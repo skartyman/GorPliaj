@@ -8,11 +8,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const menu = [
-  { id: 1, category: 'Напитки', name: 'Лимонад манго-маракуйя', price: 420 },
-  { id: 2, category: 'Закуски', name: 'Тартар из тунца', price: 780 },
-  { id: 3, category: 'Основные блюда', name: 'Паста с морепродуктами', price: 980 },
-  { id: 4, category: 'Гриль', name: 'Лобстер на углях', price: 1900 },
-  { id: 5, category: 'Десерты', name: 'Кокосовый мусс', price: 490 }
+  { id: 1, category: 'Напої', name: 'Лимонад манго-маракуя', price: 420 },
+  { id: 2, category: 'Закуски', name: 'Тартар із тунця', price: 780 },
+  { id: 3, category: 'Основні страви', name: 'Паста з морепродуктами', price: 980 },
+  { id: 4, category: 'Гриль', name: 'Лобстер на вугіллі', price: 1900 },
+  { id: 5, category: 'Десерти', name: 'Кокосовий мус', price: 490 }
 ];
 
 const reservations = [];
@@ -30,7 +30,7 @@ app.post('/api/reservations', (req, res) => {
   const { guestName, phone, date, time, guests, zone, note } = req.body;
 
   if (!guestName || !phone || !date || !time || !guests || !zone) {
-    return res.status(400).json({ message: 'Заполните обязательные поля брони.' });
+    return res.status(400).json({ message: 'Заповніть обов’язкові поля бронювання.' });
   }
 
   const reservation = {
@@ -55,12 +55,12 @@ app.patch('/api/reservations/:id/status', (req, res) => {
   const { status } = req.body;
 
   if (!['new', 'confirmed', 'cancelled'].includes(status)) {
-    return res.status(400).json({ message: 'Некорректный статус брони.' });
+    return res.status(400).json({ message: 'Некоректний статус бронювання.' });
   }
 
   const reservation = reservations.find((item) => item.id === id);
   if (!reservation) {
-    return res.status(404).json({ message: 'Бронь не найдена.' });
+    return res.status(404).json({ message: 'Бронювання не знайдено.' });
   }
 
   reservation.status = status;
@@ -72,7 +72,7 @@ app.delete('/api/reservations/:id', (req, res) => {
   const index = reservations.findIndex((item) => item.id === id);
 
   if (index === -1) {
-    return res.status(404).json({ message: 'Бронь не найдена.' });
+    return res.status(404).json({ message: 'Бронювання не знайдено.' });
   }
 
   reservations.splice(index, 1);
@@ -84,5 +84,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Beach resort app is running on http://localhost:${PORT}`);
+  console.log(`ГорПляж app is running on http://localhost:${PORT}`);
 });

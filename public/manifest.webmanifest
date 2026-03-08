@@ -1,12 +1,12 @@
 {
-  "name": "GorPliaj Beach & Restaurant",
-  "short_name": "GorPliaj",
-  "description": "Пляжно-ресторанный комплекс с меню и бронированием",
+  "name": "ГорПляж — пляжно-ресторанний комплекс",
+  "short_name": "ГорПляж",
+  "description": "Пляжно-ресторанний комплекс «ГорПляж» в Одесі з меню та бронюванням",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4fbff",
   "theme_color": "#0077b6",
-  "lang": "ru",
+  "lang": "uk",
   "icons": [
     {
       "src": "/icons/icon.svg",
