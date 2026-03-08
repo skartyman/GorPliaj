@@ -3,110 +3,115 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0077b6" />
-    <meta name="description" content="Пляжно-ресторанний комплекс «ГорПляж» в Одесі з меню, афішею та онлайн-бронюванням" />
+    <meta name="theme-color" content="#5d2e8c" />
+    <meta name="description" content="Пляжно-ресторанний комплекс «ГорПляж» в Одесі на пляжі Отрада з меню, подіями та онлайн-бронюванням" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
-    <title>ГорПляж — Одеса, море та відпочинок</title>
+    <title>ГорПляж — Одеса, пляж Отрада</title>
   </head>
   <body>
     <header class="hero" id="top">
       <div class="hero-overlay"></div>
       <div class="hero-content">
-        <h1>ГорПляж в Одесі</h1>
-        <p>Море, пляж, заходи сонця та відпочинок зі смаком — усе в одному місці.</p>
+        <div class="lang-switch" aria-label="Language switcher">
+          <button class="lang-btn active" type="button" data-lang="uk" data-i18n="langUk">Українська</button>
+          <button class="lang-btn" type="button" data-lang="en" data-i18n="langEn">Англійська</button>
+        </div>
+
+        <h1 data-i18n="heroTitle">ГорПляж в Одесі</h1>
+        <p data-i18n="heroSubtitle">Пляж Отрада, море та відпочинок зі смаком — усе в одному місці.</p>
 
         <div class="dropdown-nav">
-          <button class="menu-toggle" type="button">Меню сайту ▾</button>
+          <button class="menu-toggle" type="button" data-i18n="siteMenu">Меню сайту ▾</button>
           <div class="dropdown-content">
-            <a href="#about">Про заклад</a>
-            <a href="#menu-section">Меню</a>
-            <a href="#booking">Бронювання</a>
-            <a href="#contacts">Контакти</a>
+            <a href="#about" data-i18n="navAbout">Про заклад</a>
+            <a href="#menu-section" data-i18n="navMenu">Меню</a>
+            <a href="#booking" data-i18n="navBooking">Бронювання</a>
+            <a href="#contacts" data-i18n="navContacts">Контакти</a>
           </div>
         </div>
 
-        <button id="installBtn" class="install-btn hidden">Встановити як застосунок</button>
+        <button id="installBtn" class="install-btn hidden" data-i18n="installApp">Встановити як застосунок</button>
       </div>
     </header>
 
     <main class="layout">
       <section class="card full-width" id="about">
-        <h2>Про заклад</h2>
-        <p>
-          ГорПляж — це пляжний простір в Одесі, де можна поснідати біля моря,
+        <h2 data-i18n="aboutTitle">Про заклад</h2>
+        <p data-i18n="aboutText">
+          ГорПляж — це пляжний простір в Одесі на пляжі Отрада, де можна поснідати біля моря,
           провести вечір на терасі й організувати відпочинок для компанії.
         </p>
       </section>
 
       <section class="card" id="menu-section">
-        <h2>Меню комплексу</h2>
+        <h2 data-i18n="menuTitle">Меню комплексу</h2>
         <ul id="menuList" class="menu-list"></ul>
       </section>
 
       <section class="card" id="booking">
-        <h2>Онлайн-бронювання</h2>
+        <h2 data-i18n="bookingTitle">Онлайн-бронювання</h2>
         <form id="reservationForm" class="booking-form">
-          <label>Ім’я гостя <input required name="guestName" type="text" /></label>
-          <label>Телефон <input required name="phone" type="tel" /></label>
+          <label><span data-i18n="guestName">Ім’я гостя</span> <input required name="guestName" type="text" /></label>
+          <label><span data-i18n="phone">Телефон</span> <input required name="phone" type="tel" /></label>
           <div class="row">
-            <label>Дата <input required name="date" type="date" /></label>
-            <label>Час <input required name="time" type="time" /></label>
+            <label><span data-i18n="date">Дата</span> <input required name="date" type="date" /></label>
+            <label><span data-i18n="time">Час</span> <input required name="time" type="time" /></label>
           </div>
           <div class="row">
-            <label>Гостей <input required min="1" max="20" name="guests" type="number" /></label>
-            <label>Зона
-              <select required name="zone">
-                <option value="">Оберіть</option>
-                <option>Пляжна лінія</option>
-                <option>Тераса</option>
-                <option>Lounge</option>
-                <option>Ресторанна зала</option>
+            <label><span data-i18n="guests">Гостей</span> <input required min="1" max="20" name="guests" type="number" /></label>
+            <label><span data-i18n="zone">Зона</span>
+              <select required name="zone" id="zoneSelect">
+                <option value="" data-i18n="zoneSelect">Оберіть</option>
+                <option data-i18n="zoneBeach">Пляжна лінія</option>
+                <option data-i18n="zoneTerrace">Тераса</option>
+                <option data-i18n="zoneLounge">Лаунж</option>
+                <option data-i18n="zoneHall">Ресторанна зала</option>
               </select>
             </label>
           </div>
-          <label>Побажання <textarea name="note" rows="3"></textarea></label>
-          <button type="submit">Створити бронювання</button>
+          <label><span data-i18n="note">Побажання</span> <textarea name="note" rows="3"></textarea></label>
+          <button type="submit" data-i18n="createReservation">Створити бронювання</button>
         </form>
       </section>
 
       <section class="card full-width" id="events">
-        <h2>Афіша та анонси</h2>
+        <h2 data-i18n="eventsTitle">Афіша та анонси</h2>
         <div class="news-grid">
           <article class="news-item">
-            <h3>П’ятничні заходи сонця з DJ</h3>
-            <p>Щоп’ятниці з 19:00 — музичний вечір на пляжі та special-коктейлі.</p>
+            <h3 data-i18n="event1Title">П’ятничні заходи сонця з діджеєм</h3>
+            <p data-i18n="event1Text">Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.</p>
           </article>
           <article class="news-item">
-            <h3>Сімейні вихідні</h3>
-            <p>Субота та неділя — анімація для дітей і зона сімейного відпочинку.</p>
+            <h3 data-i18n="event2Title">Сімейні вихідні</h3>
+            <p data-i18n="event2Text">Субота та неділя — анімація для дітей і зона сімейного відпочинку.</p>
           </article>
           <article class="news-item">
-            <h3>Кіно просто неба</h3>
-            <p>Щочетверга після заходу сонця — покази фільмів біля моря.</p>
+            <h3 data-i18n="event3Title">Кіно просто неба</h3>
+            <p data-i18n="event3Text">Щочетверга після заходу сонця — покази фільмів біля моря.</p>
           </article>
         </div>
       </section>
 
       <section class="card full-width" id="news">
-        <h2>Новини та акції</h2>
+        <h2 data-i18n="newsTitle">Новини та акції</h2>
         <ul class="promo-list">
-          <li>З 10:00 до 12:00 — знижка 20% на сніданки.</li>
-          <li>Комбо «Пляжний день»: шезлонг + лимонад + салат за спеціальною ціною.</li>
-          <li>Іменинникам — десерт у подарунок під час бронювання столу.</li>
+          <li data-i18n="promo1">З 10:00 до 12:00 — знижка 20% на сніданки.</li>
+          <li data-i18n="promo2">Комбо «Пляжний день»: шезлонг + лимонад + салат за спеціальною ціною.</li>
+          <li data-i18n="promo3">Іменинникам — десерт у подарунок під час бронювання столу.</li>
         </ul>
       </section>
 
       <section class="card full-width">
-        <h2>Список бронювань</h2>
-        <p class="hint">Змінюйте статус бронювання: нове → підтверджене → скасоване.</p>
+        <h2 data-i18n="reservationsTitle">Список бронювань</h2>
+        <p class="hint" data-i18n="reservationsHint">Змінюйте статус бронювання: нове → підтверджене → скасоване.</p>
         <div id="reservationList" class="reservation-list"></div>
       </section>
 
       <section class="card full-width" id="contacts">
-        <h2>Контакти</h2>
-        <p>Одеса, перша берегова лінія</p>
+        <h2 data-i18n="contactsTitle">Контакти</h2>
+        <p data-i18n="address">Одеса, пляж Отрада</p>
         <p>Телефон: +380 (97) 123-45-67</p>
         <p>Email: hello@gorpliaj.ua</p>
       </section>
