@@ -1,0 +1,145 @@
+:root {
+  color-scheme: light;
+  --bg: #f4fbff;
+  --card: #ffffff;
+  --text: #14324a;
+  --accent: #0077b6;
+  --accent-2: #00b4d8;
+  --ok: #2a9d8f;
+  --warn: #e76f51;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(160deg, #d9f4ff 0%, var(--bg) 45%, #fff7e6 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.hero {
+  text-align: center;
+  padding: 2.2rem 1rem 1.3rem;
+}
+
+.hero h1 {
+  margin: 0;
+}
+
+.layout {
+  width: min(1100px, 94vw);
+  margin: 0 auto 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 6%);
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.menu-list,
+.reservation-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.menu-item,
+.reservation-item {
+  border: 1px solid #d9ecf7;
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.menu-item small {
+  color: #4c6a80;
+}
+
+.booking-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+}
+
+input,
+textarea,
+select,
+button {
+  border-radius: 10px;
+  border: 1px solid #a9ccdf;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  color: white;
+  font-weight: 600;
+}
+
+.row {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.reservation-item {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reservation-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.status-new {
+  color: var(--accent);
+}
+
+.status-confirmed {
+  color: var(--ok);
+}
+
+.status-cancelled {
+  color: var(--warn);
+}
+
+.hidden {
+  display: none;
+}
+
+.hint {
+  margin-top: 0;
+  color: #4c6a80;
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
