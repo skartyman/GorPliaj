@@ -13,4 +13,4 @@ npm install
 npm start
 ```
 
-После запуска сайт доступен на `http://localhost:3000`.
+После запуска сайт доступен на `http://localhost:8080`.
