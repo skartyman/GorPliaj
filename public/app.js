@@ -4,6 +4,11 @@ const reservationForm = document.getElementById('reservationForm');
 const installBtn = document.getElementById('installBtn');
 
 let deferredPrompt;
+const statusLabels = {
+  new: 'нове',
+  confirmed: 'підтверджене',
+  cancelled: 'скасоване'
+};
 
 async function fetchMenu() {
   const response = await fetch('/api/menu');
@@ -17,7 +22,7 @@ async function fetchMenu() {
           <strong>${item.name}</strong><br/>
           <small>${item.category}</small>
         </div>
-        <span>${item.price} ₽</span>
+        <span>${item.price} ₴</span>
       </li>`
     )
     .join('');
@@ -34,7 +39,7 @@ async function fetchReservations() {
   const reservations = await response.json();
 
   if (!reservations.length) {
-    reservationList.innerHTML = '<p>Пока нет броней. Создайте первую!</p>';
+    reservationList.innerHTML = '<p>Поки немає бронювань. Створіть перше!</p>';
     return;
   }
 
@@ -44,11 +49,11 @@ async function fetchReservations() {
       <article class="reservation-item">
         <strong>#${item.id} — ${item.guestName}</strong>
         <span>${item.date} ${item.time} • ${item.guests} гостей • ${item.zone}</span>
-        <span class="status-${item.status}">Статус: ${item.status}</span>
+        <span class="status-${item.status}">Статус: ${statusLabels[item.status] || item.status}</span>
         <small>${item.phone}${item.note ? ` • ${item.note}` : ''}</small>
         <div class="reservation-actions">
-          <button data-action="toggle" data-id="${item.id}" data-status="${item.status}">Сменить статус</button>
-          <button data-action="delete" data-id="${item.id}">Удалить</button>
+          <button data-action="toggle" data-id="${item.id}" data-status="${item.status}">Змінити статус</button>
+          <button data-action="delete" data-id="${item.id}">Видалити</button>
         </div>
       </article>`
     )
@@ -67,7 +72,7 @@ reservationForm.addEventListener('submit', async (event) => {
   });
 
   if (!response.ok) {
-    alert('Не удалось создать бронь. Проверьте поля формы.');
+    alert('Не вдалося створити бронювання. Перевірте поля форми.');
     return;
   }
 
@@ -119,5 +124,5 @@ if ('serviceWorker' in navigator) {
 }
 
 Promise.all([fetchMenu(), fetchReservations()]).catch(() => {
-  reservationList.innerHTML = '<p>Ошибка загрузки данных. Проверьте сервер.</p>';
+  reservationList.innerHTML = '<p>Помилка завантаження даних. Перевірте сервер.</p>';
 });
