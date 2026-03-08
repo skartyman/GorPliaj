@@ -1,12 +1,14 @@
 :root {
   color-scheme: light;
-  --bg: #f4fbff;
+  --bg: #f6fff4;
   --card: #ffffff;
-  --text: #14324a;
-  --accent: #0077b6;
-  --accent-2: #00b4d8;
-  --ok: #2a9d8f;
-  --warn: #e76f51;
+  --text: #2f1e2a;
+  --accent: #6d3ba4;
+  --accent-2: #35c9c8;
+  --brown: #7a523a;
+  --mint: #b9f4b7;
+  --ok: #2f9e6d;
+  --warn: #b75a42;
 }
 
 * {
@@ -16,7 +18,7 @@
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(160deg, #d9f4ff 0%, var(--bg) 45%, #fff7e6 100%);
+  background: linear-gradient(160deg, #f2e8ff 0%, var(--bg) 45%, #ffffff 100%);
   color: var(--text);
   min-height: 100vh;
 }
@@ -30,14 +32,14 @@ body {
   padding: 2rem 1rem;
   color: #fff;
   background:
-    linear-gradient(180deg, rgb(0 56 89 / 45%) 0%, rgb(0 36 58 / 65%) 100%),
+    linear-gradient(180deg, rgb(50 28 79 / 48%) 0%, rgb(60 38 31 / 68%) 100%),
     url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80') center / cover no-repeat;
 }
 
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 10%, rgb(255 255 255 / 24%), transparent 45%);
+  background: radial-gradient(circle at 50% 10%, rgb(185 244 183 / 28%), transparent 45%);
 }
 
 .hero-content {
@@ -54,6 +56,23 @@ body {
 .hero p {
   font-size: clamp(1rem, 2vw, 1.2rem);
   margin-bottom: 1.2rem;
+}
+
+.lang-switch {
+  display: inline-flex;
+  gap: 0.3rem;
+  margin-bottom: 0.85rem;
+}
+
+.lang-btn {
+  background: rgb(255 255 255 / 22%);
+  border: 1px solid rgb(255 255 255 / 70%);
+  color: #fff;
+}
+
+.lang-btn.active {
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  border-color: transparent;
 }
 
 .dropdown-nav {
@@ -89,7 +108,7 @@ body {
 }
 
 .dropdown-content a:hover {
-  background: #eef8ff;
+  background: #f5f0ff;
 }
 
 .dropdown-nav:hover .dropdown-content,
@@ -109,7 +128,8 @@ body {
   background: var(--card);
   border-radius: 16px;
   padding: 1rem;
-  box-shadow: 0 8px 20px rgb(0 0 0 / 6%);
+  border: 1px solid #e9def8;
+  box-shadow: 0 8px 20px rgb(63 37 93 / 8%);
 }
 
 .full-width {
@@ -124,7 +144,7 @@ body {
 
 .menu-item,
 .reservation-item {
-  border: 1px solid #d9ecf7;
+  border: 1px solid #dfd0ef;
   border-radius: 12px;
   padding: 0.8rem;
 }
@@ -135,7 +155,7 @@ body {
 }
 
 .menu-item small {
-  color: #4c6a80;
+  color: var(--brown);
 }
 
 .booking-form {
@@ -154,7 +174,7 @@ textarea,
 select,
 button {
   border-radius: 10px;
-  border: 1px solid #a9ccdf;
+  border: 1px solid #bca5d6;
   padding: 0.55rem 0.65rem;
   font: inherit;
 }
@@ -191,10 +211,10 @@ button {
 }
 
 .news-item {
-  border: 1px solid #d9ecf7;
+  border: 1px solid #dfd0ef;
   border-radius: 12px;
   padding: 0.9rem;
-  background: linear-gradient(180deg, #fbfeff 0%, #f3fbff 100%);
+  background: linear-gradient(180deg, #fff 0%, #f8f2ff 70%, #f2fff1 100%);
 }
 
 .news-item h3 {
@@ -226,7 +246,7 @@ button {
 
 .hint {
   margin-top: 0;
-  color: #4c6a80;
+  color: var(--brown);
 }
 
 @media (max-width: 640px) {
