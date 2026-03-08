@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0077b6" />
+    <meta name="description" content="Пляжно-ресторанный комплекс с меню и онлайн-бронированием" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <title>GorPliaj — Beach & Restaurant</title>
+  </head>
+  <body>
+    <header class="hero">
+      <h1>GorPliaj Beach & Restaurant</h1>
+      <p>Пляжный отдых, авторская кухня и бронирование зон в пару кликов.</p>
+      <button id="installBtn" class="install-btn hidden">Установить как приложение</button>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Меню комплекса</h2>
+        <ul id="menuList" class="menu-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Онлайн-бронирование</h2>
+        <form id="reservationForm" class="booking-form">
+          <label>Имя гостя <input required name="guestName" type="text" /></label>
+          <label>Телефон <input required name="phone" type="tel" /></label>
+          <div class="row">
+            <label>Дата <input required name="date" type="date" /></label>
+            <label>Время <input required name="time" type="time" /></label>
+          </div>
+          <div class="row">
+            <label>Гостей <input required min="1" max="20" name="guests" type="number" /></label>
+            <label>Зона
+              <select required name="zone">
+                <option value="">Выберите</option>
+                <option>Пляжная линия</option>
+                <option>Терраса</option>
+                <option>Lounge</option>
+                <option>Ресторанный зал</option>
+              </select>
+            </label>
+          </div>
+          <label>Пожелания <textarea name="note" rows="3"></textarea></label>
+          <button type="submit">Создать бронь</button>
+        </form>
+      </section>
+
+      <section class="card full-width">
+        <h2>Список броней</h2>
+        <p class="hint">Меняйте статус брони: new → confirmed → cancelled.</p>
+        <div id="reservationList" class="reservation-list"></div>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
