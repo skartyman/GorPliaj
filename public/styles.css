@@ -22,17 +22,84 @@ body {
 }
 
 .hero {
+  position: relative;
+  min-height: 52vh;
+  display: grid;
+  place-items: center;
   text-align: center;
-  padding: 2.2rem 1rem 1.3rem;
+  padding: 2rem 1rem;
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgb(0 56 89 / 45%) 0%, rgb(0 36 58 / 65%) 100%),
+    url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80') center / cover no-repeat;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 10%, rgb(255 255 255 / 24%), transparent 45%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  width: min(860px, 95vw);
 }
 
 .hero h1 {
   margin: 0;
+  font-size: clamp(2rem, 4.2vw, 3.3rem);
+}
+
+.hero p {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  margin-bottom: 1.2rem;
+}
+
+.dropdown-nav {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.8rem;
+}
+
+.menu-toggle {
+  border: 1px solid rgb(255 255 255 / 70%);
+  background: rgb(255 255 255 / 16%);
+  backdrop-filter: blur(3px);
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgb(0 0 0 / 18%);
+  overflow: hidden;
+}
+
+.dropdown-content a {
+  display: block;
+  padding: 0.7rem 0.8rem;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.dropdown-content a:hover {
+  background: #eef8ff;
+}
+
+.dropdown-nav:hover .dropdown-content,
+.dropdown-nav:focus-within .dropdown-content {
+  display: block;
 }
 
 .layout {
   width: min(1100px, 94vw);
-  margin: 0 auto 2rem;
+  margin: 1.2rem auto 2rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
@@ -117,6 +184,30 @@ button {
   flex-wrap: wrap;
 }
 
+.news-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.news-item {
+  border: 1px solid #d9ecf7;
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: linear-gradient(180deg, #fbfeff 0%, #f3fbff 100%);
+}
+
+.news-item h3 {
+  margin-top: 0;
+}
+
+.promo-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
 .status-new {
   color: var(--accent);
 }
@@ -141,5 +232,11 @@ button {
 @media (max-width: 640px) {
   .row {
     grid-template-columns: 1fr;
+  }
+
+  .dropdown-content {
+    left: 0;
+    transform: none;
+    min-width: 100%;
   }
 }

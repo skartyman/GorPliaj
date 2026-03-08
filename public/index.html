@@ -4,26 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0077b6" />
-    <meta name="description" content="Пляжно-ресторанный комплекс с меню и онлайн-бронированием" />
+    <meta name="description" content="Пляжно-ресторанный комплекс с меню, афишей и онлайн-бронированием" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
-    <title>GorPliaj — Beach & Restaurant</title>
+    <title>GorPliaj — Окуневка, пляж и море</title>
   </head>
   <body>
-    <header class="hero">
-      <h1>GorPliaj Beach & Restaurant</h1>
-      <p>Пляжный отдых, авторская кухня и бронирование зон в пару кликов.</p>
-      <button id="installBtn" class="install-btn hidden">Установить как приложение</button>
+    <header class="hero" id="top">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <h1>GorPliaj в Окуневке</h1>
+        <p>Море, пляж, закаты и отдых со вкусом — всё в одном месте.</p>
+
+        <div class="dropdown-nav">
+          <button class="menu-toggle" type="button">Меню сайта ▾</button>
+          <div class="dropdown-content">
+            <a href="#about">О заведении</a>
+            <a href="#menu-section">Меню</a>
+            <a href="#booking">Бронь</a>
+            <a href="#contacts">Контакты</a>
+          </div>
+        </div>
+
+        <button id="installBtn" class="install-btn hidden">Установить как приложение</button>
+      </div>
     </header>
 
     <main class="layout">
-      <section class="card">
+      <section class="card full-width" id="about">
+        <h2>О заведении</h2>
+        <p>
+          GorPliaj — это пляжное пространство в Окуневке, где можно позавтракать у моря,
+          провести вечер на террасе и организовать отдых для компании.
+        </p>
+      </section>
+
+      <section class="card" id="menu-section">
         <h2>Меню комплекса</h2>
         <ul id="menuList" class="menu-list"></ul>
       </section>
 
-      <section class="card">
+      <section class="card" id="booking">
         <h2>Онлайн-бронирование</h2>
         <form id="reservationForm" class="booking-form">
           <label>Имя гостя <input required name="guestName" type="text" /></label>
@@ -49,10 +71,44 @@
         </form>
       </section>
 
+      <section class="card full-width" id="events">
+        <h2>Афиша и анонсы</h2>
+        <div class="news-grid">
+          <article class="news-item">
+            <h3>Пятничные закаты с DJ</h3>
+            <p>Каждую пятницу с 19:00 — музыкальный вечер на пляже и special-коктейли.</p>
+          </article>
+          <article class="news-item">
+            <h3>Семейные выходные</h3>
+            <p>Суббота и воскресенье — анимация для детей и зона семейного отдыха.</p>
+          </article>
+          <article class="news-item">
+            <h3>Кино под открытым небом</h3>
+            <p>По четвергам после заката — показы фильмов у моря.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card full-width" id="news">
+        <h2>Новости и акции</h2>
+        <ul class="promo-list">
+          <li>С 10:00 до 12:00 — скидка 20% на завтраки.</li>
+          <li>Комбо «Пляжный день»: шезлонг + лимонад + салат по спеццене.</li>
+          <li>Именинникам — десерт в подарок при бронировании стола.</li>
+        </ul>
+      </section>
+
       <section class="card full-width">
         <h2>Список броней</h2>
         <p class="hint">Меняйте статус брони: new → confirmed → cancelled.</p>
         <div id="reservationList" class="reservation-list"></div>
+      </section>
+
+      <section class="card full-width" id="contacts">
+        <h2>Контакты</h2>
+        <p>Окуневка, первая береговая линия</p>
+        <p>Телефон: +7 (900) 123-45-67</p>
+        <p>Email: hello@gorpliaj.ru</p>
       </section>
     </main>
 
