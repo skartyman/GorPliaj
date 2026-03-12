@@ -1,12 +1,12 @@
-const crypto = require('node:crypto');
+const bcrypt = require('bcrypt');
 const { PrismaClient, MapStatus, MapObjectType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
 const TEST_PASSWORD = 'gorpliaj-test-password';
 
-function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+async function hashPassword(password) {
+  return bcrypt.hash(password, 10);
 }
 
 async function upsertZone(mapId, zoneData) {
@@ -62,13 +62,19 @@ async function upsertTable(mapId, zoneId, tableData) {
 }
 
 async function upsertMapObject(mapId, objectData) {
+  const baseWhere = {
+    mapId,
+    type: objectData.type,
+    tableId: objectData.tableId ?? null,
+  };
+
   const existingObject = await prisma.mapObject.findFirst({
-    where: {
-      mapId,
-      type: objectData.type,
-      tableId: objectData.tableId ?? null,
-      label: objectData.label ?? null,
-    },
+    where: objectData.type === MapObjectType.TABLE
+      ? baseWhere
+      : {
+          ...baseWhere,
+          label: objectData.label ?? null,
+        },
     select: { id: true },
   });
 
@@ -88,7 +94,7 @@ async function upsertMapObject(mapId, objectData) {
 }
 
 async function main() {
-  const adminPasswordHash = hashPassword(TEST_PASSWORD);
+  const adminPasswordHash = await hashPassword(TEST_PASSWORD);
 
   await prisma.adminUser.upsert({
     where: { email: 'admin@gorpliaj.local' },
@@ -178,7 +184,7 @@ async function main() {
     await upsertMapObject(map.id, {
       tableId: tableRecord.id,
       type: MapObjectType.TABLE,
-      label: table.name,
+      label: table.code,
       x: table.x,
       y: table.y,
       width: 120,
