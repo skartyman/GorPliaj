@@ -5,7 +5,10 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio"
   },
   "keywords": [
     "pwa",
@@ -16,7 +19,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^7.5.0",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "dotenv": "^16.4.5"
+    "prisma": "^7.5.0"
   }
 }
