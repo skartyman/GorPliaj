@@ -2,7 +2,7 @@
   "name": "gorpliaj-pwa",
   "version": "1.0.0",
   "description": "PWA сайт пляжно-ресторанного комплекса с меню и бронями",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
@@ -16,6 +16,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
   }
 }
