@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      String
+  createdAt DateTime @default(now())
+}
+
+model Map {
+  id              Int         @id @default(autoincrement())
+  name            String
+  width           Int
+  height          Int
+  backgroundImage String?
+  createdAt       DateTime    @default(now())
+  zones           Zone[]
+  mapObjects      MapObject[]
+}
+
+model Zone {
+  id     Int     @id @default(autoincrement())
+  mapId  Int
+  name   String
+  color  String
+  map    Map     @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  tables Table[]
+}
+
+model Table {
+  id           Int           @id @default(autoincrement())
+  zoneId       Int
+  name         String
+  seatsMin     Int
+  seatsMax     Int
+  deposit      Decimal       @db.Decimal(10, 2)
+  zone         Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  mapObjects   MapObject[]
+  reservations Reservation[]
+  tableHolds   TableHold[]
+}
+
+model MapObject {
+  id       Int     @id @default(autoincrement())
+  mapId    Int
+  tableId  Int?
+  type     String
+  x        Float
+  y        Float
+  width    Float
+  height   Float
+  rotation Float   @default(0)
+  map      Map     @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  table    Table?  @relation(fields: [tableId], references: [id], onDelete: SetNull)
+}
+
+model Reservation {
+  id             Int              @id @default(autoincrement())
+  tableId        Int
+  customerName   String
+  customerPhone  String
+  guests         Int
+  date           DateTime
+  timeFrom       DateTime
+  timeTo         DateTime
+  status         String
+  createdAt      DateTime         @default(now())
+  table          Table            @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  payment        Payment?
+  reservationLog ReservationLog[]
+}
+
+model TableHold {
+  id        Int      @id @default(autoincrement())
+  tableId   Int
+  holdToken String   @unique
+  expiresAt DateTime
+  table     Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            Int         @id @default(autoincrement())
+  reservationId Int         @unique
+  provider      String
+  amount        Decimal     @db.Decimal(10, 2)
+  status        String
+  createdAt     DateTime    @default(now())
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  startAt     DateTime
+  endAt       DateTime
+}
+
+model News {
+  id        Int      @id @default(autoincrement())
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model ReservationLog {
+  id            Int         @id @default(autoincrement())
+  reservationId Int
+  action        String
+  createdAt     DateTime    @default(now())
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+}
