@@ -43,6 +43,7 @@ model Zone {
   mapId        Int
   name         String
   color        String
+  sortOrder    Int           @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
@@ -57,9 +58,12 @@ model VenueTable {
   mapId        Int
   zoneId       Int
   name         String
+  code         String?
   seatsMin     Int
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
+  isActive     Boolean       @default(true)
+  isBookable   Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
@@ -76,7 +80,7 @@ model MapObject {
   id        Int        @id @default(autoincrement())
   mapId     Int
   tableId   Int?
-  type      String
+  type      MapObjectType
   label     String?
   x         Float
   y         Float
@@ -105,9 +109,8 @@ model Reservation {
   eventId          Int?
   customerName     String
   customerPhone    String
-  customerEmail    String
+  customerEmail    String?
   guests           Int
-  date             DateTime
   reservationDate  DateTime
   timeFrom         DateTime
   timeTo           DateTime
@@ -125,7 +128,7 @@ model Reservation {
   zone             Zone             @relation(fields: [zoneId], references: [id], onDelete: Restrict)
   table            VenueTable       @relation(fields: [tableId], references: [id], onDelete: Restrict)
   payment          Payment?
-  reservationLog   ReservationLog[]
+  logs             ReservationLog[]
   tableHolds       TableHold[]
 
   @@index([tableId])
@@ -133,6 +136,7 @@ model Reservation {
   @@index([zoneId])
   @@index([eventId])
   @@index([reservationDate])
+  @@index([tableId, reservationDate])
   @@index([status])
 }
 
@@ -157,6 +161,7 @@ model TableHold {
   @@index([reservationId])
   @@index([eventId])
   @@index([reservationDate])
+  @@index([expiresAt])
   @@index([status])
 }
 
@@ -168,7 +173,7 @@ model Payment {
   providerOrderId   String?
   paymentUrl        String?
   amount            Decimal       @db.Decimal(10, 2)
-  currency          String        @default("EUR")
+  currency          String        @default("UAH")
   status            PaymentStatus @default(PENDING)
   rawPayload        Json?
   paidAt            DateTime?
@@ -226,11 +231,25 @@ enum MapStatus {
 
 enum ReservationStatus {
   PENDING
+  AWAITING_PAYMENT
   CONFIRMED
   CANCELLED
   COMPLETED
   NO_SHOW
   EXPIRED
+}
+
+enum MapObjectType {
+  TABLE
+  LABEL
+  BAR
+  STAGE
+  POOL
+  WALL
+  ENTRANCE
+  WC
+  DECOR
+  CUSTOM
 }
 
 enum ReservationSource {
