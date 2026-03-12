@@ -13,95 +13,188 @@ model AdminUser {
   password  String
   role      String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Map {
-  id              Int         @id @default(autoincrement())
+  id              Int          @id @default(autoincrement())
   name            String
+  slug            String       @unique
+  description     String?
+  status          MapStatus    @default(DRAFT)
+  isDefault       Boolean      @default(false)
   width           Int
   height          Int
   backgroundImage String?
-  createdAt       DateTime    @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  events          Event[]
+  reservations    Reservation[]
+  tables          VenueTable[]
   zones           Zone[]
   mapObjects      MapObject[]
+
+  @@index([status])
+  @@index([isDefault])
 }
 
 model Zone {
-  id     Int     @id @default(autoincrement())
-  mapId  Int
-  name   String
-  color  String
-  map    Map     @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  tables Table[]
+  id           Int           @id @default(autoincrement())
+  mapId        Int
+  name         String
+  color        String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  tables       VenueTable[]
+
+  @@index([mapId])
 }
 
-model Table {
+model VenueTable {
   id           Int           @id @default(autoincrement())
+  mapId        Int
   zoneId       Int
   name         String
   seatsMin     Int
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
   zone         Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
   mapObjects   MapObject[]
   reservations Reservation[]
   tableHolds   TableHold[]
+
+  @@index([mapId])
+  @@index([zoneId])
 }
 
 model MapObject {
-  id       Int     @id @default(autoincrement())
-  mapId    Int
-  tableId  Int?
-  type     String
-  x        Float
-  y        Float
-  width    Float
-  height   Float
-  rotation Float   @default(0)
-  map      Map     @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  table    Table?  @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  id        Int        @id @default(autoincrement())
+  mapId     Int
+  tableId   Int?
+  type      String
+  label     String?
+  x         Float
+  y         Float
+  width     Float
+  height    Float
+  rotation  Float      @default(0)
+  zIndex    Int        @default(0)
+  styleJson Json?
+  metaJson  Json?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  map       Map        @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  table     VenueTable? @relation(fields: [tableId], references: [id], onDelete: SetNull)
+
+  @@index([mapId])
+  @@index([tableId])
+  @@index([isActive])
 }
 
 model Reservation {
-  id             Int              @id @default(autoincrement())
-  tableId        Int
-  customerName   String
-  customerPhone  String
-  guests         Int
-  date           DateTime
-  timeFrom       DateTime
-  timeTo         DateTime
-  status         String
-  createdAt      DateTime         @default(now())
-  table          Table            @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  payment        Payment?
-  reservationLog ReservationLog[]
+  id               Int              @id @default(autoincrement())
+  tableId          Int
+  mapId            Int
+  zoneId           Int
+  eventId          Int?
+  customerName     String
+  customerPhone    String
+  customerEmail    String
+  guests           Int
+  date             DateTime
+  reservationDate  DateTime
+  timeFrom         DateTime
+  timeTo           DateTime
+  status           ReservationStatus @default(PENDING)
+  source           ReservationSource @default(WEB)
+  commentCustomer  String?
+  commentAdmin     String?
+  depositRequired  Boolean          @default(false)
+  depositAmount    Decimal?         @db.Decimal(10, 2)
+  expiresAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  event            Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  map              Map              @relation(fields: [mapId], references: [id], onDelete: Restrict)
+  zone             Zone             @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  table            VenueTable       @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  payment          Payment?
+  reservationLog   ReservationLog[]
+  tableHolds       TableHold[]
+
+  @@index([tableId])
+  @@index([mapId])
+  @@index([zoneId])
+  @@index([eventId])
+  @@index([reservationDate])
+  @@index([status])
 }
 
 model TableHold {
-  id        Int      @id @default(autoincrement())
-  tableId   Int
-  holdToken String   @unique
-  expiresAt DateTime
-  table     Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  id              Int             @id @default(autoincrement())
+  tableId         Int
+  reservationId   Int?
+  eventId         Int?
+  holdToken       String          @unique
+  reservationDate DateTime
+  timeFrom        DateTime
+  timeTo          DateTime
+  expiresAt       DateTime
+  status          TableHoldStatus @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  reservation     Reservation?    @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  table           VenueTable      @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@index([tableId])
+  @@index([reservationId])
+  @@index([eventId])
+  @@index([reservationDate])
+  @@index([status])
 }
 
 model Payment {
-  id            Int         @id @default(autoincrement())
-  reservationId Int         @unique
-  provider      String
-  amount        Decimal     @db.Decimal(10, 2)
-  status        String
-  createdAt     DateTime    @default(now())
-  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  id                Int           @id @default(autoincrement())
+  reservationId     Int           @unique
+  provider          String
+  providerPaymentId String?
+  providerOrderId   String?
+  paymentUrl        String?
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("EUR")
+  status            PaymentStatus @default(PENDING)
+  rawPayload        Json?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  reservation       Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([providerPaymentId])
+  @@index([providerOrderId])
+  @@index([status])
 }
 
 model Event {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  startAt     DateTime
-  endAt       DateTime
+  id           Int           @id @default(autoincrement())
+  mapId        Int?
+  name         String
+  description  String?
+  startAt      DateTime
+  endAt        DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  map          Map?          @relation(fields: [mapId], references: [id], onDelete: SetNull)
+  reservations Reservation[]
+  tableHolds   TableHold[]
+
+  @@index([mapId])
 }
 
 model News {
@@ -109,12 +202,57 @@ model News {
   title     String
   body      String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ReservationLog {
-  id            Int         @id @default(autoincrement())
+  id            Int               @id @default(autoincrement())
   reservationId Int
   action        String
-  createdAt     DateTime    @default(now())
-  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  oldStatus     ReservationStatus?
+  newStatus     ReservationStatus?
+  comment       String?
+  createdAt     DateTime          @default(now())
+  reservation   Reservation       @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+}
+
+enum MapStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  EXPIRED
+}
+
+enum ReservationSource {
+  WEB
+  ADMIN
+  PHONE
+  WALK_IN
+  EVENT
+}
+
+enum TableHoldStatus {
+  ACTIVE
+  CONSUMED
+  EXPIRED
+  RELEASED
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
 }
