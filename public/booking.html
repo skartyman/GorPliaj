@@ -7,43 +7,40 @@
     <meta name="description" content="Карта бронювання столів ГорПляж" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css" />
-    <title>Карта бронювання — ГорПляж</title>
+    <link rel="stylesheet" href="/css/booking.css" />
+    <title>Бронювання столів — ГорПляж</title>
   </head>
   <body>
-    <header class="hero">
-      <div class="hero-overlay"></div>
-      <div class="hero-content">
-        <h1>Карта бронювання</h1>
-        <p>Оберіть стіл на схемі закладу, щоб переглянути його параметри.</p>
-        <a class="booking-map-link" href="/">← На головну</a>
-      </div>
-    </header>
-
     <main class="booking-page">
-      <section class="card full-width booking-map-layout">
-        <div>
-          <h2>Схема майданчика</h2>
-          <div class="booking-map-wrapper">
-            <div id="bookingMap" class="booking-map"></div>
-          </div>
-          <p id="mapFallback" class="map-fallback hidden"></p>
-        </div>
+      <header class="booking-header">
+        <p class="eyebrow">ГорПляж</p>
+        <h1>Бронювання столів</h1>
+        <p class="subtitle">Оберіть столик на мапі, щоб переглянути його параметри.</p>
+        <a class="back-link" href="/">← На головну</a>
+      </header>
 
-        <aside class="table-info-card" id="tableInfoCard">
-          <h3>Інформація про стіл</h3>
-          <p id="tableInfoEmpty">Натисніть на зелений столик на мапі.</p>
-          <dl id="tableInfoDetails" class="hidden">
-            <div><dt>Code</dt><dd id="tableCode"></dd></div>
-            <div><dt>Name</dt><dd id="tableName"></dd></div>
-            <div><dt>Seats</dt><dd id="tableSeats"></dd></div>
-            <div><dt>Deposit</dt><dd id="tableDeposit"></dd></div>
-            <div><dt>Zone</dt><dd id="tableZone"></dd></div>
+      <section class="booking-layout" aria-label="Схема майданчика та інформація про стіл">
+        <article class="card">
+          <h2>Мапа закладу</h2>
+          <p id="loadingState" class="state state-loading" role="status">Завантаження карти…</p>
+          <p id="errorState" class="state state-error hidden" role="alert"></p>
+          <div id="bookingMap" class="booking-map hidden" aria-label="Мапа столів"></div>
+        </article>
+
+        <aside class="card info-panel" aria-live="polite">
+          <h2>Обраний стіл</h2>
+          <p id="tableInfoEmpty" class="state">Натисніть на стіл на мапі.</p>
+          <dl id="tableInfoDetails" class="details hidden">
+            <div><dt>Code</dt><dd id="tableCode">—</dd></div>
+            <div><dt>Name</dt><dd id="tableName">—</dd></div>
+            <div><dt>Seats</dt><dd id="tableSeats">—</dd></div>
+            <div><dt>Deposit</dt><dd id="tableDeposit">—</dd></div>
+            <div><dt>Zone</dt><dd id="tableZone">—</dd></div>
           </dl>
         </aside>
       </section>
     </main>
 
-    <script src="/booking.js" defer></script>
+    <script src="/js/booking.js" defer></script>
   </body>
 </html>
