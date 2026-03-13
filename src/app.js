@@ -16,6 +16,10 @@ app.use(publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
 
+app.get('/booking', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'booking.html'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
