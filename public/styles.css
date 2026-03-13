@@ -260,3 +260,106 @@ button {
     min-width: 100%;
   }
 }
+
+.booking-map-link {
+  display: inline-block;
+  margin-top: 0.7rem;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font-weight: 600;
+}
+
+.booking-page {
+  width: min(1150px, 94vw);
+  margin: 1.2rem auto 2rem;
+}
+
+.booking-map-wrapper {
+  width: 100%;
+  background: #faf6ff;
+  border: 1px solid #e2d5f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.booking-map {
+  position: relative;
+  width: 100%;
+  min-height: 340px;
+  background: linear-gradient(180deg, #fff 0%, #f4f0ff 100%);
+}
+
+.map-object {
+  position: absolute;
+  border-radius: 8px;
+  border: 1px solid #8460ad;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 0.25rem;
+  overflow: hidden;
+}
+
+.map-object-label {
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.map-object--table {
+  background: #2f9e6d;
+  color: #fff;
+  border-color: #22845b;
+  cursor: pointer;
+}
+
+.map-object--static {
+  background: #ece2f8;
+  color: #462b69;
+}
+
+.booking-map-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 860px) {
+  .booking-map-layout {
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+  }
+}
+
+.table-info-card {
+  border: 1px solid #dfd0ef;
+  border-radius: 12px;
+  padding: 0.9rem;
+  background: #fff;
+}
+
+.table-info-card dl {
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.table-info-card dt {
+  font-weight: 600;
+  color: #5a3f7e;
+}
+
+.table-info-card dd {
+  margin: 0;
+}
+
+.map-fallback {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #ecd4d4;
+  background: #fff6f6;
+  border-radius: 12px;
+  color: #8c3a3a;
+}
