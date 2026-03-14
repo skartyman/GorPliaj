@@ -27,6 +27,9 @@ RUN npm ci
 # Copy application code
 COPY . .
 
+# Generate Prisma client after schema is available in image
+RUN npx prisma generate
+
 
 # Final stage for app image
 FROM base
