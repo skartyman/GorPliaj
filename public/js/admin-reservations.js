@@ -1,13 +1,14 @@
-const TOKEN_KEY = 'admin_auth_token';
+async function ensureAuthenticated() {
+  const response = await fetch('/api/admin/auth/me', {
+    credentials: 'same-origin'
+  });
 
-function getTokenOrRedirect() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) {
-    window.location.href = '/admin/login.html';
-    return null;
+  if (response.ok) {
+    return true;
   }
 
-  return token;
+  window.location.href = '/admin/login';
+  return false;
 }
 
 function formatDate(value) {
@@ -34,7 +35,7 @@ function renderRows(reservations) {
 
     return `
       <tr>
-        <td><a class="small-link" href="/admin/reservation.html?id=${reservation.id}">${reservation.id}</a></td>
+        <td><a class="small-link" href="/admin/reservation?id=${reservation.id}">${reservation.id}</a></td>
         <td>${formatDate(reservation.reservationDate)}</td>
         <td>${formatTime(reservation.timeFrom)}</td>
         <td>${reservation.customerName}</td>
@@ -49,20 +50,17 @@ function renderRows(reservations) {
 }
 
 async function loadReservations() {
-  const token = getTokenOrRedirect();
-  if (!token) {
+  const isAuthenticated = await ensureAuthenticated();
+  if (!isAuthenticated) {
     return;
   }
 
   const response = await fetch('/api/admin/reservations', {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+    credentials: 'same-origin'
   });
 
   if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    window.location.href = '/admin/login.html';
+    window.location.href = '/admin/login';
     return;
   }
 
@@ -77,18 +75,12 @@ async function loadReservations() {
 }
 
 async function logout() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (token) {
-    await fetch('/api/admin/auth/logout', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }).catch(() => null);
-  }
+  await fetch('/api/admin/auth/logout', {
+    method: 'POST',
+    credentials: 'same-origin'
+  }).catch(() => null);
 
-  localStorage.removeItem(TOKEN_KEY);
-  window.location.href = '/admin/login.html';
+  window.location.href = '/admin/login';
 }
 
 document.getElementById('logout-btn').addEventListener('click', logout);

@@ -27,6 +27,10 @@ function signTokenPart(tokenPart) {
     .digest('base64url');
 }
 
+function getTokenTtlMs() {
+  return TOKEN_TTL_MS;
+}
+
 function generateToken(adminUser) {
   const payload = {
     sub: adminUser.id,
@@ -108,5 +112,6 @@ async function getAdminById(adminId) {
 module.exports = {
   loginAdmin,
   verifyToken,
-  getAdminById
+  getAdminById,
+  getTokenTtlMs
 };

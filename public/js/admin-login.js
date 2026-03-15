@@ -1,21 +1,10 @@
-const TOKEN_KEY = 'admin_auth_token';
-
 async function checkAlreadyLoggedIn() {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) {
-    return;
-  }
-
   const response = await fetch('/api/admin/auth/me', {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+    credentials: 'same-origin'
   });
 
   if (response.ok) {
-    window.location.href = '/admin/reservations.html';
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
+    window.location.href = '/admin/reservations';
   }
 }
 
@@ -38,6 +27,7 @@ async function onSubmit(event) {
     headers: {
       'Content-Type': 'application/json'
     },
+    credentials: 'same-origin',
     body: JSON.stringify(payload)
   });
 
@@ -48,12 +38,9 @@ async function onSubmit(event) {
     return;
   }
 
-  localStorage.setItem(TOKEN_KEY, body.token);
-  window.location.href = '/admin/reservations.html';
+  window.location.href = '/admin/reservations';
 }
 
-checkAlreadyLoggedIn().catch(() => {
-  localStorage.removeItem(TOKEN_KEY);
-});
+checkAlreadyLoggedIn().catch(() => null);
 
 document.getElementById('admin-login-form').addEventListener('submit', onSubmit);
