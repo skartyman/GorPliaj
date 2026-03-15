@@ -7,11 +7,23 @@ import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
 
+const QUICK_ACTIONS = {
+  PENDING: [
+    { label: 'Confirm', status: 'CONFIRMED', className: 'btn btn-small' },
+    { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+  ],
+  CONFIRMED: [
+    { label: 'Complete', status: 'COMPLETED', className: 'btn btn-small btn-success' },
+    { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+  ]
+};
+
 export default function ReservationsPage() {
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
+  const [actionLoadingId, setActionLoadingId] = useState('');
 
   useEffect(() => {
     apiRequest('/api/admin/reservations')
@@ -76,8 +88,60 @@ export default function ReservationsPage() {
       label: 'Table / Zone',
       render: (reservation) => `${reservation.table?.code || reservation.table?.name || '-'} / ${reservation.zone?.name || '-'}`
     },
-    { key: 'status', label: 'Status', render: (reservation) => <StatusPill status={reservation.status} /> }
+    { key: 'status', label: 'Status', render: (reservation) => <StatusPill status={reservation.status} /> },
+    {
+      key: 'actions',
+      label: 'Quick actions',
+      render: (reservation) => {
+        const actions = QUICK_ACTIONS[reservation.status] || [];
+        if (!actions.length) {
+          return <span className="muted">No actions</span>;
+        }
+
+        return (
+          <div className="actions compact">
+            {actions.map((action) => (
+              <button
+                key={`${reservation.id}-${action.status}`}
+                type="button"
+                className={action.className}
+                disabled={actionLoadingId === reservation.id}
+                onClick={() => onQuickAction(reservation.id, action.status)}
+              >
+                {actionLoadingId === reservation.id ? 'Saving...' : action.label}
+              </button>
+            ))}
+          </div>
+        );
+      }
+    }
   ];
+
+  async function onQuickAction(id, status) {
+    try {
+      setActionLoadingId(id);
+      const { response, body } = await apiRequest(`/api/admin/reservations/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        setState((prev) => ({ ...prev, error: body.message || 'Failed to update reservation status.' }));
+        setActionLoadingId('');
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        error: '',
+        rows: prev.rows.map((row) => (row.id === id ? { ...row, status: body?.reservation?.status || status } : row))
+      }));
+    } catch {
+      setState((prev) => ({ ...prev, error: 'Failed to update reservation status.' }));
+    } finally {
+      setActionLoadingId('');
+    }
+  }
 
   return (
     <AdminLayout>
