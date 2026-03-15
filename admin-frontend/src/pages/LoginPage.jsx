@@ -10,7 +10,7 @@ export default function LoginPage() {
   useEffect(() => {
     apiRequest('/api/admin/auth/me').then(({ response }) => {
       if (response.ok) {
-        navigate('/admin/reservations', { replace: true });
+        navigate('/admin/dashboard', { replace: true });
       }
     });
   }, [navigate]);
@@ -38,7 +38,7 @@ export default function LoginPage() {
       return;
     }
 
-    navigate('/admin/reservations', { replace: true });
+    navigate('/admin/dashboard', { replace: true });
   }
 
   return (
