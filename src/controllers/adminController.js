@@ -1,5 +1,39 @@
 const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
+const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
+
+function buildAuthCookie(token) {
+  const maxAgeSeconds = Math.floor(adminAuthService.getTokenTtlMs() / 1000);
+  const parts = [
+    `${ADMIN_AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSeconds}`
+  ];
+
+  if (process.env.NODE_ENV === 'production') {
+    parts.push('Secure');
+  }
+
+  return parts.join('; ');
+}
+
+function buildLogoutCookie() {
+  const parts = [
+    `${ADMIN_AUTH_COOKIE_NAME}=`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=0'
+  ];
+
+  if (process.env.NODE_ENV === 'production') {
+    parts.push('Secure');
+  }
+
+  return parts.join('; ');
+}
 
 function getAdminStatus(req, res) {
   res.json({
@@ -22,7 +56,11 @@ async function loginAdmin(req, res) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
-    return res.json(authData);
+    res.setHeader('Set-Cookie', buildAuthCookie(authData.token));
+
+    return res.json({
+      admin: authData.admin
+    });
   } catch (error) {
     console.error('[adminController.loginAdmin] Failed to login admin.', error);
     return res.status(500).json({ message: 'Unable to login.' });
@@ -51,6 +89,8 @@ async function getAdminMe(req, res) {
 }
 
 function logoutAdmin(req, res) {
+  res.setHeader('Set-Cookie', buildLogoutCookie());
+
   return res.json({
     success: true
   });
