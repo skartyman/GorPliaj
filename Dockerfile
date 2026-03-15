@@ -31,12 +31,13 @@ COPY . .
 RUN npx prisma generate
 
 
-# Final stage for app image
 FROM base
 
-# Copy built application
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y openssl && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app /app
 
-# Start the server by default, this can be overwritten at runtime
 EXPOSE 8080
-CMD [ "npm", "run", "start" ]
+CMD ["npm", "run", "start"]
