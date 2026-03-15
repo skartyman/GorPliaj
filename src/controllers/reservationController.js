@@ -67,8 +67,24 @@ async function createReservation(req, res) {
       return res.status(400).json({ message: 'Некоректні дата або час бронювання.' });
     }
 
+    if (timeFrom >= timeTo) {
+      return res.status(400).json({ message: 'Час завершення має бути пізніше за час початку.' });
+    }
+
+    const tableId = Number(req.body.tableId);
+    const conflict = await reservationService.findReservationConflict({
+      tableId,
+      reservationDate,
+      timeFrom,
+      timeTo
+    });
+
+    if (conflict) {
+      return res.status(409).json({ message: 'Стіл уже заброньований на обраний проміжок часу.' });
+    }
+
     const reservation = await reservationService.createReservation({
-      tableId: Number(req.body.tableId),
+      tableId,
       mapId: Number(req.body.mapId),
       zoneId: Number(req.body.zoneId),
       customerName: req.body.customerName,
