@@ -107,6 +107,14 @@ body {
   padding: 0.75rem;
 }
 
+.state-warning {
+  border: 1px solid #f1d89e;
+  border-radius: 10px;
+  background: #fff9e9;
+  color: #7a5a0e;
+  padding: 0.75rem;
+}
+
 .map-object {
   position: absolute;
   display: grid;
@@ -133,6 +141,11 @@ body {
 
 .map-object--table:hover {
   filter: brightness(1.03);
+}
+
+.map-object--selected {
+  outline: 3px solid #5d2e8c;
+  outline-offset: 2px;
 }
 
 
