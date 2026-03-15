@@ -1,6 +1,7 @@
 const bookingMap = document.getElementById('bookingMap');
 const loadingState = document.getElementById('loadingState');
 const errorState = document.getElementById('errorState');
+const availabilityWarning = document.getElementById('availabilityWarning');
 
 const tableInfoEmpty = document.getElementById('tableInfoEmpty');
 const tableInfoDetails = document.getElementById('tableInfoDetails');
@@ -22,12 +23,17 @@ let selectedTable = null;
 let currentMapId = null;
 let availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
 const tableElementsById = new Map();
+const defaultEmptyTableMessage = 'Натисніть на стіл на мапі.';
 
 function showError(message) {
   loadingState.classList.add('hidden');
   bookingMap.classList.add('hidden');
   errorState.textContent = message;
   errorState.classList.remove('hidden');
+}
+
+function setTableInfoEmptyMessage(message = defaultEmptyTableMessage) {
+  tableInfoEmpty.textContent = message;
 }
 
 function showTableInfo(table, zoneName = '—') {
@@ -60,8 +66,28 @@ function showReservationSuccess(message) {
   reservationSuccess.classList.remove('hidden');
 }
 
+function clearSelectionUI() {
+  tableElementsById.forEach((element) => element.classList.remove('map-object--selected'));
+}
+
+function resetSelectedTableUI(emptyMessage = defaultEmptyTableMessage) {
+  selectedTable = null;
+  clearSelectionUI();
+  reservationForm.classList.add('hidden');
+  tableInfoDetails.classList.add('hidden');
+  setTableInfoEmptyMessage(emptyMessage);
+  tableInfoEmpty.classList.remove('hidden');
+}
+
 function showReservationForm(table) {
   selectedTable = table;
+  clearSelectionUI();
+
+  const selectedElement = tableElementsById.get(table.id);
+  if (selectedElement) {
+    selectedElement.classList.add('map-object--selected');
+  }
+
   reservationForm.classList.remove('hidden');
   resetMessages();
 }
@@ -87,13 +113,12 @@ function updateTableAvailabilityUI() {
     element.classList.toggle('map-object--busy', busy);
     element.classList.toggle('map-object--held', held);
     element.classList.toggle('map-object--free', free);
-    element.disabled = busy;
+    element.disabled = busy || held;
   });
 
-  if (selectedTable && isTableBusy(selectedTable.id)) {
-    selectedTable = null;
-    reservationForm.classList.add('hidden');
-    showReservationError('Обраний стіл уже зайнятий на вказаний час. Оберіть інший.');
+  if (selectedTable && (isTableBusy(selectedTable.id) || isTableHeld(selectedTable.id))) {
+    resetSelectedTableUI();
+    showReservationError('Обраний стіл уже недоступний на вказаний час. Оберіть інший.');
   }
 }
 
@@ -134,12 +159,13 @@ function createMapObjectElement(object, map, tableById, zoneById) {
         return;
       }
 
-      if (isTableBusy(table.id)) {
-        showReservationError('Цей стіл зайнятий на обраний час.');
+      if (isTableBusy(table.id) || isTableHeld(table.id)) {
+        showReservationError('Цей стіл недоступний на обраний час.');
         return;
       }
 
       const zone = zoneById.get(table.zoneId);
+      setTableInfoEmptyMessage(defaultEmptyTableMessage);
       showTableInfo(table, zone?.name || '—');
       showReservationForm(table);
     });
@@ -187,11 +213,21 @@ function getAvailabilityParams() {
   return { date, timeFrom };
 }
 
+function showAvailabilityWarning(message) {
+  if (!availabilityWarning) {
+    return;
+  }
+
+  availabilityWarning.textContent = message || '';
+  availabilityWarning.classList.toggle('hidden', !message);
+}
+
 async function fetchAvailability() {
   const params = getAvailabilityParams();
   if (!params) {
     availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
     updateTableAvailabilityUI();
+    showAvailabilityWarning('');
     return;
   }
 
@@ -209,9 +245,9 @@ async function fetchAvailability() {
       freeTableIds: Array.isArray(data.freeTableIds) ? data.freeTableIds : []
     };
     updateTableAvailabilityUI();
+    showAvailabilityWarning('');
   } catch (error) {
-    availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
-    updateTableAvailabilityUI();
+    showAvailabilityWarning('Не вдалося оновити доступність столів. Показано попередні дані.');
   }
 }
 
@@ -248,6 +284,17 @@ function renderDateQuickSelect() {
   }
 }
 
+function roundToNextHalfHour(date) {
+  const rounded = new Date(date);
+  rounded.setSeconds(0, 0);
+
+  const minutes = rounded.getMinutes();
+  const delta = (30 - (minutes % 30)) % 30;
+  rounded.setMinutes(minutes + (delta === 0 ? 30 : delta));
+
+  return rounded;
+}
+
 function ensureDefaultDateTime() {
   const now = new Date();
   if (!reservationDateInput.value) {
@@ -255,8 +302,7 @@ function ensureDefaultDateTime() {
   }
 
   if (!timeFromInput.value) {
-    const rounded = new Date(now);
-    rounded.setMinutes(now.getMinutes() + (30 - (now.getMinutes() % 30 || 30)));
+    const rounded = roundToNextHalfHour(now);
     timeFromInput.value = `${String(rounded.getHours()).padStart(2, '0')}:${String(rounded.getMinutes()).padStart(2, '0')}`;
   }
 
@@ -271,8 +317,8 @@ async function submitReservation(event) {
     return;
   }
 
-  if (isTableBusy(selectedTable.id)) {
-    showReservationError('Цей стіл зайнятий на обраний час. Оберіть інший.');
+  if (isTableBusy(selectedTable.id) || isTableHeld(selectedTable.id)) {
+    showReservationError('Цей стіл недоступний на обраний час. Оберіть інший.');
     return;
   }
 
@@ -312,8 +358,7 @@ async function submitReservation(event) {
 
     reservationForm.reset();
     ensureDefaultDateTime();
-    selectedTable = null;
-    showReservationSuccess('Бронювання створено успішно. Очікуйте підтвердження від адміністратора.');
+    resetSelectedTableUI('Бронювання створено успішно. Ви можете обрати інший стіл.');
     await fetchAvailability();
   } catch (error) {
     showReservationError('Помилка мережі. Спробуйте ще раз.');
