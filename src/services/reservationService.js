@@ -75,6 +75,15 @@ async function findReservationConflict({ tableId, reservationDate, timeFrom, tim
 async function getMapAvailability({ mapId, reservationDate, timeFrom, timeTo }) {
   const { start, end } = getDateRange(reservationDate);
 
+  const tables = await prisma.venueTable.findMany({
+    where: {
+      mapId,
+      isActive: true,
+      isBookable: true
+    },
+    select: { id: true }
+  });
+
   const [busyReservations, heldTables] = await Promise.all([
     prisma.reservation.findMany({
       where: {
@@ -117,9 +126,17 @@ async function getMapAvailability({ mapId, reservationDate, timeFrom, timeTo }) 
     })
   ]);
 
+  const busyTableIds = [...new Set(busyReservations.map((reservation) => reservation.tableId))];
+  const heldTableIds = [...new Set(heldTables.map((hold) => hold.tableId))];
+  const blockedTableIds = new Set([...busyTableIds, ...heldTableIds]);
+  const freeTableIds = tables
+    .map((table) => table.id)
+    .filter((tableId) => !blockedTableIds.has(tableId));
+
   return {
-    busyTableIds: [...new Set(busyReservations.map((reservation) => reservation.tableId))],
-    heldTableIds: [...new Set(heldTables.map((hold) => hold.tableId))]
+    busyTableIds,
+    heldTableIds,
+    freeTableIds
   };
 }
 
