@@ -16,7 +16,6 @@ const reservationSuccess = document.getElementById('reservationSuccess');
 
 const reservationDateInput = reservationForm.elements.reservationDate;
 const timeFromInput = reservationForm.elements.timeFrom;
-const timeToInput = reservationForm.elements.timeTo;
 
 let selectedTable = null;
 let currentMapId = null;
@@ -166,13 +165,12 @@ function renderMap(data) {
 function getAvailabilityParams() {
   const date = reservationDateInput.value;
   const timeFrom = timeFromInput.value;
-  const timeTo = timeToInput.value;
 
-  if (!currentMapId || !date || !timeFrom || !timeTo) {
+  if (!currentMapId || !date || !timeFrom) {
     return null;
   }
 
-  return { date, timeFrom, timeTo };
+  return { date, timeFrom };
 }
 
 async function fetchAvailability() {
@@ -227,7 +225,6 @@ async function submitReservation(event) {
     guests: Number(formData.get('guests')),
     reservationDate: formData.get('reservationDate')?.toString(),
     timeFrom: formData.get('timeFrom')?.toString(),
-    timeTo: formData.get('timeTo')?.toString(),
     commentCustomer: formData.get('commentCustomer')?.toString().trim() || ''
   };
 
@@ -276,5 +273,4 @@ async function fetchDefaultMap() {
 reservationForm.addEventListener('submit', submitReservation);
 reservationDateInput.addEventListener('change', fetchAvailability);
 timeFromInput.addEventListener('change', fetchAvailability);
-timeToInput.addEventListener('change', fetchAvailability);
 fetchDefaultMap();

@@ -1,5 +1,6 @@
 const contentService = require('../services/contentService');
 const reservationService = require('../services/reservationService');
+const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
 
 async function getDefaultMap(req, res) {
   try {
@@ -16,22 +17,18 @@ async function getDefaultMap(req, res) {
   }
 }
 
-function toDateTime(datePart, timePart) {
-  return new Date(`${datePart}T${timePart}:00`);
-}
-
 async function getMapAvailability(req, res) {
   try {
     const mapId = Number(req.params.mapId);
-    const { date, timeFrom, timeTo } = req.query;
+    const { date, timeFrom } = req.query;
 
-    if (!mapId || !date || !timeFrom || !timeTo) {
-      return res.status(400).json({ message: 'Потрібні параметри mapId, date, timeFrom, timeTo.' });
+    if (!mapId || !date || !timeFrom) {
+      return res.status(400).json({ message: 'Потрібні параметри mapId, date, timeFrom.' });
     }
 
     const reservationDate = new Date(`${date}T00:00:00`);
     const dateTimeFrom = toDateTime(date, timeFrom);
-    const dateTimeTo = toDateTime(date, timeTo);
+    const dateTimeTo = getClosingDateTime(date);
 
     if (
       Number.isNaN(reservationDate.getTime()) ||
@@ -42,7 +39,7 @@ async function getMapAvailability(req, res) {
     }
 
     if (dateTimeFrom >= dateTimeTo) {
-      return res.status(400).json({ message: 'Час завершення має бути пізніше за час початку.' });
+      return res.status(400).json({ message: 'Час початку має бути раніше за час закриття закладу.' });
     }
 
     const availability = await reservationService.getMapAvailability({

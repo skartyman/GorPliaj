@@ -1,4 +1,5 @@
 const reservationService = require('../services/reservationService');
+const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
 
 const LEGACY_STATUS_ALIASES = {
   new: 'PENDING',
@@ -28,10 +29,6 @@ async function getReservations(req, res) {
   }
 }
 
-function toDateTime(datePart, timePart) {
-  return new Date(`${datePart}T${timePart}:00`);
-}
-
 function hasMissingRequiredFields(body) {
   const requiredFields = [
     'tableId',
@@ -41,8 +38,7 @@ function hasMissingRequiredFields(body) {
     'customerPhone',
     'guests',
     'reservationDate',
-    'timeFrom',
-    'timeTo'
+    'timeFrom'
   ];
 
   return requiredFields.some((field) => !body[field]);
@@ -61,14 +57,14 @@ async function createReservation(req, res) {
 
     const reservationDate = new Date(`${req.body.reservationDate}T00:00:00`);
     const timeFrom = toDateTime(req.body.reservationDate, req.body.timeFrom);
-    const timeTo = toDateTime(req.body.reservationDate, req.body.timeTo);
+    const timeTo = getClosingDateTime(req.body.reservationDate);
 
     if (Number.isNaN(reservationDate.getTime()) || Number.isNaN(timeFrom.getTime()) || Number.isNaN(timeTo.getTime())) {
       return res.status(400).json({ message: 'Некоректні дата або час бронювання.' });
     }
 
     if (timeFrom >= timeTo) {
-      return res.status(400).json({ message: 'Час завершення має бути пізніше за час початку.' });
+      return res.status(400).json({ message: 'Час початку має бути раніше за час закриття закладу.' });
     }
 
     const tableId = Number(req.body.tableId);
