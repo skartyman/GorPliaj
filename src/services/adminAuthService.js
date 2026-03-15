@@ -4,7 +4,20 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-const ADMIN_AUTH_SECRET = process.env.ADMIN_AUTH_SECRET || 'gorpliaj-admin-secret';
+const DEFAULT_DEV_ADMIN_AUTH_SECRET = 'gorpliaj-admin-secret';
+const isProduction = process.env.NODE_ENV === 'production';
+const isLocalDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+const configuredAdminAuthSecret = process.env.ADMIN_AUTH_SECRET;
+
+if (isProduction && !configuredAdminAuthSecret) {
+  throw new Error('ADMIN_AUTH_SECRET must be explicitly set in production.');
+}
+
+if (!isLocalDevelopment && !configuredAdminAuthSecret) {
+  throw new Error('ADMIN_AUTH_SECRET must be set outside local development.');
+}
+
+const ADMIN_AUTH_SECRET = configuredAdminAuthSecret || DEFAULT_DEV_ADMIN_AUTH_SECRET;
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 
 function encodePayload(payload) {
@@ -53,7 +66,16 @@ function verifyToken(token) {
   const [tokenPart, signature] = token.split('.');
   const expectedSignature = signTokenPart(tokenPart);
 
-  if (!signature || signature !== expectedSignature) {
+  if (!signature || signature.length !== expectedSignature.length) {
+    return null;
+  }
+
+  const isValidSignature = crypto.timingSafeEqual(
+    Buffer.from(signature, 'utf8'),
+    Buffer.from(expectedSignature, 'utf8')
+  );
+
+  if (!isValidSignature) {
     return null;
   }
 
