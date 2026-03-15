@@ -18,19 +18,76 @@ function getReservationStatuses() {
   return cachedReservationStatuses;
 }
 
-function getReservations(req, res) {
-  res.json(reservationService.getReservations());
+async function getReservations(req, res) {
+  try {
+    const reservations = await reservationService.getReservations();
+    return res.json(reservations);
+  } catch (error) {
+    console.error('[reservationController.getReservations] Failed to get reservations.', error);
+    return res.status(500).json({ message: 'Не вдалося отримати бронювання.' });
+  }
 }
 
-function createReservation(req, res) {
-  const { guestName, phone, date, time, guests, zone } = req.body;
+function toDateTime(datePart, timePart) {
+  return new Date(`${datePart}T${timePart}:00`);
+}
 
-  if (!guestName || !phone || !date || !time || !guests || !zone) {
-    return res.status(400).json({ message: 'Заповніть обов’язкові поля бронювання.' });
+function hasMissingRequiredFields(body) {
+  const requiredFields = [
+    'tableId',
+    'mapId',
+    'zoneId',
+    'customerName',
+    'customerPhone',
+    'guests',
+    'reservationDate',
+    'timeFrom',
+    'timeTo'
+  ];
+
+  return requiredFields.some((field) => !body[field]);
+}
+
+async function createReservation(req, res) {
+  try {
+    if (hasMissingRequiredFields(req.body)) {
+      return res.status(400).json({ message: 'Заповніть обов’язкові поля бронювання.' });
+    }
+
+    const guests = Number(req.body.guests);
+    if (!Number.isFinite(guests) || guests <= 0) {
+      return res.status(400).json({ message: 'Кількість гостей має бути більшою за 0.' });
+    }
+
+    const reservationDate = new Date(`${req.body.reservationDate}T00:00:00`);
+    const timeFrom = toDateTime(req.body.reservationDate, req.body.timeFrom);
+    const timeTo = toDateTime(req.body.reservationDate, req.body.timeTo);
+
+    if (Number.isNaN(reservationDate.getTime()) || Number.isNaN(timeFrom.getTime()) || Number.isNaN(timeTo.getTime())) {
+      return res.status(400).json({ message: 'Некоректні дата або час бронювання.' });
+    }
+
+    const reservation = await reservationService.createReservation({
+      tableId: Number(req.body.tableId),
+      mapId: Number(req.body.mapId),
+      zoneId: Number(req.body.zoneId),
+      customerName: req.body.customerName,
+      customerPhone: req.body.customerPhone,
+      guests,
+      reservationDate,
+      timeFrom,
+      timeTo,
+      commentCustomer: req.body.commentCustomer
+    });
+
+    return res.status(201).json({
+      success: true,
+      reservation
+    });
+  } catch (error) {
+    console.error('[reservationController.createReservation] Failed to create reservation.', error);
+    return res.status(500).json({ message: 'Не вдалося створити бронювання.' });
   }
-
-  const reservation = reservationService.createReservation(req.body);
-  return res.status(201).json(reservation);
 }
 
 function normalizeStatusInput(status, validStatuses) {
@@ -48,7 +105,7 @@ function normalizeStatusInput(status, validStatuses) {
   return LEGACY_STATUS_ALIASES[trimmedStatus.toLowerCase()] || null;
 }
 
-function updateReservationStatus(req, res) {
+async function updateReservationStatus(req, res) {
   try {
     const id = Number(req.params.id);
     const validStatuses = getReservationStatuses();
@@ -58,28 +115,32 @@ function updateReservationStatus(req, res) {
       return res.status(400).json({ message: 'Некоректний статус бронювання.' });
     }
 
-    const reservation = reservationService.updateReservationStatus(id, normalizedStatus);
-
-    if (!reservation) {
+    const reservation = await reservationService.updateReservationStatus(id, normalizedStatus);
+    return res.json(reservation);
+  } catch (error) {
+    if (error.code === 'P2025') {
       return res.status(404).json({ message: 'Бронювання не знайдено.' });
     }
 
-    return res.json(reservation);
-  } catch (error) {
     console.error('[reservationController.updateReservationStatus] Failed to update reservation status.', error);
     return res.status(500).json({ message: 'Не вдалося оновити статус бронювання.' });
   }
 }
 
-function deleteReservation(req, res) {
-  const id = Number(req.params.id);
-  const wasDeleted = reservationService.deleteReservation(id);
+async function deleteReservation(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const wasDeleted = await reservationService.deleteReservation(id);
 
-  if (!wasDeleted) {
-    return res.status(404).json({ message: 'Бронювання не знайдено.' });
+    if (!wasDeleted) {
+      return res.status(404).json({ message: 'Бронювання не знайдено.' });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('[reservationController.deleteReservation] Failed to delete reservation.', error);
+    return res.status(500).json({ message: 'Не вдалося видалити бронювання.' });
   }
-
-  return res.status(204).send();
 }
 
 module.exports = {
