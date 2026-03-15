@@ -1,6 +1,7 @@
 const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
+const { NODE_ENV } = require('../config/env');
 
 function buildAuthCookie(token) {
   const maxAgeSeconds = Math.floor(adminAuthService.getTokenTtlMs() / 1000);
@@ -12,7 +13,7 @@ function buildAuthCookie(token) {
     `Max-Age=${maxAgeSeconds}`
   ];
 
-  if (process.env.NODE_ENV === 'production') {
+  if (NODE_ENV === 'production') {
     parts.push('Secure');
   }
 
@@ -28,7 +29,7 @@ function buildLogoutCookie() {
     'Max-Age=0'
   ];
 
-  if (process.env.NODE_ENV === 'production') {
+  if (NODE_ENV === 'production') {
     parts.push('Secure');
   }
 

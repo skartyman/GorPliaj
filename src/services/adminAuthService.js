@@ -1,23 +1,17 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
+const { ADMIN_AUTH_SECRET, isLocalDevelopment } = require('../config/env');
 
 const prisma = new PrismaClient();
 
 const DEFAULT_DEV_ADMIN_AUTH_SECRET = 'gorpliaj-admin-secret';
-const isProduction = process.env.NODE_ENV === 'production';
-const isLocalDevelopment = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
-const configuredAdminAuthSecret = process.env.ADMIN_AUTH_SECRET;
 
-if (isProduction && !configuredAdminAuthSecret) {
-  throw new Error('ADMIN_AUTH_SECRET must be explicitly set in production.');
-}
-
-if (!isLocalDevelopment && !configuredAdminAuthSecret) {
+if (!isLocalDevelopment && !ADMIN_AUTH_SECRET) {
   throw new Error('ADMIN_AUTH_SECRET must be set outside local development.');
 }
 
-const ADMIN_AUTH_SECRET = configuredAdminAuthSecret || DEFAULT_DEV_ADMIN_AUTH_SECRET;
+const resolvedAdminAuthSecret = ADMIN_AUTH_SECRET || DEFAULT_DEV_ADMIN_AUTH_SECRET;
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 
 function encodePayload(payload) {
@@ -35,7 +29,7 @@ function decodePayload(tokenPart) {
 
 function signTokenPart(tokenPart) {
   return crypto
-    .createHmac('sha256', ADMIN_AUTH_SECRET)
+    .createHmac('sha256', resolvedAdminAuthSecret)
     .update(tokenPart)
     .digest('base64url');
 }

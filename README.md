@@ -23,6 +23,30 @@ npm run dev
 
 ### Змінні оточення
 
+Проєкт використовує `dotenv` і читає `.env` у корені репозиторію.
+Скопіюйте шаблон і заповніть значення:
+
+```bash
+cp .env.example .env
+```
+
+Обов'язкові змінні:
+
+```env
+DATABASE_URL=
+ADMIN_AUTH_SECRET=
+ADMIN_SEED_PASSWORD=
+APP_BASE_URL=
+NODE_ENV=development
+PORT=8080
+```
+
+Нотатки:
+- `ADMIN_AUTH_SECRET` обов'язковий поза локальною розробкою (`NODE_ENV=development`).
+- `ADMIN_SEED_PASSWORD` обов'язковий для `npm run prisma:seed`.
+- `DATABASE_URL` використовується Prisma і сумісний з Fly.io secrets (`fly secrets set ...`).
+- `APP_BASE_URL` можна встановити як публічний URL застосунку (наприклад, Fly.io домен).
+
 ### Prisma: міграції та seed
 
 ```bash
@@ -32,15 +56,6 @@ npm run prisma:seed
 
 Скрипт seed створює базові дані для розробки (admin-користувач, дефолтна карта, зони, столи та map objects) та безпечно оновлює їх при повторному запуску.
 
-
-Проєкт використовує `dotenv` і читає `.env` у корені репозиторію.
-
-Приклад:
-
-```env
-PORT=8080
-NODE_ENV=development
-```
 
 ## Нова структура backend
 
