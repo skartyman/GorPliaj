@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import PageCard from '../components/PageCard';
+import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDateTime } from '../lib/api';
 
 function DetailRow({ label, value }) {
@@ -54,12 +56,11 @@ export default function ReservationDetailPage() {
 
   return (
     <AdminLayout>
-      <section className="card">
-        <div className="row-between">
-          <h1>Reservation #{id}</h1>
-          <Link to="/admin/reservations">Back to list</Link>
-        </div>
-
+      <PageCard
+        title={`Reservation #${id}`}
+        description="Detailed reservation view with status workflow actions."
+        actions={<Link to="/admin/reservations">Back to list</Link>}
+      >
         {state.loading ? <p>Loading reservation...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
 
@@ -78,13 +79,10 @@ export default function ReservationDetailPage() {
               <DetailRow label="Map" value={reservation.map?.name || '-'} />
               <DetailRow label="Customer comments" value={reservation.commentCustomer || '-'} />
               <DetailRow label="Admin comments" value={reservation.commentAdmin || '-'} />
-              <DetailRow
-                label="Current status"
-                value={<span className={`status ${reservation.status}`}>{reservation.status}</span>}
-              />
+              <DetailRow label="Current status" value={<StatusPill status={reservation.status} />} />
             </div>
 
-            <h2>Status Actions</h2>
+            <h3>Status Actions</h3>
             <div className="actions">
               {!allowedNextStatuses.length ? <p className="muted">No status changes available.</p> : null}
               {allowedNextStatuses.map((status) => (
@@ -101,7 +99,7 @@ export default function ReservationDetailPage() {
             </div>
           </>
         ) : null}
-      </section>
+      </PageCard>
     </AdminLayout>
   );
 }

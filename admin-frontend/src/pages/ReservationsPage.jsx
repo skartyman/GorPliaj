@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import PageCard from '../components/PageCard';
+import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
 
 export default function ReservationsPage() {
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
     apiRequest('/api/admin/reservations')
@@ -21,14 +25,68 @@ export default function ReservationsPage() {
       });
   }, []);
 
+  const statuses = useMemo(
+    () => ['ALL', ...new Set(state.rows.map((row) => row.status).filter(Boolean))],
+    [state.rows]
+  );
+
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return state.rows.filter((reservation) => {
+      const matchesStatus = statusFilter === 'ALL' || reservation.status === statusFilter;
+      if (!query) {
+        return matchesStatus;
+      }
+
+      const searchable = [
+        reservation.id,
+        reservation.customerName,
+        reservation.customerPhone,
+        reservation.table?.code,
+        reservation.table?.name,
+        reservation.zone?.name
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return matchesStatus && searchable.includes(query);
+    });
+  }, [search, state.rows, statusFilter]);
+
   return (
     <AdminLayout>
-      <section className="card">
-        <h1>Reservations</h1>
+      <PageCard
+        title="Reservations"
+        description="Live list of reservations from the existing admin API."
+        actions={<button className="btn btn-secondary" type="button" onClick={() => window.location.reload()}>Refresh</button>}
+      >
+        <div className="toolbar">
+          <label>
+            Search
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by guest, phone, table, or id"
+            />
+          </label>
+          <label>
+            Status
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         {state.loading ? <p>Loading reservations...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
-        {!state.loading && !state.error && !state.rows.length ? <p>No reservations found.</p> : null}
-        {!state.loading && state.rows.length ? (
+        {!state.loading && !state.error && !filteredRows.length ? <p>No reservations found.</p> : null}
+
+        {!state.loading && filteredRows.length ? (
           <div className="table-wrap">
             <table>
               <thead>
@@ -43,7 +101,7 @@ export default function ReservationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {state.rows.map((reservation) => (
+                {filteredRows.map((reservation) => (
                   <tr key={reservation.id}>
                     <td>
                       <Link to={`/admin/reservations/${reservation.id}`}>{reservation.id}</Link>
@@ -54,7 +112,7 @@ export default function ReservationsPage() {
                     <td>{reservation.customerPhone}</td>
                     <td>{reservation.table?.code || reservation.table?.name || '-'} / {reservation.zone?.name || '-'}</td>
                     <td>
-                      <span className={`status ${reservation.status}`}>{reservation.status}</span>
+                      <StatusPill status={reservation.status} />
                     </td>
                   </tr>
                 ))}
@@ -62,7 +120,7 @@ export default function ReservationsPage() {
             </table>
           </div>
         ) : null}
-      </section>
+      </PageCard>
     </AdminLayout>
   );
 }
