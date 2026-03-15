@@ -39,6 +39,14 @@ function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTab
   return 'FREE';
 }
 
+function toPercent(value, total) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || !total) {
+    return 0;
+  }
+
+  return (value / total) * 100;
+}
+
 export default function MapPage() {
   const [state, setState] = useState({
     loading: true,
@@ -128,7 +136,31 @@ export default function MapPage() {
     ? getTableDisplayStatus(selectedTable, reservationsByTable, heldTableIds, busyTableIds)
     : null;
 
-  const mapObjects = useMemo(() => state.mapData?.objects || [], [state.mapData]);
+  const mapDimensions = {
+    width: state.mapData?.map?.width || 1200,
+    height: state.mapData?.map?.height || 700
+  };
+
+  const mapObjects = useMemo(() => {
+    const objects = state.mapData?.objects || [];
+
+    return objects.map((object) => {
+      const isTable = object.type === 'TABLE';
+      const table = isTable && object.tableId ? tableMap.get(object.tableId) : null;
+      const zone = table ? zoneMap.get(table.zoneId) : null;
+
+      return {
+        ...object,
+        isTable,
+        table,
+        zone,
+        left: toPercent(object.x, mapDimensions.width),
+        top: toPercent(object.y, mapDimensions.height),
+        width: Math.max(toPercent(object.width, mapDimensions.width), 2.5),
+        height: Math.max(toPercent(object.height, mapDimensions.height), 2.5)
+      };
+    });
+  }, [mapDimensions.height, mapDimensions.width, state.mapData?.objects, tableMap, zoneMap]);
 
   return (
     <AdminLayout>
@@ -154,27 +186,41 @@ export default function MapPage() {
                 }}
               >
                 {mapObjects.map((object) => {
-                  const table = object.tableId ? tableMap.get(object.tableId) : null;
-                  const status = table
-                    ? getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTableIds)
+                  const status = object.table
+                    ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
                     : 'NEUTRAL';
+
+                  const baseStyle = {
+                    left: `${object.left}%`,
+                    top: `${object.top}%`,
+                    width: `${object.width}%`,
+                    height: `${object.height}%`,
+                    transform: `rotate(${object.rotation || 0}deg)`,
+                    zIndex: object.zIndex || 2
+                  };
+
+                  if (!object.isTable) {
+                    return (
+                      <div key={object.id} className="map-object neutral" style={baseStyle} title={object.label || object.type}>
+                        <span>{object.label || object.type}</span>
+                      </div>
+                    );
+                  }
 
                   return (
                     <button
                       key={object.id}
                       type="button"
                       className={`map-object ${status.toLowerCase()} ${selectedTableId === object.tableId ? 'selected' : ''}`}
-                      style={{
-                        left: `${object.x}%`,
-                        top: `${object.y}%`,
-                        width: `${Math.max(object.width, 4)}%`,
-                        height: `${Math.max(object.height, 4)}%`,
-                        transform: `rotate(${object.rotation || 0}deg)`
-                      }}
-                      title={object.label || object.type}
+                      style={baseStyle}
+                      title={
+                        object.table
+                          ? `${object.table.name || object.table.code || 'Table'}${object.zone?.name ? ` • ${object.zone.name}` : ''}`
+                          : object.label || object.type
+                      }
                       onClick={() => (object.tableId ? setSelectedTableId(object.tableId) : setSelectedTableId(null))}
                     >
-                      <span>{object.label || object.type}</span>
+                      <span>{object.table?.code || object.table?.name || object.label || 'Table'}</span>
                     </button>
                   );
                 })}
