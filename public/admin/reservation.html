@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reservation Detail</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <main class="admin-shell">
+    <section class="admin-card">
+      <header class="admin-header">
+        <div>
+          <h1 class="admin-title">Reservation detail</h1>
+          <p class="admin-subtitle"><a class="small-link" href="/admin/reservations.html">← Back to reservations</a></p>
+        </div>
+        <button id="logout-btn" class="secondary">Logout</button>
+      </header>
+
+      <p class="error" id="error-message"></p>
+      <div id="detail-content" class="detail-grid"></div>
+
+      <h3>Status controls</h3>
+      <p class="info">Current status: <span id="current-status"></span></p>
+      <div class="actions" id="status-actions"></div>
+    </section>
+  </main>
+
+  <script src="/js/admin-reservation.js"></script>
+</body>
+</html>
