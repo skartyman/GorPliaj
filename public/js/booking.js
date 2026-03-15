@@ -13,6 +13,7 @@ const tableZone = document.getElementById('tableZone');
 const reservationForm = document.getElementById('reservationForm');
 const reservationError = document.getElementById('reservationError');
 const reservationSuccess = document.getElementById('reservationSuccess');
+const dateQuickSelect = document.getElementById('dateQuickSelect');
 
 const reservationDateInput = reservationForm.elements.reservationDate;
 const timeFromInput = reservationForm.elements.timeFrom;
@@ -69,10 +70,23 @@ function isTableBusy(tableId) {
   return availabilityState.busyTableIds.includes(tableId);
 }
 
+function isTableHeld(tableId) {
+  return availabilityState.heldTableIds.includes(tableId);
+}
+
+function isTableFree(tableId) {
+  return availabilityState.freeTableIds.includes(tableId);
+}
+
 function updateTableAvailabilityUI() {
   tableElementsById.forEach((element, tableId) => {
     const busy = isTableBusy(tableId);
+    const held = isTableHeld(tableId);
+    const free = isTableFree(tableId) || (!busy && !held);
+
     element.classList.toggle('map-object--busy', busy);
+    element.classList.toggle('map-object--held', held);
+    element.classList.toggle('map-object--free', free);
     element.disabled = busy;
   });
 
@@ -201,6 +215,54 @@ async function fetchAvailability() {
   }
 }
 
+function toIsoDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function renderDateQuickSelect() {
+  if (!dateQuickSelect) {
+    return;
+  }
+
+  const today = new Date();
+  const currentValue = reservationDateInput.value;
+  dateQuickSelect.innerHTML = '';
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + offset);
+
+    const isoDate = toIsoDate(date);
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `date-chip ${isoDate === currentValue ? 'date-chip--active' : ''}`;
+    chip.dataset.date = isoDate;
+    chip.innerHTML = `<span>${date.toLocaleDateString('uk-UA', { weekday: 'short' })}</span><strong>${date.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })}</strong>`;
+    chip.addEventListener('click', () => {
+      reservationDateInput.value = isoDate;
+      renderDateQuickSelect();
+      fetchAvailability();
+    });
+
+    dateQuickSelect.appendChild(chip);
+  }
+}
+
+function ensureDefaultDateTime() {
+  const now = new Date();
+  if (!reservationDateInput.value) {
+    reservationDateInput.value = toIsoDate(now);
+  }
+
+  if (!timeFromInput.value) {
+    const rounded = new Date(now);
+    rounded.setMinutes(now.getMinutes() + (30 - (now.getMinutes() % 30 || 30)));
+    timeFromInput.value = `${String(rounded.getHours()).padStart(2, '0')}:${String(rounded.getMinutes()).padStart(2, '0')}`;
+  }
+
+  renderDateQuickSelect();
+}
+
 async function submitReservation(event) {
   event.preventDefault();
 
@@ -249,9 +311,10 @@ async function submitReservation(event) {
     }
 
     reservationForm.reset();
-    availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
+    ensureDefaultDateTime();
     selectedTable = null;
     showReservationSuccess('Бронювання створено успішно. Очікуйте підтвердження від адміністратора.');
+    await fetchAvailability();
   } catch (error) {
     showReservationError('Помилка мережі. Спробуйте ще раз.');
   }
@@ -266,13 +329,23 @@ async function fetchDefaultMap() {
 
     const data = await response.json();
     renderMap(data);
+    await fetchAvailability();
   } catch (error) {
     showError('Не вдалося завантажити карту. Спробуйте пізніше.');
   }
 }
 
 reservationForm.addEventListener('submit', submitReservation);
-reservationDateInput.addEventListener('change', fetchAvailability);
+reservationDateInput.addEventListener('change', () => {
+  renderDateQuickSelect();
+  fetchAvailability();
+});
+reservationDateInput.addEventListener('input', () => {
+  renderDateQuickSelect();
+  fetchAvailability();
+});
 timeFromInput.addEventListener('change', fetchAvailability);
 timeFromInput.addEventListener('input', fetchAvailability);
+
+ensureDefaultDateTime();
 fetchDefaultMap();
