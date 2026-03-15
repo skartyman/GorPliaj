@@ -25,7 +25,7 @@ export default function App() {
       />
       <Route
         path="/admin/events"
-        element={<ProtectedPage><PlaceholderPage title="Events / Posters" description="Prepared for event scheduling and poster publishing flows." /></ProtectedPage>}
+        element={<ProtectedPage><PlaceholderPage title="Events" description="Prepared for event scheduling and publishing flows." /></ProtectedPage>}
       />
       <Route
         path="/admin/news"

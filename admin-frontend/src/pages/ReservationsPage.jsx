@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import PageCard from '../components/PageCard';
+import DataTable from '../components/DataTable';
+import FilterBar from '../components/FilterBar';
+import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
 
@@ -9,6 +11,7 @@ export default function ReservationsPage() {
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [dateFilter, setDateFilter] = useState('');
 
   useEffect(() => {
     apiRequest('/api/admin/reservations')
@@ -32,10 +35,14 @@ export default function ReservationsPage() {
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
+
     return state.rows.filter((reservation) => {
       const matchesStatus = statusFilter === 'ALL' || reservation.status === statusFilter;
+      const reservationDate = String(reservation.reservationDate || '').slice(0, 10);
+      const matchesDate = !dateFilter || reservationDate === dateFilter;
+
       if (!query) {
-        return matchesStatus;
+        return matchesStatus && matchesDate;
       }
 
       const searchable = [
@@ -50,18 +57,36 @@ export default function ReservationsPage() {
         .join(' ')
         .toLowerCase();
 
-      return matchesStatus && searchable.includes(query);
+      return matchesStatus && matchesDate && searchable.includes(query);
     });
-  }, [search, state.rows, statusFilter]);
+  }, [search, state.rows, statusFilter, dateFilter]);
+
+  const columns = [
+    {
+      key: 'id',
+      label: 'ID',
+      render: (reservation) => <Link to={`/admin/reservations/${reservation.id}`}>{reservation.id}</Link>
+    },
+    { key: 'reservationDate', label: 'Date', render: (reservation) => formatDate(reservation.reservationDate) },
+    { key: 'timeFrom', label: 'Time', render: (reservation) => formatTime(reservation.timeFrom) },
+    { key: 'customerName', label: 'Guest' },
+    { key: 'customerPhone', label: 'Phone' },
+    {
+      key: 'table',
+      label: 'Table / Zone',
+      render: (reservation) => `${reservation.table?.code || reservation.table?.name || '-'} / ${reservation.zone?.name || '-'}`
+    },
+    { key: 'status', label: 'Status', render: (reservation) => <StatusPill status={reservation.status} /> }
+  ];
 
   return (
     <AdminLayout>
-      <PageCard
+      <PageContainer
         title="Reservations"
         description="Live list of reservations from the existing admin API."
         actions={<button className="btn btn-secondary" type="button" onClick={() => window.location.reload()}>Refresh</button>}
       >
-        <div className="toolbar">
+        <FilterBar>
           <label>
             Search
             <input
@@ -69,6 +94,10 @@ export default function ReservationsPage() {
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by guest, phone, table, or id"
             />
+          </label>
+          <label>
+            Date
+            <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
           </label>
           <label>
             Status
@@ -80,47 +109,14 @@ export default function ReservationsPage() {
               ))}
             </select>
           </label>
-        </div>
+        </FilterBar>
 
         {state.loading ? <p>Loading reservations...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
-        {!state.loading && !state.error && !filteredRows.length ? <p>No reservations found.</p> : null}
-
-        {!state.loading && filteredRows.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Guest</th>
-                  <th>Phone</th>
-                  <th>Table / Zone</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((reservation) => (
-                  <tr key={reservation.id}>
-                    <td>
-                      <Link to={`/admin/reservations/${reservation.id}`}>{reservation.id}</Link>
-                    </td>
-                    <td>{formatDate(reservation.reservationDate)}</td>
-                    <td>{formatTime(reservation.timeFrom)}</td>
-                    <td>{reservation.customerName}</td>
-                    <td>{reservation.customerPhone}</td>
-                    <td>{reservation.table?.code || reservation.table?.name || '-'} / {reservation.zone?.name || '-'}</td>
-                    <td>
-                      <StatusPill status={reservation.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {!state.loading && !state.error ? (
+          <DataTable columns={columns} rows={filteredRows} emptyText="No reservations found for this filter." />
         ) : null}
-      </PageCard>
+      </PageContainer>
     </AdminLayout>
   );
 }
