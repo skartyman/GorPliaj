@@ -10,6 +10,8 @@
   --static-border: #8e75b2;
   --error-bg: #fff3f3;
   --error-text: #a03636;
+  --success-bg: #effdf4;
+  --success-text: #1d7040;
 }
 
 * {
@@ -97,6 +99,14 @@ body {
   padding: 0.75rem;
 }
 
+.state-success {
+  border: 1px solid #bce9cc;
+  border-radius: 10px;
+  background: var(--success-bg);
+  color: var(--success-text);
+  padding: 0.75rem;
+}
+
 .map-object {
   position: absolute;
   display: grid;
@@ -144,6 +154,45 @@ body {
 
 .info-panel dd {
   margin: 0.1rem 0 0;
+}
+
+.reservation-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.reservation-form h3 {
+  margin: 0;
+}
+
+.reservation-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.reservation-form input,
+.reservation-form textarea,
+.reservation-form button {
+  font: inherit;
+}
+
+.reservation-form input,
+.reservation-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+
+.reservation-form button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(140deg, #5d2e8c, #35c9c8);
 }
 
 .hidden {

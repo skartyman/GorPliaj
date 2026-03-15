@@ -37,6 +37,43 @@
             <div><dt>Deposit</dt><dd id="tableDeposit">—</dd></div>
             <div><dt>Zone</dt><dd id="tableZone">—</dd></div>
           </dl>
+
+          <form id="reservationForm" class="reservation-form hidden">
+            <h3>Дані бронювання</h3>
+            <p id="reservationError" class="state state-error hidden" role="alert"></p>
+            <p id="reservationSuccess" class="state state-success hidden" role="status"></p>
+
+            <label>
+              Ім'я
+              <input type="text" name="customerName" required />
+            </label>
+            <label>
+              Телефон
+              <input type="tel" name="customerPhone" required />
+            </label>
+            <label>
+              Гостей
+              <input type="number" name="guests" min="1" step="1" required />
+            </label>
+            <label>
+              Дата
+              <input type="date" name="reservationDate" required />
+            </label>
+            <label>
+              Час від
+              <input type="time" name="timeFrom" required />
+            </label>
+            <label>
+              Час до
+              <input type="time" name="timeTo" required />
+            </label>
+            <label>
+              Коментар
+              <textarea name="commentCustomer" rows="3" placeholder="Необов'язково"></textarea>
+            </label>
+
+            <button type="submit">Підтвердити бронювання</button>
+          </form>
         </aside>
       </section>
     </main>

@@ -10,6 +10,12 @@ const tableSeats = document.getElementById('tableSeats');
 const tableDeposit = document.getElementById('tableDeposit');
 const tableZone = document.getElementById('tableZone');
 
+const reservationForm = document.getElementById('reservationForm');
+const reservationError = document.getElementById('reservationError');
+const reservationSuccess = document.getElementById('reservationSuccess');
+
+let selectedTable = null;
+
 function showError(message) {
   loadingState.classList.add('hidden');
   bookingMap.classList.add('hidden');
@@ -26,6 +32,31 @@ function showTableInfo(table, zoneName = '—') {
   tableSeats.textContent = `${table.seatsMin ?? '—'} / ${table.seatsMax ?? '—'}`;
   tableDeposit.textContent = table.deposit ?? '—';
   tableZone.textContent = zoneName;
+}
+
+function resetMessages() {
+  reservationError.textContent = '';
+  reservationError.classList.add('hidden');
+  reservationSuccess.textContent = '';
+  reservationSuccess.classList.add('hidden');
+}
+
+function showReservationError(message) {
+  reservationSuccess.classList.add('hidden');
+  reservationError.textContent = message;
+  reservationError.classList.remove('hidden');
+}
+
+function showReservationSuccess(message) {
+  reservationError.classList.add('hidden');
+  reservationSuccess.textContent = message;
+  reservationSuccess.classList.remove('hidden');
+}
+
+function showReservationForm(table) {
+  selectedTable = table;
+  reservationForm.classList.remove('hidden');
+  resetMessages();
 }
 
 function createMapObjectElement(object, map, tableById, zoneById) {
@@ -63,6 +94,7 @@ function createMapObjectElement(object, map, tableById, zoneById) {
 
       const zone = zoneById.get(table.zoneId);
       showTableInfo(table, zone?.name || '—');
+      showReservationForm(table);
     });
   }
 
@@ -92,6 +124,53 @@ function renderMap(data) {
   bookingMap.classList.remove('hidden');
 }
 
+async function submitReservation(event) {
+  event.preventDefault();
+
+  if (!selectedTable) {
+    showReservationError('Спочатку оберіть столик на мапі.');
+    return;
+  }
+
+  resetMessages();
+
+  const formData = new FormData(reservationForm);
+  const payload = {
+    tableId: selectedTable.id,
+    mapId: selectedTable.mapId,
+    zoneId: selectedTable.zoneId,
+    customerName: formData.get('customerName')?.toString().trim(),
+    customerPhone: formData.get('customerPhone')?.toString().trim(),
+    guests: Number(formData.get('guests')),
+    reservationDate: formData.get('reservationDate')?.toString(),
+    timeFrom: formData.get('timeFrom')?.toString(),
+    timeTo: formData.get('timeTo')?.toString(),
+    commentCustomer: formData.get('commentCustomer')?.toString().trim() || ''
+  };
+
+  try {
+    const response = await fetch('/api/reservations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      showReservationError(responseData.message || 'Не вдалося створити бронювання.');
+      return;
+    }
+
+    reservationForm.reset();
+    showReservationSuccess('Бронювання створено успішно. Очікуйте підтвердження від адміністратора.');
+  } catch (error) {
+    showReservationError('Помилка мережі. Спробуйте ще раз.');
+  }
+}
+
 async function fetchDefaultMap() {
   try {
     const response = await fetch('/api/maps/default');
@@ -106,4 +185,5 @@ async function fetchDefaultMap() {
   }
 }
 
+reservationForm.addEventListener('submit', submitReservation);
 fetchDefaultMap();

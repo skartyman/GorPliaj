@@ -1,49 +1,65 @@
-const reservations = [];
-let reservationId = 1;
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
 
 function getReservations() {
-  return reservations;
+  return prisma.reservation.findMany({
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
 }
 
 function createReservation(payload) {
-  const { guestName, phone, date, time, guests, zone, note } = payload;
+  const {
+    tableId,
+    mapId,
+    zoneId,
+    customerName,
+    customerPhone,
+    guests,
+    reservationDate,
+    timeFrom,
+    timeTo,
+    commentCustomer
+  } = payload;
 
-  const reservation = {
-    id: reservationId++,
-    guestName,
-    phone,
-    date,
-    time,
-    guests: Number(guests),
-    zone,
-    note: note || '',
-    status: 'new',
-    createdAt: new Date().toISOString()
-  };
-
-  reservations.push(reservation);
-  return reservation;
+  return prisma.reservation.create({
+    data: {
+      tableId,
+      mapId,
+      zoneId,
+      customerName,
+      customerPhone,
+      guests,
+      reservationDate,
+      timeFrom,
+      timeTo,
+      commentCustomer: commentCustomer || null
+    }
+  });
 }
 
 function updateReservationStatus(id, status) {
-  const reservation = reservations.find((item) => item.id === id);
-  if (!reservation) {
-    return null;
-  }
-
-  reservation.status = status;
-  return reservation;
+  return prisma.reservation.update({
+    where: { id },
+    data: { status }
+  });
 }
 
-function deleteReservation(id) {
-  const index = reservations.findIndex((item) => item.id === id);
+async function deleteReservation(id) {
+  try {
+    await prisma.reservation.delete({
+      where: { id }
+    });
+    return true;
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return false;
+    }
 
-  if (index === -1) {
-    return false;
+    throw error;
   }
-
-  reservations.splice(index, 1);
-  return true;
 }
 
 module.exports = {
