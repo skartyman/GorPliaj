@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import PageCard from '../components/PageCard';
+import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
-import { apiRequest, formatDateTime } from '../lib/api';
+import { apiRequest, formatDate, formatTime } from '../lib/api';
 
 function DetailRow({ label, value }) {
   return (
@@ -68,61 +68,54 @@ export default function ReservationDetailPage() {
 
   return (
     <AdminLayout>
-      <PageCard
+      <PanelCard
         title={`Reservation #${id}`}
-        description="Detailed reservation view with status workflow actions."
-        actions={<Link to="/admin/reservations">Back to list</Link>}
+        subtitle="Detailed reservation view with operator-friendly status actions."
+        actions={<Link to="/admin/reservations">Back to reservations</Link>}
       >
         {state.loading ? <p>Loading reservation...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
 
         {reservation ? (
-          <>
-            <div className="reservation-detail-summary">
-              <article className="summary-card">
-                <h3>Reservation summary</h3>
-                <div className="details-grid">
-                  <DetailRow label="Current status" value={<StatusPill status={reservation.status} />} />
-                  <DetailRow label="Date" value={formatDateTime(reservation.reservationDate)} />
-                  <DetailRow label="Time from" value={formatDateTime(reservation.timeFrom)} />
-                  <DetailRow label="Time to" value={formatDateTime(reservation.timeTo)} />
-                  <DetailRow label="Guests" value={reservation.guests} />
-                  <DetailRow label="Table" value={reservation.table?.code || reservation.table?.name || '-'} />
-                  <DetailRow label="Zone" value={reservation.zone?.name || '-'} />
-                  <DetailRow label="Map" value={reservation.map?.name || '-'} />
-                </div>
-              </article>
+          <div className="reservation-detail-grid">
+            <PanelCard title="Guest information" className="surface-muted">
+              <div className="details-grid compact">
+                <DetailRow label="Guest" value={reservation.customerName} />
+                <DetailRow label="Phone" value={reservation.customerPhone} />
+                <DetailRow label="Guests count" value={reservation.guests} />
+                <DetailRow label="Comments" value={reservation.commentCustomer || reservation.commentAdmin || '-'} />
+              </div>
+            </PanelCard>
 
-              <article className="summary-card">
-                <h3>Customer & contact</h3>
-                <div className="details-grid">
-                  <DetailRow label="Customer" value={reservation.customerName} />
-                  <DetailRow label="Phone" value={reservation.customerPhone} />
-                  <DetailRow label="Email" value={reservation.customerEmail || '-'} />
-                  <DetailRow label="Customer comments" value={reservation.commentCustomer || '-'} />
-                  <DetailRow label="Admin comments" value={reservation.commentAdmin || '-'} />
-                </div>
-              </article>
-            </div>
+            <PanelCard title="Reservation slot" className="surface-muted">
+              <div className="details-grid compact">
+                <DetailRow label="Date" value={formatDate(reservation.reservationDate)} />
+                <DetailRow label="Start time" value={formatTime(reservation.timeFrom)} />
+                <DetailRow label="Table" value={reservation.table?.code || reservation.table?.name || '-'} />
+                <DetailRow label="Zone" value={reservation.zone?.name || '-'} />
+                <DetailRow label="Status" value={<StatusPill status={reservation.status} />} />
+              </div>
+            </PanelCard>
 
-            <h3>Update status</h3>
-            <div className="actions prominent-actions">
-              {!allowedNextStatuses.length ? <p className="muted">No status changes available.</p> : null}
-              {allowedNextStatuses.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  className={getActionTone(status)}
-                  disabled={state.updating}
-                  onClick={() => onChangeStatus(status)}
-                >
-                  {state.updating ? 'Updating...' : `Set ${status}`}
-                </button>
-              ))}
-            </div>
-          </>
+            <PanelCard title="Status actions" subtitle="Use these actions to keep table flow updated." className="surface-muted">
+              <div className="actions prominent-actions">
+                {!allowedNextStatuses.length ? <p className="muted">No status changes available.</p> : null}
+                {allowedNextStatuses.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className={getActionTone(status)}
+                    disabled={state.updating}
+                    onClick={() => onChangeStatus(status)}
+                  >
+                    {state.updating ? 'Updating...' : `Set ${status}`}
+                  </button>
+                ))}
+              </div>
+            </PanelCard>
+          </div>
         ) : null}
-      </PageCard>
+      </PanelCard>
     </AdminLayout>
   );
 }

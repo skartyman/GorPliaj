@@ -13,7 +13,7 @@ const QUICK_ACTIONS = {
     { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
   ],
   CONFIRMED: [
-    { label: 'Complete', status: 'COMPLETED', className: 'btn btn-small btn-success' },
+    { label: 'Mark completed', status: 'COMPLETED', className: 'btn btn-small btn-success' },
     { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
   ]
 };
@@ -76,17 +76,34 @@ export default function ReservationsPage() {
   const columns = [
     {
       key: 'id',
-      label: 'ID',
-      render: (reservation) => <Link to={`/admin/reservations/${reservation.id}`}>{reservation.id}</Link>
+      label: 'Reservation',
+      render: (reservation) => (
+        <div>
+          <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link>
+          <div className="muted small">{reservation.customerName || 'Guest'}</div>
+        </div>
+      )
     },
-    { key: 'reservationDate', label: 'Date', render: (reservation) => formatDate(reservation.reservationDate) },
-    { key: 'timeFrom', label: 'Time', render: (reservation) => formatTime(reservation.timeFrom) },
-    { key: 'customerName', label: 'Guest' },
+    {
+      key: 'slot',
+      label: 'Date / Time',
+      render: (reservation) => (
+        <div>
+          <div>{formatDate(reservation.reservationDate)}</div>
+          <div className="muted small">{formatTime(reservation.timeFrom)}</div>
+        </div>
+      )
+    },
     { key: 'customerPhone', label: 'Phone' },
     {
       key: 'table',
       label: 'Table / Zone',
       render: (reservation) => `${reservation.table?.code || reservation.table?.name || '-'} / ${reservation.zone?.name || '-'}`
+    },
+    {
+      key: 'guests',
+      label: 'Guests',
+      render: (reservation) => reservation.guests || '-'
     },
     { key: 'status', label: 'Status', render: (reservation) => <StatusPill status={reservation.status} /> },
     {
@@ -143,20 +160,31 @@ export default function ReservationsPage() {
     }
   }
 
+  function onResetFilters() {
+    setSearch('');
+    setStatusFilter('ALL');
+    setDateFilter('');
+  }
+
   return (
     <AdminLayout>
       <PageContainer
         title="Reservations"
-        description="Live list of reservations from the existing admin API."
-        actions={<button className="btn btn-secondary" type="button" onClick={() => window.location.reload()}>Refresh</button>}
+        description="Operational reservation list from the current admin API with fast filtering and actions."
+        actions={(
+          <>
+            <button className="btn btn-secondary" type="button" onClick={onResetFilters}>Reset filters</button>
+            <button className="btn btn-secondary" type="button" onClick={() => window.location.reload()}>Refresh</button>
+          </>
+        )}
       >
         <FilterBar>
           <label>
-            Search
+            Search guest / phone
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by guest, phone, table, or id"
+              placeholder="Guest name or phone"
             />
           </label>
           <label>
@@ -174,6 +202,8 @@ export default function ReservationsPage() {
             </select>
           </label>
         </FilterBar>
+
+        <p className="muted table-meta">Showing {filteredRows.length} of {state.rows.length} reservations.</p>
 
         {state.loading ? <p>Loading reservations...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
