@@ -4,7 +4,11 @@ const { PrismaClient, MapStatus, MapObjectType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-const TEST_PASSWORD = 'gorpliaj-test-password';
+const adminSeedPassword = (process.env.ADMIN_SEED_PASSWORD || '').trim();
+
+if (!adminSeedPassword) {
+  throw new Error('ADMIN_SEED_PASSWORD is required to run prisma seed. Set it in your environment or .env file.');
+}
 
 async function hashPassword(password) {
   return bcrypt.hash(password, 10);
@@ -95,7 +99,7 @@ async function upsertMapObject(mapId, objectData) {
 }
 
 async function main() {
-  const adminPasswordHash = await hashPassword(TEST_PASSWORD);
+  const adminPasswordHash = await hashPassword(adminSeedPassword);
 
   await prisma.adminUser.upsert({
     where: { email: 'admin@gorpliaj.local' },
