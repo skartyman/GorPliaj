@@ -1,3 +1,4 @@
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { PrismaClient, MapStatus, MapObjectType } = require('@prisma/client');
 
