@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
+import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
-import { apiRequest } from '../lib/api';
+import { apiRequest, formatDate, formatTime } from '../lib/api';
 
 function getTimeKey(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -132,7 +134,7 @@ export default function MapPage() {
     <AdminLayout>
       <PageContainer
         title="Venue map operations"
-        description="Operational floor overview with live table status and reservation hints."
+        description="Operational floor map with visual table status and active reservation details."
       >
         {state.loading ? <p>Loading map...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
@@ -178,33 +180,25 @@ export default function MapPage() {
                 })}
               </div>
 
-              <aside className="map-side-panel">
-                <h3>Table details</h3>
-                {!selectedTable ? <p className="muted">Select a table from the map to see details and actions.</p> : null}
+              <PanelCard title="Table details" subtitle="Select a table from map to inspect and operate.">
+                {!selectedTable ? <p className="muted">Select a table to see detail and reservation context.</p> : null}
                 {selectedTable ? (
                   <>
                     <div className="details-grid compact">
-                      <div className="detail-row">
-                        <span className="muted">Table</span>
-                        <strong>{selectedTable.code || selectedTable.name}</strong>
-                      </div>
-                      <div className="detail-row">
-                        <span className="muted">Zone</span>
-                        <strong>{zoneMap.get(selectedTable.zoneId)?.name || '-'}</strong>
-                      </div>
-                      <div className="detail-row">
-                        <span className="muted">Availability</span>
-                        <StatusPill status={selectedStatus} />
-                      </div>
+                      <DetailRow label="Table" value={selectedTable.code || selectedTable.name} />
+                      <DetailRow label="Zone" value={zoneMap.get(selectedTable.zoneId)?.name || '-'} />
+                      <DetailRow label="Availability" value={<StatusPill status={selectedStatus} />} />
+                      <DetailRow label="Capacity" value={selectedTable.capacity || '-'} />
                     </div>
 
-                    <h4>Active reservation</h4>
+                    <h4>Active reservations</h4>
                     {!selectedReservations.length ? <p className="muted">No active reservation for this table.</p> : null}
                     {selectedReservations.length ? (
                       <ul className="plain-list compact">
-                        {selectedReservations.slice(0, 2).map((reservation) => (
+                        {selectedReservations.slice(0, 3).map((reservation) => (
                           <li key={reservation.id}>
-                            <strong>#{reservation.id}</strong> • {reservation.customerName || 'Guest'} • <StatusPill status={reservation.status} />
+                            <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || 'Guest'} •{' '}
+                            {formatDate(reservation.reservationDate)} {formatTime(reservation.timeFrom)} • <StatusPill status={reservation.status} />
                           </li>
                         ))}
                       </ul>
@@ -215,12 +209,15 @@ export default function MapPage() {
                         Hold table (soon)
                       </button>
                       <button type="button" className="btn btn-secondary" disabled>
+                        Free table (soon)
+                      </button>
+                      <button type="button" className="btn btn-secondary" disabled>
                         Move reservation (soon)
                       </button>
                     </div>
                   </>
                 ) : null}
-              </aside>
+              </PanelCard>
             </div>
 
             <div className="map-legend">
@@ -234,5 +231,14 @@ export default function MapPage() {
         ) : null}
       </PageContainer>
     </AdminLayout>
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="detail-row">
+      <span className="muted">{label}</span>
+      <strong>{value || '-'}</strong>
+    </div>
   );
 }

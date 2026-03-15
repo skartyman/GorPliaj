@@ -45,7 +45,12 @@ export default function DashboardPage() {
   }, [state.rows]);
 
   const upcoming = useMemo(
-    () => [...state.rows].sort((a, b) => new Date(a.timeFrom) - new Date(b.timeFrom)).slice(0, 7),
+    () => [...state.rows].sort((a, b) => new Date(a.timeFrom) - new Date(b.timeFrom)).slice(0, 6),
+    [state.rows]
+  );
+
+  const latest = useMemo(
+    () => [...state.rows].sort((a, b) => new Date(b.createdAt || b.timeFrom) - new Date(a.createdAt || a.timeFrom)).slice(0, 4),
     [state.rows]
   );
 
@@ -63,14 +68,14 @@ export default function DashboardPage() {
       <section className="grid-two-col">
         <PageCard title="Quick actions" description="Jump directly to frequent admin tasks.">
           <div className="actions">
-            <Link className="btn" to="/admin/reservations">Manage reservations</Link>
-            <Link className="btn btn-secondary" to="/admin/map">Open venue map</Link>
+            <Link className="btn" to="/admin/reservations">Open reservations</Link>
+            <Link className="btn btn-secondary" to="/admin/map">Open map</Link>
             <Link className="btn btn-secondary" to="/admin/news">Add news</Link>
             <Link className="btn btn-secondary" to="/admin/events">Add event</Link>
           </div>
         </PageCard>
 
-        <PageCard title="Upcoming reservations" description="Latest and upcoming reservations from the current API feed.">
+        <PageCard title="Upcoming reservations" description="Compact feed of latest and upcoming reservations from the live API.">
           {state.error ? <p className="error">{state.error}</p> : null}
           {!state.error && !upcoming.length ? <p className="muted">No upcoming reservations.</p> : null}
           {!state.error && upcoming.length ? (
@@ -82,6 +87,20 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
+          ) : null}
+
+          {latest.length ? (
+            <>
+              <h3 className="section-subtitle">Latest created</h3>
+              <ul className="plain-list compact">
+                {latest.map((item) => (
+                  <li key={`latest-${item.id}`}>
+                    <Link to={`/admin/reservations/${item.id}`}>#{item.id}</Link> • {item.customerName || 'Guest'} •{' '}
+                    <StatusPill status={item.status} />
+                  </li>
+                ))}
+              </ul>
+            </>
           ) : null}
         </PageCard>
       </section>
