@@ -19,7 +19,7 @@ const timeFromInput = reservationForm.elements.timeFrom;
 
 let selectedTable = null;
 let currentMapId = null;
-let availabilityState = { busyTableIds: [], heldTableIds: [] };
+let availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
 const tableElementsById = new Map();
 
 function showError(message) {
@@ -176,7 +176,7 @@ function getAvailabilityParams() {
 async function fetchAvailability() {
   const params = getAvailabilityParams();
   if (!params) {
-    availabilityState = { busyTableIds: [], heldTableIds: [] };
+    availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
     updateTableAvailabilityUI();
     return;
   }
@@ -191,11 +191,12 @@ async function fetchAvailability() {
     const data = await response.json();
     availabilityState = {
       busyTableIds: Array.isArray(data.busyTableIds) ? data.busyTableIds : [],
-      heldTableIds: Array.isArray(data.heldTableIds) ? data.heldTableIds : []
+      heldTableIds: Array.isArray(data.heldTableIds) ? data.heldTableIds : [],
+      freeTableIds: Array.isArray(data.freeTableIds) ? data.freeTableIds : []
     };
     updateTableAvailabilityUI();
   } catch (error) {
-    availabilityState = { busyTableIds: [], heldTableIds: [] };
+    availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
     updateTableAvailabilityUI();
   }
 }
@@ -248,7 +249,7 @@ async function submitReservation(event) {
     }
 
     reservationForm.reset();
-    availabilityState = { busyTableIds: [], heldTableIds: [] };
+    availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
     selectedTable = null;
     showReservationSuccess('Бронювання створено успішно. Очікуйте підтвердження від адміністратора.');
   } catch (error) {
@@ -273,4 +274,5 @@ async function fetchDefaultMap() {
 reservationForm.addEventListener('submit', submitReservation);
 reservationDateInput.addEventListener('change', fetchAvailability);
 timeFromInput.addEventListener('change', fetchAvailability);
+timeFromInput.addEventListener('input', fetchAvailability);
 fetchDefaultMap();
