@@ -136,6 +136,48 @@ body {
 }
 
 
+.date-quick-select {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 0.35rem;
+}
+
+.date-chip {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.4rem 0.45rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.date-chip strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.date-chip--active {
+  border-color: #5d2e8c;
+  background: #efe8ff;
+  color: #402161;
+}
+
+.map-object--free {
+  background: var(--table);
+  border-color: var(--table-border);
+  color: #fff;
+}
+
+.map-object--held {
+  background: #ffe7b3;
+  border-color: #c78c12;
+  color: #5a430f;
+}
+
+
 .map-object--table:disabled,
 .map-object--busy {
   background: #c6c0d1;
