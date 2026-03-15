@@ -14,6 +14,18 @@ function DetailRow({ label, value }) {
   );
 }
 
+function getActionTone(status) {
+  if (status === 'CANCELLED') {
+    return 'btn btn-danger';
+  }
+
+  if (status === 'COMPLETED') {
+    return 'btn btn-success';
+  }
+
+  return 'btn';
+}
+
 export default function ReservationDetailPage() {
   const { id } = useParams();
   const [state, setState] = useState({ loading: true, error: '', data: null, updating: false });
@@ -66,30 +78,41 @@ export default function ReservationDetailPage() {
 
         {reservation ? (
           <>
-            <div className="details-grid">
-              <DetailRow label="Customer" value={reservation.customerName} />
-              <DetailRow label="Phone" value={reservation.customerPhone} />
-              <DetailRow label="Email" value={reservation.customerEmail || '-'} />
-              <DetailRow label="Guests" value={reservation.guests} />
-              <DetailRow label="Date" value={formatDateTime(reservation.reservationDate)} />
-              <DetailRow label="Time from" value={formatDateTime(reservation.timeFrom)} />
-              <DetailRow label="Time to" value={formatDateTime(reservation.timeTo)} />
-              <DetailRow label="Table" value={reservation.table?.code || reservation.table?.name || '-'} />
-              <DetailRow label="Zone" value={reservation.zone?.name || '-'} />
-              <DetailRow label="Map" value={reservation.map?.name || '-'} />
-              <DetailRow label="Customer comments" value={reservation.commentCustomer || '-'} />
-              <DetailRow label="Admin comments" value={reservation.commentAdmin || '-'} />
-              <DetailRow label="Current status" value={<StatusPill status={reservation.status} />} />
+            <div className="reservation-detail-summary">
+              <article className="summary-card">
+                <h3>Reservation summary</h3>
+                <div className="details-grid">
+                  <DetailRow label="Current status" value={<StatusPill status={reservation.status} />} />
+                  <DetailRow label="Date" value={formatDateTime(reservation.reservationDate)} />
+                  <DetailRow label="Time from" value={formatDateTime(reservation.timeFrom)} />
+                  <DetailRow label="Time to" value={formatDateTime(reservation.timeTo)} />
+                  <DetailRow label="Guests" value={reservation.guests} />
+                  <DetailRow label="Table" value={reservation.table?.code || reservation.table?.name || '-'} />
+                  <DetailRow label="Zone" value={reservation.zone?.name || '-'} />
+                  <DetailRow label="Map" value={reservation.map?.name || '-'} />
+                </div>
+              </article>
+
+              <article className="summary-card">
+                <h3>Customer & contact</h3>
+                <div className="details-grid">
+                  <DetailRow label="Customer" value={reservation.customerName} />
+                  <DetailRow label="Phone" value={reservation.customerPhone} />
+                  <DetailRow label="Email" value={reservation.customerEmail || '-'} />
+                  <DetailRow label="Customer comments" value={reservation.commentCustomer || '-'} />
+                  <DetailRow label="Admin comments" value={reservation.commentAdmin || '-'} />
+                </div>
+              </article>
             </div>
 
-            <h3>Status Actions</h3>
-            <div className="actions">
+            <h3>Update status</h3>
+            <div className="actions prominent-actions">
               {!allowedNextStatuses.length ? <p className="muted">No status changes available.</p> : null}
               {allowedNextStatuses.map((status) => (
                 <button
                   key={status}
                   type="button"
-                  className={`btn ${status === 'CANCELLED' ? 'btn-danger' : ''}`}
+                  className={getActionTone(status)}
                   disabled={state.updating}
                   onClick={() => onChangeStatus(status)}
                 >
