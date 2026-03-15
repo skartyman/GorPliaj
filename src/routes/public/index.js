@@ -11,6 +11,7 @@ router.get('/menu', publicController.getMenu);
 router.get('/events', publicController.getEvents);
 router.get('/news', publicController.getNews);
 router.get('/maps/default', mapController.getDefaultMap);
+router.get('/maps/:mapId/availability', mapController.getMapAvailability);
 
 router.get('/reservations', reservationController.getReservations);
 router.post('/reservations', reservationController.createReservation);

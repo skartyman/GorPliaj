@@ -135,6 +135,15 @@ body {
   filter: brightness(1.03);
 }
 
+
+.map-object--table:disabled,
+.map-object--busy {
+  background: #c6c0d1;
+  border-color: #8f879e;
+  color: #f8f7fb;
+  cursor: not-allowed;
+}
+
 .map-object--static {
   background: var(--static);
   color: #4f3a72;
