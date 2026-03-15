@@ -1,0 +1,105 @@
+:root {
+  --bg: #f5f7fb;
+  --card: #ffffff;
+  --text: #20273a;
+  --muted: #65708a;
+  --primary: #1f63ff;
+  --danger: #d54343;
+  --border: #e2e7f2;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.admin-shell {
+  max-width: 1120px;
+  margin: 32px auto;
+  padding: 0 16px;
+}
+
+.admin-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(31, 49, 91, 0.06);
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-title { margin: 0; }
+.admin-subtitle { color: var(--muted); margin: 4px 0 0; }
+
+.form-group { margin-bottom: 14px; }
+label { display: block; margin-bottom: 6px; font-weight: bold; }
+input, textarea, select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+button.secondary { background: #6c7895; }
+button.danger { background: var(--danger); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.table-wrap { overflow-x: auto; }
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 10px 8px;
+  white-space: nowrap;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.status-pill.PENDING { background: #fff1cc; color: #8a5b00; }
+.status-pill.CONFIRMED { background: #dff7e5; color: #156b2f; }
+.status-pill.CANCELLED { background: #ffe4e4; color: #8f2020; }
+.status-pill.COMPLETED { background: #e3efff; color: #204f96; }
+
+.error { color: var(--danger); margin: 8px 0 0; }
+.info { color: var(--muted); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.detail-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fbfcff;
+}
+.small-link { color: var(--primary); text-decoration: none; }

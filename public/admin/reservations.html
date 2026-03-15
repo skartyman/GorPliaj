@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Reservations</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <main class="admin-shell">
+    <section class="admin-card">
+      <header class="admin-header">
+        <div>
+          <h1 class="admin-title">Reservations</h1>
+          <p class="admin-subtitle">Manage incoming bookings.</p>
+        </div>
+        <button id="logout-btn" class="secondary">Logout</button>
+      </header>
+
+      <p class="error" id="error-message"></p>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>reservationDate</th>
+              <th>timeFrom</th>
+              <th>customerName</th>
+              <th>customerPhone</th>
+              <th>table</th>
+              <th>zone</th>
+              <th>guests</th>
+              <th>status</th>
+            </tr>
+          </thead>
+          <tbody id="reservations-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/admin-reservations.js"></script>
+</body>
+</html>
