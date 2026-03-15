@@ -5,9 +5,9 @@ import { apiRequest } from '../lib/api';
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard' },
   { to: '/admin/reservations', label: 'Reservations' },
-  { to: '/admin/map', label: 'Venue map' },
+  { to: '/admin/map', label: 'Map' },
   { to: '/admin/menu', label: 'Menu' },
-  { to: '/admin/events', label: 'Events / Posters' },
+  { to: '/admin/events', label: 'Events' },
   { to: '/admin/news', label: 'News' },
   { to: '/admin/payments', label: 'Payments' },
   { to: '/admin/settings', label: 'Settings' }

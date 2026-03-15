@@ -47,6 +47,7 @@ p {
   position: sticky;
   top: 0;
   height: 100vh;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .brand {
@@ -104,6 +105,7 @@ p {
   gap: 16px;
 }
 
+.page-container,
 .card {
   background: #fff;
   border-radius: 14px;
@@ -111,6 +113,7 @@ p {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
+.page-container-head,
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -119,6 +122,7 @@ p {
   margin-bottom: 14px;
 }
 
+.page-container-head h2,
 .card-head h2 {
   margin-bottom: 4px;
 }
@@ -224,33 +228,41 @@ select {
   gap: 8px;
 }
 
-.toolbar {
+.filter-bar {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   margin-bottom: 10px;
 }
 
 .table-wrap {
   overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
 }
 
-table {
+.admin-table {
   border-collapse: collapse;
   width: 100%;
   min-width: 760px;
+  background: #fff;
 }
 
-th,
-td {
+.admin-table th,
+.admin-table td {
   text-align: left;
   padding: 12px 10px;
   border-bottom: 1px solid #e2e8f0;
   font-size: 14px;
 }
 
-th {
+.admin-table th {
   color: #334155;
+  background: #f8fafc;
+}
+
+.admin-table tbody tr:hover {
+  background: #f8fafc;
 }
 
 .status-pill {
@@ -301,14 +313,73 @@ th {
   gap: 10px;
 }
 
-.map-placeholder {
-  min-height: 300px;
-  border: 2px dashed #cbd5e1;
+.map-meta {
+  margin-bottom: 12px;
+}
+
+.admin-map-canvas {
+  position: relative;
   border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: repeating-linear-gradient(
+    0deg,
+    #f8fafc,
+    #f8fafc 24px,
+    #eef2f7 24px,
+    #eef2f7 25px
+  );
+  overflow: hidden;
+}
+
+.map-object {
+  position: absolute;
+  border-radius: 8px;
+  border: 1px solid #94a3b8;
+  background: #e2e8f0;
   display: grid;
   place-items: center;
+  font-size: 11px;
   text-align: center;
-  padding: 20px;
+  padding: 2px;
+}
+
+.map-object.available {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.map-object.reserved {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+.map-legend {
+  margin-top: 12px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #334155;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.dot.available {
+  background: #22c55e;
+}
+
+.dot.reserved {
+  background: #ef4444;
+}
+
+.dot.neutral {
+  background: #94a3b8;
 }
 
 .placeholder-grid {
