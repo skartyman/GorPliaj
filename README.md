@@ -80,3 +80,27 @@ npm run prisma:seed
 - `GET /api/maps/default`
 - `GET /api/admin/status` (placeholder)
 - `GET /api/payments/status` (placeholder)
+
+
+## Admin frontend (окремий React + Vite застосунок)
+
+Адмінка винесена в окремий фронтенд-додаток у межах цього репозиторію:
+
+- `admin-frontend/` — джерела React SPA (Vite).
+- `public/admin-app/` — production build адмінки, який віддає Express.
+- `src/app.js` — маршрути `/admin/*` віддають SPA, API лишається на `/api/admin/*`.
+
+### Маршрути адмінки
+
+- `/admin/login`
+- `/admin/reservations`
+- `/admin/reservations/:id`
+
+### Команди
+
+```bash
+npm run admin:dev
+npm run admin:build
+```
+
+Адмінка використовує cookie-based авторизацію і перевіряє сесію через `GET /api/admin/auth/me`.
