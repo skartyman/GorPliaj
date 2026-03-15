@@ -5,13 +5,10 @@ const { ADMIN_AUTH_SECRET, isLocalDevelopment } = require('../config/env');
 
 const prisma = new PrismaClient();
 
-const DEFAULT_DEV_ADMIN_AUTH_SECRET = 'gorpliaj-admin-secret';
-
-if (!isLocalDevelopment && !ADMIN_AUTH_SECRET) {
-  throw new Error('ADMIN_AUTH_SECRET must be set outside local development.');
+if (!ADMIN_AUTH_SECRET) {
+  const environmentLabel = isLocalDevelopment ? 'local development' : 'non-development environments';
+  throw new Error(`ADMIN_AUTH_SECRET must be set for admin authentication in ${environmentLabel}.`);
 }
-
-const resolvedAdminAuthSecret = ADMIN_AUTH_SECRET || DEFAULT_DEV_ADMIN_AUTH_SECRET;
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 
 function encodePayload(payload) {
@@ -29,7 +26,7 @@ function decodePayload(tokenPart) {
 
 function signTokenPart(tokenPart) {
   return crypto
-    .createHmac('sha256', resolvedAdminAuthSecret)
+    .createHmac('sha256', ADMIN_AUTH_SECRET)
     .update(tokenPart)
     .digest('base64url');
 }
