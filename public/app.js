@@ -1,8 +1,13 @@
 const menuList = document.getElementById('menuList');
 const reservationList = document.getElementById('reservationList');
 const reservationForm = document.getElementById('reservationForm');
+const reservationFormState = document.getElementById('reservationFormState');
 const installBtn = document.getElementById('installBtn');
 const langButtons = document.querySelectorAll('.lang-btn');
+const heroMenuCount = document.getElementById('heroMenuCount');
+const heroReservationCount = document.getElementById('heroReservationCount');
+const menuCountChip = document.getElementById('menuCountChip');
+const reservationCountChip = document.getElementById('reservationCountChip');
 
 let deferredPrompt;
 let currentLanguage = localStorage.getItem('language') || 'uk';
@@ -12,20 +17,45 @@ let menuCache = [];
 const translations = {
   uk: {
     pageTitle: 'ГорПляж — Одеса, пляж Отрада',
+    brandSubtitle: 'Beach · Restaurant · Events',
+    heroEyebrow: 'Пляжний комплекс в Одесі',
     heroTitle: 'ГорПляж в Одесі',
     heroSubtitle: 'Пляж Отрада, море та відпочинок зі смаком — усе в одному місці.',
+    heroDescription: 'Меню, онлайн-бронювання, карта столів та анонси подій зібрані в одному сучасному інтерфейсі для гостей.',
+    heroPrimaryCta: 'Забронювати онлайн',
+    heroSecondaryCta: 'Відкрити карту столів',
+    highlightMenu: 'Позицій меню',
+    highlightReservations: 'Активних броней',
+    highlightZones: 'Основних зон',
+    heroPanelLabel: 'Готово до графіки',
+    heroPanelTitle: 'Сучасний публічний фронт для гостей',
+    heroPanelText: 'Простий шлях від першого враження до бронювання столу: меню, події, карта та контактна інформація працюють як єдина система.',
+    service1Title: 'Онлайн бронювання',
+    service1Text: 'Створення заявки за хвилину прямо з головної.',
+    service2Title: 'Інтерактивна карта',
+    service2Text: 'Швидкий перехід до вибору конкретного столу.',
+    service3Title: 'Події та акції',
+    service3Text: 'Анонси та спецпропозиції для залучення гостей.',
     langUk: 'Українська',
     langEn: 'Англійська',
-    siteMenu: 'Меню сайту ▾',
     navAbout: 'Про заклад',
     navMenu: 'Меню',
     navBooking: 'Бронювання',
-    navBookingMap: 'Карта столів',
+    navEvents: 'Події',
     navContacts: 'Контакти',
     installApp: 'Встановити як застосунок',
+    aboutKicker: 'Про простір',
     aboutTitle: 'Про заклад',
     aboutText: 'ГорПляж — це пляжний простір в Одесі на пляжі Отрада, де можна поснідати біля моря, провести вечір на терасі й організувати відпочинок для компанії.',
+    metricSea: 'Локація',
+    metricSeaValue: 'Перша лінія біля моря',
+    metricKitchen: 'Формат',
+    metricKitchenValue: 'Ресторан + пляж + події',
+    metricBooking: 'Сервіс',
+    metricBookingValue: 'Онлайн бронювання і карта',
+    menuKicker: 'Kitchen & bar',
     menuTitle: 'Меню комплексу',
+    bookingKicker: 'Fast reservation',
     bookingTitle: 'Онлайн-бронювання',
     guestName: 'Ім’я гостя',
     phone: 'Телефон',
@@ -41,6 +71,13 @@ const translations = {
     note: 'Побажання',
     createReservation: 'Створити бронювання',
     bookingMapCta: 'Відкрити карту столів',
+    bookingAsideLabel: 'Як це працює',
+    bookingAsideSecondaryLabel: 'Для візуальної вставки',
+    bookingFeature1: 'Заповніть коротку форму бронювання.',
+    bookingFeature2: 'Оберіть бажану зону відпочинку.',
+    bookingFeature3: 'Для точного вибору скористайтесь картою столів.',
+    bookingGraphicHint: 'Hero/background: 1600×900, promo cards: 3:2, icons: 128×128 PNG/SVG.',
+    eventsKicker: 'Live atmosphere',
     eventsTitle: 'Афіша та анонси',
     event1Title: 'П’ятничні заходи сонця з діджеєм',
     event1Text: 'Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.',
@@ -48,15 +85,21 @@ const translations = {
     event2Text: 'Субота та неділя — анімація для дітей і зона сімейного відпочинку.',
     event3Title: 'Кіно просто неба',
     event3Text: 'Щочетверга після заходу сонця — покази фільмів біля моря.',
+    newsKicker: 'Special offers',
     newsTitle: 'Новини та акції',
     promo1: 'З 10:00 до 12:00 — знижка 20% на сніданки.',
     promo2: 'Комбо «Пляжний день»: шезлонг + лимонад + салат за спеціальною ціною.',
     promo3: 'Іменинникам — десерт у подарунок під час бронювання столу.',
+    reservationsKicker: 'Live feed',
     reservationsTitle: 'Список бронювань',
     reservationsHint: 'Змінюйте статус бронювання: нове → підтверджене → скасоване.',
+    contactsKicker: 'Contact us',
     contactsTitle: 'Контакти',
+    addressLabel: 'Адреса',
+    phoneLabel: 'Телефон',
     address: 'Одеса, пляж Отрада',
     noReservations: 'Поки немає бронювань. Створіть перше!',
+    noMenu: 'Меню тимчасово недоступне.',
     reservationStatus: 'Статус',
     statusNew: 'нове',
     statusConfirmed: 'підтверджене',
@@ -64,25 +107,53 @@ const translations = {
     changeStatus: 'Змінити статус',
     delete: 'Видалити',
     reservationError: 'Не вдалося створити бронювання. Перевірте поля форми.',
+    reservationSuccess: 'Бронювання створено. Ми вже готуємо найкраще місце для вас.',
     loadingError: 'Помилка завантаження даних. Перевірте сервер.',
-    guestsWord: 'гостей'
+    guestsWord: 'гостей',
+    menuItemsCount: 'позицій',
+    reservationsCount: 'броней'
   },
   en: {
     pageTitle: 'GorPliaj — Odesa, Otrada Beach',
+    brandSubtitle: 'Beach · Restaurant · Events',
+    heroEyebrow: 'Beach venue in Odesa',
     heroTitle: 'GorPliaj in Odesa',
     heroSubtitle: 'Otrada Beach, sea views, and quality relaxation all in one place.',
+    heroDescription: 'Menu, online booking, table map, and event updates are combined into one modern guest interface.',
+    heroPrimaryCta: 'Book online',
+    heroSecondaryCta: 'Open table map',
+    highlightMenu: 'Menu items',
+    highlightReservations: 'Active bookings',
+    highlightZones: 'Main zones',
+    heroPanelLabel: 'Graphics ready',
+    heroPanelTitle: 'Modern guest-facing frontend',
+    heroPanelText: 'A clean path from first impression to table booking: menu, events, map, and contact details work together as one flow.',
+    service1Title: 'Online booking',
+    service1Text: 'Create a booking request in a minute from the homepage.',
+    service2Title: 'Interactive map',
+    service2Text: 'Jump quickly to a specific table selection.',
+    service3Title: 'Events and offers',
+    service3Text: 'Announcements and promotions to attract guests.',
     langUk: 'Ukrainian',
     langEn: 'English',
-    siteMenu: 'Site menu ▾',
     navAbout: 'About',
     navMenu: 'Menu',
     navBooking: 'Booking',
-    navBookingMap: 'Table map',
+    navEvents: 'Events',
     navContacts: 'Contacts',
     installApp: 'Install as app',
+    aboutKicker: 'About the venue',
     aboutTitle: 'About',
     aboutText: 'GorPliaj is a beach venue in Odesa on Otrada Beach where you can have breakfast by the sea, spend an evening on the terrace, and organize leisure time for your group.',
+    metricSea: 'Location',
+    metricSeaValue: 'First line by the sea',
+    metricKitchen: 'Format',
+    metricKitchenValue: 'Restaurant + beach + events',
+    metricBooking: 'Service',
+    metricBookingValue: 'Online booking and map',
+    menuKicker: 'Kitchen & bar',
     menuTitle: 'Venue menu',
+    bookingKicker: 'Fast reservation',
     bookingTitle: 'Online booking',
     guestName: 'Guest name',
     phone: 'Phone',
@@ -98,6 +169,13 @@ const translations = {
     note: 'Notes',
     createReservation: 'Create booking',
     bookingMapCta: 'Open table map',
+    bookingAsideLabel: 'How it works',
+    bookingAsideSecondaryLabel: 'For graphic inserts',
+    bookingFeature1: 'Fill in the short booking form.',
+    bookingFeature2: 'Choose your preferred area.',
+    bookingFeature3: 'Use the table map for precise table selection.',
+    bookingGraphicHint: 'Hero/background: 1600×900, promo cards: 3:2, icons: 128×128 PNG/SVG.',
+    eventsKicker: 'Live atmosphere',
     eventsTitle: 'Events and announcements',
     event1Title: 'Friday sunsets with DJ',
     event1Text: 'Every Friday from 19:00 — beach music evenings and signature cocktails.',
@@ -105,15 +183,21 @@ const translations = {
     event2Text: 'Saturday and Sunday — kids activities and family recreation area.',
     event3Title: 'Open-air cinema',
     event3Text: 'Every Thursday after sunset — movie screenings by the sea.',
+    newsKicker: 'Special offers',
     newsTitle: 'News and offers',
     promo1: 'From 10:00 to 12:00 — 20% discount on breakfasts.',
     promo2: '"Beach Day" combo: sunbed + lemonade + salad at a special price.',
     promo3: 'Birthday guests get a complimentary dessert with table booking.',
+    reservationsKicker: 'Live feed',
     reservationsTitle: 'Booking list',
     reservationsHint: 'Cycle booking status: new → confirmed → cancelled.',
+    contactsKicker: 'Contact us',
     contactsTitle: 'Contacts',
+    addressLabel: 'Address',
+    phoneLabel: 'Phone',
     address: 'Odesa, Otrada Beach',
     noReservations: 'No bookings yet. Create the first one!',
+    noMenu: 'Menu is temporarily unavailable.',
     reservationStatus: 'Status',
     statusNew: 'new',
     statusConfirmed: 'confirmed',
@@ -121,8 +205,11 @@ const translations = {
     changeStatus: 'Change status',
     delete: 'Delete',
     reservationError: 'Could not create booking. Please check form fields.',
+    reservationSuccess: 'Booking created. We are already preparing the best spot for you.',
     loadingError: 'Data loading error. Please check the server.',
-    guestsWord: 'guests'
+    guestsWord: 'guests',
+    menuItemsCount: 'items',
+    reservationsCount: 'bookings'
   }
 };
 
@@ -133,6 +220,22 @@ function statusLabels() {
     confirmed: dictionary.statusConfirmed,
     cancelled: dictionary.statusCancelled
   };
+}
+
+function updateCounters() {
+  const dictionary = translations[currentLanguage];
+  const reservationCount = reservationsCache.length;
+  const menuCount = menuCache.length;
+
+  heroMenuCount.textContent = menuCount;
+  heroReservationCount.textContent = reservationCount;
+  menuCountChip.textContent = `${menuCount} ${dictionary.menuItemsCount}`;
+  reservationCountChip.textContent = `${reservationCount} ${dictionary.reservationsCount}`;
+}
+
+function setFormState(message = '', tone = '') {
+  reservationFormState.textContent = message;
+  reservationFormState.className = `form-state${message ? '' : ' hidden'}${tone ? ` is-${tone}` : ''}`;
 }
 
 function translatePage() {
@@ -153,18 +256,26 @@ function translatePage() {
 
   renderMenu(menuCache);
   renderReservations(reservationsCache);
+  updateCounters();
 }
 
 function renderMenu(menu) {
+  const dictionary = translations[currentLanguage];
+
+  if (!menu.length) {
+    menuList.innerHTML = `<li class="menu-item"><div><strong>${dictionary.noMenu}</strong></div></li>`;
+    return;
+  }
+
   menuList.innerHTML = menu
     .map(
       (item) => `
       <li class="menu-item">
         <div>
-          <strong>${item.name[currentLanguage] || item.name.uk}</strong><br/>
-          <small>${item.category[currentLanguage] || item.category.uk}</small>
+          <strong>${item.name[currentLanguage] || item.name.uk}</strong>
+          <p class="menu-meta">${item.category[currentLanguage] || item.category.uk}</p>
         </div>
-        <span>${item.price} ₴</span>
+        <span class="menu-price">${item.price} ₴</span>
       </li>`
     )
     .join('');
@@ -181,7 +292,7 @@ function renderReservations(reservations) {
   const statuses = statusLabels();
 
   if (!reservations.length) {
-    reservationList.innerHTML = `<p>${dictionary.noReservations}</p>`;
+    reservationList.innerHTML = `<p class="reservation-meta">${dictionary.noReservations}</p>`;
     return;
   }
 
@@ -189,10 +300,12 @@ function renderReservations(reservations) {
     .map(
       (item) => `
       <article class="reservation-item">
-        <strong>#${item.id} — ${item.guestName}</strong>
-        <span>${item.date} ${item.time} • ${item.guests} ${dictionary.guestsWord} • ${item.zone}</span>
-        <span class="status-${item.status}">${dictionary.reservationStatus}: ${statuses[item.status] || item.status}</span>
-        <small>${item.phone}${item.note ? ` • ${item.note}` : ''}</small>
+        <div>
+          <strong>#${item.id} — ${item.guestName}</strong>
+        </div>
+        <p class="reservation-meta">${item.date} ${item.time} • ${item.guests} ${dictionary.guestsWord} • ${item.zone}</p>
+        <span class="reservation-status status-${item.status}">${dictionary.reservationStatus}: ${statuses[item.status] || item.status}</span>
+        <p class="reservation-meta">${item.phone}${item.note ? ` • ${item.note}` : ''}</p>
         <div class="reservation-actions">
           <button data-action="toggle" data-id="${item.id}" data-status="${item.status}">${dictionary.changeStatus}</button>
           <button data-action="delete" data-id="${item.id}">${dictionary.delete}</button>
@@ -206,18 +319,21 @@ async function fetchMenu() {
   const response = await fetch('/api/menu');
   menuCache = await response.json();
   renderMenu(menuCache);
+  updateCounters();
 }
 
 async function fetchReservations() {
   const response = await fetch('/api/reservations');
   reservationsCache = await response.json();
   renderReservations(reservationsCache);
+  updateCounters();
 }
 
 reservationForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const formData = new FormData(reservationForm);
   const payload = Object.fromEntries(formData.entries());
+  setFormState('');
 
   const response = await fetch('/api/reservations', {
     method: 'POST',
@@ -226,11 +342,12 @@ reservationForm.addEventListener('submit', async (event) => {
   });
 
   if (!response.ok) {
-    alert(translations[currentLanguage].reservationError);
+    setFormState(translations[currentLanguage].reservationError, 'error');
     return;
   }
 
   reservationForm.reset();
+  setFormState(translations[currentLanguage].reservationSuccess, 'success');
   await fetchReservations();
 });
 
@@ -290,5 +407,5 @@ Promise.all([fetchMenu(), fetchReservations()])
     translatePage();
   })
   .catch(() => {
-    reservationList.innerHTML = `<p>${translations[currentLanguage].loadingError}</p>`;
+    reservationList.innerHTML = `<p class="reservation-meta">${translations[currentLanguage].loadingError}</p>`;
   });
