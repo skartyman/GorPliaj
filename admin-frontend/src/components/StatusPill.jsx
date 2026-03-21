@@ -1,3 +1,5 @@
+import { useAdminI18n } from '../lib/i18n';
+
 const STATUS_CLASS_MAP = {
   PENDING: 'pending',
   CONFIRMED: 'success',
@@ -12,6 +14,9 @@ const STATUS_CLASS_MAP = {
 };
 
 export default function StatusPill({ status }) {
+  const { t } = useAdminI18n();
   const tone = STATUS_CLASS_MAP[status] || 'neutral';
-  return <span className={`status-pill ${tone}`}>{status || 'UNKNOWN'}</span>;
+  const label = t(`status.${status || 'UNKNOWN'}`);
+
+  return <span className={`status-pill ${tone}`}>{label}</span>;
 }

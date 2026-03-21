@@ -1,62 +1,64 @@
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import PanelCard from '../components/PanelCard';
-
-const defaultStats = [
-  { label: 'Ready modules', value: '03' },
-  { label: 'Mobile states', value: '06' },
-  { label: 'Primary flows', value: '04' }
-];
-
-const defaultSections = [
-  {
-    title: 'What is ready now',
-    items: [
-      'Focused hero with the most important operator actions.',
-      'Compact mobile cards and wider desktop layout.',
-      'Clear placeholders for future CRUD and API integration.'
-    ]
-  },
-  {
-    title: 'Next implementation steps',
-    items: [
-      'Connect live API endpoints and replace static previews.',
-      'Add create / edit flows with validation and drafts.',
-      'Expand analytics and alerts for daily operations.'
-    ]
-  }
-];
-
-const defaultTimeline = [
-  'Define content structure and priorities for the section.',
-  'Prepare compact cards and navigation for mobile first usage.',
-  'Connect publishing workflow and operational actions.'
-];
+import { useAdminI18n } from '../lib/i18n';
 
 export default function PlaceholderPage({
   title,
   description,
-  eyebrow = 'Workspace',
-  stats = defaultStats,
-  sections = defaultSections,
-  timeline = defaultTimeline,
-  ctaLabel = 'Planned for next iteration'
+  eyebrow,
+  stats,
+  sections,
+  timeline,
+  ctaLabel
 }) {
+  const { t } = useAdminI18n();
+  const defaultStats = [
+    { label: t('placeholder.sections.ready'), value: '03' },
+    { label: t('reservations.summary.visible'), value: '06' },
+    { label: t('placeholder.defaults.eyebrow'), value: '04' }
+  ];
+  const defaultSections = [
+    {
+      title: t('placeholder.sections.ready'),
+      items: [
+        t('placeholder.items.ready1'),
+        t('placeholder.items.ready2'),
+        t('placeholder.items.ready3')
+      ]
+    },
+    {
+      title: t('placeholder.sections.next'),
+      items: [
+        t('placeholder.items.next1'),
+        t('placeholder.items.next2'),
+        t('placeholder.items.next3')
+      ]
+    }
+  ];
+  const defaultTimeline = [
+    t('placeholder.timeline.step1'),
+    t('placeholder.timeline.step2'),
+    t('placeholder.timeline.step3')
+  ];
+
+  const resolvedStats = stats?.length ? stats : defaultStats;
+  const resolvedSections = sections?.length ? sections : defaultSections;
+  const resolvedTimeline = timeline?.length ? timeline : defaultTimeline;
+
   return (
     <AdminLayout>
       <PageContainer title={title} description={description}>
         <section className="page-hero">
           <div className="page-hero-copy">
-            <span className="eyebrow">{eyebrow}</span>
-            <h3>{title} workspace</h3>
-            <p className="muted">
-              {description} The page is already structured for operators on small screens first, then expanded for tablet and desktop.
-            </p>
-            <div className="hero-inline-note">{ctaLabel}</div>
+            <span className="eyebrow">{eyebrow || t('placeholder.defaults.eyebrow')}</span>
+            <h3>{`${title} ${t('placeholder.workspaceSuffix')}`}</h3>
+            <p className="muted">{t('placeholder.heroDescription', { description })}</p>
+            <div className="hero-inline-note">{ctaLabel || t('placeholder.defaults.cta')}</div>
           </div>
 
           <div className="hero-stat-grid">
-            {stats.map((item) => (
+            {resolvedStats.map((item) => (
               <article key={item.label} className="hero-stat-card">
                 <strong>{item.value}</strong>
                 <span className="muted">{item.label}</span>
@@ -66,7 +68,7 @@ export default function PlaceholderPage({
         </section>
 
         <section className="stack-grid">
-          {sections.map((section) => (
+          {resolvedSections.map((section) => (
             <PanelCard key={section.title} title={section.title} className="surface-muted full-height">
               <ul className="feature-list">
                 {section.items.map((item) => (
@@ -77,9 +79,13 @@ export default function PlaceholderPage({
           ))}
         </section>
 
-        <PanelCard title="Launch checklist" subtitle="A compact rollout path that works well on mobile and desktop." className="surface-muted">
+        <PanelCard
+          title={t('placeholder.launchChecklist')}
+          subtitle={t('placeholder.launchChecklistDescription')}
+          className="surface-muted"
+        >
           <ol className="timeline-list">
-            {timeline.map((item) => (
+            {resolvedTimeline.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ol>

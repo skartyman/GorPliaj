@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
+import { useAdminI18n } from '../lib/i18n';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useAdminI18n();
 
   useEffect(() => {
     apiRequest('/api/admin/auth/me').then(({ response }) => {
@@ -34,7 +36,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!response.ok) {
-      setError(body.message || 'Login failed.');
+      setError(body.message || t('login.error'));
       return;
     }
 
@@ -45,33 +47,33 @@ export default function LoginPage() {
     <div className="page page-center auth-page">
       <section className="login-shell card">
         <div className="login-intro">
-          <span className="eyebrow">Admin access</span>
-          <h1>GorPliaj control room</h1>
-          <p className="muted">A mobile-first sign-in screen for reservation, map, and content operations.</p>
+          <span className="eyebrow">{t('login.eyebrow')}</span>
+          <h1>{t('login.title')}</h1>
+          <p className="muted">{t('login.description')}</p>
           <div className="hero-stat-grid mini">
             <article className="hero-stat-card">
               <strong>24/7</strong>
-              <span className="muted">Access</span>
+              <span className="muted">{t('login.access')}</span>
             </article>
             <article className="hero-stat-card">
               <strong>01</strong>
-              <span className="muted">Unified admin</span>
+              <span className="muted">{t('login.admin')}</span>
             </article>
           </div>
         </div>
 
         <form className="login-card form-stack" onSubmit={onSubmit}>
           <label>
-            Email
+            {t('login.email')}
             <input name="email" type="email" required autoComplete="username" />
           </label>
           <label>
-            Password
+            {t('login.password')}
             <input name="password" type="password" required autoComplete="current-password" />
           </label>
           {error ? <p className="error">{error}</p> : null}
           <button className="btn" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
       </section>

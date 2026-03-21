@@ -6,17 +6,7 @@ import FilterBar from '../components/FilterBar';
 import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
-
-const QUICK_ACTIONS = {
-  PENDING: [
-    { label: 'Confirm', status: 'CONFIRMED', className: 'btn btn-small' },
-    { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
-  ],
-  CONFIRMED: [
-    { label: 'Mark completed', status: 'COMPLETED', className: 'btn btn-small btn-success' },
-    { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
-  ]
-};
+import { useAdminI18n } from '../lib/i18n';
 
 export default function ReservationsPage() {
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
@@ -24,21 +14,36 @@ export default function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState('');
+  const { t, locale } = useAdminI18n();
+
+  const quickActions = useMemo(
+    () => ({
+      PENDING: [
+        { label: t('reservations.actions.confirm'), status: 'CONFIRMED', className: 'btn btn-small' },
+        { label: t('reservations.actions.cancel'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+      ],
+      CONFIRMED: [
+        { label: t('reservations.actions.complete'), status: 'COMPLETED', className: 'btn btn-small btn-success' },
+        { label: t('reservations.actions.cancel'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+      ]
+    }),
+    [t]
+  );
 
   useEffect(() => {
     apiRequest('/api/admin/reservations')
       .then(({ response, body }) => {
         if (!response.ok) {
-          setState({ loading: false, error: body.message || 'Failed to load reservations.', rows: [] });
+          setState({ loading: false, error: body.message || t('reservations.errors.load'), rows: [] });
           return;
         }
 
         setState({ loading: false, error: '', rows: Array.isArray(body) ? body : [] });
       })
       .catch(() => {
-        setState({ loading: false, error: 'Failed to load reservations.', rows: [] });
+        setState({ loading: false, error: t('reservations.errors.load'), rows: [] });
       });
-  }, []);
+  }, [t]);
 
   const statuses = useMemo(
     () => ['ALL', ...new Set(state.rows.map((row) => row.status).filter(Boolean))],
@@ -79,53 +84,79 @@ export default function ReservationsPage() {
     const guests = filteredRows.reduce((total, row) => total + (Number(row.guests) || 0), 0);
 
     return [
-      { label: 'Visible bookings', value: filteredRows.length },
-      { label: 'Pending', value: pending },
-      { label: 'Confirmed', value: confirmed },
-      { label: 'Guests total', value: guests }
+      { label: t('reservations.summary.visible'), value: filteredRows.length },
+      { label: t('reservations.summary.pending'), value: pending },
+      { label: t('reservations.summary.confirmed'), value: confirmed },
+      { label: t('reservations.summary.guests'), value: guests }
     ];
-  }, [filteredRows]);
+  }, [filteredRows, t]);
+
+  async function onQuickAction(id, status) {
+    try {
+      setActionLoadingId(id);
+      const { response, body } = await apiRequest(`/api/admin/reservations/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        setState((prev) => ({ ...prev, error: body.message || t('reservations.errors.update') }));
+        setActionLoadingId('');
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        error: '',
+        rows: prev.rows.map((row) => (row.id === id ? { ...row, status: body?.reservation?.status || status } : row))
+      }));
+    } catch {
+      setState((prev) => ({ ...prev, error: t('reservations.errors.update') }));
+    } finally {
+      setActionLoadingId('');
+    }
+  }
 
   const columns = [
     {
       key: 'id',
-      label: 'Reservation',
+      label: t('reservations.columns.reservation'),
       render: (reservation) => (
         <div>
           <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link>
-          <div className="muted small">{reservation.customerName || 'Guest'}</div>
+          <div className="muted small">{reservation.customerName || t('common.guest')}</div>
         </div>
       )
     },
     {
       key: 'slot',
-      label: 'Date / Time',
+      label: t('reservations.columns.dateTime'),
       render: (reservation) => (
         <div>
-          <div>{formatDate(reservation.reservationDate)}</div>
-          <div className="muted small">{formatTime(reservation.timeFrom)}</div>
+          <div>{formatDate(reservation.reservationDate, locale)}</div>
+          <div className="muted small">{formatTime(reservation.timeFrom, locale)}</div>
         </div>
       )
     },
-    { key: 'customerPhone', label: 'Phone' },
+    { key: 'customerPhone', label: t('reservations.columns.phone') },
     {
       key: 'table',
-      label: 'Table / Zone',
-      render: (reservation) => `${reservation.table?.code || reservation.table?.name || '-'} / ${reservation.zone?.name || '-'}`
+      label: t('reservations.columns.tableZone'),
+      render: (reservation) => `${reservation.table?.code || reservation.table?.name || '—'} / ${reservation.zone?.name || '—'}`
     },
     {
       key: 'guests',
-      label: 'Guests',
-      render: (reservation) => reservation.guests || '-'
+      label: t('reservations.columns.guests'),
+      render: (reservation) => reservation.guests || '—'
     },
-    { key: 'status', label: 'Status', render: (reservation) => <StatusPill status={reservation.status} /> },
+    { key: 'status', label: t('reservations.columns.status'), render: (reservation) => <StatusPill status={reservation.status} /> },
     {
       key: 'actions',
-      label: 'Quick actions',
+      label: t('reservations.columns.actions'),
       render: (reservation) => {
-        const actions = QUICK_ACTIONS[reservation.status] || [];
+        const actions = quickActions[reservation.status] || [];
         if (!actions.length) {
-          return <span className="muted">No actions</span>;
+          return <span className="muted">{t('reservations.actions.none')}</span>;
         }
 
         return (
@@ -138,7 +169,7 @@ export default function ReservationsPage() {
                 disabled={actionLoadingId === reservation.id}
                 onClick={() => onQuickAction(reservation.id, action.status)}
               >
-                {actionLoadingId === reservation.id ? 'Saving...' : action.label}
+                {actionLoadingId === reservation.id ? t('reservations.actions.save') : action.label}
               </button>
             ))}
           </div>
@@ -146,32 +177,6 @@ export default function ReservationsPage() {
       }
     }
   ];
-
-  async function onQuickAction(id, status) {
-    try {
-      setActionLoadingId(id);
-      const { response, body } = await apiRequest(`/api/admin/reservations/${id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status })
-      });
-
-      if (!response.ok) {
-        setState((prev) => ({ ...prev, error: body.message || 'Failed to update reservation status.' }));
-        setActionLoadingId('');
-        return;
-      }
-
-      setState((prev) => ({
-        ...prev,
-        error: '',
-        rows: prev.rows.map((row) => (row.id === id ? { ...row, status: body?.reservation?.status || status } : row))
-      }));
-    } catch {
-      setState((prev) => ({ ...prev, error: 'Failed to update reservation status.' }));
-    } finally {
-      setActionLoadingId('');
-    }
-  }
 
   function onResetFilters() {
     setSearch('');
@@ -182,20 +187,20 @@ export default function ReservationsPage() {
   return (
     <AdminLayout>
       <PageContainer
-        title="Reservations"
-        description="Operational reservation list with mobile-first filtering and status actions."
+        title={t('reservations.title')}
+        description={t('reservations.description')}
         actions={(
           <>
-            <button className="btn btn-secondary" type="button" onClick={onResetFilters}>Reset filters</button>
-            <button className="btn btn-secondary" type="button" onClick={() => window.location.reload()}>Refresh</button>
+            <button className="btn btn-secondary" type="button" onClick={onResetFilters}>{t('reservations.resetFilters')}</button>
+            <button className="btn btn-secondary" type="button" onClick={() => window.location.reload()}>{t('reservations.refresh')}</button>
           </>
         )}
       >
         <section className="page-hero compact">
           <div className="page-hero-copy">
-            <span className="eyebrow">Live bookings</span>
-            <h3>Fast lookup and actions for service staff</h3>
-            <p className="muted">Filters stay stacked and thumb-friendly on small screens, while the data table remains available for wider layouts.</p>
+            <span className="eyebrow">{t('reservations.eyebrow')}</span>
+            <h3>{t('reservations.heroTitle')}</h3>
+            <p className="muted">{t('reservations.heroDescription')}</p>
           </div>
           <div className="hero-stat-grid mini">
             {summary.map((item) => (
@@ -209,35 +214,35 @@ export default function ReservationsPage() {
 
         <FilterBar>
           <label>
-            Search guest / phone
+            {t('reservations.searchLabel')}
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Guest name or phone"
+              placeholder={t('reservations.searchPlaceholder')}
             />
           </label>
           <label>
-            Date
+            {t('reservations.dateLabel')}
             <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
           </label>
           <label>
-            Status
+            {t('reservations.statusLabel')}
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               {statuses.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {status === 'ALL' ? t('reservations.statuses.all') : t(`status.${status}`)}
                 </option>
               ))}
             </select>
           </label>
         </FilterBar>
 
-        <p className="muted table-meta">Showing {filteredRows.length} of {state.rows.length} reservations.</p>
+        <p className="muted table-meta">{t('reservations.showing', { visible: filteredRows.length, total: state.rows.length })}</p>
 
-        {state.loading ? <p>Loading reservations...</p> : null}
+        {state.loading ? <p>{t('reservations.loading')}</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
         {!state.loading && !state.error ? (
-          <DataTable columns={columns} rows={filteredRows} emptyText="No reservations found for this filter." />
+          <DataTable columns={columns} rows={filteredRows} emptyText={t('reservations.empty')} />
         ) : null}
       </PageContainer>
     </AdminLayout>

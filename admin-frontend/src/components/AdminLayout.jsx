@@ -1,28 +1,30 @@
 import { useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
+import { useAdminI18n } from '../lib/i18n';
 
 const navItems = [
-  { to: '/admin/dashboard', label: 'Dashboard' },
-  { to: '/admin/reservations', label: 'Reservations' },
-  { to: '/admin/map', label: 'Map' },
-  { to: '/admin/menu', label: 'Menu' },
-  { to: '/admin/events', label: 'Events' },
-  { to: '/admin/news', label: 'News' },
-  { to: '/admin/payments', label: 'Payments' },
-  { to: '/admin/settings', label: 'Settings' }
+  { to: '/admin/dashboard', labelKey: 'nav.dashboard' },
+  { to: '/admin/reservations', labelKey: 'nav.reservations' },
+  { to: '/admin/map', labelKey: 'nav.map' },
+  { to: '/admin/menu', labelKey: 'nav.menu' },
+  { to: '/admin/events', labelKey: 'nav.events' },
+  { to: '/admin/news', labelKey: 'nav.news' },
+  { to: '/admin/payments', labelKey: 'nav.payments' },
+  { to: '/admin/settings', labelKey: 'nav.settings' }
 ];
 
-function pageTitle(pathname) {
+function pageTitle(pathname, t) {
   const item = navItems.find((entry) => pathname.startsWith(entry.to));
-  return item?.label || 'Admin';
+  return item ? t(item.labelKey) : t('common.admin');
 }
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSidebar, setOpenSidebar] = useState(false);
-  const title = useMemo(() => pageTitle(location.pathname), [location.pathname]);
+  const { t, toggleLanguage } = useAdminI18n();
+  const title = useMemo(() => pageTitle(location.pathname, t), [location.pathname, t]);
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
@@ -36,9 +38,19 @@ export default function AdminLayout({ children }) {
   return (
     <div className="admin-shell">
       <aside className={`sidebar ${openSidebar ? 'open' : ''}`}>
-        <Link to="/admin/dashboard" className="brand" onClick={onNavSelect}>
-          GorPliaj Admin
-        </Link>
+        <div className="sidebar-header">
+          <Link to="/admin/dashboard" className="brand" onClick={onNavSelect}>
+            {t('brand')}
+          </Link>
+          <button
+            type="button"
+            className="lang-toggle-btn"
+            onClick={toggleLanguage}
+            aria-label={t('common.languageAria')}
+          >
+            {t('common.languageSwitch')}
+          </button>
+        </div>
         <nav className="sidebar-nav">
           {navItems.map((item) => (
             <NavLink
@@ -47,7 +59,7 @@ export default function AdminLayout({ children }) {
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={onNavSelect}
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -62,7 +74,7 @@ export default function AdminLayout({ children }) {
             <h1>{title}</h1>
           </div>
           <button type="button" className="btn" onClick={onLogout}>
-            Logout
+            {t('common.logout')}
           </button>
         </header>
         <main className="content">{children}</main>

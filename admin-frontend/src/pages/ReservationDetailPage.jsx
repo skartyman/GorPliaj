@@ -4,12 +4,13 @@ import AdminLayout from '../components/AdminLayout';
 import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
+import { useAdminI18n } from '../lib/i18n';
 
 function DetailRow({ label, value }) {
   return (
     <div className="detail-row">
       <span className="muted">{label}</span>
-      <strong>{value || '-'}</strong>
+      <strong>{value || '—'}</strong>
     </div>
   );
 }
@@ -29,13 +30,14 @@ function getActionTone(status) {
 export default function ReservationDetailPage() {
   const { id } = useParams();
   const [state, setState] = useState({ loading: true, error: '', data: null, updating: false });
+  const { t, locale } = useAdminI18n();
 
   async function loadReservation() {
     setState((prev) => ({ ...prev, loading: true, error: '' }));
     const { response, body } = await apiRequest(`/api/admin/reservations/${id}`);
 
     if (!response.ok) {
-      setState({ loading: false, error: body.message || 'Failed to load reservation.', data: null, updating: false });
+      setState({ loading: false, error: body.message || t('reservationDetail.errors.load'), data: null, updating: false });
       return;
     }
 
@@ -44,9 +46,9 @@ export default function ReservationDetailPage() {
 
   useEffect(() => {
     loadReservation().catch(() => {
-      setState({ loading: false, error: 'Failed to load reservation.', data: null, updating: false });
+      setState({ loading: false, error: t('reservationDetail.errors.load'), data: null, updating: false });
     });
-  }, [id]);
+  }, [id, t]);
 
   async function onChangeStatus(status) {
     setState((prev) => ({ ...prev, updating: true, error: '' }));
@@ -56,7 +58,7 @@ export default function ReservationDetailPage() {
     });
 
     if (!response.ok) {
-      setState((prev) => ({ ...prev, updating: false, error: body.message || 'Failed to update status.' }));
+      setState((prev) => ({ ...prev, updating: false, error: body.message || t('reservationDetail.errors.update') }));
       return;
     }
 
@@ -70,46 +72,46 @@ export default function ReservationDetailPage() {
     <AdminLayout>
       <section className="page-hero compact">
         <div className="page-hero-copy">
-          <span className="eyebrow">Reservation detail</span>
-          <h2>Reservation #{id}</h2>
-          <p className="muted">A focused detail view with priority information and actions stacked first for mobile operators.</p>
+          <span className="eyebrow">{t('reservationDetail.eyebrow')}</span>
+          <h2>{t('reservationDetail.title', { id })}</h2>
+          <p className="muted">{t('reservationDetail.description')}</p>
         </div>
         <div className="actions hero-actions">
-          <Link className="btn btn-secondary" to="/admin/reservations">Back to reservations</Link>
+          <Link className="btn btn-secondary" to="/admin/reservations">{t('reservationDetail.back')}</Link>
         </div>
       </section>
 
       <PanelCard
-        title="Booking overview"
-        subtitle="Detailed reservation view with operator-friendly status actions."
+        title={t('reservationDetail.overviewTitle')}
+        subtitle={t('reservationDetail.overviewDescription')}
       >
-        {state.loading ? <p>Loading reservation...</p> : null}
+        {state.loading ? <p>{t('reservationDetail.loading')}</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
 
         {reservation ? (
           <div className="reservation-detail-grid">
-            <PanelCard title="Guest information" className="surface-muted full-height">
+            <PanelCard title={t('reservationDetail.guestInfo')} className="surface-muted full-height">
               <div className="details-grid compact">
-                <DetailRow label="Guest" value={reservation.customerName} />
-                <DetailRow label="Phone" value={reservation.customerPhone} />
-                <DetailRow label="Guests count" value={reservation.guests} />
-                <DetailRow label="Comments" value={reservation.commentCustomer || reservation.commentAdmin || '-'} />
+                <DetailRow label={t('reservationDetail.fields.guest')} value={reservation.customerName} />
+                <DetailRow label={t('reservationDetail.fields.phone')} value={reservation.customerPhone} />
+                <DetailRow label={t('reservationDetail.fields.guests')} value={reservation.guests} />
+                <DetailRow label={t('reservationDetail.fields.comments')} value={reservation.commentCustomer || reservation.commentAdmin || '—'} />
               </div>
             </PanelCard>
 
-            <PanelCard title="Reservation slot" className="surface-muted full-height">
+            <PanelCard title={t('reservationDetail.slotInfo')} className="surface-muted full-height">
               <div className="details-grid compact">
-                <DetailRow label="Date" value={formatDate(reservation.reservationDate)} />
-                <DetailRow label="Start time" value={formatTime(reservation.timeFrom)} />
-                <DetailRow label="Table" value={reservation.table?.code || reservation.table?.name || '-'} />
-                <DetailRow label="Zone" value={reservation.zone?.name || '-'} />
-                <DetailRow label="Status" value={<StatusPill status={reservation.status} />} />
+                <DetailRow label={t('reservationDetail.fields.date')} value={formatDate(reservation.reservationDate, locale)} />
+                <DetailRow label={t('reservationDetail.fields.startTime')} value={formatTime(reservation.timeFrom, locale)} />
+                <DetailRow label={t('reservationDetail.fields.table')} value={reservation.table?.code || reservation.table?.name || '—'} />
+                <DetailRow label={t('reservationDetail.fields.zone')} value={reservation.zone?.name || '—'} />
+                <DetailRow label={t('reservationDetail.fields.status')} value={<StatusPill status={reservation.status} />} />
               </div>
             </PanelCard>
 
-            <PanelCard title="Status actions" subtitle="Use these actions to keep table flow updated." className="surface-muted detail-action-panel">
+            <PanelCard title={t('reservationDetail.statusActions')} subtitle={t('reservationDetail.statusActionsDescription')} className="surface-muted detail-action-panel">
               <div className="actions prominent-actions wrap-mobile">
-                {!allowedNextStatuses.length ? <p className="muted">No status changes available.</p> : null}
+                {!allowedNextStatuses.length ? <p className="muted">{t('reservationDetail.noActions')}</p> : null}
                 {allowedNextStatuses.map((status) => (
                   <button
                     key={status}
@@ -118,7 +120,7 @@ export default function ReservationDetailPage() {
                     disabled={state.updating}
                     onClick={() => onChangeStatus(status)}
                   >
-                    {state.updating ? 'Updating...' : `Set ${status}`}
+                    {state.updating ? t('reservationDetail.updating') : t('reservationDetail.setStatus', { status: t(`status.${status}`) })}
                   </button>
                 ))}
               </div>

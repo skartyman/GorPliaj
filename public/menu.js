@@ -1,6 +1,6 @@
 const categoryNav = document.getElementById('categoryNav');
 const menuCatalog = document.getElementById('menuCatalog');
-const langButtons = document.querySelectorAll('.lang-btn');
+const languageToggle = document.getElementById('languageToggle');
 const featuredDishName = document.getElementById('featuredDishName');
 const featuredDishText = document.getElementById('featuredDishText');
 const featuredDishCategory = document.getElementById('featuredDishCategory');
@@ -14,8 +14,8 @@ const translations = {
   uk: {
     pageTitle: 'ГорПляж — Меню',
     brandSubtitle: 'Beach · Restaurant · Events',
-    langUk: 'Українська',
-    langEn: 'Англійська',
+    languageToggleLabel: 'EN',
+    languageToggleAria: 'Switch language to English',
     menuPageKicker: 'Kitchen & bar',
     menuPageTitle: 'Меню ГорПляжу',
     menuPageDescription: 'Окрема сторінка з категоріями та зручним переглядом основних позицій, як у digital menu.',
@@ -29,8 +29,8 @@ const translations = {
   en: {
     pageTitle: 'GorPliaj — Menu',
     brandSubtitle: 'Beach · Restaurant · Events',
-    langUk: 'Ukrainian',
-    langEn: 'English',
+    languageToggleLabel: 'UK',
+    languageToggleAria: 'Перемкнути мову на українську',
     menuPageKicker: 'Kitchen & bar',
     menuPageTitle: 'GorPliaj Menu',
     menuPageDescription: 'A dedicated page with categories and an easy overview of signature dishes, similar to a digital menu.',
@@ -139,9 +139,10 @@ function translatePage() {
     }
   });
 
-  langButtons.forEach((button) => {
-    button.classList.toggle('active', button.dataset.lang === currentLanguage);
-  });
+  if (languageToggle) {
+    languageToggle.textContent = dictionary.languageToggleLabel;
+    languageToggle.setAttribute('aria-label', dictionary.languageToggleAria);
+  }
 
   const groupedMenu = groupMenu(menuCache);
   activeCategory = activeCategory || Object.keys(groupedMenu)[0] || '';
@@ -156,13 +157,11 @@ async function fetchMenu() {
   translatePage();
 }
 
-langButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    currentLanguage = button.dataset.lang;
-    localStorage.setItem('language', currentLanguage);
-    activeCategory = '';
-    translatePage();
-  });
+languageToggle?.addEventListener('click', () => {
+  currentLanguage = currentLanguage === 'uk' ? 'en' : 'uk';
+  localStorage.setItem('language', currentLanguage);
+  activeCategory = '';
+  translatePage();
 });
 
 categoryNav.addEventListener('click', (event) => {

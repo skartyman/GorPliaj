@@ -28,7 +28,7 @@ app.get('/menu', (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
-  res.redirect('/admin/reservations');
+  res.redirect('/admin/dashboard');
 });
 
 app.get('/admin/*', (req, res) => {

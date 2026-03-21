@@ -5,6 +5,7 @@ import PageContainer from '../components/PageContainer';
 import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
+import { useAdminI18n } from '../lib/i18n';
 
 function getTimeKey(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -47,6 +48,15 @@ function toPercent(value, total) {
   return (value / total) * 100;
 }
 
+function DetailRow({ label, value }) {
+  return (
+    <div className="detail-row">
+      <span className="muted">{label}</span>
+      <strong>{value || '—'}</strong>
+    </div>
+  );
+}
+
 export default function MapPage() {
   const [state, setState] = useState({
     loading: true,
@@ -56,6 +66,7 @@ export default function MapPage() {
     availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
   });
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const { t, locale } = useAdminI18n();
 
   useEffect(() => {
     async function loadMapData() {
@@ -63,7 +74,7 @@ export default function MapPage() {
       if (!mapResult.response.ok) {
         setState({
           loading: false,
-          error: mapResult.body.message || 'Failed to load map.',
+          error: mapResult.body.message || t('map.errors.load'),
           mapData: null,
           reservations: [],
           availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
@@ -92,13 +103,13 @@ export default function MapPage() {
     loadMapData().catch(() => {
       setState({
         loading: false,
-        error: 'Failed to load map.',
+        error: t('map.errors.load'),
         mapData: null,
         reservations: [],
         availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
       });
     });
-  }, []);
+  }, [t]);
 
   const tableMap = useMemo(
     () => new Map((state.mapData?.tables || []).map((table) => [table.id, table])),
@@ -164,25 +175,26 @@ export default function MapPage() {
 
   return (
     <AdminLayout>
-      <PageContainer
-        title="Venue map operations"
-        description="Operational floor map with visual table status and active reservation details."
-      >
+      <PageContainer title={t('map.title')} description={t('map.description')}>
         <section className="page-hero compact">
           <div className="page-hero-copy">
-            <span className="eyebrow">Live floor</span>
-            <h3>Table status, zones, and quick context</h3>
-            <p className="muted">The map starts as a vertical mobile-first workflow and expands into a split workspace on larger screens.</p>
+            <span className="eyebrow">{t('map.eyebrow')}</span>
+            <h3>{t('map.heroTitle')}</h3>
+            <p className="muted">{t('map.heroDescription')}</p>
           </div>
-          <div className="hero-inline-note">Tap any table to inspect its current status.</div>
+          <div className="hero-inline-note">{t('map.note')}</div>
         </section>
-        {state.loading ? <p>Loading map...</p> : null}
+        {state.loading ? <p>{t('map.loading')}</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
 
         {!state.loading && !state.error && state.mapData ? (
           <>
             <div className="map-meta muted">
-              Map: <strong>{state.mapData.map?.name}</strong> • Zones: {state.mapData.zones?.length || 0} • Tables: {state.mapData.tables?.length || 0}
+              {t('map.meta', {
+                map: state.mapData.map?.name || '—',
+                zones: state.mapData.zones?.length || 0,
+                tables: state.mapData.tables?.length || 0
+              })}
             </div>
 
             <div className="map-layout">
@@ -223,36 +235,36 @@ export default function MapPage() {
                       style={baseStyle}
                       title={
                         object.table
-                          ? `${object.table.name || object.table.code || 'Table'}${object.zone?.name ? ` • ${object.zone.name}` : ''}`
+                          ? `${object.table.name || object.table.code || t('map.fields.table')}${object.zone?.name ? ` • ${object.zone.name}` : ''}`
                           : object.label || object.type
                       }
                       onClick={() => (object.tableId ? setSelectedTableId(object.tableId) : setSelectedTableId(null))}
                     >
-                      <span>{object.table?.code || object.table?.name || object.label || 'Table'}</span>
+                      <span>{object.table?.code || object.table?.name || object.label || t('map.fields.table')}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <PanelCard title="Table details" subtitle="Select a table from map to inspect and operate." className="full-height">
-                {!selectedTable ? <p className="muted">Select a table to see detail and reservation context.</p> : null}
+              <PanelCard title={t('map.tableDetails')} subtitle={t('map.tableDetailsDescription')} className="full-height">
+                {!selectedTable ? <p className="muted">{t('map.noTableSelected')}</p> : null}
                 {selectedTable ? (
                   <>
                     <div className="details-grid compact">
-                      <DetailRow label="Table" value={selectedTable.code || selectedTable.name} />
-                      <DetailRow label="Zone" value={zoneMap.get(selectedTable.zoneId)?.name || '-'} />
-                      <DetailRow label="Availability" value={<StatusPill status={selectedStatus} />} />
-                      <DetailRow label="Capacity" value={selectedTable.capacity || '-'} />
+                      <DetailRow label={t('map.fields.table')} value={selectedTable.code || selectedTable.name} />
+                      <DetailRow label={t('map.fields.zone')} value={zoneMap.get(selectedTable.zoneId)?.name || '—'} />
+                      <DetailRow label={t('map.fields.availability')} value={<StatusPill status={selectedStatus} />} />
+                      <DetailRow label={t('map.fields.capacity')} value={selectedTable.capacity || '—'} />
                     </div>
 
-                    <h4>Active reservations</h4>
-                    {!selectedReservations.length ? <p className="muted">No active reservation for this table.</p> : null}
+                    <h4>{t('map.activeReservations')}</h4>
+                    {!selectedReservations.length ? <p className="muted">{t('map.noActiveReservations')}</p> : null}
                     {selectedReservations.length ? (
                       <ul className="plain-list compact">
                         {selectedReservations.slice(0, 3).map((reservation) => (
                           <li key={reservation.id}>
-                            <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || 'Guest'} •{' '}
-                            {formatDate(reservation.reservationDate)} {formatTime(reservation.timeFrom)} • <StatusPill status={reservation.status} />
+                            <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
+                            {formatDate(reservation.reservationDate, locale)} {formatTime(reservation.timeFrom, locale)} • <StatusPill status={reservation.status} />
                           </li>
                         ))}
                       </ul>
@@ -260,13 +272,13 @@ export default function MapPage() {
 
                     <div className="actions">
                       <button type="button" className="btn btn-secondary" disabled>
-                        Hold table (soon)
+                        {t('map.holdSoon', { soon: t('common.soon') })}
                       </button>
                       <button type="button" className="btn btn-secondary" disabled>
-                        Free table (soon)
+                        {t('map.freeSoon', { soon: t('common.soon') })}
                       </button>
                       <button type="button" className="btn btn-secondary" disabled>
-                        Move reservation (soon)
+                        {t('map.moveSoon', { soon: t('common.soon') })}
                       </button>
                     </div>
                   </>
@@ -275,24 +287,15 @@ export default function MapPage() {
             </div>
 
             <div className="map-legend">
-              <span><i className="dot free" /> Free</span>
-              <span><i className="dot pending" /> Pending</span>
-              <span><i className="dot confirmed" /> Confirmed</span>
-              <span><i className="dot held" /> Held</span>
-              <span><i className="dot unavailable" /> Unavailable</span>
+              <span><i className="dot free" /> {t('map.legend.free')}</span>
+              <span><i className="dot pending" /> {t('map.legend.pending')}</span>
+              <span><i className="dot confirmed" /> {t('map.legend.confirmed')}</span>
+              <span><i className="dot held" /> {t('map.legend.held')}</span>
+              <span><i className="dot unavailable" /> {t('map.legend.unavailable')}</span>
             </div>
           </>
         ) : null}
       </PageContainer>
     </AdminLayout>
-  );
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="detail-row">
-      <span className="muted">{label}</span>
-      <strong>{value || '-'}</strong>
-    </div>
   );
 }
