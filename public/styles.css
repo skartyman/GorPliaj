@@ -974,15 +974,7 @@ select:focus {
   width: min(100%, 1120px);
 }
 
-.home-page-header {
-  position: sticky;
-  top: 12px;
-  z-index: 20;
-}
-
-.home-page-toolbar,
-.home-page-nav,
-.home-page-controls,
+.home-page-header,
 .home-hero-grid,
 .home-highlight-panel,
 .home-grid,
@@ -991,41 +983,61 @@ select:focus {
   display: flex;
 }
 
-.home-page-toolbar,
-.home-page-nav,
-.home-page-controls {
+.home-page-header {
+  display: grid;
+  gap: 18px;
+}
+
+.home-page-scroll-block {
+  position: relative;
+  overflow: hidden;
+  margin-inline: -2px;
+}
+
+.home-page-scroll-block::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 48px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92));
+}
+
+.home-page-scroll-track {
+  display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.home-page-toolbar {
-  flex: 1 1 auto;
-  justify-content: space-between;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 6px 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
 }
 
-.home-page-nav,
-.home-page-controls {
-  flex-wrap: wrap;
+.home-page-scroll-track::-webkit-scrollbar {
+  display: none;
 }
 
-.home-page-nav {
-  justify-content: center;
-}
-
-.home-page-nav a {
+.home-page-scroll-track a,
+.home-scroll-action {
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
-  padding: 0 14px;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 999px;
   color: #64748b;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+  scroll-snap-align: start;
 }
 
-.home-page-controls {
-  justify-content: flex-end;
+.home-scroll-action {
+  font-weight: 700;
 }
 
 .home-hero-card {
@@ -1126,7 +1138,6 @@ select:focus {
 }
 
 @media (max-width: 1040px) {
-  .home-page-header,
   .home-hero-grid,
   .home-grid-double,
   .home-grid-triple,
@@ -1135,43 +1146,23 @@ select:focus {
     flex-direction: column;
     align-items: stretch;
   }
-
-  .home-page-toolbar {
-    width: 100%;
-    justify-content: flex-start;
-    overflow-x: auto;
-    overflow-y: hidden;
-    flex-wrap: nowrap;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
-  }
-
-  .home-page-toolbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .home-page-nav,
-  .home-page-controls {
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-  }
-
-  .home-page-nav {
-    justify-content: flex-start;
-  }
-
-  .home-page-nav a,
-  .home-page-controls > * {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-  }
 }
 
 @media (max-width: 720px) {
   .home-page-shell {
     padding: 20px 12px 32px;
+  }
+
+  .home-page-header {
+    gap: 14px;
+  }
+
+  .home-page-scroll-track {
+    padding-inline: 2px;
+  }
+
+  .home-page-scroll-block::after {
+    width: 28px;
   }
 
   .home-card,
