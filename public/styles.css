@@ -703,3 +703,248 @@ select:focus {
     flex-direction: column;
   }
 }
+
+.topbar {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+}
+
+.section-head-compact {
+  align-items: center;
+}
+
+.menu-preview-surface {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.12), rgba(8, 18, 34, 0.9)),
+    var(--surface);
+}
+
+.menu-preview-copy,
+.menu-page-description {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.menu-preview-actions,
+.menu-page-controls,
+.menu-page-intro-row,
+.menu-showcase-meta {
+  display: flex;
+  gap: 12px;
+}
+
+.menu-preview-actions,
+.menu-page-intro-row {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.menu-page-body {
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.14), transparent 24%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.18), transparent 28%),
+    #eef2ff;
+  color: #0f172a;
+}
+
+.menu-page-shell {
+  width: min(100%, 100vw);
+  padding: 32px 16px;
+}
+
+.menu-page-surface {
+  width: min(100%, 820px);
+  margin: 0 auto;
+  padding: 18px 0;
+}
+
+.menu-page-header,
+.menu-page-intro,
+.menu-showcase-card,
+.menu-category-block {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  border-radius: 28px;
+}
+
+.menu-page-header,
+.menu-page-intro,
+.menu-showcase-card,
+.menu-category-block,
+.menu-category-nav {
+  padding: 18px;
+}
+
+.menu-page-header,
+.menu-page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-page-header .brand small,
+.menu-page-description,
+.menu-card-copy .menu-meta,
+.menu-category-link,
+.menu-back-link {
+  color: #64748b;
+}
+
+.menu-page-header .brand-mark {
+  box-shadow: none;
+}
+
+
+.menu-page-body .lang-btn {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+.menu-page-body .lang-btn.active {
+  color: #fff;
+}
+
+
+.menu-search-btn,
+.menu-category-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 0 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+}
+
+.menu-search-btn {
+  min-width: 48px;
+  font-size: 1.5rem;
+  color: #0f172a;
+}
+
+.menu-page-intro,
+.menu-showcase-card,
+.menu-category-block,
+.menu-category-nav,
+.menu-catalog {
+  margin-top: 16px;
+}
+
+.menu-page-intro h1,
+.menu-showcase-card h2,
+.menu-category-block h2,
+.menu-card-item strong,
+.menu-page-header .brand strong {
+  color: #0f172a;
+}
+
+.menu-category-nav {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.menu-category-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.menu-category-link {
+  white-space: nowrap;
+}
+
+.menu-category-link.active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: transparent;
+  color: #fff;
+}
+
+.menu-showcase-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 18px;
+  align-items: center;
+}
+
+.menu-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.menu-showcase-image {
+  min-height: 180px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, 0.04), rgba(30, 41, 59, 0.08)),
+    url('https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80') center/cover no-repeat;
+}
+
+.menu-catalog {
+  display: grid;
+  gap: 16px;
+}
+
+.menu-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.menu-card-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.menu-card-copy {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .menu-preview-actions,
+  .menu-page-header,
+  .menu-page-controls,
+  .menu-showcase-card {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .menu-page-shell {
+    padding: 18px 12px;
+  }
+
+  .menu-page-surface {
+    padding: 8px 0;
+  }
+
+  .menu-showcase-card {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .menu-card-item {
+    flex-direction: column;
+  }
+}

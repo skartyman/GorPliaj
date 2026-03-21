@@ -23,6 +23,10 @@ app.get('/booking', (req, res) => {
   res.sendFile(path.join(publicDir, 'booking.html'));
 });
 
+app.get('/menu', (req, res) => {
+  res.sendFile(path.join(publicDir, 'menu.html'));
+});
+
 app.get('/admin', (req, res) => {
   res.redirect('/admin/reservations');
 });

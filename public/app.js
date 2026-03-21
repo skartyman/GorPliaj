@@ -1,17 +1,12 @@
-const menuList = document.getElementById('menuList');
-const reservationList = document.getElementById('reservationList');
 const reservationForm = document.getElementById('reservationForm');
 const reservationFormState = document.getElementById('reservationFormState');
 const installBtn = document.getElementById('installBtn');
 const langButtons = document.querySelectorAll('.lang-btn');
 const heroMenuCount = document.getElementById('heroMenuCount');
-const heroReservationCount = document.getElementById('heroReservationCount');
 const menuCountChip = document.getElementById('menuCountChip');
-const reservationCountChip = document.getElementById('reservationCountChip');
 
 let deferredPrompt;
 let currentLanguage = localStorage.getItem('language') || 'uk';
-let reservationsCache = [];
 let menuCache = [];
 
 const translations = {
@@ -23,9 +18,11 @@ const translations = {
     heroSubtitle: 'Пляж Отрада, море та відпочинок зі смаком — усе в одному місці.',
     heroDescription: 'Меню, онлайн-бронювання, карта столів та анонси подій зібрані в одному сучасному інтерфейсі для гостей.',
     heroPrimaryCta: 'Забронювати онлайн',
+    heroMenuCta: 'Переглянути меню',
     heroSecondaryCta: 'Відкрити карту столів',
     highlightMenu: 'Позицій меню',
-    highlightReservations: 'Активних броней',
+    highlightBookingAccess: 'Онлайн бронювання',
+    highlightBookingAccessValue: '24/7',
     highlightZones: 'Основних зон',
     heroPanelLabel: 'Готово до графіки',
     heroPanelTitle: 'Сучасний публічний фронт для гостей',
@@ -42,6 +39,7 @@ const translations = {
     navMenu: 'Меню',
     navBooking: 'Бронювання',
     navEvents: 'Події',
+    navNews: 'Акції',
     navContacts: 'Контакти',
     installApp: 'Встановити як застосунок',
     aboutKicker: 'Про простір',
@@ -55,6 +53,9 @@ const translations = {
     metricBookingValue: 'Онлайн бронювання і карта',
     menuKicker: 'Kitchen & bar',
     menuTitle: 'Меню комплексу',
+    menuPreviewText: 'Окрема сторінка меню з категоріями, картками страв і швидкою навігацією.',
+    menuPreviewCta: 'Відкрити меню',
+    menuPreviewSecondary: 'Спочатку забронювати столик',
     bookingKicker: 'Fast reservation',
     bookingTitle: 'Онлайн-бронювання',
     guestName: 'Ім’я гостя',
@@ -90,28 +91,16 @@ const translations = {
     promo1: 'З 10:00 до 12:00 — знижка 20% на сніданки.',
     promo2: 'Комбо «Пляжний день»: шезлонг + лимонад + салат за спеціальною ціною.',
     promo3: 'Іменинникам — десерт у подарунок під час бронювання столу.',
-    reservationsKicker: 'Live feed',
-    reservationsTitle: 'Список бронювань',
-    reservationsHint: 'Змінюйте статус бронювання: нове → підтверджене → скасоване.',
     contactsKicker: 'Contact us',
     contactsTitle: 'Контакти',
     addressLabel: 'Адреса',
     phoneLabel: 'Телефон',
     address: 'Одеса, пляж Отрада',
-    noReservations: 'Поки немає бронювань. Створіть перше!',
     noMenu: 'Меню тимчасово недоступне.',
-    reservationStatus: 'Статус',
-    statusNew: 'нове',
-    statusConfirmed: 'підтверджене',
-    statusCancelled: 'скасоване',
-    changeStatus: 'Змінити статус',
-    delete: 'Видалити',
     reservationError: 'Не вдалося створити бронювання. Перевірте поля форми.',
     reservationSuccess: 'Бронювання створено. Ми вже готуємо найкраще місце для вас.',
     loadingError: 'Помилка завантаження даних. Перевірте сервер.',
-    guestsWord: 'гостей',
-    menuItemsCount: 'позицій',
-    reservationsCount: 'броней'
+    menuItemsCount: 'позицій'
   },
   en: {
     pageTitle: 'GorPliaj — Odesa, Otrada Beach',
@@ -121,9 +110,11 @@ const translations = {
     heroSubtitle: 'Otrada Beach, sea views, and quality relaxation all in one place.',
     heroDescription: 'Menu, online booking, table map, and event updates are combined into one modern guest interface.',
     heroPrimaryCta: 'Book online',
+    heroMenuCta: 'View menu',
     heroSecondaryCta: 'Open table map',
     highlightMenu: 'Menu items',
-    highlightReservations: 'Active bookings',
+    highlightBookingAccess: 'Online booking',
+    highlightBookingAccessValue: '24/7',
     highlightZones: 'Main zones',
     heroPanelLabel: 'Graphics ready',
     heroPanelTitle: 'Modern guest-facing frontend',
@@ -140,6 +131,7 @@ const translations = {
     navMenu: 'Menu',
     navBooking: 'Booking',
     navEvents: 'Events',
+    navNews: 'Offers',
     navContacts: 'Contacts',
     installApp: 'Install as app',
     aboutKicker: 'About the venue',
@@ -153,6 +145,9 @@ const translations = {
     metricBookingValue: 'Online booking and map',
     menuKicker: 'Kitchen & bar',
     menuTitle: 'Venue menu',
+    menuPreviewText: 'A dedicated menu page with categories, dish cards, and quick navigation.',
+    menuPreviewCta: 'Open menu',
+    menuPreviewSecondary: 'Book a table first',
     bookingKicker: 'Fast reservation',
     bookingTitle: 'Online booking',
     guestName: 'Guest name',
@@ -188,49 +183,25 @@ const translations = {
     promo1: 'From 10:00 to 12:00 — 20% discount on breakfasts.',
     promo2: '"Beach Day" combo: sunbed + lemonade + salad at a special price.',
     promo3: 'Birthday guests get a complimentary dessert with table booking.',
-    reservationsKicker: 'Live feed',
-    reservationsTitle: 'Booking list',
-    reservationsHint: 'Cycle booking status: new → confirmed → cancelled.',
     contactsKicker: 'Contact us',
     contactsTitle: 'Contacts',
     addressLabel: 'Address',
     phoneLabel: 'Phone',
     address: 'Odesa, Otrada Beach',
-    noReservations: 'No bookings yet. Create the first one!',
     noMenu: 'Menu is temporarily unavailable.',
-    reservationStatus: 'Status',
-    statusNew: 'new',
-    statusConfirmed: 'confirmed',
-    statusCancelled: 'cancelled',
-    changeStatus: 'Change status',
-    delete: 'Delete',
     reservationError: 'Could not create booking. Please check form fields.',
     reservationSuccess: 'Booking created. We are already preparing the best spot for you.',
     loadingError: 'Data loading error. Please check the server.',
-    guestsWord: 'guests',
-    menuItemsCount: 'items',
-    reservationsCount: 'bookings'
+    menuItemsCount: 'items'
   }
 };
 
-function statusLabels() {
-  const dictionary = translations[currentLanguage];
-  return {
-    new: dictionary.statusNew,
-    confirmed: dictionary.statusConfirmed,
-    cancelled: dictionary.statusCancelled
-  };
-}
-
 function updateCounters() {
   const dictionary = translations[currentLanguage];
-  const reservationCount = reservationsCache.length;
   const menuCount = menuCache.length;
 
   heroMenuCount.textContent = menuCount;
-  heroReservationCount.textContent = reservationCount;
   menuCountChip.textContent = `${menuCount} ${dictionary.menuItemsCount}`;
-  reservationCountChip.textContent = `${reservationCount} ${dictionary.reservationsCount}`;
 }
 
 function setFormState(message = '', tone = '') {
@@ -254,78 +225,12 @@ function translatePage() {
     button.classList.toggle('active', button.dataset.lang === currentLanguage);
   });
 
-  renderMenu(menuCache);
-  renderReservations(reservationsCache);
   updateCounters();
-}
-
-function renderMenu(menu) {
-  const dictionary = translations[currentLanguage];
-
-  if (!menu.length) {
-    menuList.innerHTML = `<li class="menu-item"><div><strong>${dictionary.noMenu}</strong></div></li>`;
-    return;
-  }
-
-  menuList.innerHTML = menu
-    .map(
-      (item) => `
-      <li class="menu-item">
-        <div>
-          <strong>${item.name[currentLanguage] || item.name.uk}</strong>
-          <p class="menu-meta">${item.category[currentLanguage] || item.category.uk}</p>
-        </div>
-        <span class="menu-price">${item.price} ₴</span>
-      </li>`
-    )
-    .join('');
-}
-
-function nextStatus(status) {
-  const order = ['new', 'confirmed', 'cancelled'];
-  const index = order.indexOf(status);
-  return order[(index + 1) % order.length];
-}
-
-function renderReservations(reservations) {
-  const dictionary = translations[currentLanguage];
-  const statuses = statusLabels();
-
-  if (!reservations.length) {
-    reservationList.innerHTML = `<p class="reservation-meta">${dictionary.noReservations}</p>`;
-    return;
-  }
-
-  reservationList.innerHTML = reservations
-    .map(
-      (item) => `
-      <article class="reservation-item">
-        <div>
-          <strong>#${item.id} — ${item.guestName}</strong>
-        </div>
-        <p class="reservation-meta">${item.date} ${item.time} • ${item.guests} ${dictionary.guestsWord} • ${item.zone}</p>
-        <span class="reservation-status status-${item.status}">${dictionary.reservationStatus}: ${statuses[item.status] || item.status}</span>
-        <p class="reservation-meta">${item.phone}${item.note ? ` • ${item.note}` : ''}</p>
-        <div class="reservation-actions">
-          <button data-action="toggle" data-id="${item.id}" data-status="${item.status}">${dictionary.changeStatus}</button>
-          <button data-action="delete" data-id="${item.id}">${dictionary.delete}</button>
-        </div>
-      </article>`
-    )
-    .join('');
 }
 
 async function fetchMenu() {
   const response = await fetch('/api/menu');
   menuCache = await response.json();
-  renderMenu(menuCache);
-  updateCounters();
-}
-
-async function fetchReservations() {
-  const response = await fetch('/api/reservations');
-  reservationsCache = await response.json();
-  renderReservations(reservationsCache);
   updateCounters();
 }
 
@@ -348,30 +253,6 @@ reservationForm.addEventListener('submit', async (event) => {
 
   reservationForm.reset();
   setFormState(translations[currentLanguage].reservationSuccess, 'success');
-  await fetchReservations();
-});
-
-reservationList.addEventListener('click', async (event) => {
-  const button = event.target.closest('button');
-  if (!button) return;
-
-  const id = button.dataset.id;
-  const action = button.dataset.action;
-
-  if (action === 'toggle') {
-    const status = nextStatus(button.dataset.status);
-    await fetch(`/api/reservations/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-  }
-
-  if (action === 'delete') {
-    await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
-  }
-
-  await fetchReservations();
 });
 
 langButtons.forEach((button) => {
@@ -402,10 +283,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-Promise.all([fetchMenu(), fetchReservations()])
-  .then(() => {
-    translatePage();
-  })
-  .catch(() => {
-    reservationList.innerHTML = `<p class="reservation-meta">${translations[currentLanguage].loadingError}</p>`;
-  });
+translatePage();
+
+fetchMenu().catch(() => {
+  menuCountChip.textContent = translations[currentLanguage].loadingError;
+});
