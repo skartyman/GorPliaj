@@ -68,17 +68,27 @@ export default function ReservationDetailPage() {
 
   return (
     <AdminLayout>
+      <section className="page-hero compact">
+        <div className="page-hero-copy">
+          <span className="eyebrow">Reservation detail</span>
+          <h2>Reservation #{id}</h2>
+          <p className="muted">A focused detail view with priority information and actions stacked first for mobile operators.</p>
+        </div>
+        <div className="actions hero-actions">
+          <Link className="btn btn-secondary" to="/admin/reservations">Back to reservations</Link>
+        </div>
+      </section>
+
       <PanelCard
-        title={`Reservation #${id}`}
+        title="Booking overview"
         subtitle="Detailed reservation view with operator-friendly status actions."
-        actions={<Link to="/admin/reservations">Back to reservations</Link>}
       >
         {state.loading ? <p>Loading reservation...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
 
         {reservation ? (
           <div className="reservation-detail-grid">
-            <PanelCard title="Guest information" className="surface-muted">
+            <PanelCard title="Guest information" className="surface-muted full-height">
               <div className="details-grid compact">
                 <DetailRow label="Guest" value={reservation.customerName} />
                 <DetailRow label="Phone" value={reservation.customerPhone} />
@@ -87,7 +97,7 @@ export default function ReservationDetailPage() {
               </div>
             </PanelCard>
 
-            <PanelCard title="Reservation slot" className="surface-muted">
+            <PanelCard title="Reservation slot" className="surface-muted full-height">
               <div className="details-grid compact">
                 <DetailRow label="Date" value={formatDate(reservation.reservationDate)} />
                 <DetailRow label="Start time" value={formatTime(reservation.timeFrom)} />
@@ -97,8 +107,8 @@ export default function ReservationDetailPage() {
               </div>
             </PanelCard>
 
-            <PanelCard title="Status actions" subtitle="Use these actions to keep table flow updated." className="surface-muted">
-              <div className="actions prominent-actions">
+            <PanelCard title="Status actions" subtitle="Use these actions to keep table flow updated." className="surface-muted detail-action-panel">
+              <div className="actions prominent-actions wrap-mobile">
                 {!allowedNextStatuses.length ? <p className="muted">No status changes available.</p> : null}
                 {allowedNextStatuses.map((status) => (
                   <button

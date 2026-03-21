@@ -56,6 +56,29 @@ export default function DashboardPage() {
 
   return (
     <AdminLayout>
+      <section className="page-hero dashboard-hero">
+        <div className="page-hero-copy">
+          <span className="eyebrow">Main workspace</span>
+          <h2>Operations overview built mobile first</h2>
+          <p className="muted">
+            The dashboard prioritizes today&apos;s service flow on narrow screens and expands into a wider control center on larger layouts.
+          </p>
+          <div className="actions hero-actions">
+            <Link className="btn" to="/admin/reservations">Open reservations</Link>
+            <Link className="btn btn-secondary" to="/admin/map">View live map</Link>
+          </div>
+        </div>
+
+        <div className="hero-stat-grid">
+          {summaryCards.slice(0, 3).map((card) => (
+            <article key={card.label} className="hero-stat-card accent">
+              <strong>{state.loading ? '—' : card.value}</strong>
+              <span className="muted">{card.label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="grid-summary">
         {summaryCards.map((card) => (
           <article key={card.label} className="metric-card">
@@ -65,45 +88,63 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <section className="grid-two-col">
-        <PageCard title="Quick actions" description="Jump directly to frequent admin tasks.">
-          <div className="actions">
-            <Link className="btn" to="/admin/reservations">Open reservations</Link>
-            <Link className="btn btn-secondary" to="/admin/map">Open map</Link>
-            <Link className="btn btn-secondary" to="/admin/news">Add news</Link>
-            <Link className="btn btn-secondary" to="/admin/events">Add event</Link>
+      <section className="stack-grid">
+        <PageCard title="Quick actions" description="Daily operator shortcuts for phone-sized and desktop layouts.">
+          <div className="action-grid">
+            <Link className="action-tile" to="/admin/reservations">
+              <strong>Reservations</strong>
+              <span className="muted">Search, filter, and update statuses fast.</span>
+            </Link>
+            <Link className="action-tile" to="/admin/map">
+              <strong>Floor map</strong>
+              <span className="muted">Inspect table load and active seating context.</span>
+            </Link>
+            <Link className="action-tile" to="/admin/news">
+              <strong>Homepage news</strong>
+              <span className="muted">Prepare highlights and announcements.</span>
+            </Link>
+            <Link className="action-tile" to="/admin/events">
+              <strong>Events</strong>
+              <span className="muted">Plan posters, dates, and promotional visibility.</span>
+            </Link>
           </div>
         </PageCard>
 
-        <PageCard title="Upcoming reservations" description="Compact feed of latest and upcoming reservations from the live API.">
+        <PageCard title="Upcoming reservations" description="Latest and upcoming bookings from the live API.">
           {state.error ? <p className="error">{state.error}</p> : null}
           {!state.error && !upcoming.length ? <p className="muted">No upcoming reservations.</p> : null}
           {!state.error && upcoming.length ? (
-            <ul className="plain-list">
+            <ul className="plain-list rich-list">
               {upcoming.map((item) => (
                 <li key={item.id}>
-                  <strong>#{item.id}</strong> • {item.customerName} • {formatDate(item.reservationDate)} {formatTime(item.timeFrom)} •{' '}
+                  <div>
+                    <strong>#{item.id}</strong> • {item.customerName || 'Guest'}
+                    <div className="muted small">{formatDate(item.reservationDate)} • {formatTime(item.timeFrom)}</div>
+                  </div>
                   <StatusPill status={item.status} />
                 </li>
               ))}
             </ul>
           ) : null}
-
-          {latest.length ? (
-            <>
-              <h3 className="section-subtitle">Latest created</h3>
-              <ul className="plain-list compact">
-                {latest.map((item) => (
-                  <li key={`latest-${item.id}`}>
-                    <Link to={`/admin/reservations/${item.id}`}>#{item.id}</Link> • {item.customerName || 'Guest'} •{' '}
-                    <StatusPill status={item.status} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
         </PageCard>
       </section>
+
+      <PageCard title="Latest created" description="Most recent booking entries for quick follow-up.">
+        {!latest.length ? <p className="muted">No recent reservations.</p> : null}
+        {latest.length ? (
+          <ul className="plain-list compact rich-list">
+            {latest.map((item) => (
+              <li key={`latest-${item.id}`}>
+                <div>
+                  <Link to={`/admin/reservations/${item.id}`}>#{item.id}</Link> • {item.customerName || 'Guest'}
+                  <div className="muted small">Created from the current admin feed.</div>
+                </div>
+                <StatusPill status={item.status} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </PageCard>
     </AdminLayout>
   );
 }

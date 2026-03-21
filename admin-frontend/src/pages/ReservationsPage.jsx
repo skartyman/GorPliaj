@@ -73,6 +73,19 @@ export default function ReservationsPage() {
     });
   }, [search, state.rows, statusFilter, dateFilter]);
 
+  const summary = useMemo(() => {
+    const pending = filteredRows.filter((row) => row.status === 'PENDING').length;
+    const confirmed = filteredRows.filter((row) => row.status === 'CONFIRMED').length;
+    const guests = filteredRows.reduce((total, row) => total + (Number(row.guests) || 0), 0);
+
+    return [
+      { label: 'Visible bookings', value: filteredRows.length },
+      { label: 'Pending', value: pending },
+      { label: 'Confirmed', value: confirmed },
+      { label: 'Guests total', value: guests }
+    ];
+  }, [filteredRows]);
+
   const columns = [
     {
       key: 'id',
@@ -170,7 +183,7 @@ export default function ReservationsPage() {
     <AdminLayout>
       <PageContainer
         title="Reservations"
-        description="Operational reservation list from the current admin API with fast filtering and actions."
+        description="Operational reservation list with mobile-first filtering and status actions."
         actions={(
           <>
             <button className="btn btn-secondary" type="button" onClick={onResetFilters}>Reset filters</button>
@@ -178,6 +191,22 @@ export default function ReservationsPage() {
           </>
         )}
       >
+        <section className="page-hero compact">
+          <div className="page-hero-copy">
+            <span className="eyebrow">Live bookings</span>
+            <h3>Fast lookup and actions for service staff</h3>
+            <p className="muted">Filters stay stacked and thumb-friendly on small screens, while the data table remains available for wider layouts.</p>
+          </div>
+          <div className="hero-stat-grid mini">
+            {summary.map((item) => (
+              <article key={item.label} className="hero-stat-card">
+                <strong>{state.loading ? '—' : item.value}</strong>
+                <span className="muted">{item.label}</span>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <FilterBar>
           <label>
             Search guest / phone
