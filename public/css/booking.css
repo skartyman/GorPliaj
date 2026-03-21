@@ -183,7 +183,27 @@ textarea {
 
 .map-stage {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+}
+
+.map-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background:
+    radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(8, 18, 34, 0.98), rgba(6, 14, 28, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 40px rgba(2, 6, 23, 0.28);
+}
+
+.map-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .booking-map-shell {
@@ -195,9 +215,10 @@ textarea {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(15, 23, 42, 0.16);
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.18);
+  touch-action: none;
+  user-select: none;
 }
 
 .booking-map-canvas {
@@ -208,11 +229,9 @@ textarea {
 
 .map-controls {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 12px;
-  opacity: 0.5;
-  transition: opacity 0.18s ease;
+  gap: 8px;
+  opacity: 0.72;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 .map-controls:hover,
@@ -220,37 +239,24 @@ textarea {
   opacity: 1;
 }
 
-.map-controls-group,
-.map-zoom-controls,
-.map-pan-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.map-controls-group {
-  padding: 10px;
+.map-controls--floating {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
+  flex-direction: column;
+  padding: 8px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 18, 34, 0.52);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 18px 30px rgba(2, 6, 23, 0.22);
-}
-
-.map-pan-controls {
-  display: grid;
-  justify-items: center;
-}
-
-.map-pan-row {
-  display: flex;
-  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 18, 34, 0.7);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.28);
 }
 
 .map-control-button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 10px 14px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
@@ -275,8 +281,9 @@ textarea {
   transform: none;
 }
 
-.map-control-button--wide {
-  min-width: 74px;
+.map-control-button--reset {
+  min-width: 52px;
+  font-size: 0.78rem;
 }
 
 .map-mobile-hint {
@@ -483,6 +490,28 @@ textarea {
   color: #cffafe;
 }
 
+@media (max-width: 720px) {
+  .map-card {
+    padding-bottom: 14px;
+  }
+
+  .info-panel {
+    border-top-left-radius: 26px;
+    border-top-right-radius: 26px;
+    box-shadow: 0 -12px 30px rgba(2, 6, 23, 0.18), var(--shadow);
+  }
+
+  .info-panel::before {
+    content: '';
+    display: block;
+    width: 52px;
+    height: 5px;
+    margin: 0 auto 14px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.38);
+  }
+}
+
 .hidden {
   display: none !important;
 }
@@ -539,8 +568,9 @@ textarea {
   }
 
   .booking-map-shell {
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x pan-y;
+    min-height: clamp(320px, 58vh, 460px);
+    max-height: min(62vh, 500px);
+    overflow: hidden;
   }
 
   .booking-map-shell::-webkit-scrollbar {
@@ -560,21 +590,15 @@ textarea {
     display: block;
   }
 
-  .map-controls {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  .map-frame {
+    border-radius: 24px;
   }
 
-  .map-controls-group,
-  .map-zoom-controls,
-  .map-pan-controls {
-    width: auto;
-    justify-content: center;
-  }
-
-  .map-controls-group {
-    width: min(100%, 280px);
+  .map-controls--floating {
+    right: 12px;
+    bottom: 12px;
+    padding: 6px;
+    gap: 6px;
   }
 
   .info-panel .detail-row {
@@ -628,8 +652,14 @@ textarea {
     min-height: 320px;
   }
 
+  .map-frame {
+    border-radius: 22px;
+  }
+
   .booking-map-shell {
     min-height: 320px;
+    max-height: min(56vh, 420px);
+    border-radius: 22px;
   }
 
   .map-object {
