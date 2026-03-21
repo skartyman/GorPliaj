@@ -170,6 +170,7 @@ textarea {
 .booking-map {
   position: relative;
   width: 100%;
+  height: 100%;
   min-height: 420px;
   border-radius: 24px;
   border: 1px solid var(--line);
@@ -182,6 +183,76 @@ textarea {
 
 .booking-map-shell {
   width: 100%;
+  max-width: 100%;
+  min-height: 420px;
+  max-height: min(70vh, 720px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.16);
+}
+
+.booking-map-canvas {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.map-controls {
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.map-zoom-controls,
+.map-pan-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.map-pan-controls {
+  display: grid;
+  justify-items: center;
+}
+
+.map-pan-row {
+  display: flex;
+  gap: 8px;
+}
+
+.map-control-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.map-control-button:hover {
+  transform: translateY(-1px);
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.32);
+}
+
+.map-control-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.map-control-button--wide {
+  min-width: 74px;
 }
 
 .map-mobile-hint {
@@ -444,11 +515,8 @@ textarea {
   }
 
   .booking-map-shell {
-    overflow-x: auto;
-    overflow-y: hidden;
-    margin: 0 -4px;
-    padding: 0 4px 8px;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
   }
 
   .booking-map-shell::-webkit-scrollbar {
@@ -461,12 +529,22 @@ textarea {
   }
 
   .booking-map {
-    width: max(100%, 640px);
     min-height: auto;
   }
 
   .map-mobile-hint {
     display: block;
+  }
+
+  .map-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .map-zoom-controls,
+  .map-pan-controls {
+    width: 100%;
+    justify-content: center;
   }
 
   .info-panel .detail-row {
@@ -517,7 +595,11 @@ textarea {
   }
 
   .booking-map {
-    width: max(100%, 560px);
+    min-height: 320px;
+  }
+
+  .booking-map-shell {
+    min-height: 320px;
   }
 
   .map-object {

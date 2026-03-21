@@ -1,7 +1,16 @@
 const bookingMap = document.getElementById('bookingMap');
+const bookingMapShell = document.getElementById('bookingMapShell');
+const bookingMapCanvas = document.getElementById('bookingMapCanvas');
 const loadingState = document.getElementById('loadingState');
 const errorState = document.getElementById('errorState');
 const availabilityWarning = document.getElementById('availabilityWarning');
+const mapZoomInButton = document.getElementById('mapZoomIn');
+const mapZoomOutButton = document.getElementById('mapZoomOut');
+const mapZoomResetButton = document.getElementById('mapZoomReset');
+const mapPanUpButton = document.getElementById('mapPanUp');
+const mapPanRightButton = document.getElementById('mapPanRight');
+const mapPanDownButton = document.getElementById('mapPanDown');
+const mapPanLeftButton = document.getElementById('mapPanLeft');
 
 const tableInfoEmpty = document.getElementById('tableInfoEmpty');
 const tableInfoDetails = document.getElementById('tableInfoDetails');
@@ -29,10 +38,121 @@ let currentMapId = null;
 let availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
 const tableElementsById = new Map();
 const defaultEmptyTableMessage = 'Натисніть на стіл на мапі.';
+const zoomSteps = [1, 1.25, 1.5, 2, 2.5];
+let currentZoomIndex = 0;
+let currentMapDimensions = null;
+
+function getFitScale() {
+  if (!currentMapDimensions || !bookingMapShell) {
+    return 1;
+  }
+
+  const shellWidth = bookingMapShell.clientWidth || currentMapDimensions.width;
+  const shellHeight = bookingMapShell.clientHeight || currentMapDimensions.height;
+
+  if (!shellWidth || !shellHeight) {
+    return 1;
+  }
+
+  return Math.min(shellWidth / currentMapDimensions.width, shellHeight / currentMapDimensions.height, 1);
+}
+
+function clampMapScroll() {
+  if (!bookingMapShell) {
+    return;
+  }
+
+  const maxScrollLeft = Math.max(bookingMapShell.scrollWidth - bookingMapShell.clientWidth, 0);
+  const maxScrollTop = Math.max(bookingMapShell.scrollHeight - bookingMapShell.clientHeight, 0);
+
+  bookingMapShell.scrollLeft = Math.min(Math.max(bookingMapShell.scrollLeft, 0), maxScrollLeft);
+  bookingMapShell.scrollTop = Math.min(Math.max(bookingMapShell.scrollTop, 0), maxScrollTop);
+}
+
+function updateMapControls() {
+  const canZoomOut = currentZoomIndex > 0;
+  const canZoomIn = currentZoomIndex < zoomSteps.length - 1;
+  const canPanX = bookingMapShell && bookingMapShell.scrollWidth > bookingMapShell.clientWidth + 2;
+  const canPanY = bookingMapShell && bookingMapShell.scrollHeight > bookingMapShell.clientHeight + 2;
+
+  if (mapZoomOutButton) mapZoomOutButton.disabled = !canZoomOut;
+  if (mapZoomInButton) mapZoomInButton.disabled = !canZoomIn;
+  if (mapZoomResetButton) mapZoomResetButton.textContent = `${Math.round(zoomSteps[currentZoomIndex] * 100)}%`;
+  if (mapPanLeftButton) mapPanLeftButton.disabled = !canPanX;
+  if (mapPanRightButton) mapPanRightButton.disabled = !canPanX;
+  if (mapPanUpButton) mapPanUpButton.disabled = !canPanY;
+  if (mapPanDownButton) mapPanDownButton.disabled = !canPanY;
+}
+
+function updateMapViewport(keepCenter = false) {
+  if (!currentMapDimensions || !bookingMap || !bookingMapCanvas || !bookingMapShell) {
+    return;
+  }
+
+  const previousScrollWidth = bookingMapShell.scrollWidth || bookingMapShell.clientWidth;
+  const previousScrollHeight = bookingMapShell.scrollHeight || bookingMapShell.clientHeight;
+  const viewportCenterX = bookingMapShell.scrollLeft + bookingMapShell.clientWidth / 2;
+  const viewportCenterY = bookingMapShell.scrollTop + bookingMapShell.clientHeight / 2;
+  const relativeCenterX = previousScrollWidth ? viewportCenterX / previousScrollWidth : 0.5;
+  const relativeCenterY = previousScrollHeight ? viewportCenterY / previousScrollHeight : 0.5;
+
+  const fitScale = getFitScale();
+  const displayScale = fitScale * zoomSteps[currentZoomIndex];
+  const scaledWidth = Math.max(currentMapDimensions.width * displayScale, bookingMapShell.clientWidth);
+  const scaledHeight = Math.max(currentMapDimensions.height * displayScale, bookingMapShell.clientHeight);
+
+  bookingMapCanvas.style.width = `${scaledWidth}px`;
+  bookingMapCanvas.style.height = `${scaledHeight}px`;
+
+  bookingMap.style.width = `${currentMapDimensions.width}px`;
+  bookingMap.style.height = `${currentMapDimensions.height}px`;
+  bookingMap.style.minHeight = `${currentMapDimensions.height}px`;
+  bookingMap.style.transformOrigin = 'top left';
+  bookingMap.style.transform = `scale(${displayScale})`;
+
+  if (keepCenter) {
+    const nextScrollLeft = scaledWidth * relativeCenterX - bookingMapShell.clientWidth / 2;
+    const nextScrollTop = scaledHeight * relativeCenterY - bookingMapShell.clientHeight / 2;
+
+    bookingMapShell.scrollLeft = nextScrollLeft;
+    bookingMapShell.scrollTop = nextScrollTop;
+  } else if (currentZoomIndex === 0) {
+    bookingMapShell.scrollLeft = 0;
+    bookingMapShell.scrollTop = 0;
+  }
+
+  clampMapScroll();
+  updateMapControls();
+}
+
+function setMapZoom(nextZoomIndex) {
+  const safeZoomIndex = Math.min(Math.max(nextZoomIndex, 0), zoomSteps.length - 1);
+
+  if (safeZoomIndex === currentZoomIndex && currentMapDimensions) {
+    updateMapViewport();
+    return;
+  }
+
+  currentZoomIndex = safeZoomIndex;
+  updateMapViewport(true);
+}
+
+function panMap(deltaX = 0, deltaY = 0) {
+  if (!bookingMapShell) {
+    return;
+  }
+
+  bookingMapShell.scrollBy({
+    left: deltaX,
+    top: deltaY,
+    behavior: 'smooth'
+  });
+}
 
 function showError(message) {
   loadingState.classList.add('hidden');
   bookingMap.classList.add('hidden');
+  bookingMapCanvas?.classList.add('hidden');
   errorState.textContent = message;
   errorState.classList.remove('hidden');
 }
@@ -235,13 +355,15 @@ function renderMap(data) {
   }
 
   currentMapId = map.id;
+  currentMapDimensions = { width: map.width, height: map.height };
+  currentZoomIndex = 0;
 
   const tableById = new Map(tables.map((table) => [table.id, table]));
   const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
 
   tableElementsById.clear();
   bookingMap.innerHTML = '';
-  bookingMap.style.aspectRatio = `${map.width} / ${map.height}`;
+  bookingMap.style.aspectRatio = 'auto';
 
   objects.forEach((object) => {
     const objectElement = createMapObjectElement(object, map, tableById, zoneById);
@@ -249,9 +371,11 @@ function renderMap(data) {
   });
 
   updateTableAvailabilityUI();
+  updateMapViewport();
 
   loadingState.classList.add('hidden');
   errorState.classList.add('hidden');
+  bookingMapCanvas?.classList.remove('hidden');
   bookingMap.classList.remove('hidden');
 }
 
@@ -448,7 +572,18 @@ reservationDateInput.addEventListener('input', () => {
 timeFromInput.addEventListener('change', fetchAvailability);
 timeFromInput.addEventListener('input', fetchAvailability);
 
+mapZoomInButton?.addEventListener('click', () => setMapZoom(currentZoomIndex + 1));
+mapZoomOutButton?.addEventListener('click', () => setMapZoom(currentZoomIndex - 1));
+mapZoomResetButton?.addEventListener('click', () => setMapZoom(0));
+mapPanUpButton?.addEventListener('click', () => panMap(0, -120));
+mapPanRightButton?.addEventListener('click', () => panMap(120, 0));
+mapPanDownButton?.addEventListener('click', () => panMap(0, 120));
+mapPanLeftButton?.addEventListener('click', () => panMap(-120, 0));
+bookingMapShell?.addEventListener('scroll', updateMapControls, { passive: true });
+window.addEventListener('resize', () => updateMapViewport(true));
+
 ensureDefaultDateTime();
 updateStats();
 updateSelectedStatusBadge('', 'Не обрано');
+updateMapControls();
 fetchDefaultMap();
