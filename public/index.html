@@ -14,13 +14,17 @@
     <main class="menu-page-shell home-page-shell">
       <section class="menu-page-surface home-page-surface">
         <header class="menu-page-header home-page-header" id="top">
-          <a class="brand" href="#top">
-            <span class="brand-mark">GP</span>
-            <span>
-              <strong>ГорПляж</strong>
-              <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
-            </span>
-          </a>
+          <div class="home-page-header-bar">
+            <a class="brand" href="#top">
+              <span class="brand-mark">GP</span>
+              <span>
+                <strong>ГорПляж</strong>
+                <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
+              </span>
+            </a>
+
+            <button id="languageToggle" class="lang-toggle home-header-action" type="button" aria-label="Switch language">EN</button>
+          </div>
 
           <div class="home-page-scroll-block" aria-label="Site sections and controls">
             <nav class="home-page-scroll-track" aria-label="Site navigation">
@@ -30,7 +34,6 @@
               <a href="#events" data-i18n="navEvents">Події</a>
               <a href="#news" data-i18n="navNews">Акції</a>
               <a href="#contacts" data-i18n="navContacts">Контакти</a>
-              <button id="languageToggle" class="lang-toggle home-scroll-action" type="button" aria-label="Switch language">EN</button>
               <button id="installBtn" class="install-btn home-scroll-action hidden" data-i18n="installApp">Встановити як застосунок</button>
             </nav>
           </div>
@@ -79,7 +82,7 @@
           </div>
         </section>
 
-        <section class="home-grid home-grid-double" id="about">
+        <section class="home-grid home-grid-double home-section-divider" id="about">
           <article class="home-card home-card-wide">
             <p class="eyebrow" data-i18n="aboutKicker">Про простір</p>
             <h2 data-i18n="aboutTitle">Про заклад</h2>
@@ -105,7 +108,7 @@
           </article>
         </section>
 
-        <section class="home-grid home-grid-double">
+        <section class="home-grid home-grid-double home-section-divider">
           <section class="home-card menu-preview-surface" id="menu-section">
             <div class="section-head section-head-compact">
               <div>
@@ -173,7 +176,7 @@
           </section>
         </section>
 
-        <section class="home-grid home-grid-triple" id="events">
+        <section class="home-grid home-grid-triple home-section-divider" id="events">
           <article class="home-card news-item">
             <p class="eyebrow" data-i18n="eventsKicker">Live atmosphere</p>
             <h2 data-i18n="eventsTitle">Афіша та анонси</h2>
@@ -190,7 +193,7 @@
           </article>
         </section>
 
-        <section class="home-grid home-grid-double" id="news">
+        <section class="home-grid home-grid-double home-section-divider" id="news">
           <article class="home-card">
             <p class="eyebrow" data-i18n="newsKicker">Special offers</p>
             <h2 data-i18n="newsTitle">Новини та акції</h2>
