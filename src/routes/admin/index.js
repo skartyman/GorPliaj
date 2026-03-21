@@ -6,7 +6,9 @@ const {
   logoutAdmin,
   getAdminReservations,
   getAdminReservationById,
-  updateAdminReservationStatus
+  updateAdminReservationStatus,
+  getAdminMapEditor,
+  updateAdminMapEditor
 } = require('../../controllers/adminController');
 const { requireAdminAuth } = require('../../middleware/adminAuth');
 
@@ -21,5 +23,7 @@ router.post('/auth/logout', requireAdminAuth, logoutAdmin);
 router.get('/reservations', requireAdminAuth, getAdminReservations);
 router.get('/reservations/:id', requireAdminAuth, getAdminReservationById);
 router.patch('/reservations/:id/status', requireAdminAuth, updateAdminReservationStatus);
+router.get('/maps/:id/editor', requireAdminAuth, getAdminMapEditor);
+router.put('/maps/:id/editor', requireAdminAuth, updateAdminMapEditor);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
+const adminMapEditorService = require('../services/adminMapEditorService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
 
@@ -171,6 +172,56 @@ async function updateAdminReservationStatus(req, res) {
   }
 }
 
+
+async function getAdminMapEditor(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Map id is invalid.' });
+    }
+
+    const mapEditorData = await adminMapEditorService.getAdminMapEditor(id);
+
+    if (!mapEditorData) {
+      return res.status(404).json({ message: 'Map not found.' });
+    }
+
+    return res.json(mapEditorData);
+  } catch (error) {
+    console.error('[adminController.getAdminMapEditor] Failed to load map editor data.', error);
+    return res.status(500).json({ message: 'Unable to load map editor data.' });
+  }
+}
+
+async function updateAdminMapEditor(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Map id is invalid.' });
+    }
+
+    const result = await adminMapEditorService.updateAdminMapEditor(id, req.body.objects);
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: 'Map not found.' });
+    }
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      ...result.data
+    });
+  } catch (error) {
+    console.error('[adminController.updateAdminMapEditor] Failed to save map editor data.', error);
+    return res.status(500).json({ message: 'Unable to save map editor data.' });
+  }
+}
+
 module.exports = {
   getAdminStatus,
   loginAdmin,
@@ -178,5 +229,7 @@ module.exports = {
   logoutAdmin,
   getAdminReservations,
   getAdminReservationById,
-  updateAdminReservationStatus
+  updateAdminReservationStatus,
+  getAdminMapEditor,
+  updateAdminMapEditor
 };

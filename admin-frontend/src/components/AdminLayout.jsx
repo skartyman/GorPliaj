@@ -6,6 +6,7 @@ import { useAdminI18n } from '../lib/i18n';
 const navItems = [
   { to: '/admin/dashboard', labelKey: 'nav.dashboard' },
   { to: '/admin/reservations', labelKey: 'nav.reservations' },
+  { to: '/admin/map-editor', labelKey: 'nav.mapEditor' },
   { to: '/admin/map', labelKey: 'nav.map' },
   { to: '/admin/menu', labelKey: 'nav.menu' },
   { to: '/admin/events', labelKey: 'nav.events' },
@@ -56,6 +57,7 @@ export default function AdminLayout({ children }) {
             <NavLink
               key={item.to}
               to={item.to}
+              end
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={onNavSelect}
             >

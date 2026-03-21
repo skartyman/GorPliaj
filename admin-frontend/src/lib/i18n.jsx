@@ -21,6 +21,7 @@ const translations = {
       dashboard: 'Дашборд',
       reservations: 'Брони',
       map: 'Карта',
+      mapEditor: 'Редактор карты',
       menu: 'Меню',
       events: 'События',
       news: 'Новости',
@@ -154,6 +155,55 @@ const translations = {
         table: 'Стол',
         zone: 'Зона',
         status: 'Статус'
+      }
+    },
+
+    mapEditor: {
+      title: 'Редактор карты',
+      description: 'Админский редактор объектов текущей карты без влияния на публичный flow бронирования.',
+      eyebrow: 'MVP редактора схемы',
+      heroTitle: 'Выбирайте, перемещайте, масштабируйте и настраивайте объекты площадки',
+      heroDescription: 'Редактор загружает текущую дефолтную карту, позволяет править существующие объекты и сохраняет весь список обратно через admin API.',
+      note: 'MVP сфокусирован на редактировании существующих объектов — без создания и удаления.',
+      loading: 'Загружаем редактор карты...',
+      save: 'Сохранить карту',
+      saving: 'Сохраняем...',
+      reset: 'Сбросить правки',
+      clearSelection: 'Снять выбор',
+      rotateLeft: '↺ -15°',
+      rotateRight: '↻ +15°',
+      saveSuccess: 'Изменения карты сохранены.',
+      meta: 'Карта: {map} • Размер: {size} • Объектов: {objects} • Столов: {tables}',
+      canvasTitle: 'Редактируемое полотно',
+      canvasDescription: 'Кликните по объекту для выбора, тяните для перемещения и используйте ручки для resize.',
+      propertiesTitle: 'Свойства объекта',
+      propertiesDescription: 'Точные координаты и параметры активного объекта.',
+      noSelection: 'Выберите объект на схеме, чтобы редактировать его свойства.',
+      fields: {
+        label: 'Label',
+        x: 'X',
+        y: 'Y',
+        width: 'Width',
+        height: 'Height',
+        rotation: 'Rotation',
+        zIndex: 'zIndex',
+        isActive: 'Активен'
+      },
+      objectType: {
+        TABLE: 'Стол',
+        BAR: 'Бар',
+        STAGE: 'Сцена',
+        ENTRANCE: 'Вход',
+        WC: 'WC',
+        LABEL: 'Надпись',
+        POOL: 'Бассейн',
+        WALL: 'Стена',
+        DECOR: 'Декор',
+        CUSTOM: 'Объект'
+      },
+      errors: {
+        load: 'Не удалось загрузить редактор карты.',
+        save: 'Не удалось сохранить изменения карты.'
       }
     },
     map: {
@@ -346,6 +396,7 @@ const translations = {
       dashboard: 'Dashboard',
       reservations: 'Reservations',
       map: 'Map',
+      mapEditor: 'Map Editor',
       menu: 'Menu',
       events: 'Events',
       news: 'News',
@@ -479,6 +530,55 @@ const translations = {
         table: 'Table',
         zone: 'Zone',
         status: 'Status'
+      }
+    },
+
+    mapEditor: {
+      title: 'Map editor',
+      description: 'Admin-only editor for the current venue map objects without affecting the public booking flow.',
+      eyebrow: 'Layout editor MVP',
+      heroTitle: 'Select, move, resize, and tune venue objects visually',
+      heroDescription: 'The editor loads the current default map, lets staff update existing objects, and saves the full object list back through the admin API.',
+      note: 'This MVP focuses on editing existing objects only — no creation or deletion yet.',
+      loading: 'Loading map editor...',
+      save: 'Save map',
+      saving: 'Saving...',
+      reset: 'Reset changes',
+      clearSelection: 'Clear selection',
+      rotateLeft: '↺ -15°',
+      rotateRight: '↻ +15°',
+      saveSuccess: 'Map changes saved.',
+      meta: 'Map: {map} • Size: {size} • Objects: {objects} • Tables: {tables}',
+      canvasTitle: 'Editable canvas',
+      canvasDescription: 'Click any object to select it, drag to move, and use handles to resize it.',
+      propertiesTitle: 'Object properties',
+      propertiesDescription: 'Precise coordinates and settings for the active object.',
+      noSelection: 'Select an object on the layout to edit its properties.',
+      fields: {
+        label: 'Label',
+        x: 'X',
+        y: 'Y',
+        width: 'Width',
+        height: 'Height',
+        rotation: 'Rotation',
+        zIndex: 'zIndex',
+        isActive: 'Active'
+      },
+      objectType: {
+        TABLE: 'Table',
+        BAR: 'Bar',
+        STAGE: 'Stage',
+        ENTRANCE: 'Entrance',
+        WC: 'WC',
+        LABEL: 'Label',
+        POOL: 'Pool',
+        WALL: 'Wall',
+        DECOR: 'Decor',
+        CUSTOM: 'Object'
+      },
+      errors: {
+        load: 'Failed to load the map editor.',
+        save: 'Failed to save map changes.'
       }
     },
     map: {
