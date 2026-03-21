@@ -202,7 +202,7 @@ async function updateAdminMapEditor(req, res) {
       return res.status(400).json({ message: 'Map id is invalid.' });
     }
 
-    const result = await adminMapEditorService.updateAdminMapEditor(id, req.body.objects);
+    const result = await adminMapEditorService.updateAdminMapEditor(id, req.body.objects, req.body.map || {});
 
     if (result.type === 'NOT_FOUND') {
       return res.status(404).json({ message: 'Map not found.' });

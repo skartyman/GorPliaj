@@ -1,8 +1,10 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, MapObjectType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive'];
+const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type'];
+const MAP_EDITABLE_FIELDS = ['backgroundImage'];
+const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 
 function serializeMapEditorPayload(map) {
   if (!map) {
@@ -44,40 +46,80 @@ function getAdminMapEditor(mapId) {
   }).then(serializeMapEditorPayload);
 }
 
-function normalizeEditableObject(object) {
+function normalizeMapInput(mapInput) {
+  const normalized = {};
+
+  for (const field of MAP_EDITABLE_FIELDS) {
+    if (field === 'backgroundImage') {
+      normalized.backgroundImage = String(mapInput?.backgroundImage ?? '').trim() || null;
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeEditableObject(object, existingObject = null) {
   const normalized = {};
 
   for (const field of EDITABLE_FIELDS) {
     if (field === 'label') {
-      normalized.label = object.label === null ? null : String(object.label ?? '').trim() || null;
+      normalized.label = object.label === null ? null : String(object.label ?? existingObject?.label ?? '').trim() || null;
       continue;
     }
 
     if (field === 'isActive') {
-      normalized.isActive = Boolean(object.isActive);
+      normalized.isActive = object.isActive === undefined ? Boolean(existingObject?.isActive) : Boolean(object.isActive);
       continue;
     }
 
     if (field === 'zIndex') {
-      normalized.zIndex = Number(object.zIndex);
+      normalized.zIndex = Number(object.zIndex ?? existingObject?.zIndex ?? 0);
       continue;
     }
 
-    normalized[field] = Number(object[field]);
+    if (field === 'tableId') {
+      const nextTableId = object.tableId === undefined ? existingObject?.tableId : object.tableId;
+      normalized.tableId = nextTableId === null || nextTableId === '' || nextTableId === undefined ? null : Number(nextTableId);
+      continue;
+    }
+
+    if (field === 'type') {
+      normalized.type = String(object.type ?? existingObject?.type ?? '').trim().toUpperCase();
+      continue;
+    }
+
+    normalized[field] = Number(object[field] ?? existingObject?.[field]);
+  }
+
+  if (normalized.type !== 'TABLE') {
+    normalized.tableId = null;
   }
 
   return normalized;
 }
 
 function validateEditorObjects(objects) {
-  if (!Array.isArray(objects) || objects.length === 0) {
-    return 'Objects payload must be a non-empty array.';
+  if (!Array.isArray(objects)) {
+    return 'Objects payload must be an array.';
   }
 
+  const uniqueIds = new Set();
+
   for (const object of objects) {
-    const id = Number(object?.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return 'Each object must include a valid id.';
+    const rawId = object?.id;
+    if (rawId === undefined || rawId === null || rawId === '') {
+      return 'Each object must include an id.';
+    }
+
+    const normalizedId = String(rawId);
+    if (uniqueIds.has(normalizedId)) {
+      return 'Each object id must be unique.';
+    }
+    uniqueIds.add(normalizedId);
+
+    const type = object.type === undefined || object.type === null ? '' : String(object.type).trim().toUpperCase();
+    if (type && !VALID_OBJECT_TYPES.has(type)) {
+      return `Object ${normalizedId} contains an invalid type.`;
     }
 
     const x = Number(object.x);
@@ -88,18 +130,29 @@ function validateEditorObjects(objects) {
     const zIndex = Number(object.zIndex);
 
     if (![x, y, width, height, rotation, zIndex].every((value) => Number.isFinite(value))) {
-      return `Object ${id} contains invalid numeric fields.`;
+      return `Object ${normalizedId} contains invalid numeric fields.`;
     }
 
     if (width <= 0 || height <= 0) {
-      return `Object ${id} must have positive width and height.`;
+      return `Object ${normalizedId} must have positive width and height.`;
+    }
+
+    if (object.tableId !== null && object.tableId !== '' && object.tableId !== undefined) {
+      const tableId = Number(object.tableId);
+      if (!Number.isInteger(tableId) || tableId <= 0) {
+        return `Object ${normalizedId} contains an invalid table id.`;
+      }
+
+      if (type && type !== 'TABLE') {
+        return `Only table objects can reference a table id (${normalizedId}).`;
+      }
     }
   }
 
   return null;
 }
 
-async function updateAdminMapEditor(mapId, objects) {
+async function updateAdminMapEditor(mapId, objects, mapInput = {}) {
   const validationError = validateEditorObjects(objects);
   if (validationError) {
     return { type: 'INVALID', message: validationError };
@@ -107,11 +160,29 @@ async function updateAdminMapEditor(mapId, objects) {
 
   const map = await prisma.map.findUnique({
     where: { id: mapId },
-    select: { id: true }
+    select: {
+      id: true,
+      width: true,
+      height: true,
+      tables: {
+        select: {
+          id: true
+        }
+      }
+    }
   });
 
   if (!map) {
     return { type: 'NOT_FOUND' };
+  }
+
+  const tableIds = new Set(map.tables.map((table) => table.id));
+  const payloadTableIds = objects
+    .map((object) => (object.tableId === null || object.tableId === '' || object.tableId === undefined ? null : Number(object.tableId)))
+    .filter((tableId) => tableId !== null);
+
+  if (payloadTableIds.some((tableId) => !tableIds.has(tableId))) {
+    return { type: 'INVALID', message: 'Objects payload references an unknown table id.' };
   }
 
   const existingObjects = await prisma.mapObject.findMany({
@@ -120,44 +191,105 @@ async function updateAdminMapEditor(mapId, objects) {
       id: true,
       mapId: true,
       tableId: true,
-      type: true
+      type: true,
+      label: true,
+      x: true,
+      y: true,
+      width: true,
+      height: true,
+      rotation: true,
+      zIndex: true,
+      isActive: true,
+      styleJson: true,
+      metaJson: true
     },
     orderBy: {
       id: 'asc'
     }
   });
 
-  if (!existingObjects.length) {
-    return { type: 'INVALID', message: 'Map has no editable objects.' };
+  const existingById = new Map(existingObjects.map((object) => [object.id, object]));
+
+  const payloadExistingIds = new Set();
+  for (const object of objects) {
+    const numericId = Number(object.id);
+    if (!Number.isInteger(numericId) || numericId <= 0) {
+      continue;
+    }
+
+    if (!existingById.has(numericId)) {
+      return { type: 'INVALID', message: 'Objects payload contains an unknown map object id.' };
+    }
+
+    payloadExistingIds.add(numericId);
   }
 
-  const existingIds = new Set(existingObjects.map((object) => object.id));
-  const payloadIds = objects.map((object) => Number(object.id));
-  const uniquePayloadIds = new Set(payloadIds);
+  const mapUpdateData = normalizeMapInput(mapInput);
+  const operations = [];
 
-  if (uniquePayloadIds.size !== objects.length) {
-    return { type: 'INVALID', message: 'Each object id must be unique.' };
+  if (Object.keys(mapUpdateData).length) {
+    operations.push(
+      prisma.map.update({
+        where: { id: mapId },
+        data: mapUpdateData
+      })
+    );
   }
 
-  if (payloadIds.length !== existingObjects.length) {
-    return { type: 'INVALID', message: 'Full object list is required for saving.' };
+  for (const existingObject of existingObjects) {
+    if (payloadExistingIds.has(existingObject.id)) {
+      continue;
+    }
+
+    operations.push(
+      prisma.mapObject.delete({
+        where: { id: existingObject.id }
+      })
+    );
   }
 
-  if (payloadIds.some((id) => !existingIds.has(id))) {
-    return { type: 'INVALID', message: 'Objects payload contains an unknown map object id.' };
+  for (const object of objects) {
+    const numericId = Number(object.id);
+    const isExistingObject = Number.isInteger(numericId) && numericId > 0;
+    const normalizedObject = normalizeEditableObject(object, isExistingObject ? existingById.get(numericId) : null);
+
+    if (!VALID_OBJECT_TYPES.has(normalizedObject.type)) {
+      return { type: 'INVALID', message: `Object ${object.id} contains an invalid type.` };
+    }
+
+    if (normalizedObject.tableId !== null && !tableIds.has(normalizedObject.tableId)) {
+      return { type: 'INVALID', message: 'Objects payload references an unknown table id.' };
+    }
+
+    if (normalizedObject.x < 0 || normalizedObject.y < 0 || normalizedObject.x > map.width || normalizedObject.y > map.height) {
+      return { type: 'INVALID', message: `Object ${object.id} contains coordinates outside the map bounds.` };
+    }
+
+    if (isExistingObject) {
+      operations.push(
+        prisma.mapObject.update({
+          where: { id: numericId },
+          data: normalizedObject
+        })
+      );
+      continue;
+    }
+
+    operations.push(
+      prisma.mapObject.create({
+        data: {
+          mapId,
+          ...normalizedObject,
+          styleJson: object.styleJson ?? null,
+          metaJson: object.metaJson ?? null
+        }
+      })
+    );
   }
 
-  const payloadById = new Map(objects.map((object) => [Number(object.id), object]));
-
-  await prisma.$transaction(
-    existingObjects.map((existingObject) => {
-      const payload = payloadById.get(existingObject.id);
-      return prisma.mapObject.update({
-        where: { id: existingObject.id },
-        data: normalizeEditableObject(payload)
-      });
-    })
-  );
+  if (operations.length) {
+    await prisma.$transaction(operations);
+  }
 
   const updatedMap = await getAdminMapEditor(mapId);
   return {

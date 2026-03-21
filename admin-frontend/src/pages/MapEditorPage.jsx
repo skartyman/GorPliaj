@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
@@ -10,9 +10,12 @@ const STATIC_TYPE_ACCENTS = {
   BAR: 'bar',
   STAGE: 'stage',
   ENTRANCE: 'entrance',
-  WC: 'wc'
+  WC: 'wc',
+  LABEL: 'label',
+  DECOR: 'decor'
 };
 
+const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'DECOR', 'LABEL'];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', step: null },
   { key: 'x', type: 'number', step: 1 },
@@ -22,6 +25,15 @@ const PROPERTY_FIELDS = [
   { key: 'rotation', type: 'number', step: 1 },
   { key: 'zIndex', type: 'number', step: 1 }
 ];
+const CREATION_PRESETS = {
+  TABLE: { width: 108, height: 72 },
+  BAR: { width: 160, height: 64 },
+  STAGE: { width: 200, height: 120 },
+  ENTRANCE: { width: 110, height: 52 },
+  WC: { width: 96, height: 72 },
+  DECOR: { width: 120, height: 88 },
+  LABEL: { width: 180, height: 60 }
+};
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -31,17 +43,31 @@ function roundCoordinate(value) {
   return Math.round(Number(value) || 0);
 }
 
+function normalizeMap(map) {
+  if (!map) {
+    return null;
+  }
+
+  return {
+    ...map,
+    backgroundImage: String(map.backgroundImage || '').trim()
+  };
+}
+
 function normalizeObject(object, map) {
-  const maxX = Math.max((map?.width || 0) - Number(object.width || 0), 0);
-  const maxY = Math.max((map?.height || 0) - Number(object.height || 0), 0);
+  const width = Math.max(roundCoordinate(object.width), 24);
+  const height = Math.max(roundCoordinate(object.height), 24);
+  const maxX = Math.max((map?.width || 0) - width, 0);
+  const maxY = Math.max((map?.height || 0) - height, 0);
 
   return {
     ...object,
     label: object.label || '',
+    tableId: Number.isInteger(Number(object.tableId)) && Number(object.tableId) > 0 ? Number(object.tableId) : null,
     x: clamp(roundCoordinate(object.x), 0, maxX),
     y: clamp(roundCoordinate(object.y), 0, maxY),
-    width: Math.max(roundCoordinate(object.width), 24),
-    height: Math.max(roundCoordinate(object.height), 24),
+    width,
+    height,
     rotation: roundCoordinate(object.rotation),
     zIndex: roundCoordinate(object.zIndex),
     isActive: Boolean(object.isActive)
@@ -49,11 +75,13 @@ function normalizeObject(object, map) {
 }
 
 function buildEditorState(payload) {
+  const map = normalizeMap(payload.map);
+
   return {
-    map: payload.map,
+    map,
     zones: payload.zones || [],
     tables: payload.tables || [],
-    objects: (payload.objects || []).map((object) => normalizeObject(object, payload.map))
+    objects: (payload.objects || []).map((object) => normalizeObject(object, map))
   };
 }
 
@@ -67,14 +95,70 @@ function getObjectAccent(object) {
 
 function getObjectDisplayName(object, tableMap, t) {
   if (object.type === 'TABLE') {
-    const table = tableMap.get(object.tableId);
+    const table = object.tableId ? tableMap.get(object.tableId) : null;
     return table?.code || table?.name || object.label || t('mapEditor.objectType.TABLE');
   }
 
   return object.label || t(`mapEditor.objectType.${object.type}`);
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, onFieldChange, t }) {
+function getNextSelectionId(nextObjects, preferredId = null) {
+  if (!nextObjects.length) {
+    return null;
+  }
+
+  if (preferredId !== null && nextObjects.some((object) => object.id === preferredId)) {
+    return preferredId;
+  }
+
+  return nextObjects[nextObjects.length - 1]?.id || null;
+}
+
+function resolveSavedSelection(prevState, nextData) {
+  if (!prevState.selectedObjectId) {
+    return nextData.objects[0]?.id || null;
+  }
+
+  if (nextData.objects.some((object) => object.id === prevState.selectedObjectId)) {
+    return prevState.selectedObjectId;
+  }
+
+  const previousObject = prevState.current?.objects?.find((object) => object.id === prevState.selectedObjectId);
+  if (!previousObject) {
+    return nextData.objects[0]?.id || null;
+  }
+
+  const matchedObject = nextData.objects.find(
+    (object) =>
+      object.type === previousObject.type &&
+      object.tableId === previousObject.tableId &&
+      object.label === previousObject.label &&
+      object.x === previousObject.x &&
+      object.y === previousObject.y &&
+      object.width === previousObject.width &&
+      object.height === previousObject.height
+  );
+
+  return matchedObject?.id || nextData.objects[0]?.id || null;
+}
+
+function MapSettings({ map, onBackgroundImageChange, t }) {
+  return (
+    <div className="editor-properties-stack">
+      <div>
+        <h4 className="panel-section-title">{t('mapEditor.mapSettingsTitle')}</h4>
+        <p className="muted small">{t('mapEditor.mapSettingsDescription')}</p>
+      </div>
+
+      <label>
+        {t('mapEditor.fields.backgroundImage')}
+        <input type="url" value={map.backgroundImage} placeholder="https://example.com/floorplan.png" onChange={(event) => onBackgroundImageChange(event.target.value)} />
+      </label>
+    </div>
+  );
+}
+
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, t }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -96,6 +180,15 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, onFieldChange,
         </span>
       </div>
 
+      <div className="actions compact">
+        <button type="button" className="btn btn-secondary btn-small" onClick={onDuplicate}>
+          {t('mapEditor.duplicateSelected')}
+        </button>
+        <button type="button" className="btn btn-danger btn-small" onClick={onDelete}>
+          {t('mapEditor.deleteSelected')}
+        </button>
+      </div>
+
       <div className="editor-form-grid">
         {PROPERTY_FIELDS.map((field) => (
           <label key={field.key}>
@@ -109,13 +202,23 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, onFieldChange,
           </label>
         ))}
 
+        {selectedObject.type === 'TABLE' ? (
+          <label>
+            {t('mapEditor.fields.tableId')}
+            <select value={selectedObject.tableId || ''} onChange={(event) => onFieldChange('tableId', event.target.value)}>
+              <option value="">{t('mapEditor.unassignedTable')}</option>
+              {tables.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.code || item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
         <label className="editor-toggle-field">
           <span>{t('mapEditor.fields.isActive')}</span>
-          <input
-            type="checkbox"
-            checked={selectedObject.isActive}
-            onChange={(event) => onFieldChange('isActive', event.target.checked)}
-          />
+          <input type="checkbox" checked={selectedObject.isActive} onChange={(event) => onFieldChange('isActive', event.target.checked)} />
         </label>
       </div>
     </div>
@@ -124,6 +227,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, onFieldChange,
 
 export default function MapEditorPage() {
   const { t } = useAdminI18n();
+  const objectIdRef = useRef(0);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -144,6 +248,23 @@ export default function MapEditorPage() {
       }));
     });
   }, [t]);
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const tagName = event.target?.tagName;
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
+
+      if (isEditableTarget || !editorState.selectedObjectId || !['Delete', 'Backspace'].includes(event.key)) {
+        return;
+      }
+
+      event.preventDefault();
+      handleDeleteSelected();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editorState.selectedObjectId, editorState.current, t]);
 
   async function loadDefaultMapEditor() {
     setEditorState((prev) => ({
@@ -208,15 +329,26 @@ export default function MapEditorPage() {
       return false;
     }
 
-    return JSON.stringify(editorState.original.objects) !== JSON.stringify(editorState.current.objects);
+    return JSON.stringify(editorState.original) !== JSON.stringify(editorState.current);
   }, [editorState.current, editorState.original]);
 
-  function updateObject(objectId, updater) {
+  function updateCurrent(updater) {
     setEditorState((prev) => {
       if (!prev.current?.map) {
         return prev;
       }
 
+      return {
+        ...prev,
+        ...updater(prev),
+        saveMessage: '',
+        error: ''
+      };
+    });
+  }
+
+  function updateObject(objectId, updater) {
+    updateCurrent((prev) => {
       const nextObjects = prev.current.objects.map((object) => {
         if (object.id !== objectId) {
           return object;
@@ -226,13 +358,10 @@ export default function MapEditorPage() {
       });
 
       return {
-        ...prev,
         current: {
           ...prev.current,
           objects: nextObjects
-        },
-        saveMessage: '',
-        error: ''
+        }
       };
     });
   }
@@ -251,12 +380,31 @@ export default function MapEditorPage() {
         return { ...object, isActive: Boolean(value) };
       }
 
+      if (field === 'tableId') {
+        return {
+          ...object,
+          tableId: value === '' ? null : Number(value)
+        };
+      }
+
       const numericValue = Number(value);
       return {
         ...object,
         [field]: Number.isFinite(numericValue) ? numericValue : object[field]
       };
     });
+  }
+
+  function handleMapFieldChange(field, value) {
+    updateCurrent((prev) => ({
+      current: {
+        ...prev.current,
+        map: {
+          ...prev.current.map,
+          [field]: String(value)
+        }
+      }
+    }));
   }
 
   function handleDragStop(objectId, position) {
@@ -288,6 +436,98 @@ export default function MapEditorPage() {
     }));
   }
 
+  function buildNewObject(type, currentMap, currentObjects) {
+    const preset = CREATION_PRESETS[type] || CREATION_PRESETS.DECOR;
+    const maxZIndex = currentObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0);
+    const width = preset.width;
+    const height = preset.height;
+    const centeredX = Math.round((currentMap.width - width) / 2);
+    const centeredY = Math.round((currentMap.height - height) / 2);
+
+    objectIdRef.current += 1;
+
+    return normalizeObject(
+      {
+        id: `tmp-${Date.now()}-${objectIdRef.current}`,
+        type,
+        label: type === 'LABEL' ? t('mapEditor.newLabelDefault') : '',
+        tableId: null,
+        x: centeredX,
+        y: centeredY,
+        width,
+        height,
+        rotation: 0,
+        zIndex: maxZIndex + 1,
+        isActive: true
+      },
+      currentMap
+    );
+  }
+
+  function createObject(type) {
+    updateCurrent((prev) => {
+      const newObject = buildNewObject(type, prev.current.map, prev.current.objects);
+      return {
+        current: {
+          ...prev.current,
+          objects: [...prev.current.objects, newObject]
+        },
+        selectedObjectId: newObject.id
+      };
+    });
+  }
+
+  function duplicateSelected() {
+    if (!selectedObject || !editorState.current?.map) {
+      return;
+    }
+
+    updateCurrent((prev) => {
+      const duplicate = normalizeObject(
+        {
+          ...selectedObject,
+          id: `tmp-${Date.now()}-${objectIdRef.current + 1}`,
+          x: selectedObject.x + 24,
+          y: selectedObject.y + 24,
+          zIndex: Math.max(selectedObject.zIndex + 1, prev.current.objects.reduce((max, object) => Math.max(max, object.zIndex), 0) + 1)
+        },
+        prev.current.map
+      );
+
+      objectIdRef.current += 1;
+
+      return {
+        current: {
+          ...prev.current,
+          objects: [...prev.current.objects, duplicate]
+        },
+        selectedObjectId: duplicate.id
+      };
+    });
+  }
+
+  function handleDeleteSelected() {
+    if (!selectedObject) {
+      return;
+    }
+
+    const confirmed = window.confirm(t('mapEditor.deleteConfirm', { name: getObjectDisplayName(selectedObject, tableMap, t) }));
+    if (!confirmed) {
+      return;
+    }
+
+    updateCurrent((prev) => {
+      const nextObjects = prev.current.objects.filter((object) => object.id !== prev.selectedObjectId);
+      return {
+        current: {
+          ...prev.current,
+          objects: nextObjects
+        },
+        selectedObjectId: getNextSelectionId(nextObjects)
+      };
+    });
+  }
+
   async function saveChanges() {
     if (!editorState.current || !editorState.defaultMapId) {
       return;
@@ -301,8 +541,13 @@ export default function MapEditorPage() {
     }));
 
     const payload = {
+      map: {
+        backgroundImage: editorState.current.map.backgroundImage || null
+      },
       objects: editorState.current.objects.map((object) => ({
         id: object.id,
+        type: object.type,
+        tableId: object.type === 'TABLE' ? object.tableId : null,
         label: object.label || null,
         x: object.x,
         y: object.y,
@@ -336,7 +581,7 @@ export default function MapEditorPage() {
       saveMessage: t('mapEditor.saveSuccess'),
       original: nextData,
       current: nextData,
-      selectedObjectId: prev.selectedObjectId
+      selectedObjectId: resolveSavedSelection(prev, nextData)
     }));
   }
 
@@ -378,12 +623,31 @@ export default function MapEditorPage() {
             <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
               {t('mapEditor.reset')}
             </button>
-            <button type="button" className="btn btn-secondary" onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: null }))} disabled={!selectedObject}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: null }))}
+              disabled={!selectedObject}
+            >
               {t('mapEditor.clearSelection')}
             </button>
           </div>
 
+          <div className="map-editor-toolbar-group compact-actions">
+            {CREATION_ACTIONS.map((type) => (
+              <button key={type} type="button" className="btn btn-secondary btn-small" onClick={() => createObject(type)} disabled={!map}>
+                {t('mapEditor.addObject', { type: t(`mapEditor.objectType.${type}`) })}
+              </button>
+            ))}
+          </div>
+
           <div className="map-editor-toolbar-group">
+            <button type="button" className="btn btn-secondary btn-small" onClick={duplicateSelected} disabled={!selectedObject}>
+              {t('mapEditor.duplicateSelected')}
+            </button>
+            <button type="button" className="btn btn-danger btn-small" onClick={handleDeleteSelected} disabled={!selectedObject}>
+              {t('mapEditor.deleteSelected')}
+            </button>
             <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(-15)} disabled={!selectedObject}>
               {t('mapEditor.rotateLeft')}
             </button>
@@ -419,6 +683,11 @@ export default function MapEditorPage() {
                     height: `${map.height}px`
                   }}
                 >
+                  {map.backgroundImage ? (
+                    <div className="map-editor-canvas-background" style={{ backgroundImage: `url(${map.backgroundImage})` }} aria-hidden="true" />
+                  ) : null}
+                  <div className="map-editor-canvas-grid" aria-hidden="true" />
+
                   {objects.map((object) => {
                     const table = object.tableId ? tableMap.get(object.tableId) : null;
                     const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
@@ -460,15 +729,24 @@ export default function MapEditorPage() {
               </div>
             </PanelCard>
 
-            <PanelCard title={t('mapEditor.propertiesTitle')} subtitle={t('mapEditor.propertiesDescription')} className="full-height surface-muted">
-              <MapObjectProperties
-                selectedObject={selectedObject}
-                tableMap={tableMap}
-                zoneMap={zoneMap}
-                onFieldChange={handleFieldChange}
-                t={t}
-              />
-            </PanelCard>
+            <div className="editor-sidebar-stack">
+              <PanelCard title={t('mapEditor.mapSettingsTitle')} subtitle={t('mapEditor.mapSettingsDescription')} className="surface-muted">
+                <MapSettings map={map} onBackgroundImageChange={(value) => handleMapFieldChange('backgroundImage', value)} t={t} />
+              </PanelCard>
+
+              <PanelCard title={t('mapEditor.propertiesTitle')} subtitle={t('mapEditor.propertiesDescription')} className="full-height surface-muted">
+                <MapObjectProperties
+                  selectedObject={selectedObject}
+                  tableMap={tableMap}
+                  zoneMap={zoneMap}
+                  tables={editorState.current.tables}
+                  onFieldChange={handleFieldChange}
+                  onDuplicate={duplicateSelected}
+                  onDelete={handleDeleteSelected}
+                  t={t}
+                />
+              </PanelCard>
+            </div>
           </div>
         ) : null}
       </PageContainer>
