@@ -980,6 +980,7 @@ select:focus {
   z-index: 20;
 }
 
+.home-page-toolbar,
 .home-page-nav,
 .home-page-controls,
 .home-hero-grid,
@@ -990,10 +991,21 @@ select:focus {
   display: flex;
 }
 
+.home-page-toolbar,
 .home-page-nav,
 .home-page-controls {
   align-items: center;
   gap: 10px;
+}
+
+.home-page-toolbar {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.home-page-nav,
+.home-page-controls {
   flex-wrap: wrap;
 }
 
@@ -1115,8 +1127,6 @@ select:focus {
 
 @media (max-width: 1040px) {
   .home-page-header,
-  .home-page-nav,
-  .home-page-controls,
   .home-hero-grid,
   .home-grid-double,
   .home-grid-triple,
@@ -1126,8 +1136,36 @@ select:focus {
     align-items: stretch;
   }
 
+  .home-page-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+
+  .home-page-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-page-nav,
+  .home-page-controls {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
   .home-page-nav {
     justify-content: flex-start;
+  }
+
+  .home-page-nav a,
+  .home-page-controls > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
   }
 }
 
