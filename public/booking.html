@@ -56,25 +56,27 @@
           <p id="loadingState" class="state state-loading" role="status">Завантаження карти…</p>
           <p id="errorState" class="state state-error hidden" role="alert"></p>
           <p id="availabilityWarning" class="state state-warning hidden" role="status"></p>
-          <p class="map-mobile-hint">На телефоні збільшіть мапу кнопками нижче, а потім рухайте її пальцем, щоб точніше обрати столик.</p>
-          <div class="map-controls" aria-label="Керування мапою">
-            <div class="map-zoom-controls">
-              <button id="mapZoomOut" class="map-control-button" type="button" aria-label="Зменшити мапу">−</button>
-              <button id="mapZoomReset" class="map-control-button map-control-button--wide" type="button">100%</button>
-              <button id="mapZoomIn" class="map-control-button" type="button" aria-label="Збільшити мапу">+</button>
-            </div>
-            <div class="map-pan-controls" aria-label="Навігація по мапі">
-              <button id="mapPanUp" class="map-control-button" type="button" aria-label="Перемістити мапу вгору">↑</button>
-              <div class="map-pan-row">
-                <button id="mapPanLeft" class="map-control-button" type="button" aria-label="Перемістити мапу ліворуч">←</button>
-                <button id="mapPanRight" class="map-control-button" type="button" aria-label="Перемістити мапу праворуч">→</button>
+          <p class="map-mobile-hint">На телефоні збільшіть мапу кнопками на самій схемі, а потім рухайте її пальцем, щоб точніше обрати столик.</p>
+          <div class="map-stage">
+            <div id="bookingMapShell" class="booking-map-shell">
+              <div id="bookingMapCanvas" class="booking-map-canvas hidden">
+                <div id="bookingMap" class="booking-map hidden" aria-label="Мапа столів"></div>
               </div>
-              <button id="mapPanDown" class="map-control-button" type="button" aria-label="Перемістити мапу вниз">↓</button>
             </div>
-          </div>
-          <div id="bookingMapShell" class="booking-map-shell">
-            <div id="bookingMapCanvas" class="booking-map-canvas hidden">
-              <div id="bookingMap" class="booking-map hidden" aria-label="Мапа столів"></div>
+            <div class="map-controls" aria-label="Керування мапою">
+              <div class="map-zoom-controls map-controls-group">
+                <button id="mapZoomOut" class="map-control-button" type="button" aria-label="Зменшити мапу">−</button>
+                <button id="mapZoomReset" class="map-control-button map-control-button--wide" type="button">100%</button>
+                <button id="mapZoomIn" class="map-control-button" type="button" aria-label="Збільшити мапу">+</button>
+              </div>
+              <div class="map-pan-controls map-controls-group" aria-label="Навігація по мапі">
+                <button id="mapPanUp" class="map-control-button" type="button" aria-label="Перемістити мапу вгору">↑</button>
+                <div class="map-pan-row">
+                  <button id="mapPanLeft" class="map-control-button" type="button" aria-label="Перемістити мапу ліворуч">←</button>
+                  <button id="mapPanRight" class="map-control-button" type="button" aria-label="Перемістити мапу праворуч">→</button>
+                </div>
+                <button id="mapPanDown" class="map-control-button" type="button" aria-label="Перемістити мапу вниз">↓</button>
+              </div>
             </div>
           </div>
         </article>
