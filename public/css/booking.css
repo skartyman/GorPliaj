@@ -182,7 +182,8 @@ textarea {
 }
 
 .map-stage {
-  position: relative;
+  display: grid;
+  gap: 16px;
 }
 
 .booking-map-shell {
@@ -206,14 +207,17 @@ textarea {
 }
 
 .map-controls {
-  position: absolute;
-  inset: 16px 16px auto 16px;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: flex-start;
   gap: 12px;
-  pointer-events: none;
-  z-index: 3;
+  opacity: 0.5;
+  transition: opacity 0.18s ease;
+}
+
+.map-controls:hover,
+.map-controls:focus-within {
+  opacity: 1;
 }
 
 .map-controls-group,
@@ -222,7 +226,6 @@ textarea {
   display: flex;
   gap: 8px;
   align-items: center;
-  pointer-events: auto;
 }
 
 .map-controls-group {
@@ -558,10 +561,9 @@ textarea {
   }
 
   .map-controls {
-    inset: auto 12px 12px 12px;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
   }
 
   .map-controls-group,
