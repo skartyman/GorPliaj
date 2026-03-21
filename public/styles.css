@@ -984,14 +984,28 @@ select:focus {
 }
 
 .home-page-header {
+  position: sticky;
+  top: 12px;
+  z-index: 30;
   display: grid;
-  gap: 18px;
+  gap: 14px;
+  padding: 16px 18px;
+  backdrop-filter: blur(22px);
+}
+
+.home-page-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .home-page-scroll-block {
   position: relative;
   overflow: hidden;
   margin-inline: -2px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .home-page-scroll-block::after {
@@ -1010,7 +1024,7 @@ select:focus {
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 4px 6px 8px;
+  padding: 10px 6px 2px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
@@ -1030,10 +1044,21 @@ select:focus {
   padding: 0 16px;
   border-radius: 999px;
   color: #64748b;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
   scroll-snap-align: start;
+}
+
+.home-page-scroll-track > * + *::before {
+  content: "•";
+  color: rgba(100, 116, 139, 0.75);
+  margin-right: 10px;
+  font-size: 1rem;
+}
+
+.home-page-scroll-track > * + * {
+  position: relative;
 }
 
 .home-scroll-action {
@@ -1077,7 +1102,7 @@ select:focus {
 .home-card,
 .home-card-muted {
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
   border-radius: 28px;
 }
@@ -1132,6 +1157,39 @@ select:focus {
   border-color: rgba(15, 23, 42, 0.08);
 }
 
+.home-header-action {
+  flex: 0 0 auto;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.home-section-divider {
+  position: relative;
+  margin-top: 18px;
+  padding-top: 22px;
+}
+
+.home-section-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  border-top: 1px solid rgba(15, 23, 42, 0.14);
+}
+
+.home-section-divider::after {
+  content: '• • •';
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 12px;
+  background: #eef2ff;
+  color: rgba(100, 116, 139, 0.75);
+  letter-spacing: 0.35em;
+  font-size: 0.78rem;
+}
+
 .home-contact-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1154,11 +1212,20 @@ select:focus {
   }
 
   .home-page-header {
-    gap: 14px;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .home-page-header-bar {
+    align-items: flex-start;
   }
 
   .home-page-scroll-track {
     padding-inline: 2px;
+  }
+
+  .home-page-scroll-track > * + *::before {
+    margin-right: 8px;
   }
 
   .home-page-scroll-block::after {
@@ -1171,5 +1238,9 @@ select:focus {
   .home-page-header,
   .home-hero-card {
     border-radius: 24px;
+  }
+
+  .home-section-divider {
+    padding-top: 18px;
   }
 }
