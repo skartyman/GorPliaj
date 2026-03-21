@@ -219,6 +219,7 @@ const translations = {
     map: {
       title: 'Карта площадки',
       description: 'Операционная карта зала с визуальными статусами столов и деталями бронирований.',
+      openEditor: 'Открыть редактор',
       eyebrow: 'Живая схема',
       heroTitle: 'Статусы столов, зоны и быстрый контекст',
       heroDescription: 'Карта начинается как мобильный вертикальный сценарий и расширяется в split-layout на больших экранах.',
@@ -604,6 +605,7 @@ const translations = {
     map: {
       title: 'Venue map',
       description: 'Operational venue map with visual table statuses and reservation details.',
+      openEditor: 'Open editor',
       eyebrow: 'Live floor',
       heroTitle: 'Table statuses, zones, and quick context',
       heroDescription: 'The map begins as a mobile vertical workflow and expands into a split layout on larger screens.',

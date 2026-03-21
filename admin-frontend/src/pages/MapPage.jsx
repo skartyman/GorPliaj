@@ -175,7 +175,15 @@ export default function MapPage() {
 
   return (
     <AdminLayout>
-      <PageContainer title={t('map.title')} description={t('map.description')}>
+      <PageContainer
+        title={t('map.title')}
+        description={t('map.description')}
+        actions={(
+          <Link className="btn btn-secondary" to="/admin/map-editor">
+            {t('map.openEditor')}
+          </Link>
+        )}
+      >
         <section className="page-hero compact">
           <div className="page-hero-copy">
             <span className="eyebrow">{t('map.eyebrow')}</span>
