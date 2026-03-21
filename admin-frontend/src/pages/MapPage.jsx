@@ -168,6 +168,14 @@ export default function MapPage() {
         title="Venue map operations"
         description="Operational floor map with visual table status and active reservation details."
       >
+        <section className="page-hero compact">
+          <div className="page-hero-copy">
+            <span className="eyebrow">Live floor</span>
+            <h3>Table status, zones, and quick context</h3>
+            <p className="muted">The map starts as a vertical mobile-first workflow and expands into a split workspace on larger screens.</p>
+          </div>
+          <div className="hero-inline-note">Tap any table to inspect its current status.</div>
+        </section>
         {state.loading ? <p>Loading map...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
 
@@ -226,7 +234,7 @@ export default function MapPage() {
                 })}
               </div>
 
-              <PanelCard title="Table details" subtitle="Select a table from map to inspect and operate.">
+              <PanelCard title="Table details" subtitle="Select a table from map to inspect and operate." className="full-height">
                 {!selectedTable ? <p className="muted">Select a table to see detail and reservation context.</p> : null}
                 {selectedTable ? (
                   <>
