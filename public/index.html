@@ -25,9 +25,10 @@
 
           <nav class="hero-nav" aria-label="Site navigation">
             <a href="#about" data-i18n="navAbout">Про заклад</a>
-            <a href="#menu-section" data-i18n="navMenu">Меню</a>
+            <a href="/menu" data-i18n="navMenu">Меню</a>
             <a href="#booking" data-i18n="navBooking">Бронювання</a>
             <a href="#events" data-i18n="navEvents">Події</a>
+            <a href="#news" data-i18n="navNews">Акції</a>
             <a href="#contacts" data-i18n="navContacts">Контакти</a>
           </nav>
 
@@ -51,6 +52,7 @@
 
             <div class="hero-actions">
               <a class="btn btn-primary" href="#booking" data-i18n="heroPrimaryCta">Забронювати онлайн</a>
+              <a class="btn btn-secondary" href="/menu" data-i18n="heroMenuCta">Переглянути меню</a>
               <a class="btn btn-secondary" href="/booking" data-i18n="heroSecondaryCta">Відкрити карту столів</a>
             </div>
 
@@ -60,8 +62,8 @@
                 <strong id="heroMenuCount">—</strong>
               </article>
               <article class="highlight-card">
-                <span data-i18n="highlightReservations">Активних броней</span>
-                <strong id="heroReservationCount">—</strong>
+                <span data-i18n="highlightBookingAccess">Онлайн бронювання</span>
+                <strong data-i18n="highlightBookingAccessValue">24/7</strong>
               </article>
               <article class="highlight-card">
                 <span data-i18n="highlightZones">Основних зон</span>
@@ -135,15 +137,19 @@
       </section>
 
       <section class="content-grid">
-        <section class="surface" id="menu-section">
-          <div class="section-head">
+        <section class="surface menu-preview-surface" id="menu-section">
+          <div class="section-head section-head-compact">
             <div>
               <p class="eyebrow" data-i18n="menuKicker">Kitchen & bar</p>
               <h2 data-i18n="menuTitle">Меню комплексу</h2>
             </div>
             <span class="section-chip" id="menuCountChip">—</span>
           </div>
-          <ul id="menuList" class="menu-list"></ul>
+          <p class="menu-preview-copy" data-i18n="menuPreviewText">Окрема сторінка меню з категоріями, картками страв і швидкою навігацією.</p>
+          <div class="menu-preview-actions">
+            <a class="btn btn-primary" href="/menu" data-i18n="menuPreviewCta">Відкрити меню</a>
+            <a class="text-link" href="#booking" data-i18n="menuPreviewSecondary">Спочатку забронювати столик</a>
+          </div>
         </section>
 
         <section class="surface booking-surface" id="booking">
@@ -221,8 +227,7 @@
         </div>
       </section>
 
-      <section class="content-grid news-layout">
-        <section class="surface section-stack" id="news">
+      <section class="surface section-stack" id="news">
           <div class="section-head">
             <div>
               <p class="eyebrow" data-i18n="newsKicker">Special offers</p>
@@ -236,18 +241,6 @@
           </ul>
         </section>
 
-        <section class="surface section-stack" id="reservations-feed">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow" data-i18n="reservationsKicker">Live feed</p>
-              <h2 data-i18n="reservationsTitle">Список бронювань</h2>
-            </div>
-            <span class="section-chip" id="reservationCountChip">—</span>
-          </div>
-          <p class="hint" data-i18n="reservationsHint">Змінюйте статус бронювання: нове → підтверджене → скасоване.</p>
-          <div id="reservationList" class="reservation-list"></div>
-        </section>
-      </section>
 
       <section class="surface contact-surface" id="contacts">
         <div class="section-head">
