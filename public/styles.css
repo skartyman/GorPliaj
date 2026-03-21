@@ -803,16 +803,6 @@ select:focus {
 }
 
 
-.menu-page-body .lang-btn {
-  background: #fff;
-  border-color: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
-}
-
-.menu-page-body .lang-btn.active {
-  color: #fff;
-}
-
 
 .menu-search-btn,
 .menu-category-link {
@@ -946,5 +936,211 @@ select:focus {
 
   .menu-card-item {
     flex-direction: column;
+  }
+}
+
+
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  min-width: 56px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.lang-toggle:hover,
+.lang-toggle:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.home-page-body {
+  min-height: 100vh;
+}
+
+.home-page-shell {
+  padding: 28px 16px 40px;
+}
+
+.home-page-surface {
+  width: min(100%, 1120px);
+}
+
+.home-page-header {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+}
+
+.home-page-nav,
+.home-page-controls,
+.home-hero-grid,
+.home-highlight-panel,
+.home-grid,
+.home-metric-stack,
+.home-contact-grid {
+  display: flex;
+}
+
+.home-page-nav,
+.home-page-controls {
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.home-page-nav {
+  justify-content: center;
+}
+
+.home-page-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #64748b;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.home-page-controls {
+  justify-content: flex-end;
+}
+
+.home-hero-card {
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.96));
+}
+
+.home-hero-grid,
+.home-grid {
+  gap: 16px;
+}
+
+.home-hero-grid,
+.home-grid-double {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+}
+
+.home-grid-triple {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-hero-copy,
+.home-highlight-panel,
+.home-metric-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.home-hero-subtitle {
+  font-size: 1.06rem;
+}
+
+.home-info-card,
+.home-card,
+.home-card-muted {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  border-radius: 28px;
+}
+
+.home-info-card,
+.home-card {
+  padding: 18px;
+}
+
+.home-card-muted {
+  padding: 18px;
+  background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.home-info-card.scenic {
+  min-height: 100%;
+  background:
+    linear-gradient(145deg, rgba(29, 78, 216, 0.92), rgba(15, 23, 42, 0.94)),
+    url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+}
+
+.home-info-card.scenic h2,
+.home-info-card.scenic .menu-page-description,
+.home-info-card.scenic .eyebrow {
+  color: #f8fafc;
+}
+
+.home-highlight-stats {
+  margin-top: 0;
+}
+
+.home-stat-card {
+  background: linear-gradient(180deg, #fff, #eff6ff);
+  box-shadow: none;
+}
+
+.home-card-wide {
+  min-height: 100%;
+}
+
+.home-metric-card {
+  box-shadow: none;
+  background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.home-booking-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.9fr);
+}
+
+.home-light-btn {
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.home-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+@media (max-width: 1040px) {
+  .home-page-header,
+  .home-page-nav,
+  .home-page-controls,
+  .home-hero-grid,
+  .home-grid-double,
+  .home-grid-triple,
+  .home-booking-grid {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-page-nav {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .home-page-shell {
+    padding: 20px 12px 32px;
+  }
+
+  .home-card,
+  .home-card-muted,
+  .home-info-card,
+  .home-page-header,
+  .home-hero-card {
+    border-radius: 24px;
   }
 }

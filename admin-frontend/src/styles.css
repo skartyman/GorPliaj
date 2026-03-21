@@ -50,12 +50,37 @@ p {
   border-right: 1px solid rgba(148, 163, 184, 0.2);
 }
 
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .brand {
   font-weight: 700;
   color: #f8fafc;
   text-decoration: none;
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+.lang-toggle-btn {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border-radius: 999px;
+  min-width: 52px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lang-toggle-btn:hover,
+.lang-toggle-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .sidebar-nav {

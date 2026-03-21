@@ -12,19 +12,19 @@ export async function apiRequest(path, options = {}) {
   return { response, body };
 }
 
-export function formatDate(value) {
+export function formatDate(value, locale = 'ru-RU') {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(locale);
 }
 
-export function formatDateTime(value) {
+export function formatDateTime(value, locale = 'ru-RU') {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString(locale);
 }
 
-export function formatTime(value) {
+export function formatTime(value, locale = 'ru-RU') {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? '-'
-    : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    ? '—'
+    : date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }

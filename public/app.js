@@ -1,7 +1,7 @@
 const reservationForm = document.getElementById('reservationForm');
 const reservationFormState = document.getElementById('reservationFormState');
 const installBtn = document.getElementById('installBtn');
-const langButtons = document.querySelectorAll('.lang-btn');
+const languageToggle = document.getElementById('languageToggle');
 const heroMenuCount = document.getElementById('heroMenuCount');
 const menuCountChip = document.getElementById('menuCountChip');
 
@@ -33,8 +33,8 @@ const translations = {
     service2Text: 'Швидкий перехід до вибору конкретного столу.',
     service3Title: 'Події та акції',
     service3Text: 'Анонси та спецпропозиції для залучення гостей.',
-    langUk: 'Українська',
-    langEn: 'Англійська',
+    languageToggleLabel: 'EN',
+    languageToggleAria: 'Switch language to English',
     navAbout: 'Про заклад',
     navMenu: 'Меню',
     navBooking: 'Бронювання',
@@ -125,8 +125,8 @@ const translations = {
     service2Text: 'Jump quickly to a specific table selection.',
     service3Title: 'Events and offers',
     service3Text: 'Announcements and promotions to attract guests.',
-    langUk: 'Ukrainian',
-    langEn: 'English',
+    languageToggleLabel: 'UK',
+    languageToggleAria: 'Перемкнути мову на українську',
     navAbout: 'About',
     navMenu: 'Menu',
     navBooking: 'Booking',
@@ -221,9 +221,10 @@ function translatePage() {
     }
   });
 
-  langButtons.forEach((button) => {
-    button.classList.toggle('active', button.dataset.lang === currentLanguage);
-  });
+  if (languageToggle) {
+    languageToggle.textContent = dictionary.languageToggleLabel;
+    languageToggle.setAttribute('aria-label', dictionary.languageToggleAria);
+  }
 
   updateCounters();
 }
@@ -255,12 +256,10 @@ reservationForm.addEventListener('submit', async (event) => {
   setFormState(translations[currentLanguage].reservationSuccess, 'success');
 });
 
-langButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    currentLanguage = button.dataset.lang;
-    localStorage.setItem('language', currentLanguage);
-    translatePage();
-  });
+languageToggle?.addEventListener('click', () => {
+  currentLanguage = currentLanguage === 'uk' ? 'en' : 'uk';
+  localStorage.setItem('language', currentLanguage);
+  translatePage();
 });
 
 window.addEventListener('beforeinstallprompt', (event) => {

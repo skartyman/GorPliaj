@@ -6,160 +6,166 @@ import MapPage from './pages/MapPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ReservationDetailPage from './pages/ReservationDetailPage';
 import ReservationsPage from './pages/ReservationsPage';
-
-const placeholderPages = {
-  menu: {
-    title: 'Menu',
-    description: 'Prepared for category, dish, pricing, and availability management.',
-    eyebrow: 'Menu operations',
-    ctaLabel: 'Next: category CRUD, item sorting, and seasonal availability.',
-    stats: [
-      { label: 'Menu groups', value: '08' },
-      { label: 'Publishing modes', value: '03' },
-      { label: 'Mobile shortcuts', value: '05' }
-    ],
-    sections: [
-      {
-        title: 'Editor blocks',
-        items: [
-          'Categories with drag-and-drop ordering.',
-          'Dish cards with price, tags, and stock state.',
-          'Instant preview for public mobile menu pages.'
-        ]
-      },
-      {
-        title: 'Operator flow',
-        items: [
-          'Quick updates for sold out and seasonal items.',
-          'Compact actions for phone-sized screens.',
-          'Bulk publish tools for lunch and evening menus.'
-        ]
-      }
-    ]
-  },
-  events: {
-    title: 'Events',
-    description: 'Prepared for event scheduling, poster content, and booking visibility.',
-    eyebrow: 'Event planning',
-    ctaLabel: 'Next: calendar, cover uploads, and on-sale states.',
-    stats: [
-      { label: 'Event states', value: '04' },
-      { label: 'Promo slots', value: '06' },
-      { label: 'Schedule views', value: '02' }
-    ],
-    sections: [
-      {
-        title: 'Content modules',
-        items: [
-          'Headline, teaser, and poster media.',
-          'Schedule blocks with doors open and start time.',
-          'Visibility toggles for homepage and event list.'
-        ]
-      },
-      {
-        title: 'Operator workflow',
-        items: [
-          'Pin high-priority events at the top of the feed.',
-          'Show booking impact directly from mobile.',
-          'Connect payments and reservation campaigns later.'
-        ]
-      }
-    ]
-  },
-  news: {
-    title: 'News',
-    description: 'Prepared for announcements, homepage stories, and operational highlights.',
-    eyebrow: 'Homepage content',
-    ctaLabel: 'Next: article composer, publish windows, and featured stories.',
-    stats: [
-      { label: 'Story blocks', value: '07' },
-      { label: 'Highlights', value: '04' },
-      { label: 'Preview modes', value: '03' }
-    ],
-    sections: [
-      {
-        title: 'Editorial layout',
-        items: [
-          'Featured hero story for the homepage.',
-          'Short updates with tags and scheduling.',
-          'Mobile cards with clear priority order.'
-        ]
-      },
-      {
-        title: 'Publishing controls',
-        items: [
-          'Draft, scheduled, and published states.',
-          'Pin articles to highlights or remove quickly.',
-          'Reusable templates for announcements and promos.'
-        ]
-      }
-    ]
-  },
-  payments: {
-    title: 'Payments',
-    description: 'Prepared for payment records, booking deposits, and reconciliation tools.',
-    eyebrow: 'Finance monitor',
-    ctaLabel: 'Next: transaction feed, filters, and payout checks.',
-    stats: [
-      { label: 'Payment states', value: '05' },
-      { label: 'Reconcile tasks', value: '09' },
-      { label: 'Saved filters', value: '04' }
-    ],
-    sections: [
-      {
-        title: 'Transaction overview',
-        items: [
-          'Deposit, refund, and settlement tracking.',
-          'Fast lookup by reservation, date, or status.',
-          'Compact cards for staff using phones on site.'
-        ]
-      },
-      {
-        title: 'Daily controls',
-        items: [
-          'Flag mismatches between bookings and payments.',
-          'Prepare export-ready reconciliation summaries.',
-          'Surface urgent failed payments at the top.'
-        ]
-      }
-    ]
-  },
-  settings: {
-    title: 'Settings',
-    description: 'Prepared for venue settings, users, roles, and integrations.',
-    eyebrow: 'System setup',
-    ctaLabel: 'Next: role matrix, venue profile, and integration secrets.',
-    stats: [
-      { label: 'Access roles', value: '06' },
-      { label: 'Venue blocks', value: '05' },
-      { label: 'Integrations', value: '03' }
-    ],
-    sections: [
-      {
-        title: 'Configuration areas',
-        items: [
-          'Venue profile, schedules, and operating windows.',
-          'Admin roles with mobile-safe permissions.',
-          'External channels for maps, payments, and messaging.'
-        ]
-      },
-      {
-        title: 'Operational tasks',
-        items: [
-          'Review changes before publishing to staff.',
-          'Keep critical controls visible on narrow screens.',
-          'Separate sensitive settings from daily tools.'
-        ]
-      }
-    ]
-  }
-};
+import { useAdminI18n } from './lib/i18n';
 
 function ProtectedPage({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
 }
 
+function buildPlaceholderPages(t) {
+  return {
+    menu: {
+      title: t('placeholder.pages.menu.title'),
+      description: t('placeholder.pages.menu.description'),
+      eyebrow: t('placeholder.pages.menu.eyebrow'),
+      ctaLabel: t('placeholder.pages.menu.cta'),
+      stats: [
+        { label: t('placeholder.pages.menu.stats.groups'), value: '08' },
+        { label: t('placeholder.pages.menu.stats.publish'), value: '03' },
+        { label: t('placeholder.pages.menu.stats.shortcuts'), value: '05' }
+      ],
+      sections: [
+        {
+          title: t('placeholder.pages.menu.section1'),
+          items: [
+            t('placeholder.pages.menu.items1'),
+            t('placeholder.pages.menu.items2'),
+            t('placeholder.pages.menu.items3')
+          ]
+        },
+        {
+          title: t('placeholder.pages.menu.section2'),
+          items: [
+            t('placeholder.pages.menu.items4'),
+            t('placeholder.pages.menu.items5'),
+            t('placeholder.pages.menu.items6')
+          ]
+        }
+      ]
+    },
+    events: {
+      title: t('placeholder.pages.events.title'),
+      description: t('placeholder.pages.events.description'),
+      eyebrow: t('placeholder.pages.events.eyebrow'),
+      ctaLabel: t('placeholder.pages.events.cta'),
+      stats: [
+        { label: t('placeholder.pages.events.stats.states'), value: '04' },
+        { label: t('placeholder.pages.events.stats.promo'), value: '06' },
+        { label: t('placeholder.pages.events.stats.views'), value: '02' }
+      ],
+      sections: [
+        {
+          title: t('placeholder.pages.events.section1'),
+          items: [
+            t('placeholder.pages.events.items1'),
+            t('placeholder.pages.events.items2'),
+            t('placeholder.pages.events.items3')
+          ]
+        },
+        {
+          title: t('placeholder.pages.events.section2'),
+          items: [
+            t('placeholder.pages.events.items4'),
+            t('placeholder.pages.events.items5'),
+            t('placeholder.pages.events.items6')
+          ]
+        }
+      ]
+    },
+    news: {
+      title: t('placeholder.pages.news.title'),
+      description: t('placeholder.pages.news.description'),
+      eyebrow: t('placeholder.pages.news.eyebrow'),
+      ctaLabel: t('placeholder.pages.news.cta'),
+      stats: [
+        { label: t('placeholder.pages.news.stats.blocks'), value: '07' },
+        { label: t('placeholder.pages.news.stats.highlights'), value: '04' },
+        { label: t('placeholder.pages.news.stats.previews'), value: '03' }
+      ],
+      sections: [
+        {
+          title: t('placeholder.pages.news.section1'),
+          items: [
+            t('placeholder.pages.news.items1'),
+            t('placeholder.pages.news.items2'),
+            t('placeholder.pages.news.items3')
+          ]
+        },
+        {
+          title: t('placeholder.pages.news.section2'),
+          items: [
+            t('placeholder.pages.news.items4'),
+            t('placeholder.pages.news.items5'),
+            t('placeholder.pages.news.items6')
+          ]
+        }
+      ]
+    },
+    payments: {
+      title: t('placeholder.pages.payments.title'),
+      description: t('placeholder.pages.payments.description'),
+      eyebrow: t('placeholder.pages.payments.eyebrow'),
+      ctaLabel: t('placeholder.pages.payments.cta'),
+      stats: [
+        { label: t('placeholder.pages.payments.stats.states'), value: '05' },
+        { label: t('placeholder.pages.payments.stats.reconcile'), value: '09' },
+        { label: t('placeholder.pages.payments.stats.filters'), value: '04' }
+      ],
+      sections: [
+        {
+          title: t('placeholder.pages.payments.section1'),
+          items: [
+            t('placeholder.pages.payments.items1'),
+            t('placeholder.pages.payments.items2'),
+            t('placeholder.pages.payments.items3')
+          ]
+        },
+        {
+          title: t('placeholder.pages.payments.section2'),
+          items: [
+            t('placeholder.pages.payments.items4'),
+            t('placeholder.pages.payments.items5'),
+            t('placeholder.pages.payments.items6')
+          ]
+        }
+      ]
+    },
+    settings: {
+      title: t('placeholder.pages.settings.title'),
+      description: t('placeholder.pages.settings.description'),
+      eyebrow: t('placeholder.pages.settings.eyebrow'),
+      ctaLabel: t('placeholder.pages.settings.cta'),
+      stats: [
+        { label: t('placeholder.pages.settings.stats.roles'), value: '06' },
+        { label: t('placeholder.pages.settings.stats.blocks'), value: '05' },
+        { label: t('placeholder.pages.settings.stats.integrations'), value: '03' }
+      ],
+      sections: [
+        {
+          title: t('placeholder.pages.settings.section1'),
+          items: [
+            t('placeholder.pages.settings.items1'),
+            t('placeholder.pages.settings.items2'),
+            t('placeholder.pages.settings.items3')
+          ]
+        },
+        {
+          title: t('placeholder.pages.settings.section2'),
+          items: [
+            t('placeholder.pages.settings.items4'),
+            t('placeholder.pages.settings.items5'),
+            t('placeholder.pages.settings.items6')
+          ]
+        }
+      ]
+    }
+  };
+}
+
 export default function App() {
+  const { t } = useAdminI18n();
+  const placeholderPages = buildPlaceholderPages(t);
+
   return (
     <Routes>
       <Route path="/admin/login" element={<LoginPage />} />

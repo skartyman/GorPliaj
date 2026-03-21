@@ -1,6 +1,10 @@
-export default function DataTable({ columns, rows, emptyText = 'No records found.' }) {
+import { useAdminI18n } from '../lib/i18n';
+
+export default function DataTable({ columns, rows, emptyText }) {
+  const { t } = useAdminI18n();
+
   if (!rows.length) {
-    return <p className="muted">{emptyText}</p>;
+    return <p className="muted">{emptyText || t('common.loading')}</p>;
   }
 
   return (
@@ -18,7 +22,7 @@ export default function DataTable({ columns, rows, emptyText = 'No records found
             <tr key={row.id || index}>
               {columns.map((column) => (
                 <td key={`${row.id || index}-${column.key}`}>
-                  {column.render ? column.render(row) : row[column.key] || '-'}
+                  {column.render ? column.render(row) : row[column.key] || '—'}
                 </td>
               ))}
             </tr>
