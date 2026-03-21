@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#5d2e8c" />
+    <meta name="theme-color" content="#10182a" />
     <meta name="description" content="Карта бронювання столів ГорПляж" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
@@ -12,16 +12,47 @@
   </head>
   <body>
     <main class="booking-page">
-      <header class="booking-header">
-        <p class="eyebrow">ГорПляж</p>
-        <h1>Бронювання столів</h1>
-        <p class="subtitle">Оберіть столик на мапі, щоб переглянути його параметри.</p>
-        <a class="back-link" href="/">← На головну</a>
+      <header class="booking-hero">
+        <div class="booking-hero-copy">
+          <p class="eyebrow">GorPliaj Booking</p>
+          <h1>Карта бронювання столів</h1>
+          <p class="subtitle">Оберіть столик на мапі, перевірте його доступність і одразу підтвердіть бронювання.</p>
+          <div class="hero-actions">
+            <a class="back-link" href="/">← На головну</a>
+            <span class="hero-note">Графіка для hero: 1600×900, safe zone 120px</span>
+          </div>
+        </div>
+
+        <div class="booking-hero-stats">
+          <article class="stat-card">
+            <span>Free</span>
+            <strong id="mapStatFree">—</strong>
+          </article>
+          <article class="stat-card">
+            <span>Busy</span>
+            <strong id="mapStatBusy">—</strong>
+          </article>
+          <article class="stat-card">
+            <span>Held</span>
+            <strong id="mapStatHeld">—</strong>
+          </article>
+        </div>
       </header>
 
       <section class="booking-layout" aria-label="Схема майданчика та інформація про стіл">
-        <article class="card">
-          <h2>Мапа закладу</h2>
+        <article class="card map-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Interactive map</p>
+              <h2>Мапа закладу</h2>
+            </div>
+            <div class="map-legend">
+              <span><i class="legend-dot free"></i> Free</span>
+              <span><i class="legend-dot busy"></i> Busy</span>
+              <span><i class="legend-dot held"></i> Held</span>
+            </div>
+          </div>
+
           <p id="loadingState" class="state state-loading" role="status">Завантаження карти…</p>
           <p id="errorState" class="state state-error hidden" role="alert"></p>
           <p id="availabilityWarning" class="state state-warning hidden" role="status"></p>
@@ -29,7 +60,14 @@
         </article>
 
         <aside class="card info-panel" aria-live="polite">
-          <h2>Обраний стіл</h2>
+          <div class="card-head stacked">
+            <div>
+              <p class="eyebrow">Selected table</p>
+              <h2>Обраний стіл</h2>
+            </div>
+            <span id="selectedTableStatus" class="status-pill hidden">Не обрано</span>
+          </div>
+
           <p id="tableInfoEmpty" class="state">Натисніть на стіл на мапі.</p>
           <dl id="tableInfoDetails" class="details hidden">
             <div><dt>Code</dt><dd id="tableCode">—</dd></div>

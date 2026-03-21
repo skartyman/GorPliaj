@@ -10,6 +10,7 @@ const tableName = document.getElementById('tableName');
 const tableSeats = document.getElementById('tableSeats');
 const tableDeposit = document.getElementById('tableDeposit');
 const tableZone = document.getElementById('tableZone');
+const selectedTableStatus = document.getElementById('selectedTableStatus');
 
 const reservationForm = document.getElementById('reservationForm');
 const reservationError = document.getElementById('reservationError');
@@ -18,6 +19,10 @@ const dateQuickSelect = document.getElementById('dateQuickSelect');
 
 const reservationDateInput = reservationForm.elements.reservationDate;
 const timeFromInput = reservationForm.elements.timeFrom;
+
+const mapStatFree = document.getElementById('mapStatFree');
+const mapStatBusy = document.getElementById('mapStatBusy');
+const mapStatHeld = document.getElementById('mapStatHeld');
 
 let selectedTable = null;
 let currentMapId = null;
@@ -34,6 +39,21 @@ function showError(message) {
 
 function setTableInfoEmptyMessage(message = defaultEmptyTableMessage) {
   tableInfoEmpty.textContent = message;
+}
+
+function updateSelectedStatusBadge(status = '', label = 'Не обрано') {
+  selectedTableStatus.textContent = label;
+  selectedTableStatus.className = `status-pill${label ? '' : ' hidden'}`;
+
+  if (!status) {
+    selectedTableStatus.classList.add('hidden');
+    return;
+  }
+
+  selectedTableStatus.classList.remove('hidden');
+  if (status === 'free') selectedTableStatus.classList.add('is-free');
+  if (status === 'busy') selectedTableStatus.classList.add('is-busy');
+  if (status === 'held') selectedTableStatus.classList.add('is-held');
 }
 
 function showTableInfo(table, zoneName = '—') {
@@ -77,6 +97,7 @@ function resetSelectedTableUI(emptyMessage = defaultEmptyTableMessage) {
   tableInfoDetails.classList.add('hidden');
   setTableInfoEmptyMessage(emptyMessage);
   tableInfoEmpty.classList.remove('hidden');
+  updateSelectedStatusBadge('', 'Не обрано');
 }
 
 function showReservationForm(table) {
@@ -104,6 +125,34 @@ function isTableFree(tableId) {
   return availabilityState.freeTableIds.includes(tableId);
 }
 
+function updateStats() {
+  mapStatBusy.textContent = availabilityState.busyTableIds.length;
+  mapStatHeld.textContent = availabilityState.heldTableIds.length;
+
+  const explicitFree = availabilityState.freeTableIds.length;
+  const inferredFree = Math.max(tableElementsById.size - availabilityState.busyTableIds.length - availabilityState.heldTableIds.length, 0);
+  mapStatFree.textContent = explicitFree || inferredFree;
+}
+
+function updateSelectedStatusFromAvailability() {
+  if (!selectedTable) {
+    updateSelectedStatusBadge('', 'Не обрано');
+    return;
+  }
+
+  if (isTableBusy(selectedTable.id)) {
+    updateSelectedStatusBadge('busy', 'Busy');
+    return;
+  }
+
+  if (isTableHeld(selectedTable.id)) {
+    updateSelectedStatusBadge('held', 'Held');
+    return;
+  }
+
+  updateSelectedStatusBadge('free', 'Free');
+}
+
 function updateTableAvailabilityUI() {
   tableElementsById.forEach((element, tableId) => {
     const busy = isTableBusy(tableId);
@@ -115,6 +164,9 @@ function updateTableAvailabilityUI() {
     element.classList.toggle('map-object--free', free);
     element.disabled = busy || held;
   });
+
+  updateStats();
+  updateSelectedStatusFromAvailability();
 
   if (selectedTable && (isTableBusy(selectedTable.id) || isTableHeld(selectedTable.id))) {
     resetSelectedTableUI();
@@ -168,6 +220,7 @@ function createMapObjectElement(object, map, tableById, zoneById) {
       setTableInfoEmptyMessage(defaultEmptyTableMessage);
       showTableInfo(table, zone?.name || '—');
       showReservationForm(table);
+      updateSelectedStatusBadge('free', 'Free');
     });
   }
 
@@ -301,6 +354,8 @@ function ensureDefaultDateTime() {
     reservationDateInput.value = toIsoDate(now);
   }
 
+  reservationDateInput.min = toIsoDate(now);
+
   if (!timeFromInput.value) {
     const rounded = roundToNextHalfHour(now);
     timeFromInput.value = `${String(rounded.getHours()).padStart(2, '0')}:${String(rounded.getMinutes()).padStart(2, '0')}`;
@@ -358,6 +413,7 @@ async function submitReservation(event) {
 
     reservationForm.reset();
     ensureDefaultDateTime();
+    showReservationSuccess('Бронювання створено успішно. Ви можете обрати інший стіл.');
     resetSelectedTableUI('Бронювання створено успішно. Ви можете обрати інший стіл.');
     await fetchAvailability();
   } catch (error) {
@@ -393,4 +449,6 @@ timeFromInput.addEventListener('change', fetchAvailability);
 timeFromInput.addEventListener('input', fetchAvailability);
 
 ensureDefaultDateTime();
+updateStats();
+updateSelectedStatusBadge('', 'Не обрано');
 fetchDefaultMap();
