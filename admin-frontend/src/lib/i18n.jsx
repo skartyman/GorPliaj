@@ -220,6 +220,90 @@ const translations = {
         save: 'Не удалось сохранить изменения карты.'
       }
     },
+
+    menuAdmin: {
+      title: 'Меню',
+      description: 'Полноценный редактор меню с категориями, позициями, видимостью и стоп-листом.',
+      eyebrow: 'Управление меню',
+      heroTitle: 'Редактируйте категории и блюда из live базы данных',
+      heroDescription: 'Раздел подходит для ежедневной работы администратора: быстрые правки, переключение видимости и контроль доступности прямо в одном экране.',
+      refresh: 'Обновить данные',
+      saving: 'Сохраняем...',
+      cancelEdit: 'Отменить',
+      newCategoryTitle: 'Новая категория',
+      editCategoryTitle: 'Редактирование категории',
+      categoryFormSubtitle: 'Создайте раздел меню, настройте slug и порядок вывода.',
+      newItemTitle: 'Новая позиция',
+      editItemTitle: 'Редактирование позиции',
+      itemFormSubtitle: 'Добавьте блюдо или напиток, цену и текущий статус наличия.',
+      categoriesListTitle: 'Категории меню',
+      categoriesListSubtitle: 'Управляйте структурой меню и видимостью разделов.',
+      itemsListTitle: 'Позиции меню',
+      itemsListSubtitle: 'Рабочий список блюд с быстрыми переключателями и редактированием.',
+      emptyCategories: 'Категорий пока нет. Создайте первую категорию, чтобы начать работу.',
+      emptyItems: 'Позиции меню пока не добавлены.',
+      emptyCategoryItems: 'В этой категории пока нет позиций.',
+      fields: {
+        category: 'Категория',
+        categoryName: 'Название категории',
+        categorySlug: 'Slug',
+        itemName: 'Название позиции',
+        description: 'Описание',
+        price: 'Цена',
+        imageUrl: 'Image URL',
+        sortOrder: 'Порядок',
+        visibleOnSite: 'Показывать на сайте',
+        availableNow: 'Доступно сейчас'
+      },
+      placeholders: {
+        categoryName: 'Например, Основные блюда',
+        categorySlug: 'main-courses',
+        itemName: 'Например, Сибас на гриле',
+        description: 'Короткое описание блюда или напитка'
+      },
+      stats: {
+        categories: 'Всего категорий',
+        activeCategories: 'Активных категорий',
+        totalItems: 'Всего позиций',
+        visibleItems: 'Видимых позиций',
+        availableItems: 'Доступно к заказу',
+        stopList: 'В стоп-листе'
+      },
+      actions: {
+        addCategory: 'Добавить категорию',
+        saveCategory: 'Сохранить категорию',
+        addItem: 'Добавить позицию',
+        saveItem: 'Сохранить позицию',
+        edit: 'Изменить',
+        delete: 'Удалить'
+      },
+      errors: {
+        load: 'Не удалось загрузить редактор меню.',
+        saveCategory: 'Не удалось сохранить категорию.',
+        saveItem: 'Не удалось сохранить позицию.',
+        deleteCategory: 'Не удалось удалить категорию.',
+        deleteItem: 'Не удалось удалить позицию.'
+      },
+      feedback: {
+        categoryCreated: 'Категория создана.',
+        categoryUpdated: 'Категория обновлена.',
+        categoryDeleted: 'Категория удалена.',
+        categoryVisibilityUpdated: 'Видимость категории обновлена.',
+        itemCreated: 'Позиция создана.',
+        itemUpdated: 'Позиция обновлена.',
+        itemDeleted: 'Позиция удалена.',
+        itemVisibilityUpdated: 'Видимость позиции обновлена.',
+        itemAvailabilityUpdated: 'Доступность позиции обновлена.'
+      },
+      confirmDeleteCategory: 'Удалить категорию «{name}» вместе со всеми позициями?',
+      confirmDeleteItem: 'Удалить позицию «{name}»?',
+      selectCategory: 'Выберите категорию',
+      visible: 'Видно',
+      hidden: 'Скрыто',
+      available: 'Доступно',
+      stopListLabel: 'Стоп-лист',
+      itemsCountSuffix: 'поз.'
+    },
     map: {
       title: 'Карта площадки',
       description: 'Операционная карта зала с визуальными статусами столов и деталями бронирований.',
@@ -610,6 +694,90 @@ const translations = {
         load: 'Failed to load the map editor.',
         save: 'Failed to save map changes.'
       }
+    },
+
+    menuAdmin: {
+      title: 'Menu',
+      description: 'A full menu editor with categories, items, visibility controls, and a stop-list.',
+      eyebrow: 'Menu management',
+      heroTitle: 'Edit categories and dishes from the live database',
+      heroDescription: 'This screen is built for daily admin work: quick edits, visibility toggles, and availability control in one place.',
+      refresh: 'Refresh data',
+      saving: 'Saving...',
+      cancelEdit: 'Cancel',
+      newCategoryTitle: 'New category',
+      editCategoryTitle: 'Edit category',
+      categoryFormSubtitle: 'Create a menu section, configure its slug, and set the display order.',
+      newItemTitle: 'New item',
+      editItemTitle: 'Edit item',
+      itemFormSubtitle: 'Add a dish or drink, set the price, and control its current availability.',
+      categoriesListTitle: 'Menu categories',
+      categoriesListSubtitle: 'Manage menu structure and section visibility.',
+      itemsListTitle: 'Menu items',
+      itemsListSubtitle: 'Operational list of dishes with quick toggles and editing.',
+      emptyCategories: 'No categories yet. Create the first category to get started.',
+      emptyItems: 'No menu items yet.',
+      emptyCategoryItems: 'This category does not have any items yet.',
+      fields: {
+        category: 'Category',
+        categoryName: 'Category name',
+        categorySlug: 'Slug',
+        itemName: 'Item name',
+        description: 'Description',
+        price: 'Price',
+        imageUrl: 'Image URL',
+        sortOrder: 'Sort order',
+        visibleOnSite: 'Visible on site',
+        availableNow: 'Available now'
+      },
+      placeholders: {
+        categoryName: 'For example, Main courses',
+        categorySlug: 'main-courses',
+        itemName: 'For example, Grilled sea bass',
+        description: 'A short dish or drink description'
+      },
+      stats: {
+        categories: 'Total categories',
+        activeCategories: 'Active categories',
+        totalItems: 'Total items',
+        visibleItems: 'Visible items',
+        availableItems: 'Available now',
+        stopList: 'In stop-list'
+      },
+      actions: {
+        addCategory: 'Add category',
+        saveCategory: 'Save category',
+        addItem: 'Add item',
+        saveItem: 'Save item',
+        edit: 'Edit',
+        delete: 'Delete'
+      },
+      errors: {
+        load: 'Unable to load the menu editor.',
+        saveCategory: 'Unable to save the category.',
+        saveItem: 'Unable to save the item.',
+        deleteCategory: 'Unable to delete the category.',
+        deleteItem: 'Unable to delete the item.'
+      },
+      feedback: {
+        categoryCreated: 'Category created.',
+        categoryUpdated: 'Category updated.',
+        categoryDeleted: 'Category deleted.',
+        categoryVisibilityUpdated: 'Category visibility updated.',
+        itemCreated: 'Item created.',
+        itemUpdated: 'Item updated.',
+        itemDeleted: 'Item deleted.',
+        itemVisibilityUpdated: 'Item visibility updated.',
+        itemAvailabilityUpdated: 'Item availability updated.'
+      },
+      confirmDeleteCategory: 'Delete the category “{name}” together with all its items?',
+      confirmDeleteItem: 'Delete the item “{name}”?',
+      selectCategory: 'Select a category',
+      visible: 'Visible',
+      hidden: 'Hidden',
+      available: 'Available',
+      stopListLabel: 'Stop-list',
+      itemsCountSuffix: 'items'
     },
     map: {
       title: 'Venue map',

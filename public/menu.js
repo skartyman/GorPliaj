@@ -10,6 +10,14 @@ let currentLanguage = localStorage.getItem('language') || 'uk';
 let menuCache = [];
 let activeCategory = '';
 
+function getLocalizedValue(value) {
+  if (value && typeof value === 'object') {
+    return value[currentLanguage] || value.uk || value.en || Object.values(value)[0] || '';
+  }
+
+  return String(value || '');
+}
+
 const translations = {
   uk: {
     pageTitle: 'ГорПляж — Меню',
@@ -44,10 +52,17 @@ const translations = {
 };
 
 function groupMenu(menu) {
-  return menu.reduce((acc, item) => {
-    const category = item.category[currentLanguage] || item.category.uk;
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(item);
+  return menu.reduce((acc, categoryEntry) => {
+    const categoryName = getLocalizedValue(categoryEntry.name);
+    const items = Array.isArray(categoryEntry.items) ? categoryEntry.items : [];
+    if (!categoryName || !items.length) {
+      return acc;
+    }
+
+    acc[categoryName] = items.map((item) => ({
+      ...item,
+      category: categoryEntry.name
+    }));
     return acc;
   }, {});
 }
@@ -89,8 +104,8 @@ function renderCatalog(groupedMenu) {
                 (item) => `
                   <article class="menu-card-item">
                     <div class="menu-card-copy">
-                      <strong>${item.name[currentLanguage] || item.name.uk}</strong>
-                      <p class="menu-meta">${category}</p>
+                      <strong>${getLocalizedValue(item.name)}</strong>
+                      <p class="menu-meta">${getLocalizedValue(item.description) || category}</p>
                     </div>
                     <span class="menu-price">${item.price} ${dictionary.priceCurrency}</span>
                   </article>`
@@ -104,7 +119,7 @@ function renderCatalog(groupedMenu) {
 
 function renderFeaturedDish() {
   const dictionary = translations[currentLanguage];
-  const item = menuCache[0];
+  const item = menuCache.flatMap((category) => Array.isArray(category.items) ? category.items.map((entry) => ({ ...entry, category: category.name })) : [])[0];
 
   if (!item) {
     featuredDishName.textContent = dictionary.menuEmpty;
@@ -114,9 +129,9 @@ function renderFeaturedDish() {
     return;
   }
 
-  featuredDishName.textContent = item.name[currentLanguage] || item.name.uk;
+  featuredDishName.textContent = getLocalizedValue(item.name);
   featuredDishText.textContent = dictionary.featuredPrefix;
-  featuredDishCategory.textContent = item.category[currentLanguage] || item.category.uk;
+  featuredDishCategory.textContent = getLocalizedValue(item.category);
   featuredDishPrice.textContent = `${item.price} ${dictionary.priceCurrency}`;
 }
 

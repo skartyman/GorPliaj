@@ -205,6 +205,41 @@ model Event {
   @@index([mapId])
 }
 
+
+model MenuCategory {
+  id        Int        @id @default(autoincrement())
+  name      String
+  slug      String     @unique
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     MenuItem[]
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+model MenuItem {
+  id          Int          @id @default(autoincrement())
+  categoryId  Int
+  name        String
+  description String?
+  price       Decimal      @db.Decimal(10, 2)
+  imageUrl    String?
+  isActive    Boolean      @default(true)
+  isAvailable Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([sortOrder])
+  @@index([isActive])
+  @@index([isAvailable])
+}
+
 model News {
   id        Int      @id @default(autoincrement())
   title     String
