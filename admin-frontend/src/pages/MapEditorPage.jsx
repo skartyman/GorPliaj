@@ -12,10 +12,12 @@ const STATIC_TYPE_ACCENTS = {
   ENTRANCE: 'entrance',
   WC: 'wc',
   LABEL: 'label',
-  DECOR: 'decor'
+  DECOR: 'decor',
+  STAIRS: 'stairs',
+  PATH: 'path'
 };
 
-const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'DECOR', 'LABEL'];
+const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'STAIRS', 'PATH', 'DECOR', 'LABEL'];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', step: null },
   { key: 'x', type: 'number', step: 1 },
@@ -31,6 +33,8 @@ const CREATION_PRESETS = {
   STAGE: { width: 200, height: 120 },
   ENTRANCE: { width: 110, height: 52 },
   WC: { width: 96, height: 72 },
+  STAIRS: { width: 120, height: 84 },
+  PATH: { width: 220, height: 44 },
   DECOR: { width: 120, height: 88 },
   LABEL: { width: 180, height: 60 }
 };
@@ -50,7 +54,8 @@ function normalizeMap(map) {
 
   return {
     ...map,
-    backgroundImage: String(map.backgroundImage || '').trim()
+    backgroundImage: String(map.backgroundImage || '').trim(),
+    backgroundColor: String(map.backgroundColor || '').trim() || '#f8fafc'
   };
 }
 
@@ -80,7 +85,10 @@ function buildEditorState(payload) {
   return {
     map,
     zones: payload.zones || [],
-    tables: payload.tables || [],
+    tables: (payload.tables || []).map((table) => ({
+      ...table,
+      photoUrl: String(table.photoUrl || '').trim()
+    })),
     objects: (payload.objects || []).map((object) => normalizeObject(object, map))
   };
 }
@@ -142,7 +150,7 @@ function resolveSavedSelection(prevState, nextData) {
   return matchedObject?.id || nextData.objects[0]?.id || null;
 }
 
-function MapSettings({ map, onBackgroundImageChange, t }) {
+function MapSettings({ map, onMapFieldChange, t }) {
   return (
     <div className="editor-properties-stack">
       <div>
@@ -152,7 +160,17 @@ function MapSettings({ map, onBackgroundImageChange, t }) {
 
       <label>
         {t('mapEditor.fields.backgroundImage')}
-        <input type="url" value={map.backgroundImage} placeholder="https://example.com/floorplan.png" onChange={(event) => onBackgroundImageChange(event.target.value)} />
+        <input
+          type="url"
+          value={map.backgroundImage}
+          placeholder="https://example.com/floorplan.png"
+          onChange={(event) => onMapFieldChange('backgroundImage', event.target.value)}
+        />
+      </label>
+
+      <label>
+        {t('mapEditor.fields.backgroundColor')}
+        <input type="color" value={map.backgroundColor || '#f8fafc'} onChange={(event) => onMapFieldChange('backgroundColor', event.target.value)} />
       </label>
     </div>
   );
@@ -203,17 +221,36 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
         ))}
 
         {selectedObject.type === 'TABLE' ? (
-          <label>
-            {t('mapEditor.fields.tableId')}
-            <select value={selectedObject.tableId || ''} onChange={(event) => onFieldChange('tableId', event.target.value)}>
-              <option value="">{t('mapEditor.unassignedTable')}</option>
-              {tables.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code || item.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            <label>
+              {t('mapEditor.fields.tableId')}
+              <select value={selectedObject.tableId || ''} onChange={(event) => onFieldChange('tableId', event.target.value)}>
+                <option value="">{t('mapEditor.unassignedTable')}</option>
+                {tables.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code || item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              {t('mapEditor.fields.tablePhotoUrl')}
+              <input
+                type="url"
+                value={table?.photoUrl || ''}
+                placeholder="https://example.com/table-photo.jpg"
+                onChange={(event) => onFieldChange('tablePhotoUrl', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            {table?.photoUrl ? (
+              <div className="editor-table-photo-preview">
+                <img src={table.photoUrl} alt={table.name || table.code || t('map.fields.table')} />
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         <label className="editor-toggle-field">
@@ -371,6 +408,28 @@ export default function MapEditorPage() {
       return;
     }
 
+    if (field === 'tablePhotoUrl') {
+      if (!selectedObject.tableId) {
+        return;
+      }
+
+      updateCurrent((prev) => ({
+        current: {
+          ...prev.current,
+          tables: prev.current.tables.map((table) =>
+            table.id === selectedObject.tableId
+              ? {
+                  ...table,
+                  photoUrl: String(value)
+                }
+              : table
+          )
+        }
+      }));
+
+      return;
+    }
+
     updateObject(selectedObject.id, (object) => {
       if (field === 'label') {
         return { ...object, label: String(value) };
@@ -386,6 +445,7 @@ export default function MapEditorPage() {
           tableId: value === '' ? null : Number(value)
         };
       }
+
 
       const numericValue = Number(value);
       return {
@@ -542,8 +602,13 @@ export default function MapEditorPage() {
 
     const payload = {
       map: {
-        backgroundImage: editorState.current.map.backgroundImage || null
+        backgroundImage: editorState.current.map.backgroundImage || null,
+        backgroundColor: editorState.current.map.backgroundColor || null
       },
+      tables: editorState.current.tables.map((table) => ({
+        id: table.id,
+        photoUrl: table.photoUrl || null
+      })),
       objects: editorState.current.objects.map((object) => ({
         id: object.id,
         type: object.type,
@@ -684,8 +749,17 @@ export default function MapEditorPage() {
                   }}
                 >
                   {map.backgroundImage ? (
-                    <div className="map-editor-canvas-background" style={{ backgroundImage: `url(${map.backgroundImage})` }} aria-hidden="true" />
-                  ) : null}
+                    <div
+                      className="map-editor-canvas-background"
+                      style={{
+                        backgroundColor: map.backgroundColor || '#f8fafc',
+                        backgroundImage: map.backgroundImage ? `url(${map.backgroundImage})` : 'none'
+                      }}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <div className="map-editor-canvas-background" style={{ backgroundColor: map.backgroundColor || '#f8fafc' }} aria-hidden="true" />
+                  )}
                   <div className="map-editor-canvas-grid" aria-hidden="true" />
 
                   {objects.map((object) => {
@@ -731,7 +805,7 @@ export default function MapEditorPage() {
 
             <div className="editor-sidebar-stack">
               <PanelCard title={t('mapEditor.mapSettingsTitle')} subtitle={t('mapEditor.mapSettingsDescription')} className="surface-muted">
-                <MapSettings map={map} onBackgroundImageChange={(value) => handleMapFieldChange('backgroundImage', value)} t={t} />
+                <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
               </PanelCard>
 
               <PanelCard title={t('mapEditor.propertiesTitle')} subtitle={t('mapEditor.propertiesDescription')} className="full-height surface-muted">

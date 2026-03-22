@@ -48,6 +48,10 @@ function toPercent(value, total) {
   return (value / total) * 100;
 }
 
+function getStaticObjectClassName(type = '') {
+  return `neutral map-object-${String(type).toLowerCase()}`;
+}
+
 function DetailRow({ label, value }) {
   return (
     <div className="detail-row">
@@ -173,6 +177,13 @@ export default function MapPage() {
     });
   }, [mapDimensions.height, mapDimensions.width, state.mapData?.objects, tableMap, zoneMap]);
 
+  const mapBackgroundStyle = {
+    width: '100%',
+    aspectRatio: `${state.mapData?.map?.width || 1200} / ${state.mapData?.map?.height || 700}`,
+    '--map-background-color': state.mapData?.map?.backgroundColor || '#f8fafc',
+    '--map-background-image': state.mapData?.map?.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+  };
+
   return (
     <AdminLayout>
       <PageContainer
@@ -206,13 +217,10 @@ export default function MapPage() {
             </div>
 
             <div className="map-layout">
-              <div
-                className="admin-map-canvas"
-                style={{
-                  width: '100%',
-                  aspectRatio: `${state.mapData.map?.width || 1200} / ${state.mapData.map?.height || 700}`
-                }}
-              >
+              <div className="admin-map-canvas" style={mapBackgroundStyle}>
+                <div className="admin-map-canvas-background" aria-hidden="true" />
+                <div className="admin-map-canvas-grid" aria-hidden="true" />
+
                 {mapObjects.map((object) => {
                   const status = object.table
                     ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
@@ -229,8 +237,8 @@ export default function MapPage() {
 
                   if (!object.isTable) {
                     return (
-                      <div key={object.id} className="map-object neutral" style={baseStyle} title={object.label || object.type}>
-                        <span>{object.label || object.type}</span>
+                      <div key={object.id} className={`map-object ${getStaticObjectClassName(object.type)}`} style={baseStyle} title={object.label || object.type}>
+                        <span>{object.label || t(`mapEditor.objectType.${object.type}`)}</span>
                       </div>
                     );
                   }
@@ -258,11 +266,17 @@ export default function MapPage() {
                 {!selectedTable ? <p className="muted">{t('map.noTableSelected')}</p> : null}
                 {selectedTable ? (
                   <>
+                    {selectedTable.photoUrl ? (
+                      <div className="table-photo-card">
+                        <img src={selectedTable.photoUrl} alt={t('map.tablePhotoAlt', { table: selectedTable.code || selectedTable.name || t('map.fields.table') })} />
+                      </div>
+                    ) : null}
+
                     <div className="details-grid compact">
                       <DetailRow label={t('map.fields.table')} value={selectedTable.code || selectedTable.name} />
                       <DetailRow label={t('map.fields.zone')} value={zoneMap.get(selectedTable.zoneId)?.name || '—'} />
                       <DetailRow label={t('map.fields.availability')} value={<StatusPill status={selectedStatus} />} />
-                      <DetailRow label={t('map.fields.capacity')} value={selectedTable.capacity || '—'} />
+                      <DetailRow label={t('map.fields.capacity')} value={`${selectedTable.seatsMin || '—'}-${selectedTable.seatsMax || '—'}`} />
                     </div>
 
                     <h4>{t('map.activeReservations')}</h4>

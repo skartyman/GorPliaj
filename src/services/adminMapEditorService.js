@@ -3,7 +3,8 @@ const { PrismaClient, MapObjectType } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type'];
-const MAP_EDITABLE_FIELDS = ['backgroundImage'];
+const MAP_EDITABLE_FIELDS = ['backgroundImage', 'backgroundColor'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 
 function serializeMapEditorPayload(map) {
@@ -50,8 +51,20 @@ function normalizeMapInput(mapInput) {
   const normalized = {};
 
   for (const field of MAP_EDITABLE_FIELDS) {
-    if (field === 'backgroundImage') {
-      normalized.backgroundImage = String(mapInput?.backgroundImage ?? '').trim() || null;
+    if (field === 'backgroundImage' || field === 'backgroundColor') {
+      normalized[field] = String(mapInput?.[field] ?? '').trim() || null;
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeTableInput(tableInput, existingTable = null) {
+  const normalized = {};
+
+  for (const field of TABLE_EDITABLE_FIELDS) {
+    if (field === 'photoUrl') {
+      normalized.photoUrl = String(tableInput?.photoUrl ?? existingTable?.photoUrl ?? '').trim() || null;
     }
   }
 
@@ -152,8 +165,38 @@ function validateEditorObjects(objects) {
   return null;
 }
 
-async function updateAdminMapEditor(mapId, objects, mapInput = {}) {
-  const validationError = validateEditorObjects(objects);
+function validateEditorTables(tables) {
+  if (tables === undefined) {
+    return null;
+  }
+
+  if (!Array.isArray(tables)) {
+    return 'Tables payload must be an array.';
+  }
+
+  const uniqueIds = new Set();
+
+  for (const table of tables) {
+    const tableId = Number(table?.id);
+    if (!Number.isInteger(tableId) || tableId <= 0) {
+      return 'Each table must include a valid id.';
+    }
+
+    if (uniqueIds.has(tableId)) {
+      return `Table ${tableId} is duplicated in payload.`;
+    }
+    uniqueIds.add(tableId);
+
+    if (table.photoUrl !== undefined && table.photoUrl !== null && typeof table.photoUrl !== 'string') {
+      return `Table ${tableId} contains an invalid photo URL.`;
+    }
+  }
+
+  return null;
+}
+
+async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = []) {
+  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput);
   if (validationError) {
     return { type: 'INVALID', message: validationError };
   }
@@ -166,7 +209,8 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}) {
       height: true,
       tables: {
         select: {
-          id: true
+          id: true,
+          photoUrl: true
         }
       }
     }
@@ -177,12 +221,17 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}) {
   }
 
   const tableIds = new Set(map.tables.map((table) => table.id));
+  const tablesById = new Map(map.tables.map((table) => [table.id, table]));
   const payloadTableIds = objects
     .map((object) => (object.tableId === null || object.tableId === '' || object.tableId === undefined ? null : Number(object.tableId)))
     .filter((tableId) => tableId !== null);
 
   if (payloadTableIds.some((tableId) => !tableIds.has(tableId))) {
     return { type: 'INVALID', message: 'Objects payload references an unknown table id.' };
+  }
+
+  if ((tablesInput || []).some((table) => !tableIds.has(Number(table.id)))) {
+    return { type: 'INVALID', message: 'Tables payload references an unknown table id.' };
   }
 
   const existingObjects = await prisma.mapObject.findMany({
@@ -232,6 +281,18 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}) {
       prisma.map.update({
         where: { id: mapId },
         data: mapUpdateData
+      })
+    );
+  }
+
+  for (const table of tablesInput || []) {
+    const tableId = Number(table.id);
+    const normalizedTable = normalizeTableInput(table, tablesById.get(tableId));
+
+    operations.push(
+      prisma.venueTable.update({
+        where: { id: tableId },
+        data: normalizedTable
       })
     );
   }

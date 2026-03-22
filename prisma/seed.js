@@ -133,6 +133,7 @@ async function main() {
       isDefault: true,
       width: 1600,
       height: 900,
+      backgroundColor: '#0f172a',
     },
     create: {
       name: 'Main venue map',
@@ -142,6 +143,7 @@ async function main() {
       isDefault: true,
       width: 1600,
       height: 900,
+      backgroundColor: '#0f172a',
     },
   });
 
@@ -164,15 +166,15 @@ async function main() {
   };
 
   const tables = [
-    { zoneKey: 'beach', name: 'Beach Table 1', code: 'B-01', seatsMin: 2, seatsMax: 4, deposit: '500.00', x: 140, y: 640 },
-    { zoneKey: 'beach', name: 'Beach Table 2', code: 'B-02', seatsMin: 2, seatsMax: 4, deposit: '500.00', x: 300, y: 640 },
-    { zoneKey: 'beach', name: 'Beach Family', code: 'B-03', seatsMin: 4, seatsMax: 6, deposit: '700.00', x: 470, y: 640 },
-    { zoneKey: 'lounge', name: 'Lounge Corner', code: 'L-01', seatsMin: 2, seatsMax: 4, deposit: '600.00', x: 640, y: 470 },
-    { zoneKey: 'lounge', name: 'Lounge Center', code: 'L-02', seatsMin: 4, seatsMax: 6, deposit: '800.00', x: 820, y: 470 },
-    { zoneKey: 'lounge', name: 'Lounge Sofa', code: 'L-03', seatsMin: 4, seatsMax: 8, deposit: '1000.00', x: 1000, y: 470 },
-    { zoneKey: 'vip', name: 'VIP Gold 1', code: 'V-01', seatsMin: 4, seatsMax: 6, deposit: '1200.00', x: 1220, y: 240 },
-    { zoneKey: 'vip', name: 'VIP Gold 2', code: 'V-02', seatsMin: 4, seatsMax: 6, deposit: '1200.00', x: 1380, y: 240 },
-    { zoneKey: 'vip', name: 'VIP Platinum', code: 'V-03', seatsMin: 6, seatsMax: 10, deposit: '1800.00', x: 1300, y: 420 },
+    { zoneKey: 'beach', name: 'Beach Table 1', code: 'B-01', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 140, y: 640 },
+    { zoneKey: 'beach', name: 'Beach Table 2', code: 'B-02', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 300, y: 640 },
+    { zoneKey: 'beach', name: 'Beach Family', code: 'B-03', seatsMin: 4, seatsMax: 6, deposit: '700.00', photoUrl: null, x: 470, y: 640 },
+    { zoneKey: 'lounge', name: 'Lounge Corner', code: 'L-01', seatsMin: 2, seatsMax: 4, deposit: '600.00', photoUrl: null, x: 640, y: 470 },
+    { zoneKey: 'lounge', name: 'Lounge Center', code: 'L-02', seatsMin: 4, seatsMax: 6, deposit: '800.00', photoUrl: null, x: 820, y: 470 },
+    { zoneKey: 'lounge', name: 'Lounge Sofa', code: 'L-03', seatsMin: 4, seatsMax: 8, deposit: '1000.00', photoUrl: null, x: 1000, y: 470 },
+    { zoneKey: 'vip', name: 'VIP Gold 1', code: 'V-01', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1220, y: 240 },
+    { zoneKey: 'vip', name: 'VIP Gold 2', code: 'V-02', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1380, y: 240 },
+    { zoneKey: 'vip', name: 'VIP Platinum', code: 'V-03', seatsMin: 6, seatsMax: 10, deposit: '1800.00', photoUrl: null, x: 1300, y: 420 },
   ];
 
   for (const table of tables) {
@@ -182,6 +184,7 @@ async function main() {
       seatsMin: table.seatsMin,
       seatsMax: table.seatsMax,
       deposit: table.deposit,
+      photoUrl: table.photoUrl || null,
       isActive: true,
       isBookable: true,
     });
@@ -232,6 +235,22 @@ async function main() {
       y: 100,
       width: 90,
       height: 70,
+    },
+    {
+      type: MapObjectType.STAIRS,
+      label: 'Sea View Stairs',
+      x: 1180,
+      y: 620,
+      width: 120,
+      height: 84,
+    },
+    {
+      type: MapObjectType.PATH,
+      label: 'Main Walkway',
+      x: 120,
+      y: 760,
+      width: 1220,
+      height: 44,
     },
   ];
 
