@@ -163,7 +163,7 @@ const translations = {
       description: 'Админский редактор объектов текущей карты без влияния на публичный flow бронирования.',
       eyebrow: 'Редактор схемы площадки',
       heroTitle: 'Создавайте, перемещайте, дублируйте и настраивайте объекты площадки',
-      heroDescription: 'Редактор загружает текущую дефолтную карту, позволяет править фон схемы, добавлять новые объекты и сохраняет актуальный список обратно через admin API.',
+      heroDescription: 'Редактор загружает текущую дефолтную карту, позволяет настраивать полноценный фон плана заведения, добавлять новые объекты и сохраняет актуальный список обратно через admin API.',
       note: 'Используйте верхнюю панель для быстрого добавления объектов, а правую колонку — для точной настройки выбранного элемента.',
       loading: 'Загружаем редактор карты...',
       save: 'Сохранить карту',
@@ -181,7 +181,7 @@ const translations = {
       canvasTitle: 'Редактируемое полотно',
       canvasDescription: 'Кликните по объекту для выбора, тяните для перемещения и используйте ручки для resize.',
       mapSettingsTitle: 'Настройки карты',
-      mapSettingsDescription: 'Опциональный фон схемы для удобного редактирования поверх изображения площадки.',
+      mapSettingsDescription: 'Задайте цвет и изображение фона, чтобы превратить сетку в полноценную карту заведения.',
       propertiesTitle: 'Свойства объекта',
       propertiesDescription: 'Точные координаты и параметры активного объекта.',
       noSelection: 'Выберите объект на схеме, чтобы редактировать его свойства.',
@@ -197,7 +197,9 @@ const translations = {
         zIndex: 'zIndex',
         isActive: 'Активен',
         tableId: 'Связанный стол',
-        backgroundImage: 'Background image URL'
+        tablePhotoUrl: 'Фото стола',
+        backgroundImage: 'URL фоновой схемы',
+        backgroundColor: 'Цвет фона'
       },
       objectType: {
         TABLE: 'Стол',
@@ -209,6 +211,8 @@ const translations = {
         POOL: 'Бассейн',
         WALL: 'Стена',
         DECOR: 'Декор',
+        STAIRS: 'Лестница',
+        PATH: 'Дорожка',
         CUSTOM: 'Объект'
       },
       errors: {
@@ -249,7 +253,8 @@ const translations = {
         zone: 'Зона',
         availability: 'Доступность',
         capacity: 'Вместимость'
-      }
+      },
+      tablePhotoAlt: 'Фото стола {table}'
     },
     placeholder: {
       workspaceSuffix: '— рабочий раздел',
@@ -549,7 +554,7 @@ const translations = {
       description: 'Admin-only editor for the current venue map objects without affecting the public booking flow.',
       eyebrow: 'Venue layout editor',
       heroTitle: 'Create, move, duplicate, and tune venue objects visually',
-      heroDescription: 'The editor loads the current default map, lets staff manage the floor background, add new objects, and saves the latest layout back through the admin API.',
+      heroDescription: 'The editor loads the current default map, lets staff configure a full venue floor background, add new objects, and saves the latest layout back through the admin API.',
       note: 'Use the top action bar for quick object actions and the right-side panels for precise map and object settings.',
       loading: 'Loading map editor...',
       save: 'Save map',
@@ -567,7 +572,7 @@ const translations = {
       canvasTitle: 'Editable canvas',
       canvasDescription: 'Click any object to select it, drag to move, and use handles to resize it.',
       mapSettingsTitle: 'Map settings',
-      mapSettingsDescription: 'Optional floor background image rendered under the editor objects.',
+      mapSettingsDescription: 'Set a background color and image so the canvas becomes a full venue floor plan instead of only a grid.',
       propertiesTitle: 'Object properties',
       propertiesDescription: 'Precise coordinates and settings for the active object.',
       noSelection: 'Select an object on the layout to edit its properties.',
@@ -583,7 +588,9 @@ const translations = {
         zIndex: 'zIndex',
         isActive: 'Active',
         tableId: 'Linked table',
-        backgroundImage: 'Background image URL'
+        tablePhotoUrl: 'Table photo',
+        backgroundImage: 'Background image URL',
+        backgroundColor: 'Background color'
       },
       objectType: {
         TABLE: 'Table',
@@ -595,6 +602,8 @@ const translations = {
         POOL: 'Pool',
         WALL: 'Wall',
         DECOR: 'Decor',
+        STAIRS: 'Stairs',
+        PATH: 'Pathway',
         CUSTOM: 'Object'
       },
       errors: {
@@ -635,7 +644,8 @@ const translations = {
         zone: 'Zone',
         availability: 'Availability',
         capacity: 'Capacity'
-      }
+      },
+      tablePhotoAlt: 'Photo of table {table}'
     },
     placeholder: {
       workspaceSuffix: 'workspace',

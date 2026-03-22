@@ -27,6 +27,7 @@ model Map {
   width           Int
   height          Int
   backgroundImage String?
+  backgroundColor String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   events          Event[]
@@ -60,6 +61,7 @@ model VenueTable {
   zoneId       Int
   name         String
   code         String?
+  photoUrl     String?
   seatsMin     Int
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
@@ -250,6 +252,8 @@ enum MapObjectType {
   ENTRANCE
   WC
   DECOR
+  STAIRS
+  PATH
   CUSTOM
 }
 

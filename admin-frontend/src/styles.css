@@ -388,14 +388,31 @@ select {
   position: relative;
   border-radius: 12px;
   border: 1px solid #cbd5e1;
-  background: repeating-linear-gradient(
-    0deg,
-    #f8fafc,
-    #f8fafc 24px,
-    #eef2f7 24px,
-    #eef2f7 25px
-  );
+  background: var(--map-background-color, #f8fafc);
   overflow: hidden;
+}
+
+.admin-map-canvas-background,
+.admin-map-canvas-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.admin-map-canvas-background {
+  background-color: var(--map-background-color, #f8fafc);
+  background-image: var(--map-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.78;
+}
+
+.admin-map-canvas-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.18) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .map-layout {
@@ -462,8 +479,18 @@ select {
 }
 
 .map-object.neutral {
-  background: #e2e8f0;
+  background: rgba(226, 232, 240, 0.9);
   border-color: #94a3b8;
+}
+
+.map-object.map-object-stairs {
+  background: rgba(226, 232, 240, 0.92);
+  border-color: #64748b;
+}
+
+.map-object.map-object-path {
+  background: rgba(186, 230, 253, 0.92);
+  border-color: #0284c7;
 }
 
 .map-object.selected {
@@ -872,8 +899,8 @@ select {
 .map-editor-canvas-background {
   background-position: center;
   background-repeat: no-repeat;
-  background-size: 100% 100%;
-  opacity: 0.68;
+  background-size: cover;
+  opacity: 0.72;
 }
 
 .map-editor-canvas-grid {
@@ -954,6 +981,16 @@ select {
 .map-editor-object.label {
   background: rgba(254, 249, 195, 0.92);
   border-color: #ca8a04;
+}
+
+.map-editor-object.stairs {
+  background: rgba(226, 232, 240, 0.96);
+  border-color: #64748b;
+}
+
+.map-editor-object.path {
+  background: rgba(224, 242, 254, 0.96);
+  border-color: #0284c7;
 }
 
 .map-editor-object.static {
@@ -1040,6 +1077,22 @@ select {
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background: #fff;
+}
+
+.editor-table-photo-preview,
+.table-photo-card {
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid #dbe4f0;
+  background: #fff;
+}
+
+.editor-table-photo-preview img,
+.table-photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
 }
 
 .editor-toggle-field input {

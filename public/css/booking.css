@@ -323,6 +323,29 @@ textarea {
   color: #fde68a;
 }
 
+.booking-map-background,
+.booking-map-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.booking-map-background {
+  background-color: var(--map-background-color, #10182a);
+  background-image: var(--map-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.78;
+}
+
+.booking-map-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 .map-object {
   position: absolute;
   display: grid;
@@ -380,6 +403,16 @@ textarea {
   border-color: rgba(196, 181, 253, 0.52);
 }
 
+.map-object--stairs {
+  background: rgba(148, 163, 184, 0.22);
+  border-color: rgba(226, 232, 240, 0.68);
+}
+
+.map-object--path {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(125, 211, 252, 0.68);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -409,6 +442,21 @@ textarea {
   background: rgba(245, 158, 11, 0.16);
   border-color: rgba(245, 158, 11, 0.28);
   color: #fde68a;
+}
+
+.table-photo-card {
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 14px;
+}
+
+.table-photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
 }
 
 .info-panel .details {
@@ -662,7 +710,30 @@ textarea {
     border-radius: 22px;
   }
 
-  .map-object {
+  .booking-map-background,
+.booking-map-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.booking-map-background {
+  background-color: var(--map-background-color, #10182a);
+  background-image: var(--map-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.78;
+}
+
+.booking-map-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.map-object {
     font-size: 0.68rem;
   }
 

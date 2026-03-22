@@ -10,6 +10,8 @@ const mapZoomResetButton = document.getElementById('mapZoomReset');
 
 const tableInfoEmpty = document.getElementById('tableInfoEmpty');
 const tableInfoDetails = document.getElementById('tableInfoDetails');
+const tablePhotoCard = document.getElementById('tablePhotoCard');
+const tablePhoto = document.getElementById('tablePhoto');
 const tableCode = document.getElementById('tableCode');
 const tableName = document.getElementById('tableName');
 const tableSeats = document.getElementById('tableSeats');
@@ -231,6 +233,18 @@ function showTableInfo(table, zoneName = '—') {
   tableSeats.textContent = `${table.seatsMin ?? '—'} / ${table.seatsMax ?? '—'}`;
   tableDeposit.textContent = table.deposit ?? '—';
   tableZone.textContent = zoneName;
+
+  if (tablePhotoCard && tablePhoto) {
+    if (table.photoUrl) {
+      tablePhoto.src = table.photoUrl;
+      tablePhoto.alt = `Фото столу ${table.code || table.name || ''}`.trim();
+      tablePhotoCard.classList.remove('hidden');
+    } else {
+      tablePhoto.removeAttribute('src');
+      tablePhoto.alt = 'Фото столу';
+      tablePhotoCard.classList.add('hidden');
+    }
+  }
 }
 
 function resetMessages() {
@@ -261,6 +275,11 @@ function resetSelectedTableUI(emptyMessage = defaultEmptyTableMessage) {
   clearSelectionUI();
   reservationForm.classList.add('hidden');
   tableInfoDetails.classList.add('hidden');
+  if (tablePhotoCard && tablePhoto) {
+    tablePhotoCard.classList.add('hidden');
+    tablePhoto.removeAttribute('src');
+    tablePhoto.alt = 'Фото столу';
+  }
   setTableInfoEmptyMessage(emptyMessage);
   tableInfoEmpty.classList.remove('hidden');
   updateSelectedStatusBadge('', 'Не обрано');
@@ -348,7 +367,7 @@ function createMapObjectElement(object, map, tableById, zoneById) {
   const width = (object.width / map.width) * 100;
   const height = (object.height / map.height) * 100;
 
-  element.className = `map-object ${object.type === 'TABLE' ? 'map-object--table' : 'map-object--static'}`;
+  element.className = `map-object ${object.type === 'TABLE' ? 'map-object--table' : `map-object--static map-object--${String(object.type || '').toLowerCase()}`}`;
   element.style.left = `${left}%`;
   element.style.top = `${top}%`;
   element.style.width = `${width}%`;
@@ -410,6 +429,18 @@ function renderMap(data) {
   tableElementsById.clear();
   bookingMap.innerHTML = '';
   bookingMap.style.aspectRatio = 'auto';
+  bookingMap.style.setProperty('--map-background-color', map.backgroundColor || '#10182a');
+  bookingMap.style.setProperty('--map-background-image', map.backgroundImage ? `url(${map.backgroundImage})` : 'none');
+
+  const backgroundLayer = document.createElement('div');
+  backgroundLayer.className = 'booking-map-background';
+  backgroundLayer.setAttribute('aria-hidden', 'true');
+  bookingMap.appendChild(backgroundLayer);
+
+  const gridLayer = document.createElement('div');
+  gridLayer.className = 'booking-map-grid';
+  gridLayer.setAttribute('aria-hidden', 'true');
+  bookingMap.appendChild(gridLayer);
 
   objects.forEach((object) => {
     const objectElement = createMapObjectElement(object, map, tableById, zoneById);
