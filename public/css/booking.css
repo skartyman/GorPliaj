@@ -18,6 +18,82 @@
   box-sizing: border-box;
 }
 
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand span {
+  display: grid;
+  min-width: 0;
+}
+
+.brand strong {
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  line-height: 1.05;
+}
+
+.brand small {
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+.brand-mark {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+}
+
+.brand-with-logo .brand-mark-image {
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brand-with-logo .brand-mark-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  min-height: 62px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lang-toggle:hover,
+.lang-toggle:focus-visible,
+.back-link:hover,
+.reservation-form button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(34, 211, 238, 0.32);
+  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.16);
+}
+
 body {
   margin: 0;
   background:
@@ -61,9 +137,31 @@ textarea {
 
 .booking-hero {
   display: grid;
+  gap: 22px;
+}
+
+.booking-hero-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.booking-hero-body {
+  display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
   gap: 18px;
   align-items: stretch;
+}
+
+.booking-brand {
+  flex: 1 1 auto;
+}
+
+.booking-header-action {
+  flex-shrink: 0;
 }
 
 .eyebrow {
@@ -79,6 +177,12 @@ textarea {
 .card h2,
 .card h3 {
   margin: 0;
+}
+
+.booking-hero-copy {
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .subtitle,
@@ -565,7 +669,7 @@ textarea {
 }
 
 @media (max-width: 1100px) {
-  .booking-hero,
+  .booking-hero-body,
   .booking-layout {
     grid-template-columns: 1fr;
   }
@@ -587,6 +691,31 @@ textarea {
   .card {
     border-radius: 24px;
     padding: 18px;
+  }
+
+  .booking-hero-header {
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 14px;
+  }
+
+  .brand strong {
+    font-size: 1.75rem;
+  }
+
+  .brand small {
+    font-size: 1rem;
+  }
+
+  .brand-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+  }
+
+  .lang-toggle {
+    min-width: 74px;
+    min-height: 54px;
   }
 
   .booking-hero h1 {
@@ -675,6 +804,29 @@ textarea {
   }
 }
 
+.booking-map-background,
+.booking-map-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.booking-map-background {
+  background-color: var(--map-background-color, #10182a);
+  background-image: var(--map-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.78;
+}
+
+.booking-map-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 @media (max-width: 520px) {
   .booking-page {
     width: calc(100vw - 16px);
@@ -684,6 +836,28 @@ textarea {
   .card {
     border-radius: 20px;
     padding: 16px;
+  }
+
+  .booking-hero-header {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .booking-brand {
+    min-width: 0;
+  }
+
+  .brand strong {
+    font-size: 1.55rem;
+  }
+
+  .brand small {
+    font-size: 0.98rem;
+  }
+
+  .brand-mark {
+    width: 52px;
+    height: 52px;
   }
 
   .hero-actions {
@@ -710,30 +884,7 @@ textarea {
     border-radius: 22px;
   }
 
-  .booking-map-background,
-.booking-map-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.booking-map-background {
-  background-color: var(--map-background-color, #10182a);
-  background-image: var(--map-background-image, none);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  opacity: 0.78;
-}
-
-.booking-map-grid {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.map-object {
+  .map-object {
     font-size: 0.68rem;
   }
 
