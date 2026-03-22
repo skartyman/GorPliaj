@@ -93,11 +93,6 @@ const translations = {
   uk: {
     pageTitle: 'ГорПляж — Меню',
     brandSubtitle: 'Beach · Restaurant · Events',
-    menuHeaderSeal: 'Добірна кухня та бар',
-    menuQuickHome: 'Головна',
-    menuQuickBooking: 'Бронювання',
-    menuQuickEvents: 'Події',
-    menuQuickOffers: 'Акції',
     languageToggleLabel: 'EN',
     languageToggleAria: 'Switch language to English',
     menuPageKicker: 'Kitchen & bar',
@@ -132,11 +127,6 @@ const translations = {
   en: {
     pageTitle: 'GorPliaj — Menu',
     brandSubtitle: 'Beach · Restaurant · Events',
-    menuHeaderSeal: 'Curated kitchen & bar',
-    menuQuickHome: 'Home',
-    menuQuickBooking: 'Booking',
-    menuQuickEvents: 'Events',
-    menuQuickOffers: 'Offers',
     languageToggleLabel: 'UK',
     languageToggleAria: 'Перемкнути мову на українську',
     menuPageKicker: 'Kitchen & bar',
