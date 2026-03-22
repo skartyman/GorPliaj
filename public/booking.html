@@ -28,12 +28,15 @@
 
         <div class="booking-hero-body">
           <div class="booking-hero-copy">
-            <p class="eyebrow" data-i18n="bookingEyebrow">GorPliaj Booking</p>
             <h1 data-i18n="bookingHeroTitle">Карта бронювання столів</h1>
             <p class="subtitle" data-i18n="bookingHeroSubtitle">Оберіть столик на мапі, перевірте його доступність і одразу підтвердіть бронювання.</p>
+            <div class="booking-hero-highlights">
+              <span class="booking-highlight-chip" data-i18n="bookingHighlightMap">Жива карта столів</span>
+              <span class="booking-highlight-chip" data-i18n="bookingHighlightBooking">Швидке підтвердження онлайн</span>
+              <span class="booking-highlight-chip" data-i18n="bookingHighlightSupport">Узгодження деталей у коментарі</span>
+            </div>
             <div class="hero-actions">
               <a class="back-link" href="/" data-i18n="backHome">← На головну</a>
-              <span class="hero-note" data-i18n="heroNote">Графіка для hero: 1600×900, safe zone 120px</span>
             </div>
           </div>
 
@@ -58,8 +61,8 @@
         <article class="card map-card">
           <div class="card-head">
             <div>
-              <p class="eyebrow" data-i18n="interactiveMap">Interactive map</p>
               <h2 data-i18n="venueMapTitle">Мапа закладу</h2>
+              <p class="card-subtitle" data-i18n="venueMapSubtitle">Оглядайте зони, масштабуйте мапу та натискайте на вільні столи для бронювання.</p>
             </div>
             <div class="map-legend">
               <span><i class="legend-dot free"></i> <span data-i18n="statFree">Free</span></span>
@@ -71,7 +74,6 @@
           <p id="loadingState" class="state state-loading" role="status" data-i18n="loadingMap">Завантаження карти…</p>
           <p id="errorState" class="state state-error hidden" role="alert"></p>
           <p id="availabilityWarning" class="state state-warning hidden" role="status"></p>
-          <p class="map-mobile-hint" data-i18n="mapMobileHint">На телефоні рухайте мапу одним пальцем, змінюйте масштаб щипком або двічі торкніться для швидкого наближення.</p>
           <div class="map-stage">
             <div class="map-frame">
               <div id="bookingMapShell" class="booking-map-shell">
@@ -91,8 +93,8 @@
         <aside class="card info-panel" aria-live="polite">
           <div class="card-head stacked">
             <div>
-              <p class="eyebrow" data-i18n="selectedTableEyebrow">Selected table</p>
               <h2 data-i18n="selectedTableTitle">Обраний стіл</h2>
+              <p class="card-subtitle" data-i18n="selectedTableSubtitle">Після вибору столу заповніть коротку форму, щоб адміністратор міг швидко підтвердити бронювання.</p>
             </div>
             <span id="selectedTableStatus" class="status-pill hidden" data-i18n="selectedTableNone">Не обрано</span>
           </div>
