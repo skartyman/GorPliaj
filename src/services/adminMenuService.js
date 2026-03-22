@@ -63,6 +63,7 @@ function toAdminItem(item) {
     description: item.description || '',
     price: Number(item.price),
     imageUrl: item.imageUrl || '',
+    likesCount: Number(item.likesCount || 0),
     isActive: item.isActive,
     isAvailable: item.isAvailable,
     sortOrder: item.sortOrder,
@@ -308,6 +309,54 @@ async function deleteItem(id) {
   return { type: 'SUCCESS' };
 }
 
+async function getInsights() {
+  const [items, categoryCount, activeCategoryCount] = await Promise.all([
+    prisma.menuItem.findMany({
+      where: {
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        likesCount: true,
+        isAvailable: true,
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: [{ likesCount: 'desc' }, { id: 'asc' }]
+    }),
+    prisma.menuCategory.count(),
+    prisma.menuCategory.count({ where: { isActive: true } })
+  ]);
+
+  const totalLikes = items.reduce((sum, item) => sum + Number(item.likesCount || 0), 0);
+  const activeItemsCount = items.length;
+  const availableItemsCount = items.filter((item) => item.isAvailable).length;
+  const likedItemsCount = items.filter((item) => Number(item.likesCount || 0) > 0).length;
+  const topLikedItems = items.slice(0, 5).map((item) => ({
+    id: item.id,
+    name: item.name,
+    likesCount: Number(item.likesCount || 0),
+    categoryName: item.category?.name || ''
+  }));
+
+  return {
+    summary: {
+      totalLikes,
+      activeItemsCount,
+      availableItemsCount,
+      likedItemsCount,
+      categoryCount,
+      activeCategoryCount
+    },
+    topLikedItems
+  };
+}
+
 module.exports = {
   listCategories,
   createCategory,
@@ -316,5 +365,6 @@ module.exports = {
   listItems,
   createItem,
   updateItem,
-  deleteItem
+  deleteItem,
+  getInsights
 };
