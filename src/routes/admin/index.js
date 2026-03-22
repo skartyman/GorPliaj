@@ -7,6 +7,7 @@ const {
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,
+  getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor
 } = require('../../controllers/adminController');
@@ -23,6 +24,7 @@ router.post('/auth/logout', requireAdminAuth, logoutAdmin);
 router.get('/reservations', requireAdminAuth, getAdminReservations);
 router.get('/reservations/:id', requireAdminAuth, getAdminReservationById);
 router.patch('/reservations/:id/status', requireAdminAuth, updateAdminReservationStatus);
+router.get('/maps/default/editor', requireAdminAuth, getDefaultAdminMapEditor);
 router.get('/maps/:id/editor', requireAdminAuth, getAdminMapEditor);
 router.put('/maps/:id/editor', requireAdminAuth, updateAdminMapEditor);
 

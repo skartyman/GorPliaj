@@ -194,6 +194,21 @@ async function getAdminMapEditor(req, res) {
   }
 }
 
+async function getDefaultAdminMapEditor(req, res) {
+  try {
+    const mapEditorData = await adminMapEditorService.getDefaultAdminMapEditor();
+
+    if (!mapEditorData) {
+      return res.status(404).json({ message: 'Default map not found.' });
+    }
+
+    return res.json(mapEditorData);
+  } catch (error) {
+    console.error('[adminController.getDefaultAdminMapEditor] Failed to load default map editor data.', error);
+    return res.status(500).json({ message: 'Unable to load default map editor data.' });
+  }
+}
+
 async function updateAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -235,6 +250,7 @@ module.exports = {
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,
+  getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor
 };

@@ -6,6 +6,25 @@ const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zInd
 const MAP_EDITABLE_FIELDS = ['backgroundImage', 'backgroundColor'];
 const TABLE_EDITABLE_FIELDS = ['photoUrl'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
+const MAP_EDITOR_INCLUDE = {
+  zones: {
+    orderBy: {
+      sortOrder: 'asc'
+    }
+  },
+  tables: {
+    orderBy: [
+      { zoneId: 'asc' },
+      { id: 'asc' }
+    ]
+  },
+  mapObjects: {
+    orderBy: [
+      { zIndex: 'asc' },
+      { id: 'asc' }
+    ]
+  }
+};
 
 function serializeMapEditorPayload(map) {
   if (!map) {
@@ -25,25 +44,20 @@ function serializeMapEditorPayload(map) {
 function getAdminMapEditor(mapId) {
   return prisma.map.findUnique({
     where: { id: mapId },
-    include: {
-      zones: {
-        orderBy: {
-          sortOrder: 'asc'
-        }
-      },
-      tables: {
-        orderBy: [
-          { zoneId: 'asc' },
-          { id: 'asc' }
-        ]
-      },
-      mapObjects: {
-        orderBy: [
-          { zIndex: 'asc' },
-          { id: 'asc' }
-        ]
-      }
-    }
+    include: MAP_EDITOR_INCLUDE
+  }).then(serializeMapEditorPayload);
+}
+
+function getDefaultAdminMapEditor() {
+  return prisma.map.findFirst({
+    where: {
+      isDefault: true
+    },
+    orderBy: [
+      { updatedAt: 'desc' },
+      { id: 'desc' }
+    ],
+    include: MAP_EDITOR_INCLUDE
   }).then(serializeMapEditorPayload);
 }
 
@@ -361,5 +375,6 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
 module.exports = {
   getAdminMapEditor,
+  getDefaultAdminMapEditor,
   updateAdminMapEditor
 };

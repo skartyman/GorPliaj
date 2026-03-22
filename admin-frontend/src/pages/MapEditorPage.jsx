@@ -311,20 +311,9 @@ export default function MapEditorPage() {
       saveMessage: ''
     }));
 
-    const defaultMapResult = await apiRequest('/api/maps/default');
-    if (!defaultMapResult.response.ok || !defaultMapResult.body?.map?.id) {
-      setEditorState((prev) => ({
-        ...prev,
-        loading: false,
-        error: defaultMapResult.body?.message || t('mapEditor.errors.load')
-      }));
-      return;
-    }
+    const editorResult = await apiRequest('/api/admin/maps/default/editor');
 
-    const mapId = Number(defaultMapResult.body.map.id);
-    const editorResult = await apiRequest(`/api/admin/maps/${mapId}/editor`);
-
-    if (!editorResult.response.ok) {
+    if (!editorResult.response.ok || !editorResult.body?.map?.id) {
       setEditorState((prev) => ({
         ...prev,
         loading: false,
@@ -333,6 +322,7 @@ export default function MapEditorPage() {
       return;
     }
 
+    const mapId = Number(editorResult.body.map.id);
     const nextData = buildEditorState(editorResult.body);
 
     setEditorState({
