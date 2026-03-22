@@ -755,13 +755,13 @@ select:focus {
 
 .menu-page-shell {
   width: min(100%, 100vw);
-  padding: 20px 12px;
+  padding: 14px 10px;
 }
 
 .menu-page-surface {
   width: min(100%, 1120px);
   margin: 0 auto;
-  padding: 10px 0 96px;
+  padding: 6px 0 28px;
 }
 
 .menu-page-header,
@@ -843,8 +843,9 @@ select:focus {
 .menu-showcase-card,
 .menu-category-block,
 .menu-category-nav,
-.menu-catalog {
-  margin-top: 12px;
+.menu-catalog,
+.menu-page-footer-spacer {
+  margin-top: 10px;
 }
 
 .menu-page-intro h1,
@@ -944,31 +945,31 @@ select:focus {
 
 .menu-card-grid {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .menu-card-item {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 168px minmax(0, 1fr);
   align-items: stretch;
-  gap: 16px;
-  padding: 14px;
-  border-radius: 24px;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 22px;
   background: #fff;
   border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .menu-card-media-wrap {
-  min-height: 180px;
+  min-height: 168px;
   aspect-ratio: 1 / 1;
-  border-radius: 20px;
+  border-radius: 18px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(37, 99, 235, 0.06), rgba(30, 41, 59, 0.12));
 }
 
 .menu-card-image,
 .menu-card-image-fallback {
-  min-height: 180px;
+  min-height: 168px;
 }
 
 .menu-card-image-fallback {
@@ -977,39 +978,33 @@ select:focus {
 
 .menu-card-copy {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   align-content: start;
 }
 
 .menu-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.menu-card-title-wrap {
   display: grid;
-  gap: 10px;
-  min-width: 0;
+  gap: 8px;
 }
 
-.menu-card-social-row,
 .menu-card-actions-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.menu-card-actions-row-inline {
+  justify-content: space-between;
 }
 
 .menu-like-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 14px;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
   border-radius: 999px;
   border: 1px solid rgba(244, 114, 182, 0.22);
   background: rgba(252, 231, 243, 0.52);
@@ -1033,8 +1028,8 @@ select:focus {
 .menu-qty-control {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px;
+  gap: 6px;
+  padding: 4px;
   border-radius: 999px;
   background: #f8fafc;
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -1045,8 +1040,8 @@ select:focus {
 }
 
 .menu-qty-btn {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 50%;
   background: #e2e8f0;
@@ -1067,7 +1062,7 @@ select:focus {
 }
 
 .menu-qty-value {
-  min-width: 32px;
+  min-width: 24px;
   text-align: center;
   font-weight: 700;
   color: #0f172a;
@@ -1075,7 +1070,12 @@ select:focus {
 
 .menu-card-action-note {
   color: #64748b;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
+  min-height: 1.1rem;
+}
+
+.menu-page-footer-spacer {
+  min-height: calc(112px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (max-width: 720px) {
@@ -1089,11 +1089,11 @@ select:focus {
   }
 
   .menu-page-shell {
-    padding: 12px 10px;
+    padding: 10px 8px;
   }
 
   .menu-page-surface {
-    padding: 4px 0;
+    padding: 2px 0 20px;
   }
 
   .menu-page-header,
@@ -1101,7 +1101,7 @@ select:focus {
   .menu-showcase-card,
   .menu-category-block,
   .menu-category-nav {
-    padding: 12px;
+    padding: 10px;
   }
 
   .menu-showcase-card {
@@ -1111,27 +1111,27 @@ select:focus {
 
   .menu-card-item {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
+    padding: 10px;
   }
 
   .menu-card-media-wrap,
   .menu-card-image,
   .menu-card-image-fallback {
-    min-height: 180px;
+    min-height: 156px;
   }
 
-  .menu-card-head {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .menu-card-actions-row {
-    align-items: stretch;
+  .menu-card-actions-row-inline {
+    justify-content: flex-start;
   }
 
   .menu-card-item .menu-price {
-    padding: 7px 11px;
-    font-size: 0.95rem;
+    padding: 7px 10px;
+    font-size: 0.94rem;
+  }
+
+  .menu-page-footer-spacer {
+    min-height: calc(108px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1462,7 +1462,7 @@ body.cart-open {
 .menu-cart-fab {
   position: fixed;
   right: 20px;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 30;
   display: inline-flex;
   align-items: center;
@@ -1572,7 +1572,7 @@ body.cart-open {
   .menu-cart-fab {
     left: 12px;
     right: 12px;
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     justify-content: space-between;
   }
 

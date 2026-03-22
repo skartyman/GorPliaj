@@ -239,34 +239,30 @@ function renderCatalog(groupedMenu) {
                     </div>
                     <div class="menu-card-copy">
                       <div class="menu-card-head">
-                        <div class="menu-card-title-wrap">
-                          <strong>${escapeHtml(title)}</strong>
-                          <div class="menu-card-social-row">
-                            <button
-                              class="menu-like-btn${liked ? ' is-active' : ''}"
-                              type="button"
-                              data-like-button
-                              data-item-id="${item.id}"
-                              aria-pressed="${liked ? 'true' : 'false'}"
-                              aria-label="${escapeHtml(liked ? dictionary.unlikeButton : dictionary.likeButton)}"
-                            >
-                              <span aria-hidden="true">♥</span>
-                              <span data-like-count>${likesCount}</span>
-                              <span class="sr-only">${likesCount} ${escapeHtml(dictionary.likesLabel)}</span>
-                            </button>
+                        <strong>${escapeHtml(title)}</strong>
+                        <div class="menu-card-actions-row menu-card-actions-row-inline">
+                          <button
+                            class="menu-like-btn${liked ? ' is-active' : ''}"
+                            type="button"
+                            data-like-button
+                            data-item-id="${item.id}"
+                            aria-pressed="${liked ? 'true' : 'false'}"
+                            aria-label="${escapeHtml(liked ? dictionary.unlikeButton : dictionary.likeButton)}"
+                          >
+                            <span aria-hidden="true">♥</span>
+                            <span data-like-count>${likesCount}</span>
+                            <span class="sr-only">${likesCount} ${escapeHtml(dictionary.likesLabel)}</span>
+                          </button>
+                          <span class="menu-price">${formatPrice(item.price)} ${dictionary.priceCurrency}</span>
+                          <div class="menu-qty-control" aria-label="${escapeHtml(dictionary.cartRowQuantity)}">
+                            <button type="button" class="menu-qty-btn" data-qty-action="decrease" data-item-id="${item.id}" ${quantity ? '' : 'disabled'}>−</button>
+                            <span class="menu-qty-value" data-item-quantity="${item.id}">${quantity}</span>
+                            <button type="button" class="menu-qty-btn is-primary" data-qty-action="increase" data-item-id="${item.id}">+</button>
                           </div>
                         </div>
-                        <span class="menu-price">${formatPrice(item.price)} ${dictionary.priceCurrency}</span>
                       </div>
                       <p class="menu-meta">${escapeHtml(description)}</p>
-                      <div class="menu-card-actions-row">
-                        <div class="menu-qty-control" aria-label="${escapeHtml(dictionary.cartRowQuantity)}">
-                          <button type="button" class="menu-qty-btn" data-qty-action="decrease" data-item-id="${item.id}" ${quantity ? '' : 'disabled'}>−</button>
-                          <span class="menu-qty-value" data-item-quantity="${item.id}">${quantity}</span>
-                          <button type="button" class="menu-qty-btn is-primary" data-qty-action="increase" data-item-id="${item.id}">+</button>
-                        </div>
-                        <span class="menu-card-action-note">${quantity ? escapeHtml(`${dictionary.itemAdded}: ${quantity}`) : '&nbsp;'}</span>
-                      </div>
+                      <span class="menu-card-action-note">${quantity ? escapeHtml(`${dictionary.itemAdded}: ${quantity}`) : '&nbsp;'}</span>
                     </div>
                   </article>`;
               })
