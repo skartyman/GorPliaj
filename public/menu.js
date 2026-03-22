@@ -5,6 +5,8 @@ const featuredDishName = document.getElementById('featuredDishName');
 const featuredDishText = document.getElementById('featuredDishText');
 const featuredDishCategory = document.getElementById('featuredDishCategory');
 const featuredDishPrice = document.getElementById('featuredDishPrice');
+const featuredDishImage = document.getElementById('featuredDishImage');
+const featuredDishImageFallback = document.getElementById('featuredDishImageFallback');
 
 let currentLanguage = localStorage.getItem('language') || 'uk';
 let menuCache = [];
@@ -16,6 +18,45 @@ function getLocalizedValue(value) {
   }
 
   return String(value || '');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatPrice(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return '—';
+  }
+
+  const locale = currentLanguage === 'uk' ? 'uk-UA' : 'en-US';
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: Number.isInteger(number) ? 0 : 2,
+    maximumFractionDigits: 2
+  }).format(number);
+}
+
+function getDishImage(item) {
+  const imageUrl = typeof item?.imageUrl === 'string' ? item.imageUrl.trim() : '';
+  return imageUrl || '';
+}
+
+function getImageMarkup(item, title) {
+  const imageUrl = getDishImage(item);
+  if (!imageUrl) {
+    return `
+      <div class="menu-card-image-fallback" aria-hidden="true">
+        <span>GP</span>
+      </div>`;
+  }
+
+  return `<img class="menu-card-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" loading="lazy" />`;
 }
 
 const translations = {
@@ -32,7 +73,9 @@ const translations = {
     menuEmpty: 'Меню тимчасово недоступне.',
     featuredPrefix: 'Сьогодні радимо спробувати одну з найпопулярніших позицій комплексу.',
     categoryCount: 'позицій',
-    priceCurrency: '₴'
+    priceCurrency: '₴',
+    dishImageFallback: 'Фото страви відсутнє',
+    dishImageLabel: 'Фото страви'
   },
   en: {
     pageTitle: 'GorPliaj — Menu',
@@ -47,7 +90,9 @@ const translations = {
     menuEmpty: 'Menu is temporarily unavailable.',
     featuredPrefix: 'Today we recommend trying one of the venue’s most popular items.',
     categoryCount: 'items',
-    priceCurrency: '₴'
+    priceCurrency: '₴',
+    dishImageFallback: 'Dish photo is not available',
+    dishImageLabel: 'Dish photo'
   }
 };
 
@@ -72,7 +117,7 @@ function renderCategories(groupedMenu) {
   categoryNav.innerHTML = categories
     .map(
       (category) => `
-        <a class="menu-category-link${category === activeCategory ? ' active' : ''}" href="#category-${slugify(category)}" data-category="${category}">${category}</a>`
+        <a class="menu-category-link${category === activeCategory ? ' active' : ''}" href="#category-${slugify(category)}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</a>`
     )
     .join('');
 }
@@ -93,23 +138,30 @@ function renderCatalog(groupedMenu) {
         <section class="menu-category-block" id="category-${slugify(category)}">
           <div class="section-head section-head-compact">
             <div>
-              <p class="eyebrow">${category}</p>
-              <h2>${category}</h2>
+              <p class="eyebrow">${escapeHtml(category)}</p>
+              <h2>${escapeHtml(category)}</h2>
             </div>
             <span class="section-chip">${items.length} ${dictionary.categoryCount}</span>
           </div>
           <div class="menu-card-grid">
             ${items
-              .map(
-                (item) => `
+              .map((item) => {
+                const title = getLocalizedValue(item.name);
+                const description = getLocalizedValue(item.description) || category;
+                return `
                   <article class="menu-card-item">
-                    <div class="menu-card-copy">
-                      <strong>${getLocalizedValue(item.name)}</strong>
-                      <p class="menu-meta">${getLocalizedValue(item.description) || category}</p>
+                    <div class="menu-card-media-wrap">
+                      ${getImageMarkup(item, title)}
                     </div>
-                    <span class="menu-price">${item.price} ${dictionary.priceCurrency}</span>
-                  </article>`
-              )
+                    <div class="menu-card-copy">
+                      <div class="menu-card-head">
+                        <strong>${escapeHtml(title)}</strong>
+                        <span class="menu-price">${formatPrice(item.price)} ${dictionary.priceCurrency}</span>
+                      </div>
+                      <p class="menu-meta">${escapeHtml(description)}</p>
+                    </div>
+                  </article>`;
+              })
               .join('')}
           </div>
         </section>`
@@ -126,13 +178,40 @@ function renderFeaturedDish() {
     featuredDishText.textContent = dictionary.featuredPrefix;
     featuredDishCategory.textContent = '—';
     featuredDishPrice.textContent = '—';
+    if (featuredDishImage) {
+      featuredDishImage.hidden = true;
+      featuredDishImage.removeAttribute('src');
+      featuredDishImage.alt = '';
+    }
+    if (featuredDishImageFallback) {
+      featuredDishImageFallback.hidden = false;
+      featuredDishImageFallback.textContent = 'GP';
+      featuredDishImageFallback.setAttribute('aria-label', dictionary.dishImageFallback);
+    }
     return;
   }
 
   featuredDishName.textContent = getLocalizedValue(item.name);
   featuredDishText.textContent = dictionary.featuredPrefix;
   featuredDishCategory.textContent = getLocalizedValue(item.category);
-  featuredDishPrice.textContent = `${item.price} ${dictionary.priceCurrency}`;
+  featuredDishPrice.textContent = `${formatPrice(item.price)} ${dictionary.priceCurrency}`;
+
+  const imageUrl = getDishImage(item);
+  if (featuredDishImage && featuredDishImageFallback) {
+    if (imageUrl) {
+      featuredDishImage.src = imageUrl;
+      featuredDishImage.alt = `${dictionary.dishImageLabel}: ${getLocalizedValue(item.name)}`;
+      featuredDishImage.hidden = false;
+      featuredDishImageFallback.hidden = true;
+    } else {
+      featuredDishImage.hidden = true;
+      featuredDishImage.removeAttribute('src');
+      featuredDishImage.alt = '';
+      featuredDishImageFallback.hidden = false;
+      featuredDishImageFallback.textContent = 'GP';
+      featuredDishImageFallback.setAttribute('aria-label', dictionary.dishImageFallback);
+    }
+  }
 }
 
 function slugify(value) {
