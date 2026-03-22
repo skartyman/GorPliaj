@@ -49,15 +49,21 @@ const translations = {
       description: 'Дашборд показывает текущую нагрузку, быстрые переходы и ближайшие бронирования в одном экране.',
       openReservations: 'Открыть брони',
       viewMap: 'Открыть карту',
+      openMenu: 'Открыть меню',
       summary: {
         today: 'Броней сегодня',
         pending: 'Ожидают подтверждения',
         confirmed: 'Подтверждено',
         completed: 'Завершено',
-        busyTables: 'Занятых столов'
+        busyTables: 'Занятых столов',
+        totalLikes: 'Всего лайков',
+        likedItems: 'Лайкнутых блюд',
+        menuItems: 'Активных блюд'
       },
       quickActionsTitle: 'Быстрые действия',
       quickActionsDescription: 'Короткие сценарии для администратора на телефоне и на десктопе.',
+      likesTitle: 'Лидеры по лайкам',
+      likesDescription: 'Топ блюд, которые пользователи чаще всего отмечают на публичном меню.',
       upcomingTitle: 'Ближайшие бронирования',
       upcomingDescription: 'Актуальные брони из live API.',
       latestTitle: 'Последние созданные',
@@ -67,19 +73,24 @@ const translations = {
         reservationsDescription: 'Искать, фильтровать и быстро менять статусы.',
         mapTitle: 'Карта зала',
         mapDescription: 'Смотреть загрузку столов и текущую посадку.',
+        menuTitle: 'Меню и лайки',
+        menuDescription: 'Редактировать блюда и отслеживать интерес гостей к позициям.',
         newsTitle: 'Новости на главной',
         newsDescription: 'Готовить анонсы и важные сообщения.',
         eventsTitle: 'События',
         eventsDescription: 'Планировать афиши, даты и промо.'
       },
       errors: {
-        load: 'Не удалось загрузить дашборд.'
+        load: 'Не удалось загрузить дашборд.',
+        loadInsights: 'Не удалось загрузить статистику меню.'
       },
       empty: {
         upcoming: 'Ближайших бронирований пока нет.',
-        latest: 'Недавних бронирований пока нет.'
+        latest: 'Недавних бронирований пока нет.',
+        likes: 'Пока нет блюд с лайками.'
       },
-      createdFromFeed: 'Создано из текущего административного потока.'
+      createdFromFeed: 'Создано из текущего административного потока.',
+      noCategory: 'Без категории'
     },
     reservations: {
       title: 'Брони',
@@ -524,15 +535,21 @@ const translations = {
       description: 'The dashboard shows current load, fast shortcuts, and upcoming reservations on one screen.',
       openReservations: 'Open reservations',
       viewMap: 'Open map',
+      openMenu: 'Open menu',
       summary: {
         today: 'Reservations today',
         pending: 'Pending reservations',
         confirmed: 'Confirmed reservations',
         completed: 'Completed reservations',
-        busyTables: 'Busy tables'
+        busyTables: 'Busy tables',
+        totalLikes: 'Likes total',
+        likedItems: 'Liked dishes',
+        menuItems: 'Active dishes'
       },
       quickActionsTitle: 'Quick actions',
       quickActionsDescription: 'Shortcuts for operators on phone and desktop.',
+      likesTitle: 'Most liked dishes',
+      likesDescription: 'Top dishes that visitors mark most often in the public menu.',
       upcomingTitle: 'Upcoming reservations',
       upcomingDescription: 'Current bookings from the live API.',
       latestTitle: 'Latest created',
@@ -542,19 +559,24 @@ const translations = {
         reservationsDescription: 'Search, filter, and update statuses quickly.',
         mapTitle: 'Floor map',
         mapDescription: 'Inspect table load and current seating.',
+        menuTitle: 'Menu and likes',
+        menuDescription: 'Edit dishes and monitor guest interest in menu items.',
         newsTitle: 'Homepage news',
         newsDescription: 'Prepare announcements and highlights.',
         eventsTitle: 'Events',
         eventsDescription: 'Plan posters, dates, and promotions.'
       },
       errors: {
-        load: 'Failed to load dashboard.'
+        load: 'Failed to load dashboard.',
+        loadInsights: 'Failed to load menu insights.'
       },
       empty: {
         upcoming: 'No upcoming reservations yet.',
-        latest: 'No recent reservations yet.'
+        latest: 'No recent reservations yet.',
+        likes: 'No liked dishes yet.'
       },
-      createdFromFeed: 'Created from the current admin feed.'
+      createdFromFeed: 'Created from the current admin feed.',
+      noCategory: 'No category'
     },
     reservations: {
       title: 'Reservations',

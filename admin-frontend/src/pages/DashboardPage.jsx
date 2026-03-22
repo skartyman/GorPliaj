@@ -7,20 +7,58 @@ import { apiRequest, formatDate, formatTime } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 export default function DashboardPage() {
-  const [state, setState] = useState({ loading: true, error: '', rows: [] });
+  const [state, setState] = useState({
+    loading: true,
+    error: '',
+    rows: [],
+    insights: {
+      summary: {
+        totalLikes: 0,
+        activeItemsCount: 0,
+        availableItemsCount: 0,
+        likedItemsCount: 0,
+        categoryCount: 0,
+        activeCategoryCount: 0
+      },
+      topLikedItems: []
+    }
+  });
   const { t, locale } = useAdminI18n();
 
   useEffect(() => {
-    apiRequest('/api/admin/reservations')
-      .then(({ response, body }) => {
-        if (!response.ok) {
-          setState({ loading: false, error: body.message || t('dashboard.errors.load'), rows: [] });
+    Promise.all([apiRequest('/api/admin/reservations'), apiRequest('/api/admin/menu/insights')])
+      .then(([reservationsResult, insightsResult]) => {
+        if (!reservationsResult.response.ok) {
+          setState((current) => ({
+            ...current,
+            loading: false,
+            error: reservationsResult.body.message || t('dashboard.errors.load'),
+            rows: []
+          }));
           return;
         }
 
-        setState({ loading: false, error: '', rows: Array.isArray(body) ? body : [] });
+        if (!insightsResult.response.ok) {
+          setState((current) => ({
+            ...current,
+            loading: false,
+            error: insightsResult.body.message || t('dashboard.errors.loadInsights'),
+            rows: Array.isArray(reservationsResult.body) ? reservationsResult.body : []
+          }));
+          return;
+        }
+
+        setState({
+          loading: false,
+          error: '',
+          rows: Array.isArray(reservationsResult.body) ? reservationsResult.body : [],
+          insights: {
+            summary: insightsResult.body?.summary || {},
+            topLikedItems: Array.isArray(insightsResult.body?.topLikedItems) ? insightsResult.body.topLikedItems : []
+          }
+        });
       })
-      .catch(() => setState({ loading: false, error: t('dashboard.errors.load'), rows: [] }));
+      .catch(() => setState((current) => ({ ...current, loading: false, error: t('dashboard.errors.load'), rows: [] })));
   }, [t]);
 
   const summaryCards = useMemo(() => {
@@ -42,9 +80,12 @@ export default function DashboardPage() {
       { label: t('dashboard.summary.pending'), value: pending },
       { label: t('dashboard.summary.confirmed'), value: confirmed },
       { label: t('dashboard.summary.completed'), value: completed },
-      { label: t('dashboard.summary.busyTables'), value: busyTableIds.size }
+      { label: t('dashboard.summary.busyTables'), value: busyTableIds.size },
+      { label: t('dashboard.summary.totalLikes'), value: state.insights.summary.totalLikes || 0 },
+      { label: t('dashboard.summary.likedItems'), value: state.insights.summary.likedItemsCount || 0 },
+      { label: t('dashboard.summary.menuItems'), value: state.insights.summary.activeItemsCount || 0 }
     ];
-  }, [state.rows, t]);
+  }, [state.rows, state.insights.summary, t]);
 
   const upcoming = useMemo(
     () => [...state.rows].sort((a, b) => new Date(a.timeFrom) - new Date(b.timeFrom)).slice(0, 6),
@@ -65,7 +106,7 @@ export default function DashboardPage() {
           <p className="muted">{t('dashboard.description')}</p>
           <div className="actions hero-actions">
             <Link className="btn" to="/admin/reservations">{t('dashboard.openReservations')}</Link>
-            <Link className="btn btn-secondary" to="/admin/map">{t('dashboard.viewMap')}</Link>
+            <Link className="btn btn-secondary" to="/admin/menu">{t('dashboard.openMenu')}</Link>
           </div>
         </div>
 
@@ -99,9 +140,9 @@ export default function DashboardPage() {
               <strong>{t('dashboard.quick.mapTitle')}</strong>
               <span className="muted">{t('dashboard.quick.mapDescription')}</span>
             </Link>
-            <Link className="action-tile" to="/admin/news">
-              <strong>{t('dashboard.quick.newsTitle')}</strong>
-              <span className="muted">{t('dashboard.quick.newsDescription')}</span>
+            <Link className="action-tile" to="/admin/menu">
+              <strong>{t('dashboard.quick.menuTitle')}</strong>
+              <span className="muted">{t('dashboard.quick.menuDescription')}</span>
             </Link>
             <Link className="action-tile" to="/admin/events">
               <strong>{t('dashboard.quick.eventsTitle')}</strong>
@@ -110,6 +151,26 @@ export default function DashboardPage() {
           </div>
         </PageCard>
 
+        <PageCard title={t('dashboard.likesTitle')} description={t('dashboard.likesDescription')}>
+          {state.error ? <p className="error">{state.error}</p> : null}
+          {!state.error && !state.insights.topLikedItems.length ? <p className="muted">{t('dashboard.empty.likes')}</p> : null}
+          {!state.error && state.insights.topLikedItems.length ? (
+            <ul className="plain-list rich-list">
+              {state.insights.topLikedItems.map((item) => (
+                <li key={`like-${item.id}`}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <div className="muted small">{item.categoryName || t('dashboard.noCategory')}</div>
+                  </div>
+                  <strong>{item.likesCount} ♥</strong>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </PageCard>
+      </section>
+
+      <section className="stack-grid">
         <PageCard title={t('dashboard.upcomingTitle')} description={t('dashboard.upcomingDescription')}>
           {state.error ? <p className="error">{state.error}</p> : null}
           {!state.error && !upcoming.length ? <p className="muted">{t('dashboard.empty.upcoming')}</p> : null}
@@ -127,24 +188,24 @@ export default function DashboardPage() {
             </ul>
           ) : null}
         </PageCard>
-      </section>
 
-      <PageCard title={t('dashboard.latestTitle')} description={t('dashboard.latestDescription')}>
-        {!latest.length ? <p className="muted">{t('dashboard.empty.latest')}</p> : null}
-        {latest.length ? (
-          <ul className="plain-list compact rich-list">
-            {latest.map((item) => (
-              <li key={`latest-${item.id}`}>
-                <div>
-                  <Link to={`/admin/reservations/${item.id}`}>#{item.id}</Link> • {item.customerName || t('common.guest')}
-                  <div className="muted small">{t('dashboard.createdFromFeed')}</div>
-                </div>
-                <StatusPill status={item.status} />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </PageCard>
+        <PageCard title={t('dashboard.latestTitle')} description={t('dashboard.latestDescription')}>
+          {!latest.length ? <p className="muted">{t('dashboard.empty.latest')}</p> : null}
+          {latest.length ? (
+            <ul className="plain-list compact rich-list">
+              {latest.map((item) => (
+                <li key={`latest-${item.id}`}>
+                  <div>
+                    <Link to={`/admin/reservations/${item.id}`}>#{item.id}</Link> • {item.customerName || t('common.guest')}
+                    <div className="muted small">{t('dashboard.createdFromFeed')}</div>
+                  </div>
+                  <StatusPill status={item.status} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </PageCard>
+      </section>
     </AdminLayout>
   );
 }

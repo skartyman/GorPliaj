@@ -8,6 +8,7 @@ const router = express.Router();
 router.get('/health', publicController.getHealth);
 
 router.get('/menu', publicController.getMenu);
+router.post('/menu/items/:id/like', publicController.setMenuItemLike);
 router.get('/events', publicController.getEvents);
 router.get('/news', publicController.getNews);
 router.get('/maps/default', mapController.getDefaultMap);

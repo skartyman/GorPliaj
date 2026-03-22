@@ -7,10 +7,40 @@ const featuredDishCategory = document.getElementById('featuredDishCategory');
 const featuredDishPrice = document.getElementById('featuredDishPrice');
 const featuredDishImage = document.getElementById('featuredDishImage');
 const featuredDishImageFallback = document.getElementById('featuredDishImageFallback');
+const cartFab = document.getElementById('cartFab');
+const cartFabCount = document.getElementById('cartFabCount');
+const cartFabSummary = document.getElementById('cartFabSummary');
+const cartDrawer = document.getElementById('cartDrawer');
+const cartBackdrop = document.getElementById('cartBackdrop');
+const cartCloseButton = document.getElementById('cartCloseButton');
+const cartItems = document.getElementById('cartItems');
+const cartTotalValue = document.getElementById('cartTotalValue');
+const cartHint = document.getElementById('cartHint');
+const cartCopyButton = document.getElementById('cartCopyButton');
+const cartClearButton = document.getElementById('cartClearButton');
+
+const CART_STORAGE_KEY = 'gorpliaj-menu-cart';
+const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
 
 let currentLanguage = localStorage.getItem('language') || 'uk';
 let menuCache = [];
 let activeCategory = '';
+let cartState = loadJsonState(CART_STORAGE_KEY);
+let likedState = loadJsonState(LIKES_STORAGE_KEY);
+
+function loadJsonState(storageKey) {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function persistJsonState(storageKey, value) {
+  localStorage.setItem(storageKey, JSON.stringify(value));
+}
 
 function getLocalizedValue(value) {
   if (value && typeof value === 'object') {
@@ -75,7 +105,24 @@ const translations = {
     categoryCount: 'позицій',
     priceCurrency: '₴',
     dishImageFallback: 'Фото страви відсутнє',
-    dishImageLabel: 'Фото страви'
+    dishImageLabel: 'Фото страви',
+    likesLabel: 'вподобань',
+    likeButton: 'Подобається',
+    unlikeButton: 'Прибрати вподобайку',
+    cartButtonLabel: 'Моє замовлення',
+    cartEyebrow: 'Кошик',
+    cartTitle: 'Моє замовлення',
+    cartTotalLabel: 'Разом',
+    cartHint: 'Додайте страви через плюсик — список залишиться у вашому браузері.',
+    cartCopy: 'Скопіювати замовлення',
+    cartClear: 'Очистити',
+    cartEmpty: 'Ще нічого не додано. Натисніть плюсик біля страви, щоб зібрати замовлення.',
+    cartFabSummary: '{count} позицій · {total} ₴',
+    cartRowQuantity: 'Кількість',
+    cartCopied: 'Замовлення скопійовано у буфер обміну.',
+    cartCopyFailed: 'Не вдалося скопіювати автоматично. Виділіть текст вручну.',
+    itemAdded: 'Додано до замовлення',
+    orderLine: '{name} × {quantity} — {total} ₴'
   },
   en: {
     pageTitle: 'GorPliaj — Menu',
@@ -92,9 +139,35 @@ const translations = {
     categoryCount: 'items',
     priceCurrency: '₴',
     dishImageFallback: 'Dish photo is not available',
-    dishImageLabel: 'Dish photo'
+    dishImageLabel: 'Dish photo',
+    likesLabel: 'likes',
+    likeButton: 'Like dish',
+    unlikeButton: 'Remove like',
+    cartButtonLabel: 'My order',
+    cartEyebrow: 'Cart',
+    cartTitle: 'My order',
+    cartTotalLabel: 'Total',
+    cartHint: 'Add dishes with the plus button — the list stays in your browser.',
+    cartCopy: 'Copy order',
+    cartClear: 'Clear',
+    cartEmpty: 'No dishes added yet. Tap the plus button next to a dish to build the order.',
+    cartFabSummary: '{count} items · {total} ₴',
+    cartRowQuantity: 'Quantity',
+    cartCopied: 'The order was copied to the clipboard.',
+    cartCopyFailed: 'Automatic copy failed. Please select and copy the text manually.',
+    itemAdded: 'Added to order',
+    orderLine: '{name} × {quantity} — {total} ₴'
   }
 };
+
+function t(key, replacements = {}) {
+  const dictionary = translations[currentLanguage] || translations.uk;
+  const template = dictionary[key] || '';
+  return Object.entries(replacements).reduce(
+    (result, [name, value]) => result.replace(`{${name}}`, value),
+    template
+  );
+}
 
 function groupMenu(menu) {
   return menu.reduce((acc, categoryEntry) => {
@@ -120,6 +193,14 @@ function renderCategories(groupedMenu) {
         <a class="menu-category-link${category === activeCategory ? ' active' : ''}" href="#category-${slugify(category)}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</a>`
     )
     .join('');
+}
+
+function getCartQuantity(itemId) {
+  return Number(cartState[String(itemId)]?.quantity || 0);
+}
+
+function getLikedState(itemId) {
+  return Boolean(likedState[String(itemId)]);
 }
 
 function renderCatalog(groupedMenu) {
@@ -148,17 +229,44 @@ function renderCatalog(groupedMenu) {
               .map((item) => {
                 const title = getLocalizedValue(item.name);
                 const description = getLocalizedValue(item.description) || category;
+                const quantity = getCartQuantity(item.id);
+                const liked = getLikedState(item.id);
+                const likesCount = Number(item.likesCount || 0);
                 return `
-                  <article class="menu-card-item">
+                  <article class="menu-card-item" data-item-id="${item.id}">
                     <div class="menu-card-media-wrap">
                       ${getImageMarkup(item, title)}
                     </div>
                     <div class="menu-card-copy">
                       <div class="menu-card-head">
-                        <strong>${escapeHtml(title)}</strong>
+                        <div class="menu-card-title-wrap">
+                          <strong>${escapeHtml(title)}</strong>
+                          <div class="menu-card-social-row">
+                            <button
+                              class="menu-like-btn${liked ? ' is-active' : ''}"
+                              type="button"
+                              data-like-button
+                              data-item-id="${item.id}"
+                              aria-pressed="${liked ? 'true' : 'false'}"
+                              aria-label="${escapeHtml(liked ? dictionary.unlikeButton : dictionary.likeButton)}"
+                            >
+                              <span aria-hidden="true">♥</span>
+                              <span data-like-count>${likesCount}</span>
+                              <span class="sr-only">${likesCount} ${escapeHtml(dictionary.likesLabel)}</span>
+                            </button>
+                          </div>
+                        </div>
                         <span class="menu-price">${formatPrice(item.price)} ${dictionary.priceCurrency}</span>
                       </div>
                       <p class="menu-meta">${escapeHtml(description)}</p>
+                      <div class="menu-card-actions-row">
+                        <div class="menu-qty-control" aria-label="${escapeHtml(dictionary.cartRowQuantity)}">
+                          <button type="button" class="menu-qty-btn" data-qty-action="decrease" data-item-id="${item.id}" ${quantity ? '' : 'disabled'}>−</button>
+                          <span class="menu-qty-value" data-item-quantity="${item.id}">${quantity}</span>
+                          <button type="button" class="menu-qty-btn is-primary" data-qty-action="increase" data-item-id="${item.id}">+</button>
+                        </div>
+                        <span class="menu-card-action-note">${quantity ? escapeHtml(`${dictionary.itemAdded}: ${quantity}`) : '&nbsp;'}</span>
+                      </div>
                     </div>
                   </article>`;
               })
@@ -169,9 +277,29 @@ function renderCatalog(groupedMenu) {
     .join('');
 }
 
+function getFlatMenuItems() {
+  return menuCache.flatMap((category) => (
+    Array.isArray(category.items)
+      ? category.items.map((entry) => ({ ...entry, category: category.name }))
+      : []
+  ));
+}
+
+function getFeaturedItem() {
+  const items = getFlatMenuItems();
+  return [...items].sort((left, right) => {
+    const likesDifference = Number(right.likesCount || 0) - Number(left.likesCount || 0);
+    if (likesDifference !== 0) {
+      return likesDifference;
+    }
+
+    return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
+  })[0];
+}
+
 function renderFeaturedDish() {
   const dictionary = translations[currentLanguage];
-  const item = menuCache.flatMap((category) => Array.isArray(category.items) ? category.items.map((entry) => ({ ...entry, category: category.name })) : [])[0];
+  const item = getFeaturedItem();
 
   if (!item) {
     featuredDishName.textContent = dictionary.menuEmpty;
@@ -221,6 +349,183 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '');
 }
 
+function findItemById(itemId) {
+  return getFlatMenuItems().find((item) => Number(item.id) === Number(itemId)) || null;
+}
+
+function updateCartItem(itemId, nextQuantity) {
+  const key = String(itemId);
+  const quantity = Math.max(0, Number(nextQuantity || 0));
+
+  if (!quantity) {
+    delete cartState[key];
+  } else {
+    const item = findItemById(itemId);
+    if (!item) {
+      return;
+    }
+
+    cartState[key] = {
+      itemId: Number(item.id),
+      quantity,
+      name: getLocalizedValue(item.name),
+      price: Number(item.price || 0),
+      category: getLocalizedValue(item.category)
+    };
+  }
+
+  persistJsonState(CART_STORAGE_KEY, cartState);
+  renderCartState();
+  renderCatalog(groupMenu(menuCache));
+}
+
+function getCartEntries() {
+  return Object.values(cartState)
+    .map((entry) => {
+      const liveItem = findItemById(entry.itemId);
+      return {
+        itemId: entry.itemId,
+        quantity: Number(entry.quantity || 0),
+        name: liveItem ? getLocalizedValue(liveItem.name) : entry.name,
+        category: liveItem ? getLocalizedValue(liveItem.category) : entry.category,
+        price: liveItem ? Number(liveItem.price || 0) : Number(entry.price || 0)
+      };
+    })
+    .filter((entry) => entry.quantity > 0)
+    .sort((left, right) => left.name.localeCompare(right.name, currentLanguage === 'uk' ? 'uk' : 'en'));
+}
+
+function renderCartState() {
+  const entries = getCartEntries();
+  const totalItems = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+  const totalPrice = entries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
+
+  cartFab.hidden = totalItems === 0;
+  cartFabCount.textContent = totalItems;
+  cartFabSummary.textContent = t('cartFabSummary', {
+    count: totalItems,
+    total: formatPrice(totalPrice)
+  });
+  cartTotalValue.textContent = `${formatPrice(totalPrice)} ${translations[currentLanguage].priceCurrency}`;
+
+  if (!entries.length) {
+    cartItems.innerHTML = `<p class="menu-cart-empty">${escapeHtml(translations[currentLanguage].cartEmpty)}</p>`;
+    cartHint.textContent = translations[currentLanguage].cartHint;
+    return;
+  }
+
+  cartItems.innerHTML = entries
+    .map((entry) => `
+      <article class="menu-cart-row">
+        <div>
+          <strong>${escapeHtml(entry.name)}</strong>
+          <p class="muted small">${escapeHtml(entry.category || '')}</p>
+        </div>
+        <div class="menu-cart-row-meta">
+          <div class="menu-qty-control compact" aria-label="${escapeHtml(translations[currentLanguage].cartRowQuantity)}">
+            <button type="button" class="menu-qty-btn" data-cart-qty-action="decrease" data-item-id="${entry.itemId}">−</button>
+            <span class="menu-qty-value">${entry.quantity}</span>
+            <button type="button" class="menu-qty-btn is-primary" data-cart-qty-action="increase" data-item-id="${entry.itemId}">+</button>
+          </div>
+          <strong>${formatPrice(entry.quantity * entry.price)} ${translations[currentLanguage].priceCurrency}</strong>
+        </div>
+      </article>`)
+    .join('');
+  cartHint.textContent = t('cartFabSummary', {
+    count: totalItems,
+    total: formatPrice(totalPrice)
+  });
+}
+
+function openCart() {
+  if (!cartDrawer) {
+    return;
+  }
+
+  cartDrawer.hidden = false;
+  document.body.classList.add('cart-open');
+}
+
+function closeCart() {
+  if (!cartDrawer) {
+    return;
+  }
+
+  cartDrawer.hidden = true;
+  document.body.classList.remove('cart-open');
+}
+
+async function toggleLike(itemId) {
+  const key = String(itemId);
+  const nextLiked = !likedState[key];
+  likedState[key] = nextLiked;
+  persistJsonState(LIKES_STORAGE_KEY, likedState);
+
+  const targetItem = findItemById(itemId);
+  if (targetItem) {
+    const currentLikes = Number(targetItem.likesCount || 0);
+    targetItem.likesCount = nextLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1);
+  }
+
+  renderFeaturedDish();
+  renderCatalog(groupMenu(menuCache));
+
+  try {
+    const response = await fetch(`/api/menu/items/${itemId}/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ liked: nextLiked })
+    });
+
+    if (!response.ok) {
+      throw new Error('Request failed');
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    if (payload?.item) {
+      const liveItem = findItemById(itemId);
+      if (liveItem) {
+        liveItem.likesCount = Number(payload.item.likesCount || 0);
+      }
+    }
+  } catch (error) {
+    likedState[key] = !nextLiked;
+    persistJsonState(LIKES_STORAGE_KEY, likedState);
+    if (targetItem) {
+      const currentLikes = Number(targetItem.likesCount || 0);
+      targetItem.likesCount = nextLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+    }
+  }
+
+  renderFeaturedDish();
+  renderCatalog(groupMenu(menuCache));
+}
+
+async function copyCartToClipboard() {
+  const entries = getCartEntries();
+  const totalPrice = entries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
+  const lines = [translations[currentLanguage].cartTitle];
+
+  entries.forEach((entry) => {
+    lines.push(t('orderLine', {
+      name: entry.name,
+      quantity: entry.quantity,
+      total: formatPrice(entry.quantity * entry.price)
+    }));
+  });
+
+  lines.push(`${translations[currentLanguage].cartTotalLabel}: ${formatPrice(totalPrice)} ${translations[currentLanguage].priceCurrency}`);
+
+  try {
+    await navigator.clipboard.writeText(lines.join('\n'));
+    cartHint.textContent = translations[currentLanguage].cartCopied;
+  } catch (error) {
+    cartHint.textContent = translations[currentLanguage].cartCopyFailed;
+  }
+}
+
 function translatePage() {
   const dictionary = translations[currentLanguage];
   document.documentElement.lang = currentLanguage;
@@ -238,11 +543,16 @@ function translatePage() {
     languageToggle.setAttribute('aria-label', dictionary.languageToggleAria);
   }
 
+  if (cartCloseButton) {
+    cartCloseButton.setAttribute('aria-label', currentLanguage === 'uk' ? 'Закрити кошик' : 'Close cart');
+  }
+
   const groupedMenu = groupMenu(menuCache);
   activeCategory = activeCategory || Object.keys(groupedMenu)[0] || '';
   renderFeaturedDish();
   renderCategories(groupedMenu);
   renderCatalog(groupedMenu);
+  renderCartState();
 }
 
 async function fetchMenu() {
@@ -258,15 +568,61 @@ languageToggle?.addEventListener('click', () => {
   translatePage();
 });
 
-categoryNav.addEventListener('click', (event) => {
+categoryNav?.addEventListener('click', (event) => {
   const link = event.target.closest('[data-category]');
   if (!link) return;
   activeCategory = link.dataset.category;
   renderCategories(groupMenu(menuCache));
 });
 
+menuCatalog?.addEventListener('click', (event) => {
+  const likeButton = event.target.closest('[data-like-button]');
+  if (likeButton) {
+    toggleLike(Number(likeButton.dataset.itemId));
+    return;
+  }
+
+  const qtyButton = event.target.closest('[data-qty-action]');
+  if (qtyButton) {
+    const itemId = Number(qtyButton.dataset.itemId);
+    const action = qtyButton.dataset.qtyAction;
+    const currentQuantity = getCartQuantity(itemId);
+    updateCartItem(itemId, action === 'increase' ? currentQuantity + 1 : currentQuantity - 1);
+  }
+});
+
+cartItems?.addEventListener('click', (event) => {
+  const qtyButton = event.target.closest('[data-cart-qty-action]');
+  if (!qtyButton) {
+    return;
+  }
+
+  const itemId = Number(qtyButton.dataset.itemId);
+  const action = qtyButton.dataset.cartQtyAction;
+  const currentQuantity = getCartQuantity(itemId);
+  updateCartItem(itemId, action === 'increase' ? currentQuantity + 1 : currentQuantity - 1);
+});
+
+cartFab?.addEventListener('click', openCart);
+cartBackdrop?.addEventListener('click', closeCart);
+cartCloseButton?.addEventListener('click', closeCart);
+cartCopyButton?.addEventListener('click', copyCartToClipboard);
+cartClearButton?.addEventListener('click', () => {
+  cartState = {};
+  persistJsonState(CART_STORAGE_KEY, cartState);
+  renderCartState();
+  renderCatalog(groupMenu(menuCache));
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeCart();
+  }
+});
+
 translatePage();
 
 fetchMenu().catch(() => {
   menuCatalog.innerHTML = `<article class="surface"><p class="menu-page-description">${translations[currentLanguage].menuEmpty}</p></article>`;
+  renderCartState();
 });

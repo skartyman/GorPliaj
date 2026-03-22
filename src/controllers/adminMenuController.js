@@ -82,6 +82,16 @@ async function getMenuItems(req, res) {
   }
 }
 
+async function getMenuInsights(req, res) {
+  try {
+    const insights = await adminMenuService.getInsights();
+    return res.json(insights);
+  } catch (error) {
+    console.error('[adminMenuController.getMenuInsights] Failed to load menu insights.', error);
+    return res.status(500).json({ message: 'Unable to load menu insights.' });
+  }
+}
+
 async function createMenuItem(req, res) {
   try {
     const result = await adminMenuService.createItem(req.body || {});
@@ -145,6 +155,7 @@ module.exports = {
   updateMenuCategory,
   deleteMenuCategory,
   getMenuItems,
+  getMenuInsights,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem

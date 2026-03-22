@@ -17,6 +17,7 @@ const {
   updateMenuCategory,
   deleteMenuCategory,
   getMenuItems,
+  getMenuInsights,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem
@@ -44,6 +45,7 @@ router.patch('/menu/categories/:id', requireAdminAuth, updateMenuCategory);
 router.delete('/menu/categories/:id', requireAdminAuth, deleteMenuCategory);
 
 router.get('/menu/items', requireAdminAuth, getMenuItems);
+router.get('/menu/insights', requireAdminAuth, getMenuInsights);
 router.post('/menu/items', requireAdminAuth, createMenuItem);
 router.patch('/menu/items/:id', requireAdminAuth, updateMenuItem);
 router.delete('/menu/items/:id', requireAdminAuth, deleteMenuItem);

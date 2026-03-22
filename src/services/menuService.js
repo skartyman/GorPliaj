@@ -24,6 +24,7 @@ function toPublicCategory(category) {
         },
         price: Number(item.price),
         imageUrl: item.imageUrl || '',
+        likesCount: Number(item.likesCount || 0),
         isAvailable: item.isAvailable,
         sortOrder: item.sortOrder
       }))
@@ -54,6 +55,58 @@ async function getMenu() {
   return categories.map(toPublicCategory).filter((category) => category.items.length > 0);
 }
 
+async function setMenuItemLike(itemId, liked) {
+  const item = await prisma.menuItem.findUnique({
+    where: { id: itemId },
+    select: {
+      id: true,
+      likesCount: true,
+      isActive: true,
+      isAvailable: true,
+      name: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          isActive: true,
+          sortOrder: true
+        }
+      }
+    }
+  });
+
+  if (!item || !item.isActive || !item.isAvailable || !item.category?.isActive) {
+    return { type: 'NOT_FOUND' };
+  }
+
+  const nextLikesCount = liked
+    ? Number(item.likesCount || 0) + 1
+    : Math.max(0, Number(item.likesCount || 0) - 1);
+
+  const updatedItem = await prisma.menuItem.update({
+    where: { id: itemId },
+    data: {
+      likesCount: nextLikesCount
+    },
+    select: {
+      id: true,
+      likesCount: true,
+      name: true
+    }
+  });
+
+  return {
+    type: 'SUCCESS',
+    item: {
+      id: updatedItem.id,
+      name: updatedItem.name,
+      likesCount: Number(updatedItem.likesCount || 0)
+    }
+  };
+}
+
 module.exports = {
-  getMenu
+  getMenu,
+  setMenuItemLike
 };
