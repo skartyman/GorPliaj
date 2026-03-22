@@ -1,38 +1,59 @@
-const menu = [
-  {
-    id: 1,
-    category: { uk: 'Напої', en: 'Drinks' },
-    name: { uk: 'Лимонад манго-маракуя', en: 'Mango-passionfruit lemonade' },
-    price: 420
-  },
-  {
-    id: 2,
-    category: { uk: 'Закуски', en: 'Starters' },
-    name: { uk: 'Тартар із тунця', en: 'Tuna tartare' },
-    price: 780
-  },
-  {
-    id: 3,
-    category: { uk: 'Основні страви', en: 'Main courses' },
-    name: { uk: 'Паста з морепродуктами', en: 'Seafood pasta' },
-    price: 980
-  },
-  {
-    id: 4,
-    category: { uk: 'Гриль', en: 'Grill' },
-    name: { uk: 'Лобстер на вугіллі', en: 'Charcoal lobster' },
-    price: 1900
-  },
-  {
-    id: 5,
-    category: { uk: 'Десерти', en: 'Desserts' },
-    name: { uk: 'Кокосовий мус', en: 'Coconut mousse' },
-    price: 490
-  }
-];
+const prisma = require('../lib/prisma');
 
-function getMenu() {
-  return menu;
+function toPublicCategory(category) {
+  return {
+    id: category.id,
+    name: {
+      uk: category.name,
+      en: category.name
+    },
+    slug: category.slug,
+    sortOrder: category.sortOrder,
+    items: category.items
+      .filter((item) => item.isActive && item.isAvailable)
+      .map((item) => ({
+        id: item.id,
+        categoryId: item.categoryId,
+        name: {
+          uk: item.name,
+          en: item.name
+        },
+        description: {
+          uk: item.description || '',
+          en: item.description || ''
+        },
+        price: Number(item.price),
+        imageUrl: item.imageUrl || '',
+        isAvailable: item.isAvailable,
+        sortOrder: item.sortOrder
+      }))
+  };
 }
 
-module.exports = { getMenu };
+async function getMenu() {
+  const categories = await prisma.menuCategory.findMany({
+    where: { isActive: true },
+    orderBy: [
+      { sortOrder: 'asc' },
+      { id: 'asc' }
+    ],
+    include: {
+      items: {
+        where: {
+          isActive: true,
+          isAvailable: true
+        },
+        orderBy: [
+          { sortOrder: 'asc' },
+          { id: 'asc' }
+        ]
+      }
+    }
+  });
+
+  return categories.map(toPublicCategory).filter((category) => category.items.length > 0);
+}
+
+module.exports = {
+  getMenu
+};

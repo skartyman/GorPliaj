@@ -11,6 +11,16 @@ const {
   getAdminMapEditor,
   updateAdminMapEditor
 } = require('../../controllers/adminController');
+const {
+  getMenuCategories,
+  createMenuCategory,
+  updateMenuCategory,
+  deleteMenuCategory,
+  getMenuItems,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem
+} = require('../../controllers/adminMenuController');
 const { requireAdminAuth } = require('../../middleware/adminAuth');
 
 const router = express.Router();
@@ -27,5 +37,15 @@ router.patch('/reservations/:id/status', requireAdminAuth, updateAdminReservatio
 router.get('/maps/default/editor', requireAdminAuth, getDefaultAdminMapEditor);
 router.get('/maps/:id/editor', requireAdminAuth, getAdminMapEditor);
 router.put('/maps/:id/editor', requireAdminAuth, updateAdminMapEditor);
+
+router.get('/menu/categories', requireAdminAuth, getMenuCategories);
+router.post('/menu/categories', requireAdminAuth, createMenuCategory);
+router.patch('/menu/categories/:id', requireAdminAuth, updateMenuCategory);
+router.delete('/menu/categories/:id', requireAdminAuth, deleteMenuCategory);
+
+router.get('/menu/items', requireAdminAuth, getMenuItems);
+router.post('/menu/items', requireAdminAuth, createMenuItem);
+router.patch('/menu/items/:id', requireAdminAuth, updateMenuItem);
+router.delete('/menu/items/:id', requireAdminAuth, deleteMenuItem);
 
 module.exports = router;

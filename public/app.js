@@ -198,7 +198,7 @@ const translations = {
 
 function updateCounters() {
   const dictionary = translations[currentLanguage];
-  const menuCount = menuCache.length;
+  const menuCount = menuCache.reduce((total, category) => total + (Array.isArray(category.items) ? category.items.length : 0), 0);
 
   heroMenuCount.textContent = menuCount;
   menuCountChip.textContent = `${menuCount} ${dictionary.menuItemsCount}`;
