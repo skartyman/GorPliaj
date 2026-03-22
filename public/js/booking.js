@@ -7,6 +7,7 @@ const availabilityWarning = document.getElementById('availabilityWarning');
 const mapZoomInButton = document.getElementById('mapZoomIn');
 const mapZoomOutButton = document.getElementById('mapZoomOut');
 const mapZoomResetButton = document.getElementById('mapZoomReset');
+const languageToggle = document.getElementById('languageToggle');
 
 const tableInfoEmpty = document.getElementById('tableInfoEmpty');
 const tableInfoDetails = document.getElementById('tableInfoDetails');
@@ -31,11 +32,12 @@ const mapStatFree = document.getElementById('mapStatFree');
 const mapStatBusy = document.getElementById('mapStatBusy');
 const mapStatHeld = document.getElementById('mapStatHeld');
 
+let currentLanguage = localStorage.getItem('language') || 'uk';
 let selectedTable = null;
 let currentMapId = null;
+let currentMapData = null;
 let availabilityState = { busyTableIds: [], heldTableIds: [], freeTableIds: [] };
 const tableElementsById = new Map();
-const defaultEmptyTableMessage = 'Натисніть на стіл на мапі.';
 const minZoom = 1;
 const maxZoom = 2.5;
 const zoomStep = 0.25;
@@ -57,6 +59,211 @@ const touchState = {
   pinchCenterContent: null,
   targetTableElement: null
 };
+
+const translations = {
+  uk: {
+    pageTitle: 'Бронювання столів — ГорПляж',
+    brandSubtitle: 'Beach · Restaurant · Events',
+    languageToggleLabel: 'EN',
+    languageToggleAria: 'Switch language to English',
+    bookingEyebrow: 'GorPliaj Booking',
+    bookingHeroTitle: 'Карта бронювання столів',
+    bookingHeroSubtitle: 'Оберіть столик на мапі, перевірте його доступність і одразу підтвердіть бронювання.',
+    backHome: '← На головну',
+    heroNote: 'Графіка для hero: 1600×900, safe zone 120px',
+    statFree: 'Вільно',
+    statBusy: 'Зайнято',
+    statHeld: 'Утримується',
+    bookingLayoutAria: 'Схема майданчика та інформація про стіл',
+    interactiveMap: 'Інтерактивна мапа',
+    venueMapTitle: 'Мапа закладу',
+    loadingMap: 'Завантаження карти…',
+    mapMobileHint: 'На телефоні рухайте мапу одним пальцем, змінюйте масштаб щипком або двічі торкніться для швидкого наближення.',
+    bookingMapAria: 'Мапа столів',
+    mapControlsAria: 'Керування мапою',
+    zoomInAria: 'Збільшити мапу',
+    zoomOutAria: 'Зменшити мапу',
+    zoomResetAria: 'Скинути масштаб',
+    selectedTableEyebrow: 'Обраний стіл',
+    selectedTableTitle: 'Обраний стіл',
+    selectedTableNone: 'Не обрано',
+    selectTablePrompt: 'Натисніть на стіл на мапі.',
+    detailCode: 'Код',
+    detailName: 'Назва',
+    detailSeats: 'Місця',
+    detailDeposit: 'Депозит',
+    detailZone: 'Зона',
+    reservationFormTitle: 'Дані бронювання',
+    customerName: 'Імʼя',
+    customerPhone: 'Телефон',
+    guests: 'Гостей',
+    reservationDate: 'Дата',
+    reservationTimeFrom: 'Час від',
+    reservationComment: 'Коментар',
+    commentPlaceholder: 'Необовʼязково',
+    confirmReservation: 'Підтвердити бронювання',
+    dateQuickSelectAria: 'Вибір дати на 7 днів',
+    statusFree: 'Вільно',
+    statusBusy: 'Зайнято',
+    statusHeld: 'Утримується',
+    statusNone: 'Не обрано',
+    tablePhotoAlt: 'Фото столу',
+    tablePhotoAltNamed: 'Фото столу {name}',
+    tableFallbackName: 'Не знайдено',
+    tableButtonTitle: 'Стіл',
+    seatRange: '{min} / {max}',
+    selectedTableUnavailable: 'Обраний стіл уже недоступний на вказаний час. Оберіть інший.',
+    tableUnavailable: 'Цей стіл недоступний на обраний час.',
+    chooseTableFirst: 'Спочатку оберіть столик на мапі.',
+    bookingCreated: 'Бронювання створено успішно. Ви можете обрати інший стіл.',
+    bookingCreateFailed: 'Не вдалося створити бронювання.',
+    networkError: 'Помилка мережі. Спробуйте ще раз.',
+    mapLoadFailed: 'Не вдалося завантажити карту. Спробуйте пізніше.',
+    availabilityFailed: 'Не вдалося оновити доступність столів. Показано попередні дані.',
+    weekdayLocale: 'uk-UA',
+    dateLocale: 'uk-UA'
+  },
+  en: {
+    pageTitle: 'Table Booking — GorPliaj',
+    brandSubtitle: 'Beach · Restaurant · Events',
+    languageToggleLabel: 'UK',
+    languageToggleAria: 'Перемкнути мову на українську',
+    bookingEyebrow: 'GorPliaj Booking',
+    bookingHeroTitle: 'Table booking map',
+    bookingHeroSubtitle: 'Choose a table on the map, check availability, and confirm the reservation right away.',
+    backHome: '← Back home',
+    heroNote: 'Hero graphics: 1600×900, safe zone 120px',
+    statFree: 'Free',
+    statBusy: 'Busy',
+    statHeld: 'Held',
+    bookingLayoutAria: 'Venue plan and table details',
+    interactiveMap: 'Interactive map',
+    venueMapTitle: 'Venue map',
+    loadingMap: 'Loading map…',
+    mapMobileHint: 'On mobile, move the map with one finger, pinch to zoom, or double-tap for a quick zoom.',
+    bookingMapAria: 'Table map',
+    mapControlsAria: 'Map controls',
+    zoomInAria: 'Zoom in map',
+    zoomOutAria: 'Zoom out map',
+    zoomResetAria: 'Reset zoom',
+    selectedTableEyebrow: 'Selected table',
+    selectedTableTitle: 'Selected table',
+    selectedTableNone: 'Not selected',
+    selectTablePrompt: 'Tap a table on the map.',
+    detailCode: 'Code',
+    detailName: 'Name',
+    detailSeats: 'Seats',
+    detailDeposit: 'Deposit',
+    detailZone: 'Zone',
+    reservationFormTitle: 'Reservation details',
+    customerName: 'Name',
+    customerPhone: 'Phone',
+    guests: 'Guests',
+    reservationDate: 'Date',
+    reservationTimeFrom: 'Time from',
+    reservationComment: 'Comment',
+    commentPlaceholder: 'Optional',
+    confirmReservation: 'Confirm reservation',
+    dateQuickSelectAria: 'Pick a date for the next 7 days',
+    statusFree: 'Free',
+    statusBusy: 'Busy',
+    statusHeld: 'Held',
+    statusNone: 'Not selected',
+    tablePhotoAlt: 'Table photo',
+    tablePhotoAltNamed: 'Photo of table {name}',
+    tableFallbackName: 'Not found',
+    tableButtonTitle: 'Table',
+    seatRange: '{min} / {max}',
+    selectedTableUnavailable: 'The selected table is no longer available for the chosen time. Please select another one.',
+    tableUnavailable: 'This table is unavailable for the selected time.',
+    chooseTableFirst: 'Please choose a table on the map first.',
+    bookingCreated: 'Reservation created successfully. You can choose another table.',
+    bookingCreateFailed: 'Could not create the reservation.',
+    networkError: 'Network error. Please try again.',
+    mapLoadFailed: 'Could not load the map. Please try again later.',
+    availabilityFailed: 'Could not refresh table availability. Previous data is shown.',
+    weekdayLocale: 'en-US',
+    dateLocale: 'en-US'
+  }
+};
+
+function t(key, replacements = {}) {
+  const dictionary = translations[currentLanguage] || translations.uk;
+  const template = dictionary[key] || '';
+  return Object.entries(replacements).reduce(
+    (result, [name, value]) => result.replace(`{${name}}`, value),
+    template
+  );
+}
+
+function getLocalizedValue(value) {
+  if (value && typeof value === 'object') {
+    return value[currentLanguage] || value.uk || value.en || Object.values(value)[0] || '';
+  }
+
+  return String(value || '');
+}
+
+function getDefaultEmptyTableMessage() {
+  return t('selectTablePrompt');
+}
+
+function getStatusLabel(status = '') {
+  if (status === 'free') return t('statusFree');
+  if (status === 'busy') return t('statusBusy');
+  if (status === 'held') return t('statusHeld');
+  return t('statusNone');
+}
+
+function translateStaticContent() {
+  const dictionary = translations[currentLanguage] || translations.uk;
+
+  document.documentElement.lang = currentLanguage;
+  document.title = dictionary.pageTitle;
+
+  document.querySelectorAll('[data-i18n]').forEach((element) => {
+    const key = element.dataset.i18n;
+    if (dictionary[key]) {
+      element.textContent = dictionary[key];
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-attr]').forEach((element) => {
+    const pairs = element.dataset.i18nAttr.split(';').map((pair) => pair.trim()).filter(Boolean);
+    pairs.forEach((pair) => {
+      const [attribute, key] = pair.split(':').map((part) => part.trim());
+      if (attribute && key && dictionary[key]) {
+        element.setAttribute(attribute, dictionary[key]);
+      }
+    });
+  });
+
+  if (languageToggle) {
+    languageToggle.textContent = dictionary.languageToggleLabel;
+    languageToggle.setAttribute('aria-label', dictionary.languageToggleAria);
+  }
+
+  if (!selectedTable) {
+    setTableInfoEmptyMessage(getDefaultEmptyTableMessage());
+    updateSelectedStatusBadge();
+  }
+
+  if (!reservationError.classList.contains('hidden') && reservationError.dataset.i18nKey) {
+    reservationError.textContent = t(reservationError.dataset.i18nKey);
+  }
+
+  if (!reservationSuccess.classList.contains('hidden') && reservationSuccess.dataset.i18nKey) {
+    reservationSuccess.textContent = t(reservationSuccess.dataset.i18nKey);
+  }
+
+  if (!errorState.classList.contains('hidden') && errorState.dataset.i18nKey) {
+    errorState.textContent = t(errorState.dataset.i18nKey);
+  }
+
+  if (!availabilityWarning.classList.contains('hidden') && availabilityWarning.dataset.i18nKey) {
+    availabilityWarning.textContent = t(availabilityWarning.dataset.i18nKey);
+  }
+}
 
 function clampZoom(nextZoom) {
   return Math.min(Math.max(nextZoom, minZoom), maxZoom);
@@ -197,19 +404,20 @@ function zoomAroundClientPoint(nextZoom, clientX, clientY) {
   });
 }
 
-function showError(message) {
+function showError(key) {
   loadingState.classList.add('hidden');
   bookingMap.classList.add('hidden');
   bookingMapCanvas?.classList.add('hidden');
-  errorState.textContent = message;
+  errorState.dataset.i18nKey = key;
+  errorState.textContent = t(key);
   errorState.classList.remove('hidden');
 }
 
-function setTableInfoEmptyMessage(message = defaultEmptyTableMessage) {
+function setTableInfoEmptyMessage(message = getDefaultEmptyTableMessage()) {
   tableInfoEmpty.textContent = message;
 }
 
-function updateSelectedStatusBadge(status = '', label = 'Не обрано') {
+function updateSelectedStatusBadge(status = '', label = getStatusLabel(status)) {
   selectedTableStatus.textContent = label;
   selectedTableStatus.className = `status-pill${label ? '' : ' hidden'}`;
 
@@ -229,19 +437,23 @@ function showTableInfo(table, zoneName = '—') {
   tableInfoDetails.classList.remove('hidden');
 
   tableCode.textContent = table.code || '—';
-  tableName.textContent = table.name || '—';
-  tableSeats.textContent = `${table.seatsMin ?? '—'} / ${table.seatsMax ?? '—'}`;
+  tableName.textContent = getLocalizedValue(table.name) || '—';
+  tableSeats.textContent = t('seatRange', {
+    min: table.seatsMin ?? '—',
+    max: table.seatsMax ?? '—'
+  });
   tableDeposit.textContent = table.deposit ?? '—';
-  tableZone.textContent = zoneName;
+  tableZone.textContent = getLocalizedValue(zoneName) || '—';
 
   if (tablePhotoCard && tablePhoto) {
     if (table.photoUrl) {
+      const displayName = table.code || getLocalizedValue(table.name) || '';
       tablePhoto.src = table.photoUrl;
-      tablePhoto.alt = `Фото столу ${table.code || table.name || ''}`.trim();
+      tablePhoto.alt = displayName ? t('tablePhotoAltNamed', { name: displayName }) : t('tablePhotoAlt');
       tablePhotoCard.classList.remove('hidden');
     } else {
       tablePhoto.removeAttribute('src');
-      tablePhoto.alt = 'Фото столу';
+      tablePhoto.alt = t('tablePhotoAlt');
       tablePhotoCard.classList.add('hidden');
     }
   }
@@ -249,20 +461,24 @@ function showTableInfo(table, zoneName = '—') {
 
 function resetMessages() {
   reservationError.textContent = '';
+  reservationError.dataset.i18nKey = '';
   reservationError.classList.add('hidden');
   reservationSuccess.textContent = '';
+  reservationSuccess.dataset.i18nKey = '';
   reservationSuccess.classList.add('hidden');
 }
 
-function showReservationError(message) {
+function showReservationError(key, rawMessage = '') {
   reservationSuccess.classList.add('hidden');
-  reservationError.textContent = message;
+  reservationError.dataset.i18nKey = rawMessage ? '' : key;
+  reservationError.textContent = rawMessage || t(key);
   reservationError.classList.remove('hidden');
 }
 
-function showReservationSuccess(message) {
+function showReservationSuccess(key) {
   reservationError.classList.add('hidden');
-  reservationSuccess.textContent = message;
+  reservationSuccess.dataset.i18nKey = key;
+  reservationSuccess.textContent = t(key);
   reservationSuccess.classList.remove('hidden');
 }
 
@@ -270,7 +486,7 @@ function clearSelectionUI() {
   tableElementsById.forEach((element) => element.classList.remove('map-object--selected'));
 }
 
-function resetSelectedTableUI(emptyMessage = defaultEmptyTableMessage) {
+function resetSelectedTableUI(emptyMessage = getDefaultEmptyTableMessage()) {
   selectedTable = null;
   clearSelectionUI();
   reservationForm.classList.add('hidden');
@@ -278,11 +494,11 @@ function resetSelectedTableUI(emptyMessage = defaultEmptyTableMessage) {
   if (tablePhotoCard && tablePhoto) {
     tablePhotoCard.classList.add('hidden');
     tablePhoto.removeAttribute('src');
-    tablePhoto.alt = 'Фото столу';
+    tablePhoto.alt = t('tablePhotoAlt');
   }
   setTableInfoEmptyMessage(emptyMessage);
   tableInfoEmpty.classList.remove('hidden');
-  updateSelectedStatusBadge('', 'Не обрано');
+  updateSelectedStatusBadge();
 }
 
 function showReservationForm(table) {
@@ -321,21 +537,21 @@ function updateStats() {
 
 function updateSelectedStatusFromAvailability() {
   if (!selectedTable) {
-    updateSelectedStatusBadge('', 'Не обрано');
+    updateSelectedStatusBadge();
     return;
   }
 
   if (isTableBusy(selectedTable.id)) {
-    updateSelectedStatusBadge('busy', 'Busy');
+    updateSelectedStatusBadge('busy');
     return;
   }
 
   if (isTableHeld(selectedTable.id)) {
-    updateSelectedStatusBadge('held', 'Held');
+    updateSelectedStatusBadge('held');
     return;
   }
 
-  updateSelectedStatusBadge('free', 'Free');
+  updateSelectedStatusBadge('free');
 }
 
 function updateTableAvailabilityUI() {
@@ -355,7 +571,7 @@ function updateTableAvailabilityUI() {
 
   if (selectedTable && (isTableBusy(selectedTable.id) || isTableHeld(selectedTable.id))) {
     resetSelectedTableUI();
-    showReservationError('Обраний стіл уже недоступний на вказаний час. Оберіть інший.');
+    showReservationError('selectedTableUnavailable');
   }
 }
 
@@ -384,7 +600,7 @@ function createMapObjectElement(object, map, tableById, zoneById) {
     const table = tableById.get(object.tableId);
 
     element.type = 'button';
-    element.title = table?.name || table?.code || 'Table';
+    element.title = table?.name ? getLocalizedValue(table.name) : (table?.code || t('tableButtonTitle'));
 
     if (table) {
       tableElementsById.set(table.id, element);
@@ -392,20 +608,20 @@ function createMapObjectElement(object, map, tableById, zoneById) {
 
     element.addEventListener('click', () => {
       if (!table) {
-        showTableInfo({ code: '—', name: 'Not found', seatsMin: '—', seatsMax: '—', deposit: '—' }, '—');
+        showTableInfo({ code: '—', name: t('tableFallbackName'), seatsMin: '—', seatsMax: '—', deposit: '—' }, '—');
         return;
       }
 
       if (isTableBusy(table.id) || isTableHeld(table.id)) {
-        showReservationError('Цей стіл недоступний на обраний час.');
+        showReservationError('tableUnavailable');
         return;
       }
 
       const zone = zoneById.get(table.zoneId);
-      setTableInfoEmptyMessage(defaultEmptyTableMessage);
+      setTableInfoEmptyMessage(getDefaultEmptyTableMessage());
       showTableInfo(table, zone?.name || '—');
       showReservationForm(table);
-      updateSelectedStatusBadge('free', 'Free');
+      updateSelectedStatusBadge('free');
     });
   }
 
@@ -419,6 +635,7 @@ function renderMap(data) {
     throw new Error('Invalid map dimensions');
   }
 
+  currentMapData = data;
   currentMapId = map.id;
   currentMapDimensions = { width: map.width, height: map.height };
   currentZoom = minZoom;
@@ -467,13 +684,14 @@ function getAvailabilityParams() {
   return { date, timeFrom };
 }
 
-function showAvailabilityWarning(message) {
+function showAvailabilityWarning(key = '') {
   if (!availabilityWarning) {
     return;
   }
 
-  availabilityWarning.textContent = message || '';
-  availabilityWarning.classList.toggle('hidden', !message);
+  availabilityWarning.dataset.i18nKey = key;
+  availabilityWarning.textContent = key ? t(key) : '';
+  availabilityWarning.classList.toggle('hidden', !key);
 }
 
 async function fetchAvailability() {
@@ -501,7 +719,7 @@ async function fetchAvailability() {
     updateTableAvailabilityUI();
     showAvailabilityWarning('');
   } catch (error) {
-    showAvailabilityWarning('Не вдалося оновити доступність столів. Показано попередні дані.');
+    showAvailabilityWarning('availabilityFailed');
   }
 }
 
@@ -516,6 +734,8 @@ function renderDateQuickSelect() {
 
   const today = new Date();
   const currentValue = reservationDateInput.value;
+  const weekdayLocale = t('weekdayLocale');
+  const dateLocale = t('dateLocale');
   dateQuickSelect.innerHTML = '';
 
   for (let offset = 0; offset < 7; offset += 1) {
@@ -527,7 +747,7 @@ function renderDateQuickSelect() {
     chip.type = 'button';
     chip.className = `date-chip ${isoDate === currentValue ? 'date-chip--active' : ''}`;
     chip.dataset.date = isoDate;
-    chip.innerHTML = `<span>${date.toLocaleDateString('uk-UA', { weekday: 'short' })}</span><strong>${date.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })}</strong>`;
+    chip.innerHTML = `<span>${date.toLocaleDateString(weekdayLocale, { weekday: 'short' })}</span><strong>${date.toLocaleDateString(dateLocale, { day: '2-digit', month: '2-digit' })}</strong>`;
     chip.addEventListener('click', () => {
       reservationDateInput.value = isoDate;
       renderDateQuickSelect();
@@ -703,12 +923,12 @@ async function submitReservation(event) {
   event.preventDefault();
 
   if (!selectedTable) {
-    showReservationError('Спочатку оберіть столик на мапі.');
+    showReservationError('chooseTableFirst');
     return;
   }
 
   if (isTableBusy(selectedTable.id) || isTableHeld(selectedTable.id)) {
-    showReservationError('Цей стіл недоступний на обраний час. Оберіть інший.');
+    showReservationError('tableUnavailable');
     return;
   }
 
@@ -739,7 +959,7 @@ async function submitReservation(event) {
     const responseData = await response.json();
 
     if (!response.ok) {
-      showReservationError(responseData.message || 'Не вдалося створити бронювання.');
+      showReservationError('', responseData.message || t('bookingCreateFailed'));
       if (response.status === 409) {
         await fetchAvailability();
       }
@@ -748,11 +968,11 @@ async function submitReservation(event) {
 
     reservationForm.reset();
     ensureDefaultDateTime();
-    showReservationSuccess('Бронювання створено успішно. Ви можете обрати інший стіл.');
-    resetSelectedTableUI('Бронювання створено успішно. Ви можете обрати інший стіл.');
+    showReservationSuccess('bookingCreated');
+    resetSelectedTableUI(t('bookingCreated'));
     await fetchAvailability();
   } catch (error) {
-    showReservationError('Помилка мережі. Спробуйте ще раз.');
+    showReservationError('networkError');
   }
 }
 
@@ -767,9 +987,33 @@ async function fetchDefaultMap() {
     renderMap(data);
     await fetchAvailability();
   } catch (error) {
-    showError('Не вдалося завантажити карту. Спробуйте пізніше.');
+    showError('mapLoadFailed');
   }
 }
+
+function syncTranslatedState() {
+  translateStaticContent();
+  renderDateQuickSelect();
+
+  if (currentMapData) {
+    renderMap(currentMapData);
+  }
+
+  if (selectedTable && currentMapData) {
+    const zone = currentMapData.zones?.find((item) => item.id === selectedTable.zoneId);
+    showTableInfo(selectedTable, zone?.name || '—');
+    showReservationForm(selectedTable);
+    updateSelectedStatusFromAvailability();
+  } else {
+    updateSelectedStatusBadge();
+  }
+}
+
+languageToggle?.addEventListener('click', () => {
+  currentLanguage = currentLanguage === 'uk' ? 'en' : 'uk';
+  localStorage.setItem('language', currentLanguage);
+  syncTranslatedState();
+});
 
 reservationForm.addEventListener('submit', submitReservation);
 reservationDateInput.addEventListener('change', () => {
@@ -793,7 +1037,8 @@ bookingMapShell?.addEventListener('touchcancel', resetTouchState);
 window.addEventListener('resize', () => updateMapViewport({ keepCenter: true }));
 
 ensureDefaultDateTime();
+translateStaticContent();
 updateStats();
-updateSelectedStatusBadge('', 'Не обрано');
+updateSelectedStatusBadge();
 updateMapControls();
 fetchDefaultMap();
