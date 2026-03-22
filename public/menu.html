@@ -13,22 +13,36 @@
   <body class="menu-page-body">
     <main class="menu-page-shell">
       <section class="menu-page-surface">
-        <header class="menu-page-header">
-          <div class="menu-page-header-top">
-            <a class="brand brand-with-logo" href="/">
-              <span class="brand-mark brand-mark-image">
-                <img src="/icons/Logo.png" alt="ГорПляж logo" />
-              </span>
-              <span>
-                <strong>ГорПляж</strong>
-                <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
-              </span>
-            </a>
+        <header class="menu-page-header premium-page-header">
+          <div class="menu-page-header-top premium-page-header-top">
+            <div class="home-brand-cluster">
+              <a class="brand brand-with-logo premium-brand" href="/">
+                <span class="brand-mark brand-mark-image">
+                  <img src="/icons/Logo.png" alt="ГорПляж logo" />
+                </span>
+                <span>
+                  <strong>ГорПляж</strong>
+                  <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
+                </span>
+              </a>
+              <div class="brand-seal page-seal">
+                <img src="/icons/icon.svg" alt="" aria-hidden="true" />
+                <span data-i18n="menuHeaderSeal">Curated kitchen & bar</span>
+              </div>
+            </div>
             <button id="languageToggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
           </div>
 
-          <div class="menu-page-header-content">
+          <div class="premium-page-nav" aria-label="Public quick links">
+            <a href="/" data-i18n="menuQuickHome">Головна</a>
+            <a href="/booking" data-i18n="menuQuickBooking">Бронювання</a>
+            <a href="/#events" data-i18n="menuQuickEvents">Події</a>
+            <a href="/#news" data-i18n="menuQuickOffers">Акції</a>
+          </div>
+
+          <div class="menu-page-header-content premium-page-header-content">
             <div>
+              <p class="eyebrow" data-i18n="menuPageKicker">Kitchen & bar</p>
               <h1 data-i18n="menuPageTitle">Меню ГорПляжу</h1>
               <p class="menu-page-description" data-i18n="menuPageDescription">
                 Окрема сторінка з категоріями та зручним переглядом основних позицій, як у digital menu.
@@ -38,10 +52,14 @@
           </div>
         </header>
 
-        <nav class="menu-category-nav" id="categoryNav" aria-label="Menu categories"></nav>
+        <nav class="menu-category-nav premium-category-nav" id="categoryNav" aria-label="Menu categories"></nav>
 
-        <section class="menu-showcase-card">
+        <section class="menu-showcase-card premium-showcase-card">
           <div>
+            <div class="section-icon-title section-icon-title-compact">
+              <span class="section-icon"><img src="/icons/icon1.svg" alt="" aria-hidden="true" /></span>
+              <p class="eyebrow" data-i18n="menuFeatureLabel">Рекомендація</p>
+            </div>
             <h2 id="featuredDishName">—</h2>
             <p id="featuredDishText" class="menu-page-description">—</p>
             <div class="menu-showcase-meta">
@@ -49,7 +67,7 @@
               <strong id="featuredDishPrice">—</strong>
             </div>
           </div>
-          <div class="menu-showcase-image">
+          <div class="menu-showcase-image premium-showcase-image">
             <img id="featuredDishImage" class="menu-showcase-image-media" alt="" hidden />
             <div id="featuredDishImageFallback" class="menu-showcase-image-fallback" aria-hidden="true">GP</div>
           </div>

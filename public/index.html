@@ -15,15 +15,21 @@
       <section class="menu-page-surface home-page-surface">
         <header class="menu-page-header home-page-header" id="top">
           <div class="home-page-header-bar">
-            <a class="brand brand-with-logo" href="#top">
-              <span class="brand-mark brand-mark-image">
-                <img src="/icons/Logo.png" alt="ГорПляж logo" />
-              </span>
-              <span>
-                <strong>ГорПляж</strong>
-                <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
-              </span>
-            </a>
+            <div class="home-brand-cluster">
+              <a class="brand brand-with-logo premium-brand" href="#top">
+                <span class="brand-mark brand-mark-image">
+                  <img src="/icons/Logo.png" alt="ГорПляж logo" />
+                </span>
+                <span>
+                  <strong>ГорПляж</strong>
+                  <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
+                </span>
+              </a>
+              <div class="brand-seal">
+                <img src="/icons/icon1.svg" alt="" aria-hidden="true" />
+                <span data-i18n="headerSeal">Otrada coast hospitality</span>
+              </div>
+            </div>
 
             <button id="languageToggle" class="lang-toggle home-header-action" type="button" aria-label="Switch language">EN</button>
           </div>
@@ -42,42 +48,75 @@
         </header>
 
         <section class="menu-page-intro home-hero-card">
-          <p class="eyebrow" data-i18n="heroEyebrow">Пляжний комплекс в Одесі</p>
+          <div class="home-hero-topline">
+            <p class="eyebrow" data-i18n="heroEyebrow">Пляжний комплекс в Одесі</p>
+            <div class="hero-floating-pill">
+              <img src="/icons/icon.svg" alt="" aria-hidden="true" />
+              <span data-i18n="heroFloatingPill">Premium seaside destination</span>
+            </div>
+          </div>
+
           <div class="home-hero-grid">
             <div class="home-hero-copy">
               <h1 data-i18n="heroTitle">ГорПляж в Одесі</h1>
               <p class="menu-page-description home-hero-subtitle" data-i18n="heroSubtitle">Пляж Отрада, море та відпочинок зі смаком — усе в одному місці.</p>
-              <p class="menu-page-description" data-i18n="heroDescription">
+              <p class="menu-page-description home-hero-description" data-i18n="heroDescription">
                 Меню, онлайн-бронювання, карта столів та анонси подій зібрані в одному сучасному інтерфейсі для гостей.
               </p>
-              <div class="menu-preview-actions hero-actions">
+
+              <div class="menu-preview-actions hero-actions hero-actions-premium">
                 <a class="btn btn-primary" href="#booking" data-i18n="heroPrimaryCta">Забронювати онлайн</a>
                 <a class="btn btn-secondary home-light-btn" href="/menu" data-i18n="heroMenuCta">Переглянути меню</a>
-                <a class="btn btn-secondary home-light-btn" href="/booking" data-i18n="heroSecondaryCta">Відкрити карту столів</a>
+                <a class="btn btn-ghost" href="/booking" data-i18n="heroSecondaryCta">Відкрити карту столів</a>
+              </div>
+
+              <div class="hero-signature-strip" aria-label="Guest highlights">
+                <article class="signature-pill">
+                  <span class="signature-label" data-i18n="signatureCuisine">Signature cuisine</span>
+                  <strong data-i18n="signatureCuisineValue">Mediterranean comfort</strong>
+                </article>
+                <article class="signature-pill">
+                  <span class="signature-label" data-i18n="signatureSunset">Sunset mood</span>
+                  <strong data-i18n="signatureSunsetValue">Terrace & beach line</strong>
+                </article>
+                <article class="signature-pill">
+                  <span class="signature-label" data-i18n="signatureBooking">Guest flow</span>
+                  <strong data-i18n="signatureBookingValue">Booking in minutes</strong>
+                </article>
               </div>
             </div>
 
             <aside class="home-highlight-panel">
-              <article class="home-info-card scenic">
+              <article class="home-info-card scenic hero-promo-card">
+                <div class="hero-promo-icon">
+                  <img src="/icons/icon1.svg" alt="" aria-hidden="true" />
+                </div>
                 <p class="eyebrow" data-i18n="heroPanelLabel">Готово до графіки</p>
                 <h2 data-i18n="heroPanelTitle">Сучасний публічний фронт для гостей</h2>
                 <p class="menu-page-description" data-i18n="heroPanelText">
                   Простий шлях від першого враження до бронювання столу: меню, події, карта та контактна інформація працюють як єдина система.
                 </p>
+                <div class="hero-promo-footer">
+                  <span class="hero-promo-chip" data-i18n="heroPromoChip">Seaside service</span>
+                  <a class="text-link hero-promo-link" href="#contacts" data-i18n="heroPromoLink">Дізнатися контакти</a>
+                </div>
               </article>
 
               <div class="hero-highlights home-highlight-stats">
                 <article class="highlight-card home-stat-card">
                   <span data-i18n="highlightMenu">Позицій меню</span>
                   <strong id="heroMenuCount">—</strong>
+                  <small data-i18n="highlightMenuHint">Curated guest favorites</small>
                 </article>
                 <article class="highlight-card home-stat-card">
                   <span data-i18n="highlightBookingAccess">Онлайн бронювання</span>
                   <strong data-i18n="highlightBookingAccessValue">24/7</strong>
+                  <small data-i18n="highlightBookingHint">Fast confirmation flow</small>
                 </article>
                 <article class="highlight-card home-stat-card">
                   <span data-i18n="highlightZones">Основних зон</span>
                   <strong>4</strong>
+                  <small data-i18n="highlightZonesHint">Beachfront to terrace</small>
                 </article>
               </div>
             </aside>
@@ -85,16 +124,21 @@
         </section>
 
         <section class="home-grid home-grid-double home-section-divider" id="about">
-          <article class="home-card home-card-wide">
-            <p class="eyebrow" data-i18n="aboutKicker">Про простір</p>
-            <h2 data-i18n="aboutTitle">Про заклад</h2>
+          <article class="home-card home-card-wide tone-card">
+            <div class="section-icon-title">
+              <span class="section-icon"><img src="/icons/icon.svg" alt="" aria-hidden="true" /></span>
+              <div>
+                <p class="eyebrow" data-i18n="aboutKicker">Про простір</p>
+                <h2 data-i18n="aboutTitle">Про заклад</h2>
+              </div>
+            </div>
             <p class="menu-page-description" data-i18n="aboutText">
               ГорПляж — це пляжний простір в Одесі на пляжі Отрада, де можна поснідати біля моря,
               провести вечір на терасі й організувати відпочинок для компанії.
             </p>
           </article>
 
-          <article class="home-card home-metric-stack">
+          <article class="home-card home-metric-stack tone-card-soft">
             <div class="metric-card home-metric-card">
               <span data-i18n="metricSea">Локація</span>
               <strong data-i18n="metricSeaValue">Перша лінія біля моря</strong>
@@ -111,11 +155,14 @@
         </section>
 
         <section class="home-grid home-grid-double home-section-divider">
-          <section class="home-card menu-preview-surface" id="menu-section">
+          <section class="home-card menu-preview-surface tone-card" id="menu-section">
             <div class="section-head section-head-compact">
-              <div>
-                <p class="eyebrow" data-i18n="menuKicker">Kitchen & bar</p>
-                <h2 data-i18n="menuTitle">Меню комплексу</h2>
+              <div class="section-icon-title">
+                <span class="section-icon"><img src="/icons/icon1.svg" alt="" aria-hidden="true" /></span>
+                <div>
+                  <p class="eyebrow" data-i18n="menuKicker">Kitchen & bar</p>
+                  <h2 data-i18n="menuTitle">Меню комплексу</h2>
+                </div>
               </div>
               <span class="section-chip" id="menuCountChip">—</span>
             </div>
@@ -126,11 +173,14 @@
             </div>
           </section>
 
-          <section class="home-card booking-surface" id="booking">
+          <section class="home-card booking-surface tone-card-soft" id="booking">
             <div class="section-head">
-              <div>
-                <p class="eyebrow" data-i18n="bookingKicker">Fast reservation</p>
-                <h2 data-i18n="bookingTitle">Онлайн-бронювання</h2>
+              <div class="section-icon-title">
+                <span class="section-icon"><img src="/icons/icon.svg" alt="" aria-hidden="true" /></span>
+                <div>
+                  <p class="eyebrow" data-i18n="bookingKicker">Fast reservation</p>
+                  <h2 data-i18n="bookingTitle">Онлайн-бронювання</h2>
+                </div>
               </div>
               <a class="text-link" href="/booking" data-i18n="bookingMapCta">Відкрити карту столів</a>
             </div>
@@ -161,16 +211,22 @@
               </form>
 
               <div class="booking-aside">
-                <article class="aside-card home-card-muted">
-                  <p class="eyebrow" data-i18n="bookingAsideLabel">Як це працює</p>
+                <article class="aside-card home-card-muted refined-aside">
+                  <div class="section-icon-title section-icon-title-compact">
+                    <span class="section-icon"><img src="/icons/icon1.svg" alt="" aria-hidden="true" /></span>
+                    <p class="eyebrow" data-i18n="bookingAsideLabel">Як це працює</p>
+                  </div>
                   <ul class="feature-list">
                     <li data-i18n="bookingFeature1">Заповніть коротку форму бронювання.</li>
                     <li data-i18n="bookingFeature2">Оберіть бажану зону відпочинку.</li>
                     <li data-i18n="bookingFeature3">Для точного вибору скористайтесь картою столів.</li>
                   </ul>
                 </article>
-                <article class="aside-card home-card-muted">
-                  <p class="eyebrow" data-i18n="bookingAsideSecondaryLabel">Для візуальної вставки</p>
+                <article class="aside-card home-card-muted refined-aside scenic-tint">
+                  <div class="section-icon-title section-icon-title-compact">
+                    <span class="section-icon"><img src="/icons/icon.svg" alt="" aria-hidden="true" /></span>
+                    <p class="eyebrow" data-i18n="bookingAsideSecondaryLabel">Для візуальної вставки</p>
+                  </div>
                   <p class="menu-page-description" data-i18n="bookingGraphicHint">Hero/background: 1600×900, promo cards: 3:2, icons: 128×128 PNG/SVG.</p>
                 </article>
               </div>
@@ -179,35 +235,48 @@
         </section>
 
         <section class="home-grid home-grid-triple home-section-divider" id="events">
-          <article class="home-card news-item">
-            <p class="eyebrow" data-i18n="eventsKicker">Live atmosphere</p>
+          <article class="home-card news-item event-card feature-card-primary">
+            <div class="section-icon-title section-icon-title-compact">
+              <span class="section-icon"><img src="/icons/icon1.svg" alt="" aria-hidden="true" /></span>
+              <p class="eyebrow" data-i18n="eventsKicker">Live atmosphere</p>
+            </div>
             <h2 data-i18n="eventsTitle">Афіша та анонси</h2>
             <p class="menu-page-description" data-i18n="event1Text">Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.</p>
             <h3 data-i18n="event1Title">П’ятничні заходи сонця з діджеєм</h3>
           </article>
-          <article class="home-card news-item">
+          <article class="home-card news-item event-card">
             <h3 data-i18n="event2Title">Сімейні вихідні</h3>
             <p class="menu-page-description" data-i18n="event2Text">Субота та неділя — анімація для дітей і зона сімейного відпочинку.</p>
           </article>
-          <article class="home-card news-item">
+          <article class="home-card news-item event-card">
             <h3 data-i18n="event3Title">Кіно просто неба</h3>
             <p class="menu-page-description" data-i18n="event3Text">Щочетверга після заходу сонця — покази фільмів біля моря.</p>
           </article>
         </section>
 
         <section class="home-grid home-grid-double home-section-divider" id="news">
-          <article class="home-card">
-            <p class="eyebrow" data-i18n="newsKicker">Special offers</p>
-            <h2 data-i18n="newsTitle">Новини та акції</h2>
+          <article class="home-card tone-card-soft">
+            <div class="section-icon-title">
+              <span class="section-icon"><img src="/icons/icon.svg" alt="" aria-hidden="true" /></span>
+              <div>
+                <p class="eyebrow" data-i18n="newsKicker">Special offers</p>
+                <h2 data-i18n="newsTitle">Новини та акції</h2>
+              </div>
+            </div>
             <ul class="promo-list">
               <li data-i18n="promo1">З 10:00 до 12:00 — знижка 20% на сніданки.</li>
               <li data-i18n="promo2">Комбо «Пляжний день»: шезлонг + лимонад + салат за спеціальною ціною.</li>
               <li data-i18n="promo3">Іменинникам — десерт у подарунок під час бронювання столу.</li>
             </ul>
           </article>
-          <article class="home-card" id="contacts">
-            <p class="eyebrow" data-i18n="contactsKicker">Contact us</p>
-            <h2 data-i18n="contactsTitle">Контакти</h2>
+          <article class="home-card tone-card" id="contacts">
+            <div class="section-icon-title">
+              <span class="section-icon"><img src="/icons/icon1.svg" alt="" aria-hidden="true" /></span>
+              <div>
+                <p class="eyebrow" data-i18n="contactsKicker">Contact us</p>
+                <h2 data-i18n="contactsTitle">Контакти</h2>
+              </div>
+            </div>
             <div class="contact-grid home-contact-grid">
               <article class="contact-card home-card-muted">
                 <span data-i18n="addressLabel">Адреса</span>
