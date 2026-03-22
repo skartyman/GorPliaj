@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#10182a" />
-    <meta name="description" content="Пляжно-ресторанний комплекс «ГорПляж» в Одесі на пляжі Отрада з меню, подіями та онлайн-бронюванням" />
+    <meta
+      name="description"
+      content="Пляжно-ресторанний комплекс «ГорПляж» в Одесі на пляжі Отрада з меню, подіями та онлайн-бронюванням"
+    />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
@@ -31,56 +34,80 @@
           <div class="home-page-scroll-block" aria-label="Site sections and controls">
             <nav class="home-page-scroll-track" aria-label="Site navigation">
               <a href="#about" data-i18n="navAbout">Про заклад</a>
-              <a href="/menu" data-i18n="navMenu">Меню</a>
+              <a href="#menu-section" data-i18n="navMenu">Меню</a>
               <a href="#booking" data-i18n="navBooking">Бронювання</a>
-              <a href="#events" data-i18n="navEvents">Події</a>
-              <a href="#news" data-i18n="navNews">Акції</a>
+              <a href="#atmosphere" data-i18n="navAtmosphere">Атмосфера</a>
               <a href="#contacts" data-i18n="navContacts">Контакти</a>
+              <a href="#agreement" data-i18n="navAgreement">Угода</a>
               <button id="installBtn" class="install-btn home-scroll-action hidden" data-i18n="installApp">Встановити як застосунок</button>
             </nav>
           </div>
         </header>
 
         <section class="menu-page-intro home-hero-card">
-          <p class="eyebrow" data-i18n="heroEyebrow">Пляжний комплекс в Одесі</p>
-          <div class="home-hero-grid">
-            <div class="home-hero-copy">
-              <h1 data-i18n="heroTitle">ГорПляж в Одесі</h1>
-              <p class="menu-page-description home-hero-subtitle" data-i18n="heroSubtitle">Пляж Отрада, море та відпочинок зі смаком — усе в одному місці.</p>
-              <p class="menu-page-description" data-i18n="heroDescription">
-                Меню, онлайн-бронювання, карта столів та анонси подій зібрані в одному сучасному інтерфейсі для гостей.
-              </p>
-              <div class="menu-preview-actions hero-actions">
-                <a class="btn btn-primary" href="#booking" data-i18n="heroPrimaryCta">Забронювати онлайн</a>
-                <a class="btn btn-secondary home-light-btn" href="/menu" data-i18n="heroMenuCta">Переглянути меню</a>
-                <a class="btn btn-secondary home-light-btn" href="/booking" data-i18n="heroSecondaryCta">Відкрити карту столів</a>
+          <div class="home-hero-layout">
+            <div class="home-hero-grid">
+              <div class="home-hero-copy">
+                <p class="eyebrow" data-i18n="heroEyebrow">Пляжний комплекс в Одесі</p>
+                <h1 data-i18n="heroTitle">ГорПляж в Одесі</h1>
+                <p class="menu-page-description home-hero-subtitle" data-i18n="heroSubtitle">
+                  Пляж Отрада, море та відпочинок зі смаком — усе в одному місці.
+                </p>
+                <p class="menu-page-description home-hero-description" data-i18n="heroDescription">
+                  Меню, онлайн-бронювання, карта столів та анонси подій зібрані в одному сучасному інтерфейсі для гостей.
+                </p>
+                <div class="menu-preview-actions hero-actions">
+                  <a class="btn btn-primary" href="#booking" data-i18n="heroPrimaryCta">Забронювати онлайн</a>
+                  <a class="btn btn-secondary home-light-btn" href="/menu" data-i18n="heroMenuCta">Переглянути меню</a>
+                  <a class="btn btn-secondary home-light-btn" href="/booking" data-i18n="heroSecondaryCta">Відкрити карту столів</a>
+                </div>
+
+                <div class="hero-highlights home-highlight-stats">
+                  <article class="highlight-card home-stat-card">
+                    <span data-i18n="highlightMenu">Позицій меню</span>
+                    <strong id="heroMenuCount">—</strong>
+                  </article>
+                  <article class="highlight-card home-stat-card">
+                    <span data-i18n="highlightBookingAccess">Онлайн бронювання</span>
+                    <strong data-i18n="highlightBookingAccessValue">24/7</strong>
+                  </article>
+                  <article class="highlight-card home-stat-card">
+                    <span data-i18n="highlightZones">Основних зон</span>
+                    <strong>4</strong>
+                  </article>
+                </div>
               </div>
+
+              <aside class="home-highlight-panel">
+                <article class="home-info-card home-photo-card home-photo-card-main scenic">
+                  <img src="/icons/photo_2026-03-22_18-51-20.jpg" alt="Вечірній відпочинок біля моря у ГорПляж" />
+                  <div class="home-photo-overlay">
+                    <p class="eyebrow" data-i18n="heroPanelLabel">Відпочинок біля моря</p>
+                    <h2 data-i18n="heroPanelTitle">Простір для спокійного дня та вечора з видом на море</h2>
+                    <p class="menu-page-description" data-i18n="heroPanelText">
+                      Світлі зали, пляжна зона та тераса формують послідовний маршрут гостя: від знайомства з локацією до бронювання столу.
+                    </p>
+                  </div>
+                </article>
+              </aside>
             </div>
 
-            <aside class="home-highlight-panel">
-              <article class="home-info-card scenic">
-                <p class="eyebrow" data-i18n="heroPanelLabel">Готово до графіки</p>
-                <h2 data-i18n="heroPanelTitle">Сучасний публічний фронт для гостей</h2>
-                <p class="menu-page-description" data-i18n="heroPanelText">
-                  Простий шлях від першого враження до бронювання столу: меню, події, карта та контактна інформація працюють як єдина система.
-                </p>
+            <div class="home-gallery-strip" aria-label="Gallery">
+              <article class="home-gallery-card">
+                <img src="/icons/photo_2026-03-22_18-51-11.jpg" alt="Лаунж-зона ГорПляж" />
               </article>
-
-              <div class="hero-highlights home-highlight-stats">
-                <article class="highlight-card home-stat-card">
-                  <span data-i18n="highlightMenu">Позицій меню</span>
-                  <strong id="heroMenuCount">—</strong>
-                </article>
-                <article class="highlight-card home-stat-card">
-                  <span data-i18n="highlightBookingAccess">Онлайн бронювання</span>
-                  <strong data-i18n="highlightBookingAccessValue">24/7</strong>
-                </article>
-                <article class="highlight-card home-stat-card">
-                  <span data-i18n="highlightZones">Основних зон</span>
-                  <strong>4</strong>
-                </article>
-              </div>
-            </aside>
+              <article class="home-gallery-card">
+                <img src="/icons/IMG_20260321_234217_307.jpg" alt="Інтер'єр комплексу ГорПляж" />
+              </article>
+              <article class="home-gallery-card home-gallery-card-copy">
+                <p class="eyebrow" data-i18n="galleryLabel">Що є на локації</p>
+                <ul class="home-inline-list">
+                  <li data-i18n="galleryFeature1">Тераса біля моря</li>
+                  <li data-i18n="galleryFeature2">Лаунж та ресторанна зала</li>
+                  <li data-i18n="galleryFeature3">Швидке онлайн-бронювання</li>
+                </ul>
+              </article>
+            </div>
           </div>
         </section>
 
@@ -89,37 +116,47 @@
             <p class="eyebrow" data-i18n="aboutKicker">Про простір</p>
             <h2 data-i18n="aboutTitle">Про заклад</h2>
             <p class="menu-page-description" data-i18n="aboutText">
-              ГорПляж — це пляжний простір в Одесі на пляжі Отрада, де можна поснідати біля моря,
-              провести вечір на терасі й організувати відпочинок для компанії.
+              ГорПляж — це пляжний простір в Одесі на пляжі Отрада, де можна поснідати біля моря, провести вечір на терасі й організувати відпочинок для компанії.
             </p>
+            <div class="home-feature-grid">
+              <article class="home-card-muted home-mini-card">
+                <strong data-i18n="metricSeaValue">Перша лінія біля моря</strong>
+                <span data-i18n="metricSea">Локація</span>
+              </article>
+              <article class="home-card-muted home-mini-card">
+                <strong data-i18n="metricKitchenValue">Ресторан + пляж + події</strong>
+                <span data-i18n="metricKitchen">Формат</span>
+              </article>
+              <article class="home-card-muted home-mini-card">
+                <strong data-i18n="metricBookingValue">Онлайн бронювання і карта</strong>
+                <span data-i18n="metricBooking">Сервіс</span>
+              </article>
+            </div>
           </article>
 
-          <article class="home-card home-metric-stack">
-            <div class="metric-card home-metric-card">
-              <span data-i18n="metricSea">Локація</span>
-              <strong data-i18n="metricSeaValue">Перша лінія біля моря</strong>
-            </div>
-            <div class="metric-card home-metric-card">
-              <span data-i18n="metricKitchen">Формат</span>
-              <strong data-i18n="metricKitchenValue">Ресторан + пляж + події</strong>
-            </div>
-            <div class="metric-card home-metric-card">
-              <span data-i18n="metricBooking">Сервіс</span>
-              <strong data-i18n="metricBookingValue">Онлайн бронювання і карта</strong>
+          <article class="home-card home-visual-card">
+            <img src="/icons/Logo.jpg" alt="Фірмовий стиль ГорПляж" />
+            <div class="home-visual-copy">
+              <p class="eyebrow" data-i18n="visualLabel">Стиль комплексу</p>
+              <p class="menu-page-description" data-i18n="visualText">
+                Оновлена головна сторінка робить акцент на логічній подачі інформації: спочатку атмосфера, далі меню та бронювання, а потім контакти й умови користування.
+              </p>
             </div>
           </article>
         </section>
 
-        <section class="home-grid home-grid-double home-section-divider">
-          <section class="home-card menu-preview-surface" id="menu-section">
+        <section class="home-grid home-grid-double home-section-divider home-primary-actions" id="menu-section">
+          <section class="home-card menu-preview-surface">
             <div class="section-head section-head-compact">
               <div>
-                <p class="eyebrow" data-i18n="menuKicker">Kitchen & bar</p>
+                <p class="eyebrow" data-i18n="menuKicker">Kitchen &amp; bar</p>
                 <h2 data-i18n="menuTitle">Меню комплексу</h2>
               </div>
               <span class="section-chip" id="menuCountChip">—</span>
             </div>
-            <p class="menu-preview-copy" data-i18n="menuPreviewText">Окрема сторінка меню з категоріями, картками страв і швидкою навігацією.</p>
+            <p class="menu-preview-copy" data-i18n="menuPreviewText">
+              Окрема сторінка меню з категоріями, картками страв і швидкою навігацією.
+            </p>
             <div class="menu-preview-actions">
               <a class="btn btn-primary" href="/menu" data-i18n="menuPreviewCta">Відкрити меню</a>
               <a class="text-link" href="#booking" data-i18n="menuPreviewSecondary">Спочатку забронювати столик</a>
@@ -156,6 +193,9 @@
                   </label>
                 </div>
                 <label><span data-i18n="note">Побажання</span> <textarea name="note" rows="3"></textarea></label>
+                <p class="booking-legal-note" data-i18n="bookingAgreementNote">
+                  Натискаючи кнопку, ви погоджуєтесь з умовами бронювання та правилами використання сайту.
+                </p>
                 <p id="reservationFormState" class="form-state hidden" role="status"></p>
                 <button type="submit" data-i18n="createReservation">Створити бронювання</button>
               </form>
@@ -169,43 +209,53 @@
                     <li data-i18n="bookingFeature3">Для точного вибору скористайтесь картою столів.</li>
                   </ul>
                 </article>
-                <article class="aside-card home-card-muted">
-                  <p class="eyebrow" data-i18n="bookingAsideSecondaryLabel">Для візуальної вставки</p>
-                  <p class="menu-page-description" data-i18n="bookingGraphicHint">Hero/background: 1600×900, promo cards: 3:2, icons: 128×128 PNG/SVG.</p>
+                <article class="aside-card home-card-muted home-aside-photo-card">
+                  <img src="/icons/photo_2026-03-22_18-51-11.jpg" alt="Зона для бронювання та відпочинку" />
+                  <p class="menu-page-description" data-i18n="bookingAsidePhotoText">
+                    Для великих компаній рекомендуємо обирати терасу або лаунж та уточнювати побажання у формі.
+                  </p>
                 </article>
               </div>
             </div>
           </section>
         </section>
 
-        <section class="home-grid home-grid-triple home-section-divider" id="events">
-          <article class="home-card news-item">
-            <p class="eyebrow" data-i18n="eventsKicker">Live atmosphere</p>
-            <h2 data-i18n="eventsTitle">Афіша та анонси</h2>
-            <p class="menu-page-description" data-i18n="event1Text">Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.</p>
-            <h3 data-i18n="event1Title">П’ятничні заходи сонця з діджеєм</h3>
-          </article>
-          <article class="home-card news-item">
-            <h3 data-i18n="event2Title">Сімейні вихідні</h3>
-            <p class="menu-page-description" data-i18n="event2Text">Субота та неділя — анімація для дітей і зона сімейного відпочинку.</p>
-          </article>
-          <article class="home-card news-item">
-            <h3 data-i18n="event3Title">Кіно просто неба</h3>
-            <p class="menu-page-description" data-i18n="event3Text">Щочетверга після заходу сонця — покази фільмів біля моря.</p>
-          </article>
-        </section>
-
-        <section class="home-grid home-grid-double home-section-divider" id="news">
+        <section class="home-grid home-grid-double home-section-divider" id="atmosphere">
           <article class="home-card">
+            <p class="eyebrow" data-i18n="eventsKicker">Live atmosphere</p>
+            <h2 data-i18n="eventsTitle">Атмосфера, події та пропозиції</h2>
+            <p class="menu-page-description" data-i18n="eventsLead">
+              На головній сторінці залишили лише корисні блоки: атмосфера, меню, бронювання, контакти та юридичні умови.
+            </p>
+            <div class="home-experience-list">
+              <article class="home-mini-feature">
+                <h3 data-i18n="event1Title">П’ятничні заходи сонця з діджеєм</h3>
+                <p class="menu-page-description" data-i18n="event1Text">Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.</p>
+              </article>
+              <article class="home-mini-feature">
+                <h3 data-i18n="event2Title">Сімейні вихідні</h3>
+                <p class="menu-page-description" data-i18n="event2Text">Субота та неділя — анімація для дітей і зона сімейного відпочинку.</p>
+              </article>
+              <article class="home-mini-feature">
+                <h3 data-i18n="promoTitle">Щоденні пропозиції</h3>
+                <p class="menu-page-description" data-i18n="promoLead">Знижки на сніданки, пляжні комбо та приємні бонуси для гостей, що бронюють заздалегідь.</p>
+              </article>
+            </div>
+          </article>
+
+          <article class="home-card home-promo-card">
             <p class="eyebrow" data-i18n="newsKicker">Special offers</p>
-            <h2 data-i18n="newsTitle">Новини та акції</h2>
+            <h2 data-i18n="newsTitle">Що варто спробувати</h2>
             <ul class="promo-list">
               <li data-i18n="promo1">З 10:00 до 12:00 — знижка 20% на сніданки.</li>
               <li data-i18n="promo2">Комбо «Пляжний день»: шезлонг + лимонад + салат за спеціальною ціною.</li>
               <li data-i18n="promo3">Іменинникам — десерт у подарунок під час бронювання столу.</li>
             </ul>
           </article>
-          <article class="home-card" id="contacts">
+        </section>
+
+        <section class="home-grid home-grid-double home-section-divider" id="contacts">
+          <article class="home-card">
             <p class="eyebrow" data-i18n="contactsKicker">Contact us</p>
             <h2 data-i18n="contactsTitle">Контакти</h2>
             <div class="contact-grid home-contact-grid">
@@ -223,6 +273,45 @@
               </article>
             </div>
           </article>
+
+          <article class="home-card home-contact-aside">
+            <img src="/icons/Logo.png" alt="Логотип ГорПляж" class="home-contact-logo" />
+            <p class="menu-page-description" data-i18n="contactsText">
+              Пишіть або телефонуйте, якщо потрібне бронювання для події, приватної вечері чи великої компанії.
+            </p>
+          </article>
+        </section>
+
+        <section class="home-card home-section-divider home-agreement" id="agreement">
+          <p class="eyebrow" data-i18n="agreementKicker">User agreement</p>
+          <div class="home-agreement-head">
+            <div>
+              <h2 data-i18n="agreementTitle">Ліцензійна угода та умови використання</h2>
+              <p class="menu-page-description" data-i18n="agreementIntro">
+                Використовуючи сайт ГорПляж, ви погоджуєтесь із правилами використання контенту, бронювання та обробки контактних даних.
+              </p>
+            </div>
+          </div>
+          <div class="home-agreement-grid">
+            <article class="home-card-muted home-agreement-item">
+              <h3 data-i18n="agreementItem1Title">1. Контент і бренд</h3>
+              <p class="menu-page-description" data-i18n="agreementItem1Text">
+                Усі логотипи, фото, тексти та елементи інтерфейсу належать ГорПляж і не можуть копіюватися чи поширюватися без письмового дозволу.
+              </p>
+            </article>
+            <article class="home-card-muted home-agreement-item">
+              <h3 data-i18n="agreementItem2Title">2. Онлайн-бронювання</h3>
+              <p class="menu-page-description" data-i18n="agreementItem2Text">
+                Користувач зобов’язується залишати актуальні контактні дані, а заклад залишає за собою право уточнювати або підтверджувати бронювання телефоном.
+              </p>
+            </article>
+            <article class="home-card-muted home-agreement-item">
+              <h3 data-i18n="agreementItem3Title">3. Дані та зв’язок</h3>
+              <p class="menu-page-description" data-i18n="agreementItem3Text">
+                Контактні дані використовуються лише для обробки бронювання, сервісних повідомлень та зворотного зв’язку щодо візиту.
+              </p>
+            </article>
+          </div>
         </section>
       </section>
     </main>
