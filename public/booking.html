@@ -12,31 +12,18 @@
   </head>
   <body>
     <main class="booking-page">
-      <header class="booking-hero premium-booking-hero">
+      <header class="booking-hero">
         <div class="booking-hero-header">
-          <div class="home-brand-cluster booking-brand-cluster">
-            <a class="brand brand-with-logo booking-brand premium-brand" href="/">
-              <span class="brand-mark brand-mark-image">
-                <img src="/icons/Logo.png" alt="ГорПляж logo" />
-              </span>
-              <span>
-                <strong>ГорПляж</strong>
-                <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
-              </span>
-            </a>
-            <div class="brand-seal booking-seal">
-              <img src="/icons/icon1.svg" alt="" aria-hidden="true" />
-              <span data-i18n="bookingHeaderSeal">Seamless guest reservations</span>
-            </div>
-          </div>
+          <a class="brand brand-with-logo booking-brand" href="/">
+            <span class="brand-mark brand-mark-image">
+              <img src="/icons/Logo.png" alt="ГорПляж logo" />
+            </span>
+            <span>
+              <strong>ГорПляж</strong>
+              <small data-i18n="brandSubtitle">Beach · Restaurant · Events</small>
+            </span>
+          </a>
           <button id="languageToggle" class="lang-toggle booking-header-action" type="button" aria-label="Switch language">EN</button>
-        </div>
-
-        <div class="premium-page-nav booking-page-nav" aria-label="Public quick links">
-          <a href="/" data-i18n="bookingQuickHome">Головна</a>
-          <a href="/menu" data-i18n="bookingQuickMenu">Меню</a>
-          <a href="/#events" data-i18n="bookingQuickEvents">Події</a>
-          <a href="/#contacts" data-i18n="bookingQuickContacts">Контакти</a>
         </div>
 
         <div class="booking-hero-body">
@@ -44,40 +31,34 @@
             <p class="eyebrow" data-i18n="bookingEyebrow">GorPliaj Booking</p>
             <h1 data-i18n="bookingHeroTitle">Карта бронювання столів</h1>
             <p class="subtitle" data-i18n="bookingHeroSubtitle">Оберіть столик на мапі, перевірте його доступність і одразу підтвердіть бронювання.</p>
-            <div class="hero-actions booking-hero-actions">
+            <div class="hero-actions">
               <a class="back-link" href="/" data-i18n="backHome">← На головну</a>
-              <span class="hero-note premium-note" data-i18n="heroNote">Живий статус столів, вибір зони та бронювання в одному потоці.</span>
+              <span class="hero-note" data-i18n="heroNote">Графіка для hero: 1600×900, safe zone 120px</span>
             </div>
           </div>
 
-          <div class="booking-hero-stats premium-hero-stats">
-            <article class="stat-card featured-stat-card">
+          <div class="booking-hero-stats">
+            <article class="stat-card">
               <span data-i18n="statFree">Free</span>
               <strong id="mapStatFree">—</strong>
-              <small data-i18n="statFreeHint">Ready to reserve now</small>
             </article>
             <article class="stat-card">
               <span data-i18n="statBusy">Busy</span>
               <strong id="mapStatBusy">—</strong>
-              <small data-i18n="statBusyHint">Already requested</small>
             </article>
             <article class="stat-card">
               <span data-i18n="statHeld">Held</span>
               <strong id="mapStatHeld">—</strong>
-              <small data-i18n="statHeldHint">Temporarily reserved</small>
             </article>
           </div>
         </div>
       </header>
 
       <section class="booking-layout" data-i18n-attr="aria-label:bookingLayoutAria">
-        <article class="card map-card premium-map-card">
+        <article class="card map-card">
           <div class="card-head">
             <div>
-              <div class="section-icon-title section-icon-title-compact">
-                <span class="section-icon"><img src="/icons/icon.svg" alt="" aria-hidden="true" /></span>
-                <p class="eyebrow" data-i18n="interactiveMap">Interactive map</p>
-              </div>
+              <p class="eyebrow" data-i18n="interactiveMap">Interactive map</p>
               <h2 data-i18n="venueMapTitle">Мапа закладу</h2>
             </div>
             <div class="map-legend">
@@ -107,13 +88,10 @@
           </div>
         </article>
 
-        <aside class="card info-panel premium-info-panel" aria-live="polite">
+        <aside class="card info-panel" aria-live="polite">
           <div class="card-head stacked">
             <div>
-              <div class="section-icon-title section-icon-title-compact">
-                <span class="section-icon"><img src="/icons/icon1.svg" alt="" aria-hidden="true" /></span>
-                <p class="eyebrow" data-i18n="selectedTableEyebrow">Selected table</p>
-              </div>
+              <p class="eyebrow" data-i18n="selectedTableEyebrow">Selected table</p>
               <h2 data-i18n="selectedTableTitle">Обраний стіл</h2>
             </div>
             <span id="selectedTableStatus" class="status-pill hidden" data-i18n="selectedTableNone">Не обрано</span>
