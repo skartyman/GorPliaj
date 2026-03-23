@@ -4,6 +4,7 @@ const installBtn = document.getElementById('installBtn');
 const languageToggle = document.getElementById('languageToggle');
 const heroMenuCount = document.getElementById('heroMenuCount');
 const menuCountChip = document.getElementById('menuCountChip');
+const homePageHeader = document.querySelector('.home-page-header');
 
 let deferredPrompt;
 let currentLanguage = localStorage.getItem('language') || 'uk';
@@ -259,6 +260,17 @@ function translatePage() {
   }
 
   updateCounters();
+  updateAnchorScrollOffset();
+}
+
+function updateAnchorScrollOffset() {
+  if (!homePageHeader) return;
+
+  const headerStyles = window.getComputedStyle(homePageHeader);
+  const stickyTop = Number.parseFloat(headerStyles.top) || 0;
+  const anchorOffset = Math.ceil(homePageHeader.offsetHeight + stickyTop + 12);
+
+  document.documentElement.style.setProperty('--anchor-scroll-offset', `${anchorOffset}px`);
 }
 
 async function fetchMenu() {
@@ -293,6 +305,17 @@ languageToggle?.addEventListener('click', () => {
   localStorage.setItem('language', currentLanguage);
   translatePage();
 });
+
+window.addEventListener('load', updateAnchorScrollOffset);
+window.addEventListener('resize', updateAnchorScrollOffset);
+
+if (homePageHeader && 'ResizeObserver' in window) {
+  const headerResizeObserver = new ResizeObserver(() => {
+    updateAnchorScrollOffset();
+  });
+
+  headerResizeObserver.observe(homePageHeader);
+}
 
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
