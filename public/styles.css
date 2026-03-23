@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+  --anchor-scroll-offset: 112px;
   --bg: #f8fafc;
   --bg-soft: #eef6ff;
   --surface: rgba(255, 255, 255, 0.92);
@@ -23,6 +24,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: var(--anchor-scroll-offset);
 }
 
 body {
@@ -1545,6 +1547,7 @@ select:focus {
   position: relative;
   margin-top: 18px;
   padding-top: 22px;
+  scroll-margin-top: var(--anchor-scroll-offset);
 }
 
 .home-section-divider::before {
