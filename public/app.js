@@ -4,6 +4,8 @@ const installBtn = document.getElementById('installBtn');
 const languageToggle = document.getElementById('languageToggle');
 const heroMenuCount = document.getElementById('heroMenuCount');
 const menuCountChip = document.getElementById('menuCountChip');
+const menuPreviewGallery = document.getElementById('menuPreviewGallery');
+const menuPreviewFallback = document.getElementById('menuPreviewFallback');
 const homePageHeader = document.querySelector('.home-page-header');
 
 let deferredPrompt;
@@ -60,6 +62,7 @@ const translations = {
     visualText: 'Оновлена головна сторінка робить акцент на логічній подачі інформації: спочатку атмосфера, далі меню та бронювання, а потім контакти й умови користування.',
     menuKicker: 'Kitchen & bar',
     menuTitle: 'Меню комплексу',
+    menuPreviewLead: 'Спробуйте найпопулярніше цього сезону',
     menuPreviewText: 'Окрема сторінка меню з категоріями, картками страв і швидкою навігацією.',
     menuPreviewCta: 'Відкрити меню',
     menuPreviewSecondary: 'Спочатку забронювати столик',
@@ -168,6 +171,7 @@ const translations = {
     visualText: 'The refreshed homepage follows a clearer order: atmosphere first, then menu and booking, followed by contacts and usage terms.',
     menuKicker: 'Kitchen & bar',
     menuTitle: 'Venue menu',
+    menuPreviewLead: 'Try the most popular picks of the season',
     menuPreviewText: 'A dedicated menu page with categories, dish cards, and quick navigation.',
     menuPreviewCta: 'Open menu',
     menuPreviewSecondary: 'Book a table first',
@@ -229,6 +233,68 @@ const translations = {
   }
 };
 
+function getLocalizedValue(value) {
+  if (value && typeof value === 'object') {
+    return value[currentLanguage] || value.uk || value.en || Object.values(value)[0] || '';
+  }
+
+  return String(value || '');
+}
+
+function getMenuItemImage(item) {
+  const imageSource = item?.imageUrl || item?.image || item?.photo || '';
+  const imageUrl = typeof imageSource === 'string' ? imageSource.trim() : '';
+  return imageUrl || '';
+}
+
+function getRandomMenuPreviewItems(menu, limit = 3) {
+  const photoItems = menu
+    .flatMap((category) => (Array.isArray(category.items) ? category.items : []))
+    .filter((item) => Boolean(getMenuItemImage(item)));
+
+  if (photoItems.length <= limit) {
+    return photoItems;
+  }
+
+  const shuffledItems = [...photoItems];
+  for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffledItems[index], shuffledItems[randomIndex]] = [shuffledItems[randomIndex], shuffledItems[index]];
+  }
+
+  return shuffledItems.slice(0, limit);
+}
+
+function renderMenuPreview() {
+  if (!menuPreviewGallery || !menuPreviewFallback) return;
+
+  const previewItems = getRandomMenuPreviewItems(menuCache, 3);
+
+  if (!previewItems.length) {
+    menuPreviewGallery.replaceChildren();
+    menuPreviewGallery.hidden = true;
+    menuPreviewFallback.hidden = false;
+    return;
+  }
+
+  const galleryItems = previewItems.map((item) => {
+    const card = document.createElement('article');
+    card.className = 'menu-preview-card';
+
+    const image = document.createElement('img');
+    image.src = getMenuItemImage(item);
+    image.alt = getLocalizedValue(item.name) || 'Menu item';
+    image.loading = 'lazy';
+
+    card.append(image);
+    return card;
+  });
+
+  menuPreviewGallery.replaceChildren(...galleryItems);
+  menuPreviewGallery.hidden = false;
+  menuPreviewFallback.hidden = true;
+}
+
 function updateCounters() {
   const dictionary = translations[currentLanguage];
   const menuCount = menuCache.reduce((total, category) => total + (Array.isArray(category.items) ? category.items.length : 0), 0);
@@ -260,6 +326,7 @@ function translatePage() {
   }
 
   updateCounters();
+  renderMenuPreview();
   updateAnchorScrollOffset();
 }
 
@@ -277,6 +344,7 @@ async function fetchMenu() {
   const response = await fetch('/api/menu');
   menuCache = await response.json();
   updateCounters();
+  renderMenuPreview();
 }
 
 reservationForm.addEventListener('submit', async (event) => {
