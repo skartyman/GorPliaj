@@ -733,6 +733,72 @@ select:focus {
   line-height: 1.7;
 }
 
+.menu-preview-lead {
+  margin: -2px 0 0;
+  color: #e2e8f0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.menu-preview-copy-secondary {
+  font-size: 0.96rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.menu-preview-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.menu-preview-gallery[hidden] {
+  display: none;
+}
+
+.menu-preview-card {
+  position: relative;
+  aspect-ratio: 0.9;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  box-shadow: 0 16px 30px rgba(8, 15, 30, 0.2);
+  transform: translateZ(0);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.menu-preview-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.14));
+  pointer-events: none;
+}
+
+.menu-preview-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 220ms ease;
+}
+
+.menu-preview-card:hover,
+.menu-preview-card:focus-within {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 20px 36px rgba(8, 15, 30, 0.28);
+}
+
+.menu-preview-card:hover img,
+.menu-preview-card:focus-within img,
+.menu-preview-card:active img {
+  transform: scale(1.05);
+}
+
+.menu-preview-card:active {
+  transform: scale(1.01);
+}
+
 .menu-preview-actions,
 .menu-page-controls,
 .menu-page-intro-row,
@@ -1179,6 +1245,24 @@ select:focus {
   .menu-showcase-card {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .menu-preview-gallery {
+    gap: 8px;
+  }
+
+  .menu-preview-card {
+    border-radius: 18px;
+    aspect-ratio: 0.82;
+  }
+
+  .menu-preview-lead {
+    font-size: 0.94rem;
+  }
+
+  .menu-preview-copy-secondary {
+    font-size: 0.88rem;
+    line-height: 1.55;
   }
 
   .menu-page-shell {
