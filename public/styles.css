@@ -719,10 +719,11 @@ select:focus {
 
 .menu-preview-surface {
   display: grid;
-  gap: 18px;
+  gap: 14px;
   align-content: start;
+  padding: 16px;
   background:
-    linear-gradient(180deg, rgba(124, 58, 237, 0.12), rgba(8, 18, 34, 0.9)),
+    linear-gradient(180deg, rgba(124, 58, 237, 0.1), rgba(8, 18, 34, 0.04)),
     var(--surface);
 }
 
@@ -734,16 +735,16 @@ select:focus {
 }
 
 .menu-preview-lead {
-  margin: -2px 0 0;
-  color: #e2e8f0;
+  margin: -6px 0 2px;
+  color: #334155;
   font-size: 1.02rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 .menu-preview-copy-secondary {
   font-size: 0.96rem;
-  color: rgba(226, 232, 240, 0.8);
+  color: #64748b;
 }
 
 .menu-preview-gallery {
@@ -812,6 +813,21 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.menu-preview-actions {
+  margin-top: 4px;
+}
+
+.menu-preview-actions .btn,
+.menu-preview-actions .text-link {
+  flex: 1 1 240px;
+}
+
+.menu-preview-actions .text-link {
+  justify-content: center;
+  text-align: center;
+  min-height: 54px;
 }
 
 .menu-page-body {
@@ -1257,7 +1273,8 @@ select:focus {
   }
 
   .menu-preview-lead {
-    font-size: 0.94rem;
+    margin-top: -2px;
+    font-size: 0.96rem;
   }
 
   .menu-preview-copy-secondary {
