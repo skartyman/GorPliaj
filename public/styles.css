@@ -1547,7 +1547,6 @@ select:focus {
   position: relative;
   margin-top: 18px;
   padding-top: 22px;
-  scroll-margin-top: var(--anchor-scroll-offset);
 }
 
 .home-section-divider::before {
