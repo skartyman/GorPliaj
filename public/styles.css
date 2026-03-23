@@ -1,20 +1,20 @@
 :root {
-  color-scheme: dark;
-  --bg: #09121f;
-  --bg-soft: #0f1b2f;
-  --surface: rgba(8, 18, 34, 0.82);
-  --surface-strong: rgba(12, 24, 42, 0.94);
-  --surface-soft: rgba(15, 23, 42, 0.72);
-  --text: #eef4ff;
-  --muted: #9cb0cc;
-  --line: rgba(148, 163, 184, 0.16);
+  color-scheme: light;
+  --bg: #f8fafc;
+  --bg-soft: #eef6ff;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: rgba(255, 255, 255, 0.98);
+  --surface-soft: rgba(248, 250, 252, 0.88);
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: rgba(148, 163, 184, 0.2);
   --accent: #7c3aed;
   --accent-2: #22d3ee;
   --accent-3: #f59e0b;
   --ok: #22c55e;
   --warn: #f97316;
   --danger: #fb7185;
-  --shadow: 0 24px 60px rgba(2, 6, 23, 0.35);
+  --shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
 }
 
 * {
@@ -29,9 +29,9 @@ body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 24%),
-    radial-gradient(circle at top right, rgba(124, 58, 237, 0.18), transparent 26%),
-    linear-gradient(180deg, #07101c 0%, #09121f 100%);
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.14), transparent 26%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   color: var(--text);
   min-height: 100vh;
 }
@@ -99,7 +99,7 @@ img {
   gap: 16px;
   padding: 16px 18px;
   border-radius: 28px;
-  background: rgba(8, 18, 34, 0.68);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
@@ -184,8 +184,8 @@ img {
 .hero-nav a {
   padding: 10px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   transition: 160ms ease;
 }
 
@@ -194,7 +194,7 @@ img {
 .lang-btn:hover,
 .text-link:hover,
 .btn:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(37, 99, 235, 0.22);
   transform: translateY(-1px);
 }
 
@@ -220,8 +220,8 @@ img {
 .text-link {
   border-radius: 999px;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   color: var(--text);
 }
 
@@ -318,8 +318,9 @@ img {
 
 .btn-secondary,
 .reservation-actions button[data-action='delete'] {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #0f172a;
 }
 
 .hero-highlights {
@@ -584,7 +585,7 @@ select:focus {
 
 .news-item {
   background:
-    linear-gradient(180deg, rgba(124, 58, 237, 0.1), rgba(8, 18, 34, 0.82)),
+    linear-gradient(180deg, rgba(124, 58, 237, 0.08), rgba(255, 255, 255, 0.96)),
     var(--surface);
 }
 
@@ -1789,11 +1790,11 @@ body.cart-open {
   gap: 12px;
   min-height: 68px;
   padding: 12px 18px;
-  border: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 999px;
-  background: linear-gradient(135deg, #0f172a, #2563eb);
-  color: #fff;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
+  background: linear-gradient(135deg, #ffffff, #eff6ff);
+  color: #0f172a;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
   cursor: pointer;
 }
 
@@ -1804,7 +1805,8 @@ body.cart-open {
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  color: #ffffff;
 }
 
 .menu-cart-fab-copy {
@@ -1813,7 +1815,7 @@ body.cart-open {
 }
 
 .menu-cart-fab-copy small {
-  color: rgba(255, 255, 255, 0.8);
+  color: #64748b;
 }
 
 .menu-cart-drawer {
