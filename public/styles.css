@@ -899,14 +899,7 @@ select:focus {
 .menu-page-header-top {
   display: grid;
   align-items: start;
-  grid-template-columns: minmax(88px, 1fr) auto minmax(88px, 1fr);
-}
-
-.menu-page-header-top::before,
-.home-page-header-bar::before,
-.booking-hero-header::before {
-  content: '';
-  grid-column: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .menu-page-header-content {
@@ -941,9 +934,6 @@ select:focus {
 .menu-page-header .brand {
   min-width: 0;
   align-items: center;
-  grid-column: 2;
-  justify-self: center;
-  text-align: center;
 }
 
 .menu-page-header .brand-mark {
@@ -1400,20 +1390,9 @@ select:focus {
 
 .home-page-header-bar {
   display: grid;
-  grid-template-columns: minmax(88px, 1fr) auto minmax(88px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 12px;
-}
-
-.home-page-header-bar > .brand {
-  grid-column: 2;
-  justify-self: center;
-  text-align: center;
-}
-
-.menu-page-header-top > .lang-toggle,
-.home-page-header-bar > .lang-toggle {
-  grid-column: 3;
 }
 
 .home-page-scroll-block {
