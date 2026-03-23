@@ -399,12 +399,6 @@ installBtn.addEventListener('click', async () => {
   installBtn.classList.add('hidden');
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js');
-  });
-}
-
 translatePage();
 
 fetchMenu().catch(() => {
