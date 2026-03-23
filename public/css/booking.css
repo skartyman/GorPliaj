@@ -146,7 +146,7 @@ textarea {
 
 .booking-hero-header {
   display: grid;
-  grid-template-columns: minmax(88px, 1fr) auto minmax(88px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 18px;
   padding-bottom: 18px;
@@ -162,14 +162,10 @@ textarea {
 
 .booking-brand {
   flex: 1 1 auto;
-  grid-column: 2;
-  justify-self: center;
-  text-align: center;
 }
 
 .booking-header-action {
   flex-shrink: 0;
-  grid-column: 3;
 }
 
 .eyebrow {
