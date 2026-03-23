@@ -1438,8 +1438,10 @@ select:focus {
   border-radius: inherit;
 }
 
-.home-photo-card-main {
-  min-height: 420px;
+.home-photo-card-main,
+.home-gallery-card {
+  min-height: 0;
+  aspect-ratio: 4 / 3;
 }
 
 .home-photo-overlay {
@@ -1748,8 +1750,9 @@ select:focus {
     padding: 18px;
   }
 
-  .home-photo-card-main {
-    min-height: 320px;
+  .home-photo-card-main,
+  .home-gallery-card {
+    aspect-ratio: 4 / 3;
   }
 
   .home-photo-overlay,
