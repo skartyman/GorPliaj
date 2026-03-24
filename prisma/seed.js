@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
-const { PrismaClient, MapStatus, MapObjectType } = require('@prisma/client');
+const { PrismaClient, MapStatus, MapObjectType, EventStatus, EventCtaType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -95,6 +95,26 @@ async function upsertMapObject(mapId, objectData) {
       mapId,
       ...objectData,
     },
+  });
+}
+
+
+
+async function upsertEvent(eventData) {
+  const existingEvent = await prisma.event.findUnique({
+    where: { slug: eventData.slug },
+    select: { id: true },
+  });
+
+  if (existingEvent) {
+    return prisma.event.update({
+      where: { id: existingEvent.id },
+      data: eventData,
+    });
+  }
+
+  return prisma.event.create({
+    data: eventData,
   });
 }
 
@@ -268,6 +288,37 @@ async function main() {
       isActive: true,
     });
   }
+
+
+
+  const now = new Date();
+  await upsertEvent({
+    title: 'Sunset DJ Session',
+    slug: 'sunset-dj-session',
+    shortDescription: 'Friday sunset set on the beach terrace.',
+    fullDescription: 'Live DJ set with signature cocktails, beach lounge mood, and evening skyline at GorPliaj.',
+    posterImage: '/icons/photo_2026-03-22_18-51-11.jpg',
+    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 19, 0, 0),
+    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 23, 30, 0),
+    status: EventStatus.PUBLISHED,
+    isFeatured: true,
+    ctaType: EventCtaType.BOTH,
+    ticketUrl: 'https://example.com/tickets/sunset-dj-session',
+  });
+
+  await upsertEvent({
+    title: 'Family Beach Weekend',
+    slug: 'family-beach-weekend',
+    shortDescription: 'Weekend family-friendly activities by the sea.',
+    fullDescription: 'Kids activities, family menu offers, and relaxed seating zones for weekend daytime visits.',
+    posterImage: '/icons/lebedi.jpg',
+    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 12, 0, 0),
+    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 18, 0, 0),
+    status: EventStatus.PUBLISHED,
+    isFeatured: false,
+    ctaType: EventCtaType.BOOKING,
+    ticketUrl: null,
+  });
 
   console.log('Seed completed.');
 }

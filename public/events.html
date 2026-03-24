@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/styles.css" />
+    <title>Події — ГорПляж</title>
+  </head>
+  <body class="menu-page-body">
+    <main class="menu-page-shell">
+      <section class="menu-page-surface events-page-surface">
+        <header class="menu-page-header">
+          <a class="brand" href="/">ГорПляж</a>
+          <nav class="header-actions">
+            <a class="btn btn-secondary" href="/booking">Бронювання</a>
+          </nav>
+        </header>
+
+        <section class="events-page-hero">
+          <h1>Афіша подій</h1>
+          <p class="menu-page-description">Усі опубліковані події GorPliaj: бронюйте столик або купуйте квитки.</p>
+        </section>
+
+        <section id="eventsList" class="events-list-grid" aria-live="polite"></section>
+        <p id="eventsListEmpty" class="muted" hidden>Поки немає опублікованих подій.</p>
+      </section>
+    </main>
+    <script src="/js/events.js" defer></script>
+  </body>
+</html>
