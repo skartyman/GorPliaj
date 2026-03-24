@@ -38,6 +38,7 @@ export default function EventsPage() {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [editId, setEditId] = useState(null);
   const [savingKey, setSavingKey] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
 
   const stats = useMemo(() => {
@@ -68,6 +69,7 @@ export default function EventsPage() {
   function resetForm() {
     setForm(DEFAULT_FORM);
     setEditId(null);
+    setUploadingImage(false);
   }
 
   function startEdit(event) {
@@ -132,6 +134,32 @@ export default function EventsPage() {
     if (editId === eventRow.id) resetForm();
     setSavingKey('');
     setFeedback({ tone: 'success', message: 'Event deleted.' });
+  }
+
+  async function handlePosterUpload(file) {
+    if (!file) return;
+
+    setUploadingImage(true);
+    setFeedback({ tone: '', message: '' });
+
+    const payload = new FormData();
+    payload.append('image', file);
+    payload.append('folder', 'events');
+
+    const { response, body } = await apiRequest('/api/admin/uploads/image', {
+      method: 'POST',
+      body: payload
+    });
+
+    setUploadingImage(false);
+
+    if (!response.ok) {
+      setFeedback({ tone: 'error', message: body.message || 'Failed to upload image.' });
+      return;
+    }
+
+    setForm((current) => ({ ...current, posterImage: body.url || '' }));
+    setFeedback({ tone: 'success', message: 'Poster image uploaded.' });
   }
 
   const columns = [
@@ -200,9 +228,27 @@ export default function EventsPage() {
                 <option value="BOTH">BOTH</option>
               </select>
             </label>
-            <label>Poster image URL <input value={form.posterImage} onChange={(event) => setForm((current) => ({ ...current, posterImage: event.target.value }))} /></label>
+            <label>Poster image URL <input value={form.posterImage} onChange={(event) => setForm((current) => ({ ...current, posterImage: event.target.value }))} placeholder="https://cdn.../events/..." /></label>
+            <label>Upload poster image
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={uploadingImage}
+                onChange={(event) => {
+                  const [file] = event.target.files || [];
+                  handlePosterUpload(file);
+                  event.target.value = '';
+                }}
+              />
+            </label>
             <label>Ticket URL <input value={form.ticketUrl} onChange={(event) => setForm((current) => ({ ...current, ticketUrl: event.target.value }))} /></label>
           </div>
+          {form.posterImage ? (
+            <div className="event-poster-preview-block">
+              <p className="small muted">Poster preview</p>
+              <img src={form.posterImage} alt="Event poster preview" className="event-poster-preview" />
+            </div>
+          ) : null}
           <label>Short description <textarea rows="3" value={form.shortDescription} onChange={(event) => setForm((current) => ({ ...current, shortDescription: event.target.value }))} /></label>
           <label>Full description <textarea rows="6" value={form.fullDescription} onChange={(event) => setForm((current) => ({ ...current, fullDescription: event.target.value }))} /></label>
           <label className="checkbox-label"><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm((current) => ({ ...current, isFeatured: event.target.checked }))} /> Feature this event on homepage</label>
@@ -210,6 +256,7 @@ export default function EventsPage() {
             <button type="submit" className="btn" disabled={savingKey === 'event-form'}>{savingKey === 'event-form' ? 'Saving…' : editId ? 'Save changes' : 'Create event'}</button>
             {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel edit</button> : null}
           </div>
+          {uploadingImage ? <p className="muted">Uploading image…</p> : null}
           {feedback.message ? <p className={feedback.tone === 'error' ? 'error' : 'muted'}>{feedback.message}</p> : null}
         </form>
       </PanelCard>

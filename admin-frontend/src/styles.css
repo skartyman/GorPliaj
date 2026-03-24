@@ -166,7 +166,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   display: block;
   width: 100%;
   margin-top: 6px;
@@ -175,6 +176,24 @@ select {
   padding: 10px;
   font-size: 14px;
   background: #fff;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.event-poster-preview-block {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.event-poster-preview {
+  width: min(100%, 340px);
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
 }
 
 .btn {
