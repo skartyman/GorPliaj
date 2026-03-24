@@ -9,9 +9,9 @@
   "lang": "uk",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icons/logo1.png",
+      "sizes": "512x723",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
