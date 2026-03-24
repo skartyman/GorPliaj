@@ -121,12 +121,16 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid-summary">
-        {summaryCards.map((card) => (
-          <article key={card.label} className="metric-card">
-            <p className="muted">{card.label}</p>
-            <strong>{state.loading ? '—' : card.value}</strong>
-          </article>
-        ))}
+        <article className="metric-compact-card">
+          <div className="metric-compact-grid">
+            {summaryCards.map((card) => (
+              <div key={card.label} className="metric-compact-item">
+                <p className="muted">{card.label}</p>
+                <strong>{state.loading ? '—' : card.value}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
       </section>
 
       <section className="stack-grid">
