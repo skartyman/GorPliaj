@@ -6,6 +6,7 @@ import MapPage from './pages/MapPage';
 import MapEditorPage from './pages/MapEditorPage';
 import MenuEditorPage from './pages/MenuEditorPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import EventsPage from './pages/EventsPage';
 import ReservationDetailPage from './pages/ReservationDetailPage';
 import ReservationsPage from './pages/ReservationsPage';
 import AdminInstallPrompt from './components/AdminInstallPrompt';
@@ -180,7 +181,7 @@ export default function App() {
       <Route path="/admin/map" element={<ProtectedPage><MapPage /></ProtectedPage>} />
       <Route path="/admin/map-editor" element={<ProtectedPage><MapEditorPage /></ProtectedPage>} />
       <Route path="/admin/menu" element={<ProtectedPage><MenuEditorPage /></ProtectedPage>} />
-      <Route path="/admin/events" element={<ProtectedPage><PlaceholderPage {...placeholderPages.events} /></ProtectedPage>} />
+      <Route path="/admin/events" element={<ProtectedPage><EventsPage /></ProtectedPage>} />
       <Route path="/admin/news" element={<ProtectedPage><PlaceholderPage {...placeholderPages.news} /></ProtectedPage>} />
       <Route path="/admin/payments" element={<ProtectedPage><PlaceholderPage {...placeholderPages.payments} /></ProtectedPage>} />
       <Route path="/admin/settings" element={<ProtectedPage><PlaceholderPage {...placeholderPages.settings} /></ProtectedPage>} />

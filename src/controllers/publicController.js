@@ -1,5 +1,6 @@
 const menuService = require('../services/menuService');
 const contentService = require('../services/contentService');
+const eventService = require('../services/eventService');
 
 function getHealth(req, res) {
   res.json({ status: 'ok' });
@@ -39,8 +40,38 @@ async function setMenuItemLike(req, res) {
   }
 }
 
-function getEvents(req, res) {
-  res.json(contentService.getEvents());
+async function getEvents(req, res) {
+  try {
+    const includePast = ['1', 'true', 'yes'].includes(String(req.query.includePast || '').toLowerCase());
+    const limitValue = Number.parseInt(String(req.query.limit || ''), 10);
+    const limit = Number.isInteger(limitValue) && limitValue > 0 ? limitValue : undefined;
+
+    const events = await eventService.listPublicEvents({ includePast, limit });
+    return res.json(events);
+  } catch (error) {
+    console.error('[publicController.getEvents] Failed to load events.', error);
+    return res.status(500).json({ message: 'Unable to load events.' });
+  }
+}
+
+async function getEventBySlug(req, res) {
+  try {
+    const slug = String(req.params.slug || '').trim();
+
+    if (!slug) {
+      return res.status(400).json({ message: 'Event slug is invalid.' });
+    }
+
+    const event = await eventService.getPublicEventBySlug(slug);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found.' });
+    }
+
+    return res.json(event);
+  } catch (error) {
+    console.error('[publicController.getEventBySlug] Failed to load event.', error);
+    return res.status(500).json({ message: 'Unable to load event.' });
+  }
 }
 
 function getNews(req, res) {
@@ -52,5 +83,6 @@ module.exports = {
   getMenu,
   setMenuItemLike,
   getEvents,
+  getEventBySlug,
   getNews
 };

@@ -24,6 +24,7 @@ const reservationForm = document.getElementById('reservationForm');
 const reservationError = document.getElementById('reservationError');
 const reservationSuccess = document.getElementById('reservationSuccess');
 const dateQuickSelect = document.getElementById('dateQuickSelect');
+const eventBookingContext = document.getElementById('eventBookingContext');
 
 const reservationDateInput = reservationForm.elements.reservationDate;
 const timeFromInput = reservationForm.elements.timeFrom;
@@ -33,6 +34,7 @@ const mapStatBusy = document.getElementById('mapStatBusy');
 const mapStatHeld = document.getElementById('mapStatHeld');
 
 let currentLanguage = localStorage.getItem('language') || 'uk';
+const bookingEventSlug = new URLSearchParams(window.location.search).get('event');
 let selectedTable = null;
 let currentMapId = null;
 let currentMapData = null;
@@ -68,6 +70,7 @@ const translations = {
     languageToggleAria: 'Switch language to English',
     bookingHeroTitle: 'Карта бронювання столів',
     bookingHeroSubtitle: 'Оберіть столик на мапі, перевірте його доступність і одразу підтвердіть бронювання.',
+    bookingForEvent: 'Бронювання для події: {slug}',
     bookingHighlightMap: 'Жива мапа закладу',
     bookingHighlightBooking: 'Швидке підтвердження онлайн',
     bookingHighlightSupport: 'Узгодження деталей у коментарі',
@@ -130,6 +133,7 @@ const translations = {
     languageToggleAria: 'Перемкнути мову на українську',
     bookingHeroTitle: 'Table booking map',
     bookingHeroSubtitle: 'Choose a table on the map, check availability, and confirm the reservation right away.',
+    bookingForEvent: 'Booking for event: {slug}',
     bookingHighlightMap: 'Live table map',
     bookingHighlightBooking: 'Fast online confirmation',
     bookingHighlightSupport: 'Share details in a comment',
@@ -220,6 +224,16 @@ function translateStaticContent() {
 
   document.documentElement.lang = currentLanguage;
   document.title = dictionary.pageTitle;
+
+  if (eventBookingContext) {
+    if (bookingEventSlug) {
+      eventBookingContext.textContent = dictionary.bookingForEvent.replace('{slug}', bookingEventSlug);
+      eventBookingContext.classList.remove('hidden');
+    } else {
+      eventBookingContext.textContent = '';
+      eventBookingContext.classList.add('hidden');
+    }
+  }
 
   document.querySelectorAll('[data-i18n]').forEach((element) => {
     const key = element.dataset.i18n;

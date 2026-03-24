@@ -7,10 +7,13 @@ const menuCountChip = document.getElementById('menuCountChip');
 const menuPreviewGallery = document.getElementById('menuPreviewGallery');
 const menuPreviewFallback = document.getElementById('menuPreviewFallback');
 const homePageHeader = document.querySelector('.home-page-header');
+const homeEventsGrid = document.getElementById('homeEventsGrid');
+const homeEventsEmpty = document.getElementById('homeEventsEmpty');
 
 let deferredPrompt;
 let currentLanguage = localStorage.getItem('language') || 'uk';
 let menuCache = [];
+let homeEventsCache = [];
 
 const translations = {
   uk: {
@@ -89,7 +92,13 @@ const translations = {
     bookingFeature3: 'Для точного вибору скористайтесь мапою закладу.',
     eventsKicker: 'Live atmosphere',
     eventsTitle: 'Атмосфера, події та пропозиції',
-    eventsLead: 'На головній сторінці залишили лише корисні блоки: атмосфера, меню, бронювання, контакти та юридичні умови.',
+    eventsLead: 'Долучайтесь до подій GorPliaj: бронюйте столик або купуйте квитки онлайн.',
+    allEventsBtn: 'Усі події',
+    eventsEmpty: "Незабаром з'являться нові події.",
+    eventReserveTitle: 'Плануєте візит на подію?',
+    eventReserveLead: 'Забронюйте столик заздалегідь, щоб обрати найкращу зону біля сцени або моря.',
+    eventReserveBtn: 'Забронювати столик',
+    allEventsTextBtn: 'Переглянути афішу',
     event1Title: 'П’ятничні заходи сонця з діджеєм',
     event1Text: 'Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.',
     event2Title: 'Сімейні вихідні',
@@ -198,7 +207,13 @@ const translations = {
     bookingFeature3: 'Use the table map for precise table selection.',
     eventsKicker: 'Live atmosphere',
     eventsTitle: 'Atmosphere, events, and offers',
-    eventsLead: 'Only useful sections remain on the homepage: atmosphere, menu, booking, contacts, and legal terms.',
+    eventsLead: 'Join upcoming GorPliaj events: reserve your table or buy tickets online.',
+    allEventsBtn: 'All events',
+    eventsEmpty: 'New events will be announced soon.',
+    eventReserveTitle: 'Planning a visit for an event?',
+    eventReserveLead: 'Reserve your table in advance to choose the best area near the stage or sea.',
+    eventReserveBtn: 'Reserve a table',
+    allEventsTextBtn: 'View all posters',
     event1Title: 'Friday sunsets with DJ',
     event1Text: 'Every Friday from 19:00 — beach music evenings and signature cocktails.',
     event2Title: 'Family weekends',
@@ -295,6 +310,69 @@ function renderMenuPreview() {
   menuPreviewFallback.hidden = true;
 }
 
+
+function formatEventDateRange(startAt, endAt) {
+  const start = new Date(startAt);
+  const end = endAt ? new Date(endAt) : null;
+  if (Number.isNaN(start.getTime())) return '—';
+
+  const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+  const startText = start.toLocaleString(currentLanguage === 'uk' ? 'uk-UA' : 'en-US', options);
+  if (!end || Number.isNaN(end.getTime())) return startText;
+  const endText = end.toLocaleString(currentLanguage === 'uk' ? 'uk-UA' : 'en-US', options);
+  return `${startText} — ${endText}`;
+}
+
+function eventCardCtas(event) {
+  const ctas = [];
+  if (event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') {
+    ctas.push(`<a class="btn btn-primary" href="/booking?event=${encodeURIComponent(event.slug)}">${currentLanguage === 'uk' ? 'Забронювати столик' : 'Reserve table'}</a>`);
+  }
+
+  if ((event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl) {
+    ctas.push(`<a class="btn btn-secondary" href="${event.ticketUrl}" target="_blank" rel="noopener noreferrer">${currentLanguage === 'uk' ? 'Купити квиток' : 'Buy ticket'}</a>`);
+  }
+
+  return ctas.join('');
+}
+
+function renderHomeEvents(events = homeEventsCache) {
+  if (!homeEventsGrid || !homeEventsEmpty) return;
+
+  homeEventsCache = Array.isArray(events) ? events : [];
+
+  if (!homeEventsCache.length) {
+    homeEventsGrid.innerHTML = '';
+    homeEventsEmpty.hidden = false;
+    return;
+  }
+
+  homeEventsEmpty.hidden = true;
+  homeEventsGrid.innerHTML = homeEventsCache.map((event) => `
+    <article class="event-card home-event-card">
+      <a class="event-card-media" href="/events/${event.slug}"><img src="${event.posterImage || '/icons/lebedi.jpg'}" alt="${event.title}" loading="lazy"/></a>
+      <div class="event-card-body">
+        <p class="event-date">${formatEventDateRange(event.startAt, event.endAt)}</p>
+        <h3><a href="/events/${event.slug}">${event.title}</a></h3>
+        <p class="menu-page-description">${event.shortDescription || ''}</p>
+        <div class="event-card-actions">${eventCardCtas(event)}</div>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function fetchHomeEvents() {
+  if (!homeEventsGrid) return;
+  const response = await fetch('/api/events?limit=4');
+  const events = await response.json();
+  if (!response.ok || !Array.isArray(events)) {
+    renderHomeEvents([]);
+    return;
+  }
+
+renderHomeEvents(events.slice(0, 4));
+}
+
 function updateCounters() {
   const dictionary = translations[currentLanguage];
   const menuCount = menuCache.reduce((total, category) => total + (Array.isArray(category.items) ? category.items.length : 0), 0);
@@ -327,8 +405,10 @@ function translatePage() {
 
   updateCounters();
   renderMenuPreview();
+  renderHomeEvents();
   updateAnchorScrollOffset();
 }
+
 
 function updateAnchorScrollOffset() {
   if (!homePageHeader) return;
@@ -403,4 +483,8 @@ translatePage();
 
 fetchMenu().catch(() => {
   menuCountChip.textContent = translations[currentLanguage].loadingError;
+});
+
+fetchHomeEvents().catch(() => {
+  renderHomeEvents([]);
 });

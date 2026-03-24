@@ -48,6 +48,16 @@ app.get('/menu', (req, res) => {
   res.sendFile(path.join(publicDir, 'menu.html'));
 });
 
+app.get('/events', (req, res) => {
+  setNoCacheHeaders(res);
+  res.sendFile(path.join(publicDir, 'events.html'));
+});
+
+app.get('/events/:slug', (req, res) => {
+  setNoCacheHeaders(res);
+  res.sendFile(path.join(publicDir, 'event.html'));
+});
+
 app.get('/admin', (req, res) => {
   res.redirect('/admin/dashboard');
 });

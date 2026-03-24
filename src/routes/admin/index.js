@@ -23,6 +23,13 @@ const {
   deleteMenuItem
 } = require('../../controllers/adminMenuController');
 const { requireAdminAuth } = require('../../middleware/adminAuth');
+const {
+  getAdminEvents,
+  getAdminEventById,
+  createAdminEvent,
+  updateAdminEvent,
+  deleteAdminEvent
+} = require('../../controllers/adminEventController');
 
 const router = express.Router();
 
@@ -49,5 +56,11 @@ router.get('/menu/insights', requireAdminAuth, getMenuInsights);
 router.post('/menu/items', requireAdminAuth, createMenuItem);
 router.patch('/menu/items/:id', requireAdminAuth, updateMenuItem);
 router.delete('/menu/items/:id', requireAdminAuth, deleteMenuItem);
+
+router.get('/events', requireAdminAuth, getAdminEvents);
+router.get('/events/:id', requireAdminAuth, getAdminEventById);
+router.post('/events', requireAdminAuth, createAdminEvent);
+router.patch('/events/:id', requireAdminAuth, updateAdminEvent);
+router.delete('/events/:id', requireAdminAuth, deleteAdminEvent);
 
 module.exports = router;
