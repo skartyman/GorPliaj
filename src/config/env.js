@@ -26,6 +26,24 @@ function getRequiredEnv(name) {
 const NODE_ENV = getOptionalEnv('NODE_ENV', 'development');
 const isLocalDevelopment = NODE_ENV === 'development';
 
+const R2_CONFIG = {
+  accountId: getOptionalEnv('R2_ACCOUNT_ID', ''),
+  accessKeyId: getOptionalEnv('R2_ACCESS_KEY_ID', ''),
+  secretAccessKey: getOptionalEnv('R2_SECRET_ACCESS_KEY', ''),
+  bucketName: getOptionalEnv('R2_BUCKET_NAME', ''),
+  publicBaseUrl: getOptionalEnv('R2_PUBLIC_BASE_URL', ''),
+  endpoint: getOptionalEnv('R2_ENDPOINT', '')
+};
+
+const isR2Configured = Object.values(R2_CONFIG).every((value) => Boolean(value));
+
+if (NODE_ENV === 'production' && !isR2Configured) {
+  throw new Error(
+    'R2 image uploads are enabled in production, but one or more required env vars are missing: '
+    + 'R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_BASE_URL, R2_ENDPOINT.'
+  );
+}
+
 module.exports = {
   NODE_ENV,
   PORT: Number(getOptionalEnv('PORT', 8080)),
@@ -33,6 +51,8 @@ module.exports = {
   ADMIN_AUTH_SECRET: getOptionalEnv('ADMIN_AUTH_SECRET', ''),
   APP_BASE_URL: getOptionalEnv('APP_BASE_URL', 'http://localhost:8080'),
   VENUE_CLOSING_TIME: getOptionalEnv('VENUE_CLOSING_TIME', '23:59'),
+  R2_CONFIG,
+  isR2Configured,
   isLocalDevelopment,
   getRequiredEnv
 };

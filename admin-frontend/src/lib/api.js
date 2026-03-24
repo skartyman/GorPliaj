@@ -1,10 +1,14 @@
 export async function apiRequest(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
+
   const response = await fetch(path, {
     credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    },
+    headers: isFormData
+      ? { ...(options.headers || {}) }
+      : {
+          'Content-Type': 'application/json',
+          ...(options.headers || {})
+        },
     ...options
   });
 

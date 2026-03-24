@@ -30,6 +30,11 @@ const {
   updateAdminEvent,
   deleteAdminEvent
 } = require('../../controllers/adminEventController');
+const {
+  upload,
+  handleMulterError,
+  uploadAdminImage
+} = require('../../controllers/adminUploadController');
 
 const router = express.Router();
 
@@ -62,5 +67,7 @@ router.get('/events/:id', requireAdminAuth, getAdminEventById);
 router.post('/events', requireAdminAuth, createAdminEvent);
 router.patch('/events/:id', requireAdminAuth, updateAdminEvent);
 router.delete('/events/:id', requireAdminAuth, deleteAdminEvent);
+
+router.post('/uploads/image', requireAdminAuth, upload.single('image'), handleMulterError, uploadAdminImage);
 
 module.exports = router;
