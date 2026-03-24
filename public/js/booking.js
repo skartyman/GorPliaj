@@ -68,7 +68,7 @@ const translations = {
     languageToggleAria: 'Switch language to English',
     bookingHeroTitle: 'Карта бронювання столів',
     bookingHeroSubtitle: 'Оберіть столик на мапі, перевірте його доступність і одразу підтвердіть бронювання.',
-    bookingHighlightMap: 'Жива карта столів',
+    bookingHighlightMap: 'Жива мапа закладу',
     bookingHighlightBooking: 'Швидке підтвердження онлайн',
     bookingHighlightSupport: 'Узгодження деталей у коментарі',
     backHome: '← На головну',
