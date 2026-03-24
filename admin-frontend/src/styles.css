@@ -48,6 +48,9 @@ p {
   top: 0;
   height: 100vh;
   border-right: 1px solid rgba(148, 163, 184, 0.2);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .sidebar-header {
@@ -697,6 +700,7 @@ select {
   padding: 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 
@@ -1423,6 +1427,17 @@ select {
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.4);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@media (max-width: 900px), (hover: none) and (pointer: coarse), (display-mode: standalone) {
+  .hero-stat-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.22);
+  }
 }
 
 .admin-install-prompt__text {

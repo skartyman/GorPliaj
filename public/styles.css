@@ -1,6 +1,8 @@
 :root {
   color-scheme: light;
   --anchor-scroll-offset: 112px;
+  --glass-blur: 18px;
+  --glass-blur-strong: 22px;
   --bg: #f8fafc;
   --bg-soft: #eef6ff;
   --surface: rgba(255, 255, 255, 0.92);
@@ -104,7 +106,8 @@ img {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 .brand {
@@ -253,7 +256,8 @@ img {
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 .hero-copy,
@@ -1397,7 +1401,25 @@ select:focus {
   display: grid;
   gap: 14px;
   padding: 16px 18px;
-  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+  backdrop-filter: blur(var(--glass-blur-strong));
+}
+
+.topbar,
+.home-page-header,
+.menu-cart-fab,
+.menu-cart-panel {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.hero,
+.home-info-card.scenic,
+.home-gallery-card,
+.menu-cart-drawer {
+  isolation: isolate;
+  contain: paint;
 }
 
 .home-page-header-bar {
@@ -1904,6 +1926,37 @@ select:focus {
     max-width: 100%;
     min-height: 46px;
     font-size: 0.98rem;
+  }
+}
+
+@media (max-width: 900px), (hover: none) and (pointer: coarse), (display-mode: standalone) {
+  .topbar,
+  .hero-copy,
+  .hero-panel-card,
+  .surface,
+  .metric-card,
+  .news-item,
+  .menu-item,
+  .reservation-item,
+  .contact-card,
+  .aside-card,
+  .home-page-header,
+  .menu-cart-fab {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .topbar,
+  .hero-copy,
+  .hero-panel-card,
+  .surface,
+  .metric-card,
+  .news-item,
+  .menu-item,
+  .reservation-item,
+  .contact-card,
+  .aside-card {
+    background: rgba(255, 255, 255, 0.98);
   }
 }
 
