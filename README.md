@@ -39,6 +39,12 @@ ADMIN_SEED_PASSWORD=
 APP_BASE_URL=
 NODE_ENV=development
 PORT=8080
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_BASE_URL=
+R2_ENDPOINT=
 ```
 
 Нотатки:
@@ -46,6 +52,7 @@ PORT=8080
 - `ADMIN_SEED_PASSWORD` обов'язковий для `npm run prisma:seed`.
 - `DATABASE_URL` використовується Prisma і сумісний з Fly.io secrets (`fly secrets set ...`).
 - `APP_BASE_URL` можна встановити як публічний URL застосунку (наприклад, Fly.io домен).
+- R2-змінні потрібні для admin image upload (події/новини/menu assets), а в продакшені є обов'язковими.
 
 ### Prisma: міграції та seed
 
