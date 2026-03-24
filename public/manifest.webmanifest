@@ -9,7 +9,7 @@
   "lang": "uk",
   "icons": [
     {
-      "src": "/icons/icon.svg",
+      "src": "/icons/icon.png",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
