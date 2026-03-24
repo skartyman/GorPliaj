@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'admin-v1';
+const CACHE_VERSION = 'admin-v2';
 const STATIC_CACHE = `gorpliaj-admin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `gorpliaj-admin-pages-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   '/admin/dashboard',
-  '/admin/manifest.webmanifest'
+  '/admin/manifest.webmanifest?v=2'
 ];
 
 function isNavigationRequest(request) {
