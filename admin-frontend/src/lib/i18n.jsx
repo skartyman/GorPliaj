@@ -268,6 +268,7 @@ const translations = {
         description: 'Описание',
         price: 'Цена',
         imageUrl: 'Image URL',
+        uploadImage: 'Загрузить фото',
         sortOrder: 'Порядок',
         visibleOnSite: 'Показывать на сайте',
         availableNow: 'Доступно сейчас'
@@ -298,6 +299,7 @@ const translations = {
         load: 'Не удалось загрузить редактор меню.',
         saveCategory: 'Не удалось сохранить категорию.',
         saveItem: 'Не удалось сохранить позицию.',
+        uploadItemImage: 'Не удалось загрузить фото позиции.',
         deleteCategory: 'Не удалось удалить категорию.',
         deleteItem: 'Не удалось удалить позицию.'
       },
@@ -310,7 +312,8 @@ const translations = {
         itemUpdated: 'Позиция обновлена.',
         itemDeleted: 'Позиция удалена.',
         itemVisibilityUpdated: 'Видимость позиции обновлена.',
-        itemAvailabilityUpdated: 'Доступность позиции обновлена.'
+        itemAvailabilityUpdated: 'Доступность позиции обновлена.',
+        itemImageUploaded: 'Фото позиции загружено.'
       },
       confirmDeleteCategory: 'Удалить категорию «{name}» вместе со всеми позициями?',
       confirmDeleteItem: 'Удалить позицию «{name}»?',
@@ -760,6 +763,7 @@ const translations = {
         description: 'Description',
         price: 'Price',
         imageUrl: 'Image URL',
+        uploadImage: 'Upload image',
         sortOrder: 'Sort order',
         visibleOnSite: 'Visible on site',
         availableNow: 'Available now'
@@ -790,6 +794,7 @@ const translations = {
         load: 'Unable to load the menu editor.',
         saveCategory: 'Unable to save the category.',
         saveItem: 'Unable to save the item.',
+        uploadItemImage: 'Unable to upload the item image.',
         deleteCategory: 'Unable to delete the category.',
         deleteItem: 'Unable to delete the item.'
       },
@@ -802,7 +807,8 @@ const translations = {
         itemUpdated: 'Item updated.',
         itemDeleted: 'Item deleted.',
         itemVisibilityUpdated: 'Item visibility updated.',
-        itemAvailabilityUpdated: 'Item availability updated.'
+        itemAvailabilityUpdated: 'Item availability updated.',
+        itemImageUploaded: 'Item image uploaded.'
       },
       confirmDeleteCategory: 'Delete the category “{name}” together with all its items?',
       confirmDeleteItem: 'Delete the item “{name}”?',
