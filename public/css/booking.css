@@ -62,7 +62,7 @@ img {
   overflow: visible;
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  transform: translateY(-10px);
+  transform: translateY(-9px);
 }
 
 .brand-with-logo .brand-mark-image img {
