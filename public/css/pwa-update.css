@@ -5,12 +5,16 @@
   z-index: 1100;
   width: min(calc(100vw - 24px), 420px);
   transform: translateX(-50%);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   padding: 14px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 18px;
   background: rgba(15, 23, 42, 0.94);
   color: #f8fafc;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }
 
@@ -65,5 +69,13 @@
   .pwa-update-toast__actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+}
+
+@media (hover: none) and (pointer: coarse), (display-mode: standalone) {
+  .pwa-update-toast {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(15, 23, 42, 0.98);
   }
 }
