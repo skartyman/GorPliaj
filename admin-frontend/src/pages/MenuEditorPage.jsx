@@ -49,6 +49,7 @@ export default function MenuEditorPage() {
   const [categoryEditId, setCategoryEditId] = useState(null);
   const [itemEditId, setItemEditId] = useState(null);
   const [savingKey, setSavingKey] = useState('');
+  const [uploadingItemImage, setUploadingItemImage] = useState(false);
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
 
   const activeCategoryCount = useMemo(
@@ -199,6 +200,34 @@ export default function MenuEditorPage() {
       tone: 'success',
       message: itemEditId ? t('menuAdmin.feedback.itemUpdated') : t('menuAdmin.feedback.itemCreated')
     });
+  }
+
+  async function handleItemImageUpload(file) {
+    if (!file) {
+      return;
+    }
+
+    setUploadingItemImage(true);
+    setFeedback({ tone: '', message: '' });
+
+    const payload = new FormData();
+    payload.append('image', file);
+    payload.append('folder', 'menu');
+
+    const { response, body } = await apiRequest('/api/admin/uploads/image', {
+      method: 'POST',
+      body: payload
+    });
+
+    setUploadingItemImage(false);
+
+    if (!response.ok) {
+      setFeedback({ tone: 'error', message: body.message || t('menuAdmin.errors.uploadItemImage') });
+      return;
+    }
+
+    setItemForm((current) => ({ ...current, imageUrl: body.url || '' }));
+    setFeedback({ tone: 'success', message: t('menuAdmin.feedback.itemImageUploaded') });
   }
 
   async function removeCategory(category) {
@@ -439,6 +468,19 @@ export default function MenuEditorPage() {
                   placeholder="https://..."
                 />
               </label>
+              <label className="admin-form-span-2">
+                {t('menuAdmin.fields.uploadImage')}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={uploadingItemImage}
+                  onChange={(event) => {
+                    const [file] = event.target.files || [];
+                    handleItemImageUpload(file);
+                    event.target.value = '';
+                  }}
+                />
+              </label>
               <div className="menu-admin-inline-toggles admin-form-span-2">
                 <label className="checkbox-row compact-row">
                   <input
@@ -458,7 +500,7 @@ export default function MenuEditorPage() {
                 </label>
               </div>
               <div className="actions wrap-mobile admin-form-span-2">
-                <button type="submit" className="btn" disabled={savingKey === 'item-form' || !menuState.categories.length}>
+                <button type="submit" className="btn" disabled={savingKey === 'item-form' || uploadingItemImage || !menuState.categories.length}>
                   {savingKey === 'item-form' ? t('menuAdmin.saving') : itemEditId ? t('menuAdmin.actions.saveItem') : t('menuAdmin.actions.addItem')}
                 </button>
               </div>
