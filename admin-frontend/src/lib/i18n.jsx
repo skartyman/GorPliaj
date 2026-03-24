@@ -17,6 +17,12 @@ const translations = {
       soon: 'скоро',
       unknownStatus: 'НЕИЗВЕСТНО'
     },
+    install: {
+      title: 'Установить админку',
+      description: 'Добавьте GorPliaj Admin как отдельное приложение.',
+      cta: 'Установить',
+      installing: 'Открываем...'
+    },
     nav: {
       dashboard: 'Дашборд',
       reservations: 'Брони',
@@ -502,6 +508,12 @@ const translations = {
       noData: '—',
       soon: 'soon',
       unknownStatus: 'UNKNOWN'
+    },
+    install: {
+      title: 'Install admin app',
+      description: 'Add GorPliaj Admin as a separate application.',
+      cta: 'Install',
+      installing: 'Opening...'
     },
     nav: {
       dashboard: 'Dashboard',
