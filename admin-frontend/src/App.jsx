@@ -8,6 +8,7 @@ import MenuEditorPage from './pages/MenuEditorPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ReservationDetailPage from './pages/ReservationDetailPage';
 import ReservationsPage from './pages/ReservationsPage';
+import AdminInstallPrompt from './components/AdminInstallPrompt';
 import { useAdminI18n } from './lib/i18n';
 
 function ProtectedPage({ children }) {
@@ -169,7 +170,9 @@ export default function App() {
   const placeholderPages = buildPlaceholderPages(t);
 
   return (
-    <Routes>
+    <>
+      <AdminInstallPrompt />
+      <Routes>
       <Route path="/admin/login" element={<LoginPage />} />
       <Route path="/admin/dashboard" element={<ProtectedPage><DashboardPage /></ProtectedPage>} />
       <Route path="/admin/reservations" element={<ProtectedPage><ReservationsPage /></ProtectedPage>} />
@@ -182,6 +185,7 @@ export default function App() {
       <Route path="/admin/payments" element={<ProtectedPage><PlaceholderPage {...placeholderPages.payments} /></ProtectedPage>} />
       <Route path="/admin/settings" element={<ProtectedPage><PlaceholderPage {...placeholderPages.settings} /></ProtectedPage>} />
       <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
