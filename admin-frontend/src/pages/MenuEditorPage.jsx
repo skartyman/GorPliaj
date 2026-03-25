@@ -41,22 +41,18 @@ function MenuStatusToggle({ checked, onChange, activeLabel, inactiveLabel }) {
   );
 }
 
-function CollapsibleSection({ title, subtitle, isOpen, onToggle, children, defaultOpen = false }) {
+function CollapsibleSection({ title, subtitle, isOpen, onToggle, children }) {
   return (
-    <details
-      className="menu-admin-collapsible"
-      open={typeof isOpen === 'boolean' ? isOpen : defaultOpen}
-      onToggle={onToggle}
-    >
-      <summary className="menu-admin-collapsible-summary">
+    <section className="menu-admin-collapsible">
+      <button type="button" className="menu-admin-collapsible-summary" onClick={onToggle} aria-expanded={isOpen}>
         <div>
           <strong>{title}</strong>
           {subtitle ? <p className="muted small">{subtitle}</p> : null}
         </div>
-        <span className="menu-admin-collapsible-hint">Нажмите, чтобы развернуть</span>
-      </summary>
-      <div className="menu-admin-collapsible-body">{children}</div>
-    </details>
+        <span className="menu-admin-collapsible-hint">{isOpen ? 'Свернуть' : 'Развернуть'}</span>
+      </button>
+      {isOpen ? <div className="menu-admin-collapsible-body">{children}</div> : null}
+    </section>
   );
 }
 
@@ -428,8 +424,8 @@ export default function MenuEditorPage() {
               title={categoryEditId ? t('menuAdmin.editCategoryTitle') : t('menuAdmin.newCategoryTitle')}
               subtitle={t('menuAdmin.categoryFormSubtitle')}
               isOpen={openPanels.newCategory}
-              onToggle={(event) => {
-                setOpenPanels((current) => ({ ...current, newCategory: event.currentTarget.open }));
+              onToggle={() => {
+                setOpenPanels((current) => ({ ...current, newCategory: !current.newCategory }));
               }}
             >
               <form className="admin-form-grid" onSubmit={submitCategory}>
@@ -486,8 +482,8 @@ export default function MenuEditorPage() {
               title={itemEditId ? t('menuAdmin.editItemTitle') : t('menuAdmin.newItemTitle')}
               subtitle={t('menuAdmin.itemFormSubtitle')}
               isOpen={openPanels.newItem}
-              onToggle={(event) => {
-                setOpenPanels((current) => ({ ...current, newItem: event.currentTarget.open }));
+              onToggle={() => {
+                setOpenPanels((current) => ({ ...current, newItem: !current.newItem }));
               }}
             >
               <form className="admin-form-grid" onSubmit={submitItem}>
@@ -625,8 +621,8 @@ export default function MenuEditorPage() {
               title={t('menuAdmin.categoriesListTitle')}
               subtitle={t('menuAdmin.categoriesListSubtitle')}
               isOpen={openPanels.categoriesList}
-              onToggle={(event) => {
-                setOpenPanels((current) => ({ ...current, categoriesList: event.currentTarget.open }));
+              onToggle={() => {
+                setOpenPanels((current) => ({ ...current, categoriesList: !current.categoriesList }));
               }}
             >
               {!menuState.categories.length ? <p className="muted">{t('menuAdmin.emptyCategories')}</p> : null}
@@ -670,8 +666,8 @@ export default function MenuEditorPage() {
               title={t('menuAdmin.itemsListTitle')}
               subtitle={t('menuAdmin.itemsListSubtitle')}
               isOpen={openPanels.itemsList}
-              onToggle={(event) => {
-                setOpenPanels((current) => ({ ...current, itemsList: event.currentTarget.open }));
+              onToggle={() => {
+                setOpenPanels((current) => ({ ...current, itemsList: !current.itemsList }));
               }}
             >
               {!itemsByCategory.some((category) => category.items.length) ? <p className="muted">{t('menuAdmin.emptyItems')}</p> : null}
@@ -682,8 +678,8 @@ export default function MenuEditorPage() {
                     title={category.name}
                     subtitle={`${category.items.length} ${t('menuAdmin.itemsCountSuffix')}`}
                     isOpen={openItemCategories[category.id] ?? false}
-                    onToggle={(event) => {
-                      setOpenItemCategories((current) => ({ ...current, [category.id]: event.currentTarget.open }));
+                    onToggle={() => {
+                      setOpenItemCategories((current) => ({ ...current, [category.id]: !(current[category.id] ?? false) }));
                     }}
                   >
                     {!category.items.length ? <p className="muted small">{t('menuAdmin.emptyCategoryItems')}</p> : null}

@@ -1439,8 +1439,11 @@ textarea {
 }
 
 .menu-admin-collapsible-summary {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
-  list-style: none;
   display: flex;
   gap: 10px;
   align-items: flex-start;
@@ -1448,8 +1451,10 @@ textarea {
   padding: 12px;
 }
 
-.menu-admin-collapsible-summary::-webkit-details-marker {
-  display: none;
+.menu-admin-collapsible-summary:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+  border-radius: 12px;
 }
 
 .menu-admin-collapsible-hint {
