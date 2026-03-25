@@ -39,6 +39,7 @@ export default function EventsPage() {
   const [editId, setEditId] = useState(null);
   const [savingKey, setSavingKey] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [posterUploadState, setPosterUploadState] = useState({ status: 'idle', details: '' });
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
 
   const stats = useMemo(() => {
@@ -139,8 +140,21 @@ export default function EventsPage() {
   async function handlePosterUpload(file) {
     if (!file) return;
 
+    if (!file.type || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setPosterUploadState({ status: 'error', details: 'Only JPG, PNG, and WEBP files are supported.' });
+      setFeedback({ tone: 'error', message: 'Unsupported image format.' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPosterUploadState({ status: 'error', details: 'File exceeds the 5MB limit.' });
+      setFeedback({ tone: 'error', message: 'File is too large (max 5MB).' });
+      return;
+    }
+
     setUploadingImage(true);
     setFeedback({ tone: '', message: '' });
+    setPosterUploadState({ status: 'uploading', details: `Uploading ${file.name} (${Math.round(file.size / 1024)} KB)…` });
 
     const payload = new FormData();
     payload.append('image', file);
@@ -154,11 +168,22 @@ export default function EventsPage() {
     setUploadingImage(false);
 
     if (!response.ok) {
+      setPosterUploadState({
+        status: 'error',
+        details: `Upload failed (${response.status || 'network'}): ${body.message || 'unknown error'}`
+      });
       setFeedback({ tone: 'error', message: body.message || 'Failed to upload image.' });
       return;
     }
 
-    setForm((current) => ({ ...current, posterImage: body.url || '' }));
+    if (!body.url) {
+      setPosterUploadState({ status: 'error', details: 'Server response did not include uploaded URL.' });
+      setFeedback({ tone: 'error', message: 'Upload finished, but no image URL was returned.' });
+      return;
+    }
+
+    setForm((current) => ({ ...current, posterImage: body.url }));
+    setPosterUploadState({ status: 'success', details: `Uploaded successfully: ${body.url}` });
     setFeedback({ tone: 'success', message: 'Poster image uploaded.' });
   }
 
@@ -241,6 +266,14 @@ export default function EventsPage() {
                 }}
               />
             </label>
+            <div className={`upload-status-card is-${posterUploadState.status}`}>
+              <strong>R2 upload status</strong>
+              <p>
+                {posterUploadState.status === 'idle'
+                  ? 'Select an image to upload poster into cloud storage.'
+                  : posterUploadState.details}
+              </p>
+            </div>
             <label>Ticket URL <input value={form.ticketUrl} onChange={(event) => setForm((current) => ({ ...current, ticketUrl: event.target.value }))} /></label>
           </div>
           {form.posterImage ? (

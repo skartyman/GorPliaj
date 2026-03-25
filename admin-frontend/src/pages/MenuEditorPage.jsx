@@ -50,6 +50,7 @@ export default function MenuEditorPage() {
   const [itemEditId, setItemEditId] = useState(null);
   const [savingKey, setSavingKey] = useState('');
   const [uploadingItemImage, setUploadingItemImage] = useState(false);
+  const [itemUploadState, setItemUploadState] = useState({ status: 'idle', details: '' });
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
 
   const activeCategoryCount = useMemo(
@@ -207,8 +208,21 @@ export default function MenuEditorPage() {
       return;
     }
 
+    if (!file.type || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setItemUploadState({ status: 'error', details: 'Поддерживаются только JPG, PNG и WEBP.' });
+      setFeedback({ tone: 'error', message: 'Неподдерживаемый формат изображения.' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setItemUploadState({ status: 'error', details: 'Размер файла превышает лимит 5MB.' });
+      setFeedback({ tone: 'error', message: 'Файл слишком большой. Максимум 5MB.' });
+      return;
+    }
+
     setUploadingItemImage(true);
     setFeedback({ tone: '', message: '' });
+    setItemUploadState({ status: 'uploading', details: `Загружается ${file.name} (${Math.round(file.size / 1024)} KB)…` });
 
     const payload = new FormData();
     payload.append('image', file);
@@ -222,11 +236,22 @@ export default function MenuEditorPage() {
     setUploadingItemImage(false);
 
     if (!response.ok) {
+      setItemUploadState({
+        status: 'error',
+        details: `Ошибка загрузки (${response.status || 'network'}): ${body.message || 'неизвестная ошибка'}`
+      });
       setFeedback({ tone: 'error', message: body.message || t('menuAdmin.errors.uploadItemImage') });
       return;
     }
 
-    setItemForm((current) => ({ ...current, imageUrl: body.url || '' }));
+    if (!body.url) {
+      setItemUploadState({ status: 'error', details: 'Сервер не вернул URL изображения.' });
+      setFeedback({ tone: 'error', message: 'Загрузка завершилась без URL изображения.' });
+      return;
+    }
+
+    setItemForm((current) => ({ ...current, imageUrl: body.url }));
+    setItemUploadState({ status: 'success', details: `Файл успешно загружен в R2: ${body.url}` });
     setFeedback({ tone: 'success', message: t('menuAdmin.feedback.itemImageUploaded') });
   }
 
@@ -481,6 +506,20 @@ export default function MenuEditorPage() {
                   }}
                 />
               </label>
+              <div className={`upload-status-card admin-form-span-2 is-${itemUploadState.status}`}>
+                <strong>Загрузка фото в R2</strong>
+                <p>
+                  {itemUploadState.status === 'idle'
+                    ? 'Выберите фото, чтобы загрузить его в облачное хранилище.'
+                    : itemUploadState.details}
+                </p>
+              </div>
+              {itemForm.imageUrl ? (
+                <div className="event-poster-preview-block admin-form-span-2">
+                  <p className="small muted">Предпросмотр фото блюда</p>
+                  <img src={itemForm.imageUrl} alt="Предпросмотр фото блюда" className="event-poster-preview" />
+                </div>
+              ) : null}
               <div className="menu-admin-inline-toggles admin-form-span-2">
                 <label className="checkbox-row compact-row">
                   <input
