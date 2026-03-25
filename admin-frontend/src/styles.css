@@ -234,6 +234,40 @@ textarea {
   object-fit: cover;
 }
 
+.upload-status-card {
+  margin: 2px 0 12px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.upload-status-card strong {
+  font-size: 13px;
+}
+
+.upload-status-card p {
+  font-size: 13px;
+  color: #334155;
+}
+
+.upload-status-card.is-uploading {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.upload-status-card.is-success {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.upload-status-card.is-error {
+  border-color: #fda4af;
+  background: #fff1f2;
+}
+
 .btn {
   border: 0;
   border-radius: 10px;

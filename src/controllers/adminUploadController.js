@@ -29,6 +29,10 @@ function handleMulterError(error, req, res, next) {
       return res.status(400).json({ message: 'Image exceeds size limit of 5MB.' });
     }
 
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ message: 'Only JPG, PNG, and WEBP images are allowed.' });
+    }
+
     return res.status(400).json({ message: 'Invalid image upload payload.' });
   }
 
@@ -60,7 +64,10 @@ async function uploadAdminImage(req, res) {
     });
   } catch (error) {
     console.error('[adminUploadController.uploadAdminImage] Failed to upload image.', error);
-    return res.status(500).json({ message: 'Unable to upload image.' });
+    const details = [error?.name, error?.code, error?.message].filter(Boolean).join(': ');
+    return res.status(500).json({
+      message: details ? `Unable to upload image (${details}).` : 'Unable to upload image.'
+    });
   }
 }
 

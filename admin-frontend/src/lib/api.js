@@ -1,19 +1,31 @@
 export async function apiRequest(path, options = {}) {
   const isFormData = options.body instanceof FormData;
+  try {
+    const response = await fetch(path, {
+      credentials: 'same-origin',
+      headers: isFormData
+        ? { ...(options.headers || {}) }
+        : {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+          },
+      ...options
+    });
 
-  const response = await fetch(path, {
-    credentials: 'same-origin',
-    headers: isFormData
-      ? { ...(options.headers || {}) }
-      : {
-          'Content-Type': 'application/json',
-          ...(options.headers || {})
-        },
-    ...options
-  });
-
-  const body = await response.json().catch(() => ({}));
-  return { response, body };
+    const body = await response.json().catch(() => ({}));
+    return { response, body };
+  } catch (error) {
+    return {
+      response: {
+        ok: false,
+        status: 0,
+        statusText: 'NETWORK_ERROR'
+      },
+      body: {
+        message: error?.message || 'Network request failed.'
+      }
+    };
+  }
 }
 
 export function formatDate(value, locale = 'ru-RU') {
