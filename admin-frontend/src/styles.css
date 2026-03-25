@@ -146,8 +146,15 @@ p {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.page-container-head > :first-child,
+.card-head > :first-child {
+  min-width: 0;
+  flex: 1 1 260px;
 }
 
 .page-container-head h2,
