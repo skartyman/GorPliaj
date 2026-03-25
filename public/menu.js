@@ -218,8 +218,9 @@ function renderCatalog(groupedMenu) {
       ([category, items]) => `
         <section class="menu-category-block" id="category-${slugify(category)}">
           <div class="section-head section-head-compact">
-            <h2>${escapeHtml(category)}</h2>
-            <span class="section-chip">${items.length} ${dictionary.categoryCount}</span>
+            <div class="menu-category-title-box">
+              <h2>${escapeHtml(category)}</h2>
+            </div>
           </div>
           <div class="menu-card-grid">
             ${items

@@ -1030,6 +1030,20 @@ select:focus {
   margin: 0;
 }
 
+.menu-category-title-box {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  background: rgba(37, 99, 235, 0.06);
+  max-width: fit-content;
+}
+
+.section-head-compact {
+  justify-content: flex-start;
+}
+
 .menu-category-nav {
   display: flex;
   gap: 10px;
