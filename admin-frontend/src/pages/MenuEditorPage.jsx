@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import PanelCard from '../components/PanelCard';
@@ -41,6 +41,25 @@ function MenuStatusToggle({ checked, onChange, activeLabel, inactiveLabel }) {
   );
 }
 
+function CollapsibleSection({ title, subtitle, isOpen, onToggle, children, defaultOpen = false }) {
+  return (
+    <details
+      className="menu-admin-collapsible"
+      open={typeof isOpen === 'boolean' ? isOpen : defaultOpen}
+      onToggle={onToggle}
+    >
+      <summary className="menu-admin-collapsible-summary">
+        <div>
+          <strong>{title}</strong>
+          {subtitle ? <p className="muted small">{subtitle}</p> : null}
+        </div>
+        <span className="menu-admin-collapsible-hint">Нажмите, чтобы развернуть</span>
+      </summary>
+      <div className="menu-admin-collapsible-body">{children}</div>
+    </details>
+  );
+}
+
 export default function MenuEditorPage() {
   const { t } = useAdminI18n();
   const [menuState, setMenuState] = useState({ loading: true, error: '', categories: [], items: [] });
@@ -52,6 +71,15 @@ export default function MenuEditorPage() {
   const [uploadingItemImage, setUploadingItemImage] = useState(false);
   const [itemUploadState, setItemUploadState] = useState({ status: 'idle', details: '' });
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
+  const categoryEditorRef = useRef(null);
+  const itemEditorRef = useRef(null);
+  const [openPanels, setOpenPanels] = useState({
+    newCategory: true,
+    newItem: true,
+    categoriesList: true,
+    itemsList: true
+  });
+  const [openItemCategories, setOpenItemCategories] = useState({});
 
   const activeCategoryCount = useMemo(
     () => menuState.categories.filter((category) => category.isActive).length,
@@ -121,6 +149,10 @@ export default function MenuEditorPage() {
       sortOrder: String(category.sortOrder ?? 0),
       isActive: Boolean(category.isActive)
     });
+    setOpenPanels((current) => ({ ...current, newCategory: true }));
+    setTimeout(() => {
+      categoryEditorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 20);
   }
 
   function startItemEdit(item) {
@@ -135,6 +167,11 @@ export default function MenuEditorPage() {
       isActive: Boolean(item.isActive),
       isAvailable: Boolean(item.isAvailable)
     });
+    setOpenPanels((current) => ({ ...current, newItem: true, itemsList: true }));
+    setOpenItemCategories((current) => ({ ...current, [item.categoryId]: true }));
+    setTimeout(() => {
+      itemEditorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 20);
   }
 
   async function submitCategory(event) {
@@ -386,7 +423,16 @@ export default function MenuEditorPage() {
             className="surface-muted"
             actions={categoryEditId ? <button type="button" className="btn btn-secondary btn-small" onClick={resetCategoryForm}>{t('menuAdmin.cancelEdit')}</button> : null}
           >
-            <form className="admin-form-grid" onSubmit={submitCategory}>
+            <div ref={categoryEditorRef} />
+            <CollapsibleSection
+              title={categoryEditId ? t('menuAdmin.editCategoryTitle') : t('menuAdmin.newCategoryTitle')}
+              subtitle={t('menuAdmin.categoryFormSubtitle')}
+              isOpen={openPanels.newCategory}
+              onToggle={(event) => {
+                setOpenPanels((current) => ({ ...current, newCategory: event.currentTarget.open }));
+              }}
+            >
+              <form className="admin-form-grid" onSubmit={submitCategory}>
               <label>
                 {t('menuAdmin.fields.categoryName')}
                 <input
@@ -420,12 +466,13 @@ export default function MenuEditorPage() {
                 />
                 <span>{t('menuAdmin.fields.visibleOnSite')}</span>
               </label>
-              <div className="actions wrap-mobile">
-                <button type="submit" className="btn" disabled={savingKey === 'category-form'}>
-                  {savingKey === 'category-form' ? t('menuAdmin.saving') : categoryEditId ? t('menuAdmin.actions.saveCategory') : t('menuAdmin.actions.addCategory')}
-                </button>
-              </div>
-            </form>
+                <div className="actions wrap-mobile menu-mobile-actions">
+                  <button type="submit" className="btn menu-mobile-btn" disabled={savingKey === 'category-form'}>
+                    {savingKey === 'category-form' ? t('menuAdmin.saving') : categoryEditId ? t('menuAdmin.actions.saveCategory') : t('menuAdmin.actions.addCategory')}
+                  </button>
+                </div>
+              </form>
+            </CollapsibleSection>
           </PanelCard>
 
           <PanelCard
@@ -434,116 +481,126 @@ export default function MenuEditorPage() {
             className="surface-muted"
             actions={itemEditId ? <button type="button" className="btn btn-secondary btn-small" onClick={() => resetItemForm(itemForm.categoryId)}>{t('menuAdmin.cancelEdit')}</button> : null}
           >
-            <form className="admin-form-grid" onSubmit={submitItem}>
-              <label>
-                {t('menuAdmin.fields.category')}
-                <select
-                  value={itemForm.categoryId}
-                  onChange={(event) => setItemForm((current) => ({ ...current, categoryId: event.target.value }))}
-                  required
-                >
-                  <option value="">{t('menuAdmin.selectCategory')}</option>
-                  {menuState.categories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t('menuAdmin.fields.itemName')}
-                <input
-                  value={itemForm.name}
-                  onChange={(event) => setItemForm((current) => ({ ...current, name: event.target.value }))}
-                  placeholder={t('menuAdmin.placeholders.itemName')}
-                  required
-                />
-              </label>
-              <label className="admin-form-span-2">
-                {t('menuAdmin.fields.description')}
-                <input
-                  value={itemForm.description}
-                  onChange={(event) => setItemForm((current) => ({ ...current, description: event.target.value }))}
-                  placeholder={t('menuAdmin.placeholders.description')}
-                />
-              </label>
-              <label>
-                {t('menuAdmin.fields.price')}
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={itemForm.price}
-                  onChange={(event) => setItemForm((current) => ({ ...current, price: event.target.value }))}
-                  placeholder="0.00"
-                  required
-                />
-              </label>
-              <label>
-                {t('menuAdmin.fields.sortOrder')}
-                <input
-                  type="number"
-                  value={itemForm.sortOrder}
-                  onChange={(event) => setItemForm((current) => ({ ...current, sortOrder: event.target.value }))}
-                />
-              </label>
-              <label className="admin-form-span-2">
-                {t('menuAdmin.fields.imageUrl')}
-                <input
-                  value={itemForm.imageUrl}
-                  onChange={(event) => setItemForm((current) => ({ ...current, imageUrl: event.target.value }))}
-                  placeholder="https://..."
-                />
-              </label>
-              <label className="admin-form-span-2">
-                {t('menuAdmin.fields.uploadImage')}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={uploadingItemImage}
-                  onChange={(event) => {
-                    const [file] = event.target.files || [];
-                    handleItemImageUpload(file);
-                    event.target.value = '';
-                  }}
-                />
-              </label>
-              <div className={`upload-status-card admin-form-span-2 is-${itemUploadState.status}`}>
-                <strong>Загрузка фото в R2</strong>
-                <p>
-                  {itemUploadState.status === 'idle'
-                    ? 'Выберите фото, чтобы загрузить его в облачное хранилище.'
-                    : itemUploadState.details}
-                </p>
-              </div>
-              {itemForm.imageUrl ? (
-                <div className="event-poster-preview-block admin-form-span-2">
-                  <p className="small muted">Предпросмотр фото блюда</p>
-                  <img src={itemForm.imageUrl} alt="Предпросмотр фото блюда" className="event-poster-preview" />
+            <div ref={itemEditorRef} />
+            <CollapsibleSection
+              title={itemEditId ? t('menuAdmin.editItemTitle') : t('menuAdmin.newItemTitle')}
+              subtitle={t('menuAdmin.itemFormSubtitle')}
+              isOpen={openPanels.newItem}
+              onToggle={(event) => {
+                setOpenPanels((current) => ({ ...current, newItem: event.currentTarget.open }));
+              }}
+            >
+              <form className="admin-form-grid" onSubmit={submitItem}>
+                <label>
+                  {t('menuAdmin.fields.category')}
+                  <select
+                    value={itemForm.categoryId}
+                    onChange={(event) => setItemForm((current) => ({ ...current, categoryId: event.target.value }))}
+                    required
+                  >
+                    <option value="">{t('menuAdmin.selectCategory')}</option>
+                    {menuState.categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t('menuAdmin.fields.itemName')}
+                  <input
+                    value={itemForm.name}
+                    onChange={(event) => setItemForm((current) => ({ ...current, name: event.target.value }))}
+                    placeholder={t('menuAdmin.placeholders.itemName')}
+                    required
+                  />
+                </label>
+                <label className="admin-form-span-2">
+                  {t('menuAdmin.fields.description')}
+                  <input
+                    value={itemForm.description}
+                    onChange={(event) => setItemForm((current) => ({ ...current, description: event.target.value }))}
+                    placeholder={t('menuAdmin.placeholders.description')}
+                  />
+                </label>
+                <label>
+                  {t('menuAdmin.fields.price')}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={itemForm.price}
+                    onChange={(event) => setItemForm((current) => ({ ...current, price: event.target.value }))}
+                    placeholder="0.00"
+                    required
+                  />
+                </label>
+                <label>
+                  {t('menuAdmin.fields.sortOrder')}
+                  <input
+                    type="number"
+                    value={itemForm.sortOrder}
+                    onChange={(event) => setItemForm((current) => ({ ...current, sortOrder: event.target.value }))}
+                  />
+                </label>
+                <label className="admin-form-span-2">
+                  {t('menuAdmin.fields.imageUrl')}
+                  <input
+                    value={itemForm.imageUrl}
+                    onChange={(event) => setItemForm((current) => ({ ...current, imageUrl: event.target.value }))}
+                    placeholder="https://..."
+                  />
+                </label>
+                <label className="admin-form-span-2">
+                  {t('menuAdmin.fields.uploadImage')}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={uploadingItemImage}
+                    onChange={(event) => {
+                      const [file] = event.target.files || [];
+                      handleItemImageUpload(file);
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+                <div className={`upload-status-card admin-form-span-2 is-${itemUploadState.status}`}>
+                  <strong>Загрузка фото в R2</strong>
+                  <p>
+                    {itemUploadState.status === 'idle'
+                      ? 'Выберите фото, чтобы загрузить его в облачное хранилище.'
+                      : itemUploadState.details}
+                  </p>
                 </div>
-              ) : null}
-              <div className="menu-admin-inline-toggles admin-form-span-2">
-                <label className="checkbox-row compact-row">
-                  <input
-                    type="checkbox"
-                    checked={itemForm.isActive}
-                    onChange={(event) => setItemForm((current) => ({ ...current, isActive: event.target.checked }))}
-                  />
-                  <span>{t('menuAdmin.fields.visibleOnSite')}</span>
-                </label>
-                <label className="checkbox-row compact-row">
-                  <input
-                    type="checkbox"
-                    checked={itemForm.isAvailable}
-                    onChange={(event) => setItemForm((current) => ({ ...current, isAvailable: event.target.checked }))}
-                  />
-                  <span>{t('menuAdmin.fields.availableNow')}</span>
-                </label>
-              </div>
-              <div className="actions wrap-mobile admin-form-span-2">
-                <button type="submit" className="btn" disabled={savingKey === 'item-form' || uploadingItemImage || !menuState.categories.length}>
-                  {savingKey === 'item-form' ? t('menuAdmin.saving') : itemEditId ? t('menuAdmin.actions.saveItem') : t('menuAdmin.actions.addItem')}
-                </button>
-              </div>
-            </form>
+                {itemForm.imageUrl ? (
+                  <div className="event-poster-preview-block admin-form-span-2">
+                    <p className="small muted">Предпросмотр фото блюда</p>
+                    <img src={itemForm.imageUrl} alt="Предпросмотр фото блюда" className="event-poster-preview" />
+                  </div>
+                ) : null}
+                <div className="menu-admin-inline-toggles admin-form-span-2">
+                  <label className="checkbox-row compact-row">
+                    <input
+                      type="checkbox"
+                      checked={itemForm.isActive}
+                      onChange={(event) => setItemForm((current) => ({ ...current, isActive: event.target.checked }))}
+                    />
+                    <span>{t('menuAdmin.fields.visibleOnSite')}</span>
+                  </label>
+                  <label className="checkbox-row compact-row">
+                    <input
+                      type="checkbox"
+                      checked={itemForm.isAvailable}
+                      onChange={(event) => setItemForm((current) => ({ ...current, isAvailable: event.target.checked }))}
+                    />
+                    <span>{t('menuAdmin.fields.availableNow')}</span>
+                  </label>
+                </div>
+                <div className="actions wrap-mobile admin-form-span-2 menu-mobile-actions">
+                  <button type="submit" className="btn menu-mobile-btn" disabled={savingKey === 'item-form' || uploadingItemImage || !menuState.categories.length}>
+                    {savingKey === 'item-form' ? t('menuAdmin.saving') : itemEditId ? t('menuAdmin.actions.saveItem') : t('menuAdmin.actions.addItem')}
+                  </button>
+                </div>
+              </form>
+            </CollapsibleSection>
           </PanelCard>
         </section>
 
@@ -564,56 +621,75 @@ export default function MenuEditorPage() {
 
         <section className="menu-admin-grid menu-admin-list-grid">
           <PanelCard title={t('menuAdmin.categoriesListTitle')} subtitle={t('menuAdmin.categoriesListSubtitle')}>
-            {!menuState.categories.length ? <p className="muted">{t('menuAdmin.emptyCategories')}</p> : null}
-            <div className="menu-admin-stack">
-              {menuState.categories.map((category) => (
-                <article key={category.id} className="menu-admin-card">
-                  <div className="menu-admin-card-head">
-                    <div>
-                      <strong>{category.name}</strong>
-                      <p className="muted small">/{category.slug} · {category.itemsCount} {t('menuAdmin.itemsCountSuffix')}</p>
+            <CollapsibleSection
+              title={t('menuAdmin.categoriesListTitle')}
+              subtitle={t('menuAdmin.categoriesListSubtitle')}
+              isOpen={openPanels.categoriesList}
+              onToggle={(event) => {
+                setOpenPanels((current) => ({ ...current, categoriesList: event.currentTarget.open }));
+              }}
+            >
+              {!menuState.categories.length ? <p className="muted">{t('menuAdmin.emptyCategories')}</p> : null}
+              <div className="menu-admin-stack">
+                {menuState.categories.map((category) => (
+                  <article key={category.id} className="menu-admin-card">
+                    <div className="menu-admin-card-head">
+                      <div>
+                        <strong>{category.name}</strong>
+                        <p className="muted small">/{category.slug} · {category.itemsCount} {t('menuAdmin.itemsCountSuffix')}</p>
+                      </div>
+                      <MenuStatusToggle
+                        checked={category.isActive}
+                        onChange={() => patchCategory(category.id, { isActive: !category.isActive }, t('menuAdmin.feedback.categoryVisibilityUpdated'))}
+                        activeLabel={t('menuAdmin.visible')}
+                        inactiveLabel={t('menuAdmin.hidden')}
+                      />
                     </div>
-                    <MenuStatusToggle
-                      checked={category.isActive}
-                      onChange={() => patchCategory(category.id, { isActive: !category.isActive }, t('menuAdmin.feedback.categoryVisibilityUpdated'))}
-                      activeLabel={t('menuAdmin.visible')}
-                      inactiveLabel={t('menuAdmin.hidden')}
-                    />
-                  </div>
-                  <div className="menu-admin-card-meta muted small">
-                    <span>{t('menuAdmin.fields.sortOrder')}: {category.sortOrder}</span>
-                  </div>
-                  <div className="actions wrap-mobile">
-                    <button type="button" className="btn btn-secondary btn-small" onClick={() => startCategoryEdit(category)}>{t('menuAdmin.actions.edit')}</button>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-small"
-                      disabled={savingKey === `delete-category-${category.id}`}
-                      onClick={() => removeCategory(category)}
-                    >
-                      {t('menuAdmin.actions.delete')}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    <div className="menu-admin-card-meta muted small">
+                      <span>{t('menuAdmin.fields.sortOrder')}: {category.sortOrder}</span>
+                    </div>
+                    <div className="actions wrap-mobile menu-mobile-actions">
+                      <button type="button" className="btn btn-secondary btn-small menu-mobile-btn" onClick={() => startCategoryEdit(category)}>{t('menuAdmin.actions.edit')}</button>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-small menu-mobile-btn"
+                        disabled={savingKey === `delete-category-${category.id}`}
+                        onClick={() => removeCategory(category)}
+                      >
+                        {t('menuAdmin.actions.delete')}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </CollapsibleSection>
           </PanelCard>
 
           <PanelCard title={t('menuAdmin.itemsListTitle')} subtitle={t('menuAdmin.itemsListSubtitle')}>
-            {!itemsByCategory.some((category) => category.items.length) ? <p className="muted">{t('menuAdmin.emptyItems')}</p> : null}
-            <div className="menu-admin-stack">
-              {itemsByCategory.map((category) => (
-                <section key={category.id} className="menu-admin-group">
-                  <header className="menu-admin-group-head">
-                    <div>
-                      <h4>{category.name}</h4>
-                      <p className="muted small">{category.items.length} {t('menuAdmin.itemsCountSuffix')}</p>
-                    </div>
-                  </header>
-                  {!category.items.length ? <p className="muted small">{t('menuAdmin.emptyCategoryItems')}</p> : null}
-                  <div className="menu-admin-stack compact-stack">
-                    {category.items.map((item) => (
-                      <article key={item.id} className="menu-admin-card item-card">
+            <CollapsibleSection
+              title={t('menuAdmin.itemsListTitle')}
+              subtitle={t('menuAdmin.itemsListSubtitle')}
+              isOpen={openPanels.itemsList}
+              onToggle={(event) => {
+                setOpenPanels((current) => ({ ...current, itemsList: event.currentTarget.open }));
+              }}
+            >
+              {!itemsByCategory.some((category) => category.items.length) ? <p className="muted">{t('menuAdmin.emptyItems')}</p> : null}
+              <div className="menu-admin-stack">
+                {itemsByCategory.map((category) => (
+                  <CollapsibleSection
+                    key={category.id}
+                    title={category.name}
+                    subtitle={`${category.items.length} ${t('menuAdmin.itemsCountSuffix')}`}
+                    isOpen={openItemCategories[category.id] ?? false}
+                    onToggle={(event) => {
+                      setOpenItemCategories((current) => ({ ...current, [category.id]: event.currentTarget.open }));
+                    }}
+                  >
+                    {!category.items.length ? <p className="muted small">{t('menuAdmin.emptyCategoryItems')}</p> : null}
+                    <div className="menu-admin-stack compact-stack">
+                      {category.items.map((item) => (
+                        <article key={item.id} className="menu-admin-card item-card">
                         <div className="menu-admin-card-head">
                           <div>
                             <strong>{item.name}</strong>
@@ -639,23 +715,24 @@ export default function MenuEditorPage() {
                         <div className="menu-admin-card-meta muted small">
                           <span>{emptyState(item.imageUrl)}</span>
                         </div>
-                        <div className="actions wrap-mobile">
-                          <button type="button" className="btn btn-secondary btn-small" onClick={() => startItemEdit(item)}>{t('menuAdmin.actions.edit')}</button>
+                          <div className="actions wrap-mobile menu-mobile-actions">
+                            <button type="button" className="btn btn-secondary btn-small menu-mobile-btn" onClick={() => startItemEdit(item)}>{t('menuAdmin.actions.edit')}</button>
                           <button
                             type="button"
-                            className="btn btn-danger btn-small"
+                            className="btn btn-danger btn-small menu-mobile-btn"
                             disabled={savingKey === `delete-item-${item.id}`}
                             onClick={() => removeItem(item)}
                           >
                             {t('menuAdmin.actions.delete')}
                           </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                ))}
+              </div>
+            </CollapsibleSection>
           </PanelCard>
         </section>
       </PageContainer>
