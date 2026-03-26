@@ -711,7 +711,7 @@ textarea {
   gap: 14px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
   .admin-shell {
     grid-template-columns: 1fr;
   }
@@ -913,7 +913,7 @@ textarea {
   flex-direction: column;
 }
 
-@media (min-width: 700px) {
+@media (min-width: 700px) and (hover: hover) and (pointer: fine) {
   .page {
     padding: 24px;
   }
