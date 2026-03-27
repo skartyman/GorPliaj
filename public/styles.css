@@ -820,7 +820,9 @@ select:focus {
 .menu-page-intro-row,
 .menu-showcase-meta {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .menu-preview-actions,
@@ -926,8 +928,8 @@ select:focus {
 .menu-card-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  align-items: start;
+  gap: 10px;
 }
 
 .menu-page-header-content {
@@ -1073,6 +1075,9 @@ select:focus {
 
 .menu-category-block h2 {
   margin: 0;
+  font-size: 1.06rem;
+  line-height: 1.25;
+  text-align: left;
 }
 
 .menu-category-title-box {
@@ -1127,9 +1132,15 @@ select:focus {
 
 .menu-showcase-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 20px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 16px;
+  align-items: start;
+}
+
+.menu-showcase-card > div:first-child {
+  display: grid;
+  gap: 10px;
+  align-content: start;
 }
 
 .menu-badge {
@@ -1143,8 +1154,22 @@ select:focus {
   font-weight: 600;
 }
 
+#featuredDishPrice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #ffffff;
+  font-size: 0.96rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .menu-showcase-image {
-  min-height: 200px;
+  height: 220px;
   aspect-ratio: 1 / 1;
   border-radius: 24px;
   overflow: hidden;
@@ -1161,14 +1186,13 @@ select:focus {
 }
 
 .menu-showcase-image-media {
-  min-height: 200px;
+  height: 100%;
 }
 
 .menu-showcase-image-fallback,
 .menu-card-image-fallback {
   width: 100%;
   height: 100%;
-  min-height: 200px;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(14, 165, 233, 0.24));
@@ -1204,10 +1228,9 @@ select:focus {
 
 .menu-card-media-wrap {
   position: relative;
-  min-height: 168px;
+  height: 168px;
   width: 100%;
   max-width: 188px;
-  aspect-ratio: 1 / 1;
   border-radius: 18px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(37, 99, 235, 0.06), rgba(30, 41, 59, 0.12));
@@ -1215,7 +1238,6 @@ select:focus {
 
 .menu-card-image,
 .menu-card-image-fallback {
-  min-height: 168px;
   width: 100%;
   height: 100%;
 }
@@ -1244,8 +1266,36 @@ select:focus {
   align-content: start;
 }
 
+.menu-card-copy .menu-meta {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: -webkit-line-clamp 0.16s ease, line-clamp 0.16s ease;
+}
+
+.menu-card-item:hover .menu-card-copy .menu-meta,
+.menu-card-item:focus-within .menu-card-copy .menu-meta {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
 .menu-card-head strong {
-  align-self: center;
+  align-self: start;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.menu-card-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .menu-like-btn {
@@ -1415,13 +1465,12 @@ select:focus {
   .menu-card-media-wrap,
   .menu-card-image,
   .menu-card-image-fallback {
-    min-height: 132px;
+    height: 132px;
     border-radius: 14px;
   }
 
   .menu-card-media-wrap {
     order: 2;
-    aspect-ratio: 1 / 1;
     max-width: 132px;
     justify-self: end;
   }
