@@ -27,10 +27,13 @@ let currentLanguage = localStorage.getItem('language') || 'uk';
 let menuCache = [];
 let activeCategory = '';
 let activeSection = '';
+let renderedCategories = [];
 let cartState = loadJsonState(CART_STORAGE_KEY);
 let likedState = loadJsonState(LIKES_STORAGE_KEY);
 let categorySectionObserver = null;
 let isCategoryScrollSyncPaused = false;
+let categoryObserverAnimationFrame = null;
+let pendingObservedCategory = '';
 
 function loadJsonState(storageKey) {
   try {
@@ -267,23 +270,74 @@ function renderSectionNav(groupedBySection) {
 
 function renderCategories(groupedMenu) {
   const categories = Object.keys(groupedMenu);
-  categoryNav.innerHTML = categories
-    .map(
-      (category) => `
-        <a class="menu-category-link${category === activeCategory ? ' active' : ''}" href="#category-${slugify(category)}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</a>`
-    )
-    .join('');
+  const shouldRerender =
+    categories.length !== renderedCategories.length
+    || categories.some((category, index) => renderedCategories[index] !== category);
+
+  if (shouldRerender) {
+    categoryNav.innerHTML = categories
+      .map(
+        (category) => `
+          <a class="menu-category-link${category === activeCategory ? ' active' : ''}" href="#category-${slugify(category)}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</a>`
+      )
+      .join('');
+    renderedCategories = categories;
+  } else {
+    syncActiveCategoryLink({ autoScroll: false });
+  }
 }
 
-function setActiveCategory(category, { shouldRender = true } = {}) {
+function ensureActiveCategoryVisible(activeLink) {
+  if (!categoryNav || !activeLink) {
+    return;
+  }
+
+  const navRect = categoryNav.getBoundingClientRect();
+  const linkRect = activeLink.getBoundingClientRect();
+  const safePadding = 20;
+  const isOutsideViewport = linkRect.left < (navRect.left + safePadding)
+    || linkRect.right > (navRect.right - safePadding);
+
+  if (isOutsideViewport) {
+    activeLink.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+  }
+}
+
+function syncActiveCategoryLink({ autoScroll = false } = {}) {
+  if (!categoryNav) {
+    return;
+  }
+
+  const nextActiveLink = activeCategory
+    ? categoryNav.querySelector(`[data-category="${escapeSelectorValue(activeCategory)}"]`)
+    : null;
+  const currentActiveLink = categoryNav.querySelector('.menu-category-link.active');
+
+  if (currentActiveLink && currentActiveLink !== nextActiveLink) {
+    currentActiveLink.classList.remove('active');
+  }
+
+  if (nextActiveLink && !nextActiveLink.classList.contains('active')) {
+    nextActiveLink.classList.add('active');
+  }
+
+  if (autoScroll && nextActiveLink) {
+    ensureActiveCategoryVisible(nextActiveLink);
+  }
+}
+
+function setActiveCategory(category, { shouldRender = true, autoScroll = false } = {}) {
   if (!category || activeCategory === category) {
     return;
   }
 
   activeCategory = category;
   if (shouldRender) {
-    renderCategories(groupMenu(menuCache));
+    renderCategories(getActiveSectionMenu());
+    return;
   }
+
+  syncActiveCategoryLink({ autoScroll });
 }
 
 function setupCategoryObserver() {
@@ -324,9 +378,20 @@ function setupCategoryObserver() {
       return;
     }
 
-    setActiveCategory(categoryName);
-    const activeLink = categoryNav.querySelector(`[data-category="${escapeSelectorValue(categoryName)}"]`);
-    activeLink?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    pendingObservedCategory = categoryName;
+    if (categoryObserverAnimationFrame !== null) {
+      return;
+    }
+
+    categoryObserverAnimationFrame = window.requestAnimationFrame(() => {
+      categoryObserverAnimationFrame = null;
+      if (!pendingObservedCategory) {
+        return;
+      }
+
+      setActiveCategory(pendingObservedCategory, { shouldRender: false, autoScroll: true });
+      pendingObservedCategory = '';
+    });
   }, observerOptions);
 
   sections.forEach((section) => categorySectionObserver.observe(section));
@@ -712,6 +777,7 @@ languageToggle?.addEventListener('click', () => {
   localStorage.setItem('language', currentLanguage);
   activeCategory = '';
   activeSection = '';
+  renderedCategories = [];
   translatePage();
 });
 
@@ -748,7 +814,6 @@ categoryNav?.addEventListener('click', (event) => {
   const targetSection = targetId ? document.querySelector(targetId) : null;
 
   setActiveCategory(nextCategory, { shouldRender: false });
-  renderCategories(getActiveSectionMenu());
 
   if (!targetSection) {
     return;

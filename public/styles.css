@@ -1018,6 +1018,10 @@ select:focus {
   padding: 0 18px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: #fff;
+  height: var(--menu-tab-pill-height, 44px);
+  min-height: var(--menu-tab-pill-height, 44px);
+  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .menu-showcase-card,
@@ -1034,7 +1038,9 @@ select:focus {
   gap: 10px;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 6px 4px 2px;
+  align-items: center;
+  min-height: var(--menu-nav-height, 64px);
+  padding: 8px 6px;
 }
 
 .menu-section-nav::-webkit-scrollbar {
@@ -1045,16 +1051,18 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  height: var(--menu-tab-pill-height, 44px);
+  min-height: var(--menu-tab-pill-height, 44px);
   padding: 0 18px;
   border-radius: 999px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: #fff;
   color: #334155;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
 
 .menu-section-link.active {
@@ -1086,6 +1094,10 @@ select:focus {
   gap: 10px;
   overflow-x: auto;
   scrollbar-width: none;
+  align-items: center;
+  min-height: var(--menu-nav-height, 64px);
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .menu-category-nav-sticky {
@@ -1104,6 +1116,7 @@ select:focus {
 
 .menu-category-link {
   white-space: nowrap;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
 
 .menu-category-link.active {
