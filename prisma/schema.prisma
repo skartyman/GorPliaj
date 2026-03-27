@@ -216,6 +216,7 @@ model MenuCategory {
   id        Int        @id @default(autoincrement())
   name      String
   slug      String     @unique
+  section   MenuSection @default(KITCHEN)
   sortOrder Int        @default(0)
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
@@ -224,6 +225,7 @@ model MenuCategory {
 
   @@index([sortOrder])
   @@index([isActive])
+  @@index([section])
 }
 
 model MenuItem {
@@ -334,4 +336,9 @@ enum EventCtaType {
   BOOKING
   TICKETS
   BOTH
+}
+
+enum MenuSection {
+  KITCHEN
+  BAR
 }

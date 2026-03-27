@@ -207,7 +207,12 @@ function groupMenu(menu) {
 
 const sectionOrder = ['kitchen', 'bar'];
 
-function resolveCategorySection(categoryName) {
+function resolveCategorySection(categoryName, sectionKey) {
+  const explicitSection = String(sectionKey || '').toLowerCase();
+  if (explicitSection === 'bar' || explicitSection === 'kitchen') {
+    return explicitSection;
+  }
+
   const normalized = String(categoryName || '').toLowerCase();
   const barHints = [
     'bar',
@@ -237,8 +242,14 @@ function groupMenuBySection(groupedMenu) {
     bar: {}
   };
 
-  Object.entries(groupedMenu).forEach(([categoryName, items]) => {
-    const sectionKey = resolveCategorySection(categoryName);
+  menuCache.forEach((categoryEntry) => {
+    const categoryName = getLocalizedValue(categoryEntry.name);
+    const items = groupedMenu[categoryName];
+    if (!categoryName || !items?.length) {
+      return;
+    }
+
+    const sectionKey = resolveCategorySection(categoryName, categoryEntry.section);
     sections[sectionKey][categoryName] = items;
   });
 
@@ -254,13 +265,13 @@ function renderSectionNav(groupedBySection) {
     return;
   }
 
-  const availableSections = sectionOrder.filter((sectionKey) => Object.keys(groupedBySection[sectionKey] || {}).length);
-  sectionNav.innerHTML = availableSections
+  sectionNav.innerHTML = sectionOrder
     .map((sectionKey) => `
       <button
         type="button"
         class="menu-section-link${sectionKey === activeSection ? ' active' : ''}"
         data-section="${sectionKey}"
+        ${Object.keys(groupedBySection[sectionKey] || {}).length ? '' : 'disabled'}
       >
         ${escapeHtml(getSectionTitle(sectionKey))}
       </button>
@@ -788,7 +799,7 @@ sectionNav?.addEventListener('click', (event) => {
   }
 
   const nextSection = sectionButton.dataset.section;
-  if (!nextSection || nextSection === activeSection) {
+  if (!nextSection || nextSection === activeSection || sectionButton.disabled) {
     return;
   }
 

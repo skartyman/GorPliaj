@@ -264,6 +264,7 @@ const translations = {
         category: 'Категория',
         categoryName: 'Название категории',
         categorySlug: 'Slug',
+        section: 'Раздел',
         itemName: 'Название позиции',
         description: 'Описание',
         price: 'Цена',
@@ -318,6 +319,10 @@ const translations = {
       confirmDeleteCategory: 'Удалить категорию «{name}» вместе со всеми позициями?',
       confirmDeleteItem: 'Удалить позицию «{name}»?',
       selectCategory: 'Выберите категорию',
+      sections: {
+        kitchen: 'Кухня',
+        bar: 'Бар'
+      },
       visible: 'Видно',
       hidden: 'Скрыто',
       available: 'Доступно',
@@ -759,6 +764,7 @@ const translations = {
         category: 'Category',
         categoryName: 'Category name',
         categorySlug: 'Slug',
+        section: 'Section',
         itemName: 'Item name',
         description: 'Description',
         price: 'Price',
@@ -813,6 +819,10 @@ const translations = {
       confirmDeleteCategory: 'Delete the category “{name}” together with all its items?',
       confirmDeleteItem: 'Delete the item “{name}”?',
       selectCategory: 'Select a category',
+      sections: {
+        kitchen: 'Kitchen',
+        bar: 'Bar'
+      },
       visible: 'Visible',
       hidden: 'Hidden',
       available: 'Available',

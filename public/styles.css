@@ -1042,7 +1042,7 @@ select:focus {
   scrollbar-width: none;
   align-items: center;
   min-height: var(--menu-nav-height, 64px);
-  padding: 8px 6px;
+  padding: 8px 0;
 }
 
 .menu-section-nav::-webkit-scrollbar {
@@ -1073,6 +1073,11 @@ select:focus {
   color: #fff;
 }
 
+.menu-section-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .menu-category-block h2 {
   margin: 0;
   font-size: 1.06rem;
@@ -1081,13 +1086,19 @@ select:focus {
 }
 
 .menu-category-title-box {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
+  width: 100%;
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid rgba(37, 99, 235, 0.22);
   background: rgba(37, 99, 235, 0.06);
-  max-width: fit-content;
+}
+
+.menu-category-title-box h2 {
+  width: 100%;
+  text-align: left;
 }
 
 .section-head-compact {

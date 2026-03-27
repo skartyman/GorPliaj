@@ -8,6 +8,7 @@ function toPublicCategory(category) {
       en: category.name
     },
     slug: category.slug,
+    section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
     items: category.items
       .filter((item) => item.isActive && item.isAvailable)
