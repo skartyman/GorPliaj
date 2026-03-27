@@ -1,4 +1,5 @@
 const categoryNav = document.getElementById('categoryNav');
+const sectionNav = document.getElementById('sectionNav');
 const menuCatalog = document.getElementById('menuCatalog');
 const languageToggle = document.getElementById('languageToggle');
 const featuredDishName = document.getElementById('featuredDishName');
@@ -25,6 +26,7 @@ const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
 let currentLanguage = localStorage.getItem('language') || 'uk';
 let menuCache = [];
 let activeCategory = '';
+let activeSection = '';
 let cartState = loadJsonState(CART_STORAGE_KEY);
 let likedState = loadJsonState(LIKES_STORAGE_KEY);
 let categorySectionObserver = null;
@@ -133,7 +135,9 @@ const translations = {
     cartCopied: 'Замовлення скопійовано у буфер обміну.',
     cartCopyFailed: 'Не вдалося скопіювати автоматично. Виділіть текст вручну.',
     itemAdded: 'Додано до замовлення',
-    orderLine: '{name} × {quantity} — {total} ₴'
+    orderLine: '{name} × {quantity} — {total} ₴',
+    sectionKitchen: 'Кухня',
+    sectionBar: 'Бар'
   },
   en: {
     pageTitle: 'GorPliaj — Menu',
@@ -167,7 +171,9 @@ const translations = {
     cartCopied: 'The order was copied to the clipboard.',
     cartCopyFailed: 'Automatic copy failed. Please select and copy the text manually.',
     itemAdded: 'Added to order',
-    orderLine: '{name} × {quantity} — {total} ₴'
+    orderLine: '{name} × {quantity} — {total} ₴',
+    sectionKitchen: 'Kitchen',
+    sectionBar: 'Bar'
   }
 };
 
@@ -194,6 +200,69 @@ function groupMenu(menu) {
     }));
     return acc;
   }, {});
+}
+
+const sectionOrder = ['kitchen', 'bar'];
+
+function resolveCategorySection(categoryName) {
+  const normalized = String(categoryName || '').toLowerCase();
+  const barHints = [
+    'bar',
+    'бар',
+    'напо',
+    'коктей',
+    'вино',
+    'пиво',
+    'алко',
+    'drinks',
+    'drink',
+    'cocktail',
+    'wine',
+    'beer',
+    'coffee',
+    'tea',
+    'кава',
+    'чай'
+  ];
+
+  return barHints.some((hint) => normalized.includes(hint)) ? 'bar' : 'kitchen';
+}
+
+function groupMenuBySection(groupedMenu) {
+  const sections = {
+    kitchen: {},
+    bar: {}
+  };
+
+  Object.entries(groupedMenu).forEach(([categoryName, items]) => {
+    const sectionKey = resolveCategorySection(categoryName);
+    sections[sectionKey][categoryName] = items;
+  });
+
+  return sections;
+}
+
+function getSectionTitle(sectionKey) {
+  return sectionKey === 'bar' ? t('sectionBar') : t('sectionKitchen');
+}
+
+function renderSectionNav(groupedBySection) {
+  if (!sectionNav) {
+    return;
+  }
+
+  const availableSections = sectionOrder.filter((sectionKey) => Object.keys(groupedBySection[sectionKey] || {}).length);
+  sectionNav.innerHTML = availableSections
+    .map((sectionKey) => `
+      <button
+        type="button"
+        class="menu-section-link${sectionKey === activeSection ? ' active' : ''}"
+        data-section="${sectionKey}"
+      >
+        ${escapeHtml(getSectionTitle(sectionKey))}
+      </button>
+    `)
+    .join('');
 }
 
 function renderCategories(groupedMenu) {
@@ -257,7 +326,7 @@ function setupCategoryObserver() {
 
     setActiveCategory(categoryName);
     const activeLink = categoryNav.querySelector(`[data-category="${escapeSelectorValue(categoryName)}"]`);
-    activeLink?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    activeLink?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
   }, observerOptions);
 
   sections.forEach((section) => categorySectionObserver.observe(section));
@@ -269,6 +338,10 @@ function getCartQuantity(itemId) {
 
 function getLikedState(itemId) {
   return Boolean(likedState[String(itemId)]);
+}
+
+function getActiveSectionMenu() {
+  return groupMenuBySection(groupMenu(menuCache))[activeSection] || {};
 }
 
 function renderCatalog(groupedMenu) {
@@ -438,7 +511,7 @@ function updateCartItem(itemId, nextQuantity) {
 
   persistJsonState(CART_STORAGE_KEY, cartState);
   renderCartState();
-  renderCatalog(groupMenu(menuCache));
+  renderCatalog(getActiveSectionMenu());
 }
 
 function getCartEntries() {
@@ -530,7 +603,7 @@ async function toggleLike(itemId) {
   }
 
   renderFeaturedDish();
-  renderCatalog(groupMenu(menuCache));
+  renderCatalog(getActiveSectionMenu());
 
   try {
     const response = await fetch(`/api/menu/items/${itemId}/like`, {
@@ -562,7 +635,7 @@ async function toggleLike(itemId) {
   }
 
   renderFeaturedDish();
-  renderCatalog(groupMenu(menuCache));
+  renderCatalog(getActiveSectionMenu());
 }
 
 async function copyCartToClipboard() {
@@ -610,10 +683,21 @@ function translatePage() {
   }
 
   const groupedMenu = groupMenu(menuCache);
-  activeCategory = activeCategory || Object.keys(groupedMenu)[0] || '';
+  const menuBySection = groupMenuBySection(groupedMenu);
+  const availableSections = sectionOrder.filter((sectionKey) => Object.keys(menuBySection[sectionKey] || {}).length);
+  activeSection = activeSection && availableSections.includes(activeSection)
+    ? activeSection
+    : (availableSections[0] || 'kitchen');
+
+  const activeSectionMenu = menuBySection[activeSection] || {};
+  activeCategory = activeCategory && Object.prototype.hasOwnProperty.call(activeSectionMenu, activeCategory)
+    ? activeCategory
+    : (Object.keys(activeSectionMenu)[0] || '');
+
   renderFeaturedDish();
-  renderCategories(groupedMenu);
-  renderCatalog(groupedMenu);
+  renderSectionNav(menuBySection);
+  renderCategories(activeSectionMenu);
+  renderCatalog(activeSectionMenu);
   renderCartState();
 }
 
@@ -627,7 +711,31 @@ languageToggle?.addEventListener('click', () => {
   currentLanguage = currentLanguage === 'uk' ? 'en' : 'uk';
   localStorage.setItem('language', currentLanguage);
   activeCategory = '';
+  activeSection = '';
   translatePage();
+});
+
+sectionNav?.addEventListener('click', (event) => {
+  const sectionButton = event.target.closest('[data-section]');
+  if (!sectionButton) {
+    return;
+  }
+
+  const nextSection = sectionButton.dataset.section;
+  if (!nextSection || nextSection === activeSection) {
+    return;
+  }
+
+  const groupedMenu = groupMenu(menuCache);
+  const menuBySection = groupMenuBySection(groupedMenu);
+  const nextSectionMenu = menuBySection[nextSection] || {};
+
+  activeSection = nextSection;
+  activeCategory = Object.keys(nextSectionMenu)[0] || '';
+
+  renderSectionNav(menuBySection);
+  renderCategories(nextSectionMenu);
+  renderCatalog(nextSectionMenu);
 });
 
 categoryNav?.addEventListener('click', (event) => {
@@ -639,14 +747,15 @@ categoryNav?.addEventListener('click', (event) => {
   const targetId = link.getAttribute('href');
   const targetSection = targetId ? document.querySelector(targetId) : null;
 
-  setActiveCategory(nextCategory);
+  setActiveCategory(nextCategory, { shouldRender: false });
+  renderCategories(getActiveSectionMenu());
 
   if (!targetSection) {
     return;
   }
 
   isCategoryScrollSyncPaused = true;
-  targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  targetSection.scrollIntoView({ behavior: 'auto', block: 'start' });
   setTimeout(() => {
     isCategoryScrollSyncPaused = false;
   }, 420);
@@ -688,7 +797,7 @@ cartClearButton?.addEventListener('click', () => {
   cartState = {};
   persistJsonState(CART_STORAGE_KEY, cartState);
   renderCartState();
-  renderCatalog(groupMenu(menuCache));
+  renderCatalog(getActiveSectionMenu());
 });
 
 document.addEventListener('keydown', (event) => {
