@@ -27,6 +27,8 @@ let menuCache = [];
 let activeCategory = '';
 let cartState = loadJsonState(CART_STORAGE_KEY);
 let likedState = loadJsonState(LIKES_STORAGE_KEY);
+let categorySectionObserver = null;
+let isCategoryScrollSyncPaused = false;
 
 function loadJsonState(storageKey) {
   try {
@@ -57,6 +59,15 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function escapeSelectorValue(value) {
+  const stringValue = String(value ?? '');
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(stringValue);
+  }
+
+  return stringValue.replace(/["\\]/g, '\\$&');
 }
 
 function formatPrice(value) {
@@ -195,6 +206,63 @@ function renderCategories(groupedMenu) {
     .join('');
 }
 
+function setActiveCategory(category, { shouldRender = true } = {}) {
+  if (!category || activeCategory === category) {
+    return;
+  }
+
+  activeCategory = category;
+  if (shouldRender) {
+    renderCategories(groupMenu(menuCache));
+  }
+}
+
+function setupCategoryObserver() {
+  if (!categoryNav || !menuCatalog || typeof IntersectionObserver !== 'function') {
+    return;
+  }
+
+  if (categorySectionObserver) {
+    categorySectionObserver.disconnect();
+  }
+
+  const sections = Array.from(menuCatalog.querySelectorAll('.menu-category-block[data-category-name]'));
+  if (!sections.length) {
+    return;
+  }
+
+  const observerOptions = {
+    root: null,
+    threshold: [0.25, 0.5, 0.75],
+    rootMargin: '-110px 0px -45% 0px'
+  };
+
+  categorySectionObserver = new IntersectionObserver((entries) => {
+    if (isCategoryScrollSyncPaused) {
+      return;
+    }
+
+    const visible = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
+
+    if (!visible.length) {
+      return;
+    }
+
+    const categoryName = visible[0].target.getAttribute('data-category-name');
+    if (!categoryName) {
+      return;
+    }
+
+    setActiveCategory(categoryName);
+    const activeLink = categoryNav.querySelector(`[data-category="${escapeSelectorValue(categoryName)}"]`);
+    activeLink?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, observerOptions);
+
+  sections.forEach((section) => categorySectionObserver.observe(section));
+}
+
 function getCartQuantity(itemId) {
   return Number(cartState[String(itemId)]?.quantity || 0);
 }
@@ -216,7 +284,7 @@ function renderCatalog(groupedMenu) {
   menuCatalog.innerHTML = categories
     .map(
       ([category, items]) => `
-        <section class="menu-category-block" id="category-${slugify(category)}">
+        <section class="menu-category-block" id="category-${slugify(category)}" data-category-name="${escapeHtml(category)}">
           <div class="section-head section-head-compact">
             <div class="menu-category-title-box">
               <h2>${escapeHtml(category)}</h2>
@@ -267,6 +335,8 @@ function renderCatalog(groupedMenu) {
         </section>`
     )
     .join('');
+
+  setupCategoryObserver();
 }
 
 function getFlatMenuItems() {
@@ -563,8 +633,23 @@ languageToggle?.addEventListener('click', () => {
 categoryNav?.addEventListener('click', (event) => {
   const link = event.target.closest('[data-category]');
   if (!link) return;
-  activeCategory = link.dataset.category;
-  renderCategories(groupMenu(menuCache));
+  event.preventDefault();
+
+  const nextCategory = link.dataset.category;
+  const targetId = link.getAttribute('href');
+  const targetSection = targetId ? document.querySelector(targetId) : null;
+
+  setActiveCategory(nextCategory);
+
+  if (!targetSection) {
+    return;
+  }
+
+  isCategoryScrollSyncPaused = true;
+  targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    isCategoryScrollSyncPaused = false;
+  }, 420);
 });
 
 menuCatalog?.addEventListener('click', (event) => {
