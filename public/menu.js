@@ -460,10 +460,10 @@ function renderCatalog(groupedMenu) {
                     </div>
                     <div class="menu-card-copy">
                       <div class="menu-card-head">
-                        <strong>${escapeHtml(title)}</strong>
+                        <strong class="menu-card-title" title="${escapeHtml(title)}">${escapeHtml(title)}</strong>
                         <span class="menu-price">${formatPrice(item.price)} ${dictionary.priceCurrency}</span>
                       </div>
-                      <p class="menu-meta">${escapeHtml(description)}</p>
+                      <p class="menu-meta" title="${escapeHtml(description)}">${escapeHtml(description)}</p>
                       <span class="menu-card-action-note">${quantity ? escapeHtml(`${dictionary.itemAdded}: ${quantity}`) : '&nbsp;'}</span>
                     </div>
                   </article>`;
