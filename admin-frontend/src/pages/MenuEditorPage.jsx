@@ -8,6 +8,7 @@ import { useAdminI18n } from '../lib/i18n';
 const CATEGORY_FORM_DEFAULT = {
   name: '',
   slug: '',
+  section: 'KITCHEN',
   sortOrder: '0',
   isActive: true
 };
@@ -25,6 +26,11 @@ const ITEM_FORM_DEFAULT = {
 
 function emptyState(value) {
   return value || '—';
+}
+
+function resolveCategorySection(category) {
+  const normalizedSection = String(category?.section || '').toUpperCase();
+  return normalizedSection === 'BAR' ? 'BAR' : 'KITCHEN';
 }
 
 function MenuStatusToggle({ checked, onChange, activeLabel, inactiveLabel }) {
@@ -76,6 +82,7 @@ export default function MenuEditorPage() {
     itemsList: true
   });
   const [openItemCategories, setOpenItemCategories] = useState({});
+  const [activeMenuSection, setActiveMenuSection] = useState('KITCHEN');
 
   const activeCategoryCount = useMemo(
     () => menuState.categories.filter((category) => category.isActive).length,
@@ -142,6 +149,7 @@ export default function MenuEditorPage() {
     setCategoryForm({
       name: category.name || '',
       slug: category.slug || '',
+      section: resolveCategorySection(category),
       sortOrder: String(category.sortOrder ?? 0),
       isActive: Boolean(category.isActive)
     });
@@ -184,6 +192,7 @@ export default function MenuEditorPage() {
       method,
       body: JSON.stringify({
         ...categoryForm,
+        section: categoryForm.section,
         sortOrder: Number(categoryForm.sortOrder)
       })
     });
@@ -372,13 +381,29 @@ export default function MenuEditorPage() {
     setFeedback({ tone: 'success', message: successMessage });
   }
 
+  const visibleCategories = useMemo(
+    () => menuState.categories.filter((category) => resolveCategorySection(category) === activeMenuSection),
+    [activeMenuSection, menuState.categories]
+  );
+
   const itemsByCategory = useMemo(
-    () => menuState.categories.map((category) => ({
+    () => visibleCategories.map((category) => ({
       ...category,
       items: menuState.items.filter((item) => item.categoryId === category.id)
     })),
-    [menuState.categories, menuState.items]
+    [visibleCategories, menuState.items]
   );
+
+  useEffect(() => {
+    if (!visibleCategories.length) {
+      return;
+    }
+
+    const currentCategoryVisible = visibleCategories.some((category) => String(category.id) === String(itemForm.categoryId));
+    if (!currentCategoryVisible) {
+      setItemForm((current) => ({ ...current, categoryId: String(visibleCategories[0].id) }));
+    }
+  }, [itemForm.categoryId, visibleCategories]);
 
   return (
     <AdminLayout>
@@ -411,6 +436,22 @@ export default function MenuEditorPage() {
 
         {feedback.message ? <p className={`form-state menu-admin-feedback is-${feedback.tone || 'success'}`}>{feedback.message}</p> : null}
         {menuState.error ? <p className="error">{menuState.error}</p> : null}
+        <div className="menu-admin-section-switch">
+          <button
+            type="button"
+            className={`menu-admin-section-switch-btn${activeMenuSection === 'KITCHEN' ? ' active' : ''}`}
+            onClick={() => setActiveMenuSection('KITCHEN')}
+          >
+            {t('menuAdmin.sections.kitchen')}
+          </button>
+          <button
+            type="button"
+            className={`menu-admin-section-switch-btn${activeMenuSection === 'BAR' ? ' active' : ''}`}
+            onClick={() => setActiveMenuSection('BAR')}
+          >
+            {t('menuAdmin.sections.bar')}
+          </button>
+        </div>
 
         <section className="menu-admin-grid">
           <PanelCard
@@ -445,6 +486,16 @@ export default function MenuEditorPage() {
                   onChange={(event) => setCategoryForm((current) => ({ ...current, slug: event.target.value }))}
                   placeholder={t('menuAdmin.placeholders.categorySlug')}
                 />
+              </label>
+              <label>
+                {t('menuAdmin.fields.section')}
+                <select
+                  value={categoryForm.section}
+                  onChange={(event) => setCategoryForm((current) => ({ ...current, section: event.target.value }))}
+                >
+                  <option value="KITCHEN">{t('menuAdmin.sections.kitchen')}</option>
+                  <option value="BAR">{t('menuAdmin.sections.bar')}</option>
+                </select>
               </label>
               <label>
                 {t('menuAdmin.fields.sortOrder')}
@@ -495,7 +546,7 @@ export default function MenuEditorPage() {
                     required
                   >
                     <option value="">{t('menuAdmin.selectCategory')}</option>
-                    {menuState.categories.map((category) => (
+                    {visibleCategories.map((category) => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
@@ -591,7 +642,7 @@ export default function MenuEditorPage() {
                   </label>
                 </div>
                 <div className="actions wrap-mobile admin-form-span-2 menu-mobile-actions">
-                  <button type="submit" className="btn menu-mobile-btn" disabled={savingKey === 'item-form' || uploadingItemImage || !menuState.categories.length}>
+                  <button type="submit" className="btn menu-mobile-btn" disabled={savingKey === 'item-form' || uploadingItemImage || !visibleCategories.length}>
                     {savingKey === 'item-form' ? t('menuAdmin.saving') : itemEditId ? t('menuAdmin.actions.saveItem') : t('menuAdmin.actions.addItem')}
                   </button>
                 </div>
@@ -625,9 +676,9 @@ export default function MenuEditorPage() {
                 setOpenPanels((current) => ({ ...current, categoriesList: !current.categoriesList }));
               }}
             >
-              {!menuState.categories.length ? <p className="muted">{t('menuAdmin.emptyCategories')}</p> : null}
+              {!visibleCategories.length ? <p className="muted">{t('menuAdmin.emptyCategories')}</p> : null}
               <div className="menu-admin-stack">
-                {menuState.categories.map((category) => (
+                {visibleCategories.map((category) => (
                   <article key={category.id} className="menu-admin-card">
                     <div className="menu-admin-card-head">
                       <div>

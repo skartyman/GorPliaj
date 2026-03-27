@@ -33,6 +33,13 @@ function normalizeInteger(value, fallbackValue = 0) {
   return Number.isInteger(parsed) ? parsed : fallbackValue;
 }
 
+function normalizeMenuSection(value, fallbackValue = 'KITCHEN') {
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase();
+  return normalized === 'BAR' ? 'BAR' : fallbackValue;
+}
+
 function slugify(value) {
   return normalizeText(value)
     .toLowerCase()
@@ -46,6 +53,7 @@ function toAdminCategory(category) {
     id: category.id,
     name: category.name,
     slug: category.slug,
+    section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
     isActive: category.isActive,
     itemsCount: category._count?.items ?? category.items?.length ?? 0,
@@ -74,6 +82,7 @@ function toAdminItem(item) {
           id: item.category.id,
           name: item.category.name,
           slug: item.category.slug,
+          section: item.category.section || 'KITCHEN',
           isActive: item.category.isActive,
           sortOrder: item.category.sortOrder
         }
@@ -134,6 +143,7 @@ async function createCategory(input) {
     data: {
       name,
       slug,
+      section: normalizeMenuSection(input.section, 'KITCHEN'),
       sortOrder: normalizeInteger(input.sortOrder, 0),
       isActive: normalizeBoolean(input.isActive, true)
     }
@@ -162,6 +172,9 @@ async function updateCategory(id, input) {
     data: {
       name,
       slug,
+      section: Object.prototype.hasOwnProperty.call(input, 'section')
+        ? normalizeMenuSection(input.section, existing.section || 'KITCHEN')
+        : (existing.section || 'KITCHEN'),
       sortOrder: Object.prototype.hasOwnProperty.call(input, 'sortOrder')
         ? normalizeInteger(input.sortOrder, existing.sortOrder)
         : existing.sortOrder,
