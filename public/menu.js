@@ -439,7 +439,9 @@ function renderCatalog(groupedMenu) {
                 return `
                   <article class="menu-card-item" data-item-id="${item.id}">
                     <div class="menu-card-media-wrap">
-                      ${getImageMarkup(item, title)}
+                      <div class="menu-card-media-frame">
+                        ${getImageMarkup(item, title)}
+                      </div>
                       <div class="menu-card-media-controls">
                         <button
                           class="menu-like-btn${liked ? ' is-active' : ''}"
@@ -452,7 +454,7 @@ function renderCatalog(groupedMenu) {
                           <span aria-hidden="true">♥</span>
                           <span class="sr-only">${escapeHtml(liked ? dictionary.unlikeButton : dictionary.likeButton)}</span>
                         </button>
-                        <div class="menu-qty-control menu-qty-control-overlay" aria-label="${escapeHtml(dictionary.cartRowQuantity)}">
+                        <div class="menu-qty-control menu-qty-control-media" aria-label="${escapeHtml(dictionary.cartRowQuantity)}">
                           <button type="button" class="menu-qty-btn" data-qty-action="decrease" data-item-id="${item.id}" ${quantity ? '' : 'disabled'}>−</button>
                           <span class="menu-qty-value" data-item-quantity="${item.id}">${quantity}</span>
                           <button type="button" class="menu-qty-btn is-primary" data-qty-action="increase" data-item-id="${item.id}">+</button>
