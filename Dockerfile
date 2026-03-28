@@ -20,9 +20,13 @@ FROM base AS build
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
 
-# Install node modules
+# Install backend node modules
 COPY package-lock.json package.json ./
 RUN npm ci
+
+# Install admin frontend node modules
+COPY admin-frontend/package-lock.json admin-frontend/package.json ./admin-frontend/
+RUN npm ci --prefix admin-frontend
 
 # Copy application code
 COPY . .
