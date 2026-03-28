@@ -1,14 +1,27 @@
 import { getAssetDefinitionForObject } from '../../lib/editor-assets';
 import { EDITOR_TEXTURE_REGISTRY } from '../../lib/editor-textures';
+import { getLayoutModeLabel, t } from '../../lib/editor-locale';
 
 const BASE_FIELDS = ['name', 'label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'zoneId'];
+
+const BASE_FIELD_LABELS = {
+  name: 'Название',
+  label: 'Метка',
+  x: 'X',
+  y: 'Y',
+  width: 'Ширина',
+  height: 'Высота',
+  rotation: 'Поворот',
+  zIndex: 'Слой (zIndex)',
+  zoneId: 'Зона'
+};
 
 export default function InspectorPanel({ selectedObject, zones, layoutModes, onFieldChange, onDelete, onDuplicate }) {
   if (!selectedObject) {
     return (
       <aside className="fp-inspector">
-        <h3>Inspector</h3>
-        <p className="muted">Select an object to edit.</p>
+        <h3>{t('inspector.title')}</h3>
+        <p className="muted">{t('inspector.empty')}</p>
       </aside>
     );
   }
@@ -26,18 +39,18 @@ export default function InspectorPanel({ selectedObject, zones, layoutModes, onF
 
   return (
     <aside className="fp-inspector">
-      <h3>Inspector</h3>
+      <h3>{t('inspector.title')}</h3>
       <div className="actions compact">
-        <button type="button" className="btn btn-secondary btn-small" onClick={onDuplicate}>Duplicate</button>
-        <button type="button" className="btn btn-danger btn-small" onClick={onDelete}>Delete</button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={onDuplicate}>{t('inspector.duplicate')}</button>
+        <button type="button" className="btn btn-danger btn-small" onClick={onDelete}>{t('inspector.delete')}</button>
       </div>
       <div className="fp-inspector-fields">
         {BASE_FIELDS.map((field) => (
           <label key={field}>
-            {field}
+            {BASE_FIELD_LABELS[field] || field}
             {field === 'zoneId' ? (
               <select value={selectedObject[field] || ''} onChange={(e) => onFieldChange(field, e.target.value || null)}>
-                <option value="">No zone</option>
+                <option value="">{t('inspector.noZone')}</option>
                 {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
               </select>
             ) : (
@@ -50,35 +63,35 @@ export default function InspectorPanel({ selectedObject, zones, layoutModes, onF
         ))}
 
         <label className="editor-toggle-field">
-          <span>locked</span>
+          <span>{t('inspector.locked')}</span>
           <input type="checkbox" checked={selectedObject.locked} onChange={(e) => onFieldChange('locked', e.target.checked)} />
         </label>
 
         <label className="editor-toggle-field">
-          <span>hidden</span>
+          <span>{t('inspector.hidden')}</span>
           <input type="checkbox" checked={selectedObject.hidden} onChange={(e) => onFieldChange('hidden', e.target.checked)} />
         </label>
 
         <label>
-          visibleInLayoutModes
+          {t('inspector.visibleInLayouts')}
           <select
             value={selectedObject.visibleInLayoutModes === 'all' ? 'all' : 'custom'}
             onChange={(e) => onFieldChange('visibleInLayoutModes', e.target.value === 'all' ? 'all' : [layoutModes[0]?.code].filter(Boolean))}
           >
-            <option value="all">all</option>
-            <option value="custom">custom</option>
+            <option value="all">{t('inspector.visibleInLayouts.all')}</option>
+            <option value="custom">{t('inspector.visibleInLayouts.custom')}</option>
           </select>
         </label>
 
         {selectedObject.visibleInLayoutModes !== 'all' ? (
           <label>
-            Layout list
+            {t('inspector.layoutList')}
             <select
               multiple
               value={selectedObject.visibleInLayoutModes || []}
               onChange={(e) => onFieldChange('visibleInLayoutModes', Array.from(e.target.selectedOptions).map((it) => it.value))}
             >
-              {layoutModes.map((layout) => <option key={layout.id} value={layout.code}>{layout.code}</option>)}
+              {layoutModes.map((layout) => <option key={layout.id} value={layout.code}>{getLayoutModeLabel(layout)}</option>)}
             </select>
           </label>
         ) : null}
@@ -86,38 +99,38 @@ export default function InspectorPanel({ selectedObject, zones, layoutModes, onF
         {assetDefinition ? (
           <>
             <label>
-              assetKey
+              {t('inspector.assetKey')}
               <input value={visual.assetKey || assetDefinition.key} onChange={(e) => updateVisualField('assetKey', e.target.value || assetDefinition.key)} />
             </label>
             <label>
-              renderMode
+              {t('inspector.renderMode')}
               <select value={visual.renderMode || assetDefinition.renderMode} onChange={(e) => updateVisualField('renderMode', e.target.value)}>
-                <option value="asset">asset</option>
-                <option value="shape">shape fallback</option>
+                <option value="asset">{t('inspector.renderMode.asset')}</option>
+                <option value="shape">{t('inspector.renderMode.shape')}</option>
               </select>
             </label>
             <label className="editor-toggle-field">
-              <span>useTexture</span>
+              <span>{t('inspector.useTexture')}</span>
               <input type="checkbox" checked={Boolean(visual.useTexture ?? assetDefinition.useTexture)} onChange={(e) => updateVisualField('useTexture', e.target.checked)} />
             </label>
             <label>
-              textureKey
+              {t('inspector.textureKey')}
               <select
                 value={visual.textureKey || assetDefinition.textureKey || ''}
                 onChange={(e) => updateVisualField('textureKey', e.target.value || undefined)}
                 disabled={!Boolean(visual.useTexture ?? assetDefinition.useTexture)}
               >
-                <option value="">none</option>
+                <option value="">{t('inspector.texture.none')}</option>
                 {Object.keys(EDITOR_TEXTURE_REGISTRY).map((textureKey) => <option key={textureKey} value={textureKey}>{textureKey}</option>)}
               </select>
             </label>
             <label>
-              opacity
+              {t('inspector.opacity')}
               <input type="number" min="0.05" max="1" step="0.05" value={visual.opacity ?? 1} onChange={(e) => updateVisualField('opacity', Number(e.target.value))} />
             </label>
             <label>
-              tint
-              <input value={visual.tint || ''} placeholder="rgba(59,130,246,0.12)" onChange={(e) => updateVisualField('tint', e.target.value || undefined)} />
+              {t('inspector.tint')}
+              <input value={visual.tint || ''} placeholder={t('inspector.tint.placeholder')} onChange={(e) => updateVisualField('tint', e.target.value || undefined)} />
             </label>
           </>
         ) : null}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resolveObjectVisualConfig } from '../../lib/editor-assets';
 
 function getFallbackClass(shape = 'rect') {
@@ -8,6 +8,18 @@ function getFallbackClass(shape = 'rect') {
 export default function ObjectRenderer({ object, className = '', statusStyle = null, showLabel = true }) {
   const [assetFailed, setAssetFailed] = useState(false);
   const { definition, visual, texture, mode } = useMemo(() => resolveObjectVisualConfig(object), [object]);
+
+  useEffect(() => {
+    if (!definition && import.meta.env.DEV) {
+      console.warn('[floor-plan] missing asset definition, fallback will be used', {
+        id: object.id,
+        kind: object.kind,
+        type: object.type,
+        objectType: object.objectType,
+        assetKey: object.visual?.assetKey
+      });
+    }
+  }, [definition, object]);
 
   const renderAsAsset = mode === 'asset' && definition?.path && !assetFailed;
   const opacity = Math.max(0.05, Math.min(Number(visual.opacity ?? 1), 1));
@@ -29,7 +41,16 @@ export default function ObjectRenderer({ object, className = '', statusStyle = n
           alt=""
           className="fp-render-asset"
           style={{ objectFit: definition.preserveAspectRatio === 'none' ? 'fill' : 'contain' }}
-          onError={() => setAssetFailed(true)}
+          onError={() => {
+            setAssetFailed(true);
+            if (import.meta.env.DEV) {
+              console.warn('[floor-plan] asset failed to load, fallback will be used', {
+                id: object.id,
+                path: definition.path,
+                assetKey: definition.key
+              });
+            }
+          }}
           draggable={false}
         />
       ) : (

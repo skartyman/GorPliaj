@@ -10,6 +10,7 @@ import { clampObject, downloadJson, duplicateObject } from '../components/map-ed
 import { createStarterDocument } from '../lib/map-schema';
 import { saveDraftDocument, loadDraftDocument, publishDocument } from '../lib/map-editor-storage';
 import { getDefaultVisualConfigForObject } from '../lib/editor-assets';
+import { t } from '../lib/editor-locale';
 
 function nextId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -23,28 +24,28 @@ function toRenderableObjects(document) {
 }
 
 const TERRITORY_TOOL_PRESETS = {
-  addSea: { type: 'sea', name: 'Sea', fill: '#1d4ed8', stroke: '#1e40af' },
-  addSand: { type: 'sand', name: 'Sand', fill: '#a16207', stroke: '#78350f' },
-  addDeck: { type: 'deck', name: 'Deck', fill: '#7c2d12', stroke: '#78350f' },
-  addPathway: { type: 'pathway', name: 'Pathway', fill: '#475569', stroke: '#64748b', width: 180, height: 44 },
-  addStairs: { type: 'stairs', name: 'Stairs', fill: '#334155', stroke: '#64748b', width: 120, height: 52 },
-  addPier: { type: 'pier', name: 'Pier', fill: '#78350f', stroke: '#92400e', width: 240, height: 100 },
-  addBuilding: { type: 'building', name: 'Building', fill: '#1f2937', stroke: '#475569', width: 180, height: 130 },
-  addWinterRestaurant: { type: 'winter_restaurant', name: 'Winter Restaurant', fill: '#312e81', stroke: '#4338ca', width: 220, height: 140 },
-  addBar: { type: 'bar', name: 'Bar', fill: '#7c3aed', stroke: '#6d28d9', width: 140, height: 80 },
-  addStage: { type: 'stage', name: 'Stage', fill: '#7f1d1d', stroke: '#b91c1c', width: 200, height: 90 }
+  addSea: { type: 'sea', name: 'Море', fill: '#1d4ed8', stroke: '#1e40af', x: 0, y: 0, width: 1800, height: 360, zIndex: 1 },
+  addSand: { type: 'sand', name: 'Песок', fill: '#a16207', stroke: '#78350f', x: 0, y: 320, width: 1800, height: 460, zIndex: 2 },
+  addDeck: { type: 'deck', name: 'Настил', fill: '#7c2d12', stroke: '#78350f', width: 760, height: 210, x: 520, y: 650, zIndex: 3 },
+  addPathway: { type: 'pathway', name: 'Дорожка', fill: '#475569', stroke: '#64748b', width: 280, height: 320, x: 760, y: 340, zIndex: 4 },
+  addStairs: { type: 'stairs', name: 'Лестница', fill: '#334155', stroke: '#64748b', width: 130, height: 60 },
+  addPier: { type: 'pier', name: 'Пирс', fill: '#78350f', stroke: '#92400e', width: 420, height: 140, x: 1240, y: 180, zIndex: 5 },
+  addBuilding: { type: 'building', name: 'Здание', fill: '#1f2937', stroke: '#475569', width: 260, height: 170 },
+  addWinterRestaurant: { type: 'winter_restaurant', name: 'Зимний ресторан', fill: '#312e81', stroke: '#4338ca', width: 280, height: 180 },
+  addBar: { type: 'bar', name: 'Бар', fill: '#7c3aed', stroke: '#6d28d9', width: 170, height: 95 },
+  addStage: { type: 'stage', name: 'Сцена', fill: '#7f1d1d', stroke: '#b91c1c', width: 220, height: 120 }
 };
 
 const BOOKABLE_TOOL_PRESETS = {
-  addRoundTable: { objectType: 'round_table', bookingKind: 'restaurant_table', name: 'Restaurant Table', tableCode: 'R' },
-  addRectTable: { objectType: 'rect_table', bookingKind: 'terrace_table', name: 'Terrace Table', tableCode: 'T' },
-  addSofa: { objectType: 'sofa', bookingKind: 'vip_zone', name: 'Sofa', width: 130, height: 74 },
-  addLoungerBed: { objectType: 'lounger_bed', bookingKind: 'lounger_bed', name: 'Lounger Bed', width: 130, height: 62 },
-  addBungalow: { objectType: 'bungalow', bookingKind: 'bungalow', name: 'Bungalow', width: 130, height: 100 },
-  addHookahTable: { objectType: 'hookah_table', bookingKind: 'hookah_table', name: 'Hookah Table', width: 92, height: 92 },
-  addVipZone: { objectType: 'vip_zone', bookingKind: 'vip_zone', name: 'VIP Zone', width: 180, height: 100 },
-  addTicketZone: { objectType: 'ticket_zone', bookingKind: 'ticket_zone', name: 'Ticket Zone', width: 180, height: 90 },
-  addPierSpot: { objectType: 'pier_bed', bookingKind: 'pier_spot', name: 'Pier Spot', width: 120, height: 58 }
+  addRoundTable: { objectType: 'round_table', bookingKind: 'restaurant_table', name: 'Стол ресторана', tableCode: 'R' },
+  addRectTable: { objectType: 'rect_table', bookingKind: 'terrace_table', name: 'Стол террасы', tableCode: 'T' },
+  addSofa: { objectType: 'sofa', bookingKind: 'vip_zone', name: 'Диван', width: 130, height: 74 },
+  addLoungerBed: { objectType: 'lounger_bed', bookingKind: 'lounger_bed', name: 'Лежак', width: 130, height: 62 },
+  addBungalow: { objectType: 'bungalow', bookingKind: 'bungalow', name: 'Бунгало', width: 130, height: 100 },
+  addHookahTable: { objectType: 'hookah_table', bookingKind: 'hookah_table', name: 'Кальянный стол', width: 92, height: 92 },
+  addVipZone: { objectType: 'vip_zone', bookingKind: 'vip_zone', name: 'VIP-зона', width: 180, height: 100 },
+  addTicketZone: { objectType: 'ticket_zone', bookingKind: 'ticket_zone', name: 'Билетная зона', width: 180, height: 90 },
+  addPierSpot: { objectType: 'pier_bed', bookingKind: 'pier_spot', name: 'Место на пирсе', width: 120, height: 58 }
 };
 
 function getDefaultObjectByTool(tool, editorMode) {
@@ -80,7 +81,7 @@ function getDefaultObjectByTool(tool, editorMode) {
     };
   }
 
-  const territoryPreset = TERRITORY_TOOL_PRESETS[tool] || { type: 'rect', name: 'Territory object', fill: '#334155', stroke: '#475569' };
+  const territoryPreset = TERRITORY_TOOL_PRESETS[tool] || { type: 'rect', name: 'Объект территории', fill: '#334155', stroke: '#475569' };
   const object = {
     ...base,
     ...territoryPreset,
@@ -256,7 +257,7 @@ export default function MapEditorPage() {
 
   return (
     <AdminLayout>
-      <PageContainer title="Floor Plan Editor" description="Base territory + layout modes + bookable objects + runtime-ready status layer.">
+      <PageContainer title={t('editor.pageTitle')} description={t('editor.pageDescription')}>
         <div className="floor-plan-editor" onKeyDown={handleKeyDown} tabIndex={0}>
           <EditorToolbar
             activeTool={activeTool}
@@ -270,6 +271,12 @@ export default function MapEditorPage() {
             onPublish={handlePublish}
             onExport={handleExport}
             onImport={handleImport}
+            onLoadDraft={() => {
+              setDocument(loadDraftDocument());
+              setSelectedId(null);
+              setHistory([]);
+              setFuture([]);
+            }}
           />
 
           <div className="fp-main-grid">
@@ -328,9 +335,9 @@ export default function MapEditorPage() {
               onMouseLeave={() => setIsPanning(false)}
               onClick={() => setActiveTool(activeTool === 'hand' ? 'select' : 'hand')}
             >
-              Pan hand
+              {t('controls.panHand')}
             </button>
-            <label className="editor-toggle-field"><span>Snap to grid</span><input type="checkbox" checked={snapToGrid} onChange={(e) => setSnapToGrid(e.target.checked)} /></label>
+            <label className="editor-toggle-field"><span>{t('controls.snapToGrid')}</span><input type="checkbox" checked={snapToGrid} onChange={(e) => setSnapToGrid(e.target.checked)} /></label>
           </div>
 
           <StatusBar document={document} selectedObject={selectedObject} layoutMode={layoutMode} zoom={zoom} mode={editorMode} />
