@@ -367,8 +367,8 @@ function setupCategoryObserver() {
 
   const observerOptions = {
     root: null,
-    threshold: [0, 0.15, 0.35, 0.55, 0.75],
-    rootMargin: '-110px 0px -20% 0px'
+    threshold: [0.25, 0.5, 0.75],
+    rootMargin: '-110px 0px -45% 0px'
   };
 
   categorySectionObserver = new IntersectionObserver((entries) => {
@@ -378,20 +378,7 @@ function setupCategoryObserver() {
 
     const visible = entries
       .filter((entry) => entry.isIntersecting)
-      .sort((left, right) => (
-        right.intersectionRatio - left.intersectionRatio
-        || left.boundingClientRect.top - right.boundingClientRect.top
-      ));
-
-    const nearCatalogBottom = (window.innerHeight + window.scrollY)
-      >= (document.documentElement.scrollHeight - 8);
-    if (nearCatalogBottom) {
-      const lastCategoryName = sections[sections.length - 1]?.getAttribute('data-category-name');
-      if (lastCategoryName) {
-        setActiveCategory(lastCategoryName, { shouldRender: false, autoScroll: true });
-      }
-      return;
-    }
+      .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
 
     if (!visible.length) {
       return;
@@ -844,13 +831,10 @@ categoryNav?.addEventListener('click', (event) => {
   }
 
   isCategoryScrollSyncPaused = true;
-  const anchorOffsetRaw = getComputedStyle(document.documentElement).getPropertyValue('--anchor-scroll-offset');
-  const anchorOffset = Number.parseInt(anchorOffsetRaw, 10) || 110;
-  const targetTop = Math.max(0, window.scrollY + targetSection.getBoundingClientRect().top - anchorOffset);
-  window.scrollTo({ top: targetTop, behavior: 'auto' });
+  targetSection.scrollIntoView({ behavior: 'auto', block: 'start' });
   setTimeout(() => {
     isCategoryScrollSyncPaused = false;
-  }, 180);
+  }, 420);
 });
 
 menuCatalog?.addEventListener('click', (event) => {
