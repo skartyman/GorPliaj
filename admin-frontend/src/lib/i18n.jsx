@@ -2,6 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'admin-language';
 
+const SUPPORTED_LANGUAGES = ['ru', 'en', 'uk'];
+
+function normalizeLanguage(value) {
+  return SUPPORTED_LANGUAGES.includes(value) ? value : 'ru';
+}
+
 const translations = {
   ru: {
     appTitle: 'Админка GorPliaj',
@@ -1016,19 +1022,20 @@ function interpolate(message, params = {}) {
 }
 
 export function AdminI18nProvider({ children }) {
-  const [language, setLanguage] = useState(() => localStorage.getItem(STORAGE_KEY) || 'ru');
+  const [language, setLanguage] = useState(() => normalizeLanguage(localStorage.getItem(STORAGE_KEY) || 'ru'));
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, language);
-    document.documentElement.lang = language === 'ru' ? 'ru' : 'en';
+    document.documentElement.lang = language;
     document.title = getValueByPath(translations[language], 'appTitle') || 'Admin';
   }, [language]);
 
   const value = useMemo(() => {
-    const dictionary = translations[language] || translations.ru;
+    const resolvedLanguage = normalizeLanguage(language);
+    const dictionary = translations[resolvedLanguage] || translations.ru;
     return {
-      language,
-      locale: language === 'ru' ? 'ru-RU' : 'en-US',
+      language: resolvedLanguage,
+      locale: resolvedLanguage === 'en' ? 'en-US' : resolvedLanguage === 'uk' ? 'uk-UA' : 'ru-RU',
       toggleLanguage: () => setLanguage((prev) => (prev === 'ru' ? 'en' : 'ru')),
       t(path, params) {
         const message = getValueByPath(dictionary, path) ?? getValueByPath(translations.ru, path) ?? path;

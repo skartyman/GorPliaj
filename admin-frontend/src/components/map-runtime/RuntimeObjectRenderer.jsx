@@ -1,9 +1,12 @@
 import ObjectRenderer from '../map-common/ObjectRenderer';
 import { RUNTIME_STATUS_STYLE } from '../../lib/booking-schema';
-import { RUNTIME_STATUS_LABELS } from '../../lib/editor-locale';
+import { getLocalizedObjectName, getRuntimeStatusLabel } from '../../lib/editor-locale';
+import { useAdminI18n } from '../../lib/i18n';
 
 export default function RuntimeObjectRenderer({ object, mapWidth, mapHeight, status, title }) {
+  const { language } = useAdminI18n();
   const statusStyle = status ? RUNTIME_STATUS_STYLE[status] : null;
+  const resolvedTitle = title || getLocalizedObjectName(object, language);
 
   return (
     <div
@@ -16,10 +19,10 @@ export default function RuntimeObjectRenderer({ object, mapWidth, mapHeight, sta
         transform: `rotate(${Number(object.rotation || 0)}deg)`,
         zIndex: object.zIndex
       }}
-      title={title}
+      title={resolvedTitle}
     >
       <ObjectRenderer object={object} statusStyle={statusStyle} showLabel={object.kind === 'bookable'} />
-      {status ? <small className="fp-runtime-status-chip" style={{ background: statusStyle?.badge }}>{RUNTIME_STATUS_LABELS[status]}</small> : null}
+      {status ? <small className="fp-runtime-status-chip" style={{ background: statusStyle?.badge }}>{getRuntimeStatusLabel(status, language)}</small> : null}
     </div>
   );
 }

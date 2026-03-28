@@ -9,7 +9,8 @@ import RuntimeObjectRenderer from '../components/map-runtime/RuntimeObjectRender
 import { loadDraftDocument } from '../lib/map-editor-storage';
 import { isVisibleInLayout } from '../lib/layout-schema';
 import { resolveMockRuntimeStatus } from '../lib/booking-schema';
-import { RUNTIME_STATUS_LABELS, t } from '../lib/editor-locale';
+import { getLocalizedObjectName, getRuntimeStatusLabel, t } from '../lib/editor-locale';
+import { useAdminI18n } from '../lib/i18n';
 
 function toRenderableObjects(document) {
   return [
@@ -19,6 +20,7 @@ function toRenderableObjects(document) {
 }
 
 export default function BookingRuntimePage() {
+  const { language } = useAdminI18n();
   const [document] = useState(() => loadDraftDocument());
   const [layoutCode, setLayoutCode] = useState(document.layoutModes[0]?.code || 'day_beach_restaurant');
   const [timeline, setTimeline] = useState('19:00');
@@ -28,7 +30,7 @@ export default function BookingRuntimePage() {
 
   return (
     <AdminLayout>
-      <PageContainer title={t('runtime.pageTitle')} description={t('runtime.pageDescription')}>
+      <PageContainer title={t('runtime.pageTitle', language)} description={t('runtime.pageDescription', language)}>
         <div className="fp-runtime-toolbar">
           <LayoutModeSelector layoutModes={document.layoutModes} value={layoutCode} onChange={setLayoutCode} />
           <TimelineBar value={timeline} onChange={setTimeline} />
@@ -62,7 +64,7 @@ export default function BookingRuntimePage() {
                   mapWidth={document.width}
                   mapHeight={document.height}
                   status={status}
-                  title={status ? `${object.name} · ${RUNTIME_STATUS_LABELS[status]}` : object.name}
+                  title={status ? `${getLocalizedObjectName(object, language)} · ${getRuntimeStatusLabel(status, language)}` : getLocalizedObjectName(object, language)}
                 />
               );
             })}
