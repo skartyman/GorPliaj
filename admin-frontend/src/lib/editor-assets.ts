@@ -1,4 +1,5 @@
 import { getTextureConfig } from './editor-textures';
+import { resolveAdminPublicPath } from './admin-public-path';
 
 export type RenderMode = 'asset' | 'shape';
 export type FallbackShape = 'rect' | 'round' | 'circle' | 'pill';
@@ -27,28 +28,28 @@ export interface AssetDefinition {
 }
 
 export const TERRITORY_ASSET_REGISTRY: Record<string, AssetDefinition> = {
-  sea: { key: 'sea', category: 'territory', path: '/editor/objects/sea.svg', renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'water-lines', fallbackShape: 'rect', tintSupport: true },
-  sand: { key: 'sand', category: 'territory', path: '/editor/objects/sand.svg', renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'sand-pattern', fallbackShape: 'rect', tintSupport: true },
-  deck: { key: 'deck', category: 'territory', path: '/editor/objects/deck.svg', renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'wood-pattern', fallbackShape: 'rect', tintSupport: true },
-  pathway: { key: 'pathway', category: 'territory', path: '/editor/objects/pathway.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true },
-  stairs: { key: 'stairs', category: 'territory', path: '/editor/objects/stairs.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'rect', tintSupport: true },
-  pier: { key: 'pier', category: 'territory', path: '/editor/objects/pier.svg', renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'wood-pattern', fallbackShape: 'rect', tintSupport: true },
-  building: { key: 'building', category: 'territory', path: '/editor/objects/building.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
-  winter_restaurant: { key: 'winter_restaurant', category: 'territory', path: '/editor/objects/winter-restaurant.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
-  bar: { key: 'bar', category: 'territory', path: '/editor/objects/bar.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
-  stage: { key: 'stage', category: 'territory', path: '/editor/objects/stage.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true }
+  sea: { key: 'sea', category: 'territory', path: resolveAdminPublicPath('editor/objects/sea.svg'), renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'water-lines', fallbackShape: 'rect', tintSupport: true },
+  sand: { key: 'sand', category: 'territory', path: resolveAdminPublicPath('editor/objects/sand.svg'), renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'sand-pattern', fallbackShape: 'rect', tintSupport: true },
+  deck: { key: 'deck', category: 'territory', path: resolveAdminPublicPath('editor/objects/deck.svg'), renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'wood-pattern', fallbackShape: 'rect', tintSupport: true },
+  pathway: { key: 'pathway', category: 'territory', path: resolveAdminPublicPath('editor/objects/pathway.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true },
+  stairs: { key: 'stairs', category: 'territory', path: resolveAdminPublicPath('editor/objects/stairs.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'rect', tintSupport: true },
+  pier: { key: 'pier', category: 'territory', path: resolveAdminPublicPath('editor/objects/pier.svg'), renderMode: 'asset', preserveAspectRatio: 'none', useTexture: true, textureKey: 'wood-pattern', fallbackShape: 'rect', tintSupport: true },
+  building: { key: 'building', category: 'territory', path: resolveAdminPublicPath('editor/objects/building.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
+  winter_restaurant: { key: 'winter_restaurant', category: 'territory', path: resolveAdminPublicPath('editor/objects/winter-restaurant.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
+  bar: { key: 'bar', category: 'territory', path: resolveAdminPublicPath('editor/objects/bar.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
+  stage: { key: 'stage', category: 'territory', path: resolveAdminPublicPath('editor/objects/stage.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true }
 };
 
 export const BOOKABLE_ASSET_REGISTRY: Record<string, AssetDefinition> = {
-  round_table: { key: 'round_table', category: 'bookable', path: '/editor/objects/restaurant-table.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'circle', tintSupport: true },
-  rect_table: { key: 'rect_table', category: 'bookable', path: '/editor/objects/terrace-table.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
-  sofa: { key: 'sofa', category: 'bookable', path: '/editor/objects/vip-zone.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true },
-  lounger_bed: { key: 'lounger_bed', category: 'bookable', path: '/editor/objects/lounger-bed.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true },
-  bungalow: { key: 'bungalow', category: 'bookable', path: '/editor/objects/bungalow.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
-  hookah_table: { key: 'hookah_table', category: 'bookable', path: '/editor/objects/hookah-table.svg', renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
-  vip_zone: { key: 'vip_zone', category: 'bookable', path: '/editor/objects/vip-zone.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'round', tintSupport: true },
-  ticket_zone: { key: 'ticket_zone', category: 'bookable', path: '/editor/objects/stage.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'round', tintSupport: false },
-  pier_bed: { key: 'pier_bed', category: 'bookable', path: '/editor/objects/pier-spot.svg', renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true }
+  round_table: { key: 'round_table', category: 'bookable', path: resolveAdminPublicPath('editor/objects/restaurant-table.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'circle', tintSupport: true },
+  rect_table: { key: 'rect_table', category: 'bookable', path: resolveAdminPublicPath('editor/objects/terrace-table.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
+  sofa: { key: 'sofa', category: 'bookable', path: resolveAdminPublicPath('editor/objects/vip-zone.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true },
+  lounger_bed: { key: 'lounger_bed', category: 'bookable', path: resolveAdminPublicPath('editor/objects/lounger-bed.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true },
+  bungalow: { key: 'bungalow', category: 'bookable', path: resolveAdminPublicPath('editor/objects/bungalow.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
+  hookah_table: { key: 'hookah_table', category: 'bookable', path: resolveAdminPublicPath('editor/objects/hookah-table.svg'), renderMode: 'asset', preserveAspectRatio: 'xMidYMid meet', fallbackShape: 'round', tintSupport: true },
+  vip_zone: { key: 'vip_zone', category: 'bookable', path: resolveAdminPublicPath('editor/objects/vip-zone.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'round', tintSupport: true },
+  ticket_zone: { key: 'ticket_zone', category: 'bookable', path: resolveAdminPublicPath('editor/objects/stage.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'round', tintSupport: false },
+  pier_bed: { key: 'pier_bed', category: 'bookable', path: resolveAdminPublicPath('editor/objects/pier-spot.svg'), renderMode: 'asset', preserveAspectRatio: 'none', fallbackShape: 'pill', tintSupport: true }
 };
 
 export function getAssetDefinitionForObject(object: { kind: 'territory' | 'bookable'; type?: string; objectType?: string; visual?: ObjectVisualConfig }): AssetDefinition | null {

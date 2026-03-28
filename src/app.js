@@ -32,7 +32,7 @@ function setStaticHeaders(res, filePath) {
 
 app.use(express.json());
 app.use(express.static(publicDir, { setHeaders: setStaticHeaders }));
-app.use('/admin/assets', express.static(path.join(adminAppDir, 'assets')));
+app.use('/admin', express.static(adminAppDir, { setHeaders: setStaticHeaders }));
 
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);

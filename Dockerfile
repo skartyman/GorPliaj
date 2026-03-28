@@ -29,6 +29,7 @@ COPY . .
 
 # Generate Prisma client after schema is available in image
 RUN npx prisma generate
+RUN npm run admin:build
 
 
 FROM base
