@@ -1,4 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 80" preserveAspectRatio="none">
-  <rect width="180" height="80" fill="transparent"/>
-  <path d="M0 16 H180 M0 40 H180 M0 64 H180" stroke="#f59e0b" stroke-opacity="0.35" stroke-width="2"/>
+<svg aria-labelledby="title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" height="500" width="800">
+  <title>Тёмная деревянная палуба</title>
+
+  <defs>
+    
+    <linearGradient gradientUnits="objectBoundingBox" y2="100%" x2="100%" y1="0%" x1="0%" id="woodGrain">
+      <stop stop-color="#3c2f2f" offset="0%"></stop>
+      <stop stop-color="#2c221f" offset="50%"></stop>
+      <stop stop-color="#1f1815" offset="100%"></stop>
+    </linearGradient>
+
+    
+    <filter height="100%" width="100%" y="0%" x="0%" id="woodTexture">
+      <feTurbulence result="t1" seed="7" numOctaves="4" baseFrequency="0.9" type="fractalNoise"></feTurbulence>
+      <feDisplacementMap yChannelSelector="G" xChannelSelector="R" scale="4" in2="t1" in="SourceGraphic"></feDisplacementMap>
+    </filter>
+
+    
+    <filter height="140%" width="140%" y="-20%" x="-20%" id="shadow">
+      <feGaussianBlur stdDeviation="1.5" in="SourceAlpha"></feGaussianBlur>
+    </filter>
+  </defs>
+
+  
+  <rect fill="#2c221f" height="500" width="800"></rect>
+
+  
+  
+  <g>
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="20" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="20" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="80" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="80" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="140" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="140" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="200" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="200" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="260" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="260" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="320" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="320" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="380" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="380" x="0"></rect>
+
+    
+    <rect filter="url(#woodTexture)" fill="url(#woodGrain)" rx="4" height="48" width="800" y="440" x="0"></rect>
+    <rect filter="url(#shadow)" opacity="0.25" fill="#1f1815" rx="4" height="48" width="800" y="440" x="0"></rect>
+  </g>
+
+  
+  <g opacity="0.6">
+    <rect fill="#1a1412" height="4" width="800" y="68" x="0"></rect>
+    <rect fill="#1a1412" height="4" width="800" y="128" x="0"></rect>
+    <rect fill="#1a1412" height="4" width="800" y="188" x="0"></rect>
+    <rect fill="#1a1412" height="4" width="800" y="248" x="0"></rect>
+    <rect fill="#1a1412" height="4" width="800" y="308" x="0"></rect>
+    <rect fill="#1a1412" height="4" width="800" y="368" x="0"></rect>
+    <rect fill="#1a1412" height="4" width="800" y="428" x="0"></rect>
+  </g>
+
+  
+  <circle opacity="0.7" fill="#1f1815" r="3" cy="45" cx="120"></circle>
+  <circle opacity="0.65" fill="#1f1815" r="2.5" cy="105" cx="450"></circle>
+  <circle opacity="0.7" fill="#1f1815" r="3" cy="165" cx="680"></circle>
+  <circle opacity="0.6" fill="#1f1815" r="2" cy="225" cx="280"></circle>
+  <circle opacity="0.7" fill="#1f1815" r="3" cy="285" cx="590"></circle>
+
 </svg>
