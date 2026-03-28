@@ -24,8 +24,8 @@ RUN apt-get update -qq && \
 COPY . .
 
 # Install deps
-RUN npm ci --omit=dev
-RUN npm ci --prefix admin-frontend --omit=dev
+RUN npm ci
+RUN npm ci --prefix admin-frontend
 
 # Prisma
 RUN npx prisma generate
