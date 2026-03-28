@@ -1,4 +1,80 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-  <rect width="120" height="120" fill="transparent"/>
-  <path d="M0 20 H120 M0 50 H120 M0 80 H120" stroke="#bfdbfe" stroke-opacity="0.4" stroke-width="2"/>
+<svg aria-labelledby="title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" height="500" width="800">
+  <title>Красивое море</title>
+
+  
+  <defs>
+    <linearGradient y2="100%" x2="0%" y1="0%" x1="0%" id="seaGradient">
+      <stop stop-color="#4fc3f7" offset="0%"></stop>
+      <stop stop-color="#0288d1" offset="45%"></stop>
+      <stop stop-color="#01579b" offset="80%"></stop>
+      <stop stop-color="#013a6e" offset="100%"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <rect fill="url(#seaGradient)" height="500" width="800"></rect>
+
+  
+
+  
+  <path opacity="0.9" fill="#29b6f6" d="M0 180 
+           Q80 140 160 180 
+           Q240 220 320 180 
+           Q400 140 480 180 
+           Q560 220 640 180 
+           Q720 140 800 180 
+           L800 500 L0 500 Z"></path>
+
+  
+  <path opacity="0.85" fill="#03a9f4" d="M0 230 
+           Q100 190 200 230 
+           Q300 270 400 230 
+           Q500 190 600 230 
+           Q700 270 800 230 
+           L800 500 L0 500 Z"></path>
+
+  
+  <path opacity="0.8" fill="#0288d1" d="M0 280 
+           Q70 240 180 280 
+           Q290 320 400 280 
+           Q510 240 620 280 
+           Q730 320 800 280 
+           L800 500 L0 500 Z"></path>
+
+  
+  <path opacity="0.75" fill="#0277bd" d="M0 330 
+           Q120 290 220 330 
+           Q320 370 430 330 
+           Q540 290 650 330 
+           Q750 370 800 330 
+           L800 500 L0 500 Z"></path>
+
+  
+  <path opacity="0.7" fill="#01579b" d="M0 380 
+           Q90 340 190 380 
+           Q300 420 410 380 
+           Q520 340 630 380 
+           Q740 420 800 380 
+           L800 500 L0 500 Z"></path>
+
+  
+  <path stroke-opacity="0.45" stroke-width="22" stroke="#e0f7fa" fill="none" d="M0 175 
+           Q90 135 175 175 
+           Q260 215 355 175 
+           Q450 135 540 175 
+           Q630 215 720 175 
+           Q780 145 800 175"></path>
+
+  <path stroke-opacity="0.35" stroke-width="16" stroke="#b2ebf2" fill="none" d="M0 225 
+           Q110 185 205 225 
+           Q310 265 415 225 
+           Q520 185 625 225 
+           Q730 265 800 225"></path>
+
+  <path stroke-opacity="0.25" stroke-width="12" stroke="#81d4fa" fill="none" d="M0 275 
+           Q80 245 190 275 
+           Q300 315 410 275 
+           Q520 245 630 275 
+           Q740 315 800 275"></path>
+
 </svg>
