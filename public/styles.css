@@ -1037,13 +1037,18 @@ select:focus {
 
 .menu-section-nav {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
   align-items: center;
-  min-height: 0;
-  padding: 0;
+  min-height: var(--menu-tab-pill-height, 44px);
+  width: max-content;
+  max-width: 100%;
+  padding: 6px;
   margin: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #e2e8f0;
 }
 
 .menu-section-nav::-webkit-scrollbar {
@@ -1056,22 +1061,22 @@ select:focus {
   justify-content: center;
   height: var(--menu-tab-pill-height, 44px);
   min-height: var(--menu-tab-pill-height, 44px);
-  padding: 0 18px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: #f8fafc;
-  color: #475569;
+  padding: 0 28px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: #334155;
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .menu-section-link.active {
-  background: #fff1f2;
-  border-color: rgba(251, 113, 133, 0.35);
-  color: #be123c;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(37, 99, 235, 0.28);
 }
 
 .menu-section-link:disabled {
