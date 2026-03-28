@@ -920,10 +920,8 @@ select:focus {
 }
 
 .menu-card-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 10px;
+  display: block;
+  min-width: 0;
 }
 
 .menu-page-header h1,
@@ -992,12 +990,17 @@ select:focus {
 }
 
 .menu-card-item .menu-price {
+  width: fit-content;
+  margin-top: auto;
   flex-shrink: 0;
-  padding: 8px 14px;
+  min-height: 36px;
+  padding: 4px 10px;
   background: linear-gradient(135deg, #7c3aed, #a855f7);
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(124, 58, 237, 0.22);
   white-space: nowrap;
+  font-size: 0.84rem;
+  justify-content: flex-start;
 }
 
 .menu-category-link {
@@ -1027,6 +1030,7 @@ select:focus {
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
   display: grid;
   gap: 4px;
+  overflow: hidden;
 }
 
 .menu-nav-stack-sticky {
@@ -1042,8 +1046,9 @@ select:focus {
   scrollbar-width: none;
   align-items: center;
   min-height: var(--menu-tab-pill-height, 40px);
-  width: max-content;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   padding: 4px;
   margin: 0;
   border-radius: 999px;
@@ -1118,8 +1123,9 @@ select:focus {
   scrollbar-width: none;
   align-items: center;
   min-height: 38px;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   padding: 4px;
   margin: 0;
   border-radius: 999px;
@@ -1291,10 +1297,11 @@ select:focus {
 }
 
 .menu-card-copy {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   min-width: 0;
-  align-content: start;
+  align-items: flex-start;
 }
 
 .menu-card-copy .menu-meta {
@@ -1413,6 +1420,7 @@ select:focus {
   color: #64748b;
   font-size: 0.84rem;
   min-height: 1.1rem;
+  width: 100%;
 }
 
 .menu-page-footer-spacer {
@@ -1526,7 +1534,7 @@ select:focus {
   }
 
   .menu-card-head {
-    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
   }
 
   .menu-card-item .menu-price {
