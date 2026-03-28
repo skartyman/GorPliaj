@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import MapPage from './pages/MapPage';
 import MapEditorPage from './pages/MapEditorPage';
+import BookingRuntimePage from './pages/BookingRuntimePage';
 import MenuEditorPage from './pages/MenuEditorPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import EventsPage from './pages/EventsPage';
@@ -180,6 +181,7 @@ export default function App() {
       <Route path="/admin/reservations/:id" element={<ProtectedPage><ReservationDetailPage /></ProtectedPage>} />
       <Route path="/admin/map" element={<ProtectedPage><MapPage /></ProtectedPage>} />
       <Route path="/admin/map-editor" element={<ProtectedPage><MapEditorPage /></ProtectedPage>} />
+      <Route path="/admin/booking-runtime" element={<ProtectedPage><BookingRuntimePage /></ProtectedPage>} />
       <Route path="/admin/menu" element={<ProtectedPage><MenuEditorPage /></ProtectedPage>} />
       <Route path="/admin/events" element={<ProtectedPage><EventsPage /></ProtectedPage>} />
       <Route path="/admin/news" element={<ProtectedPage><PlaceholderPage {...placeholderPages.news} /></ProtectedPage>} />
