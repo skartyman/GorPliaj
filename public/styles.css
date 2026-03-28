@@ -867,8 +867,7 @@ select:focus {
 
 .menu-page-shell {
   width: min(100%, 100vw);
-  padding: 14px 10px;
-  zoom: 0.9;
+  padding: 10px 10px 14px;
   transform-origin: top center;
 }
 
@@ -894,6 +893,15 @@ select:focus {
   padding: 16px;
 }
 
+.menu-page-header {
+  position: sticky;
+  top: 8px;
+  z-index: 34;
+  display: grid;
+  gap: 12px;
+  border-radius: 20px;
+}
+
 .menu-page-header .brand small,
 .menu-page-description,
 .menu-card-copy .menu-meta,
@@ -902,7 +910,6 @@ select:focus {
   color: #475569;
 }
 
-.menu-page-header,
 .menu-page-header-top,
 .menu-page-header-content {
   display: grid;
@@ -917,8 +924,9 @@ select:focus {
 
 .menu-page-header-top {
   display: grid;
-  align-items: start;
+  align-items: center;
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
 }
 
 .menu-page-header-content {
@@ -935,6 +943,11 @@ select:focus {
 .menu-page-header-content {
   padding-top: 8px;
   border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.menu-page-header-content,
+.menu-showcase-card {
+  display: none;
 }
 
 .menu-page-header h1,
@@ -960,14 +973,14 @@ select:focus {
 }
 
 .brand-with-logo .brand-mark-image {
-  width: 70px;
-  height: 70px;
+  width: 50px;
+  height: 50px;
   padding: 0;
   overflow: visible;
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  transform: translateY(-9px);
+  transform: none;
 }
 
 .brand-with-logo .brand-mark-image img {
@@ -975,11 +988,11 @@ select:focus {
   height: 100%;
   object-fit: contain;
   object-position: center 42%;
-  transform: translateY(-3px) scale(1.02);
+  transform: translateY(-2px) scale(1.01);
 }
 
 .brand-with-logo strong {
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.05rem, 2.2vw, 1.3rem);
 }
 
 .brand-with-logo small {
@@ -1035,14 +1048,22 @@ select:focus {
   margin-top: 10px;
 }
 
+.menu-nav-stack {
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
 .menu-section-nav {
   display: flex;
   gap: 10px;
   overflow-x: auto;
   scrollbar-width: none;
   align-items: center;
-  min-height: var(--menu-nav-height, 64px);
-  padding: 8px 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .menu-section-nav::-webkit-scrollbar {
@@ -1056,9 +1077,9 @@ select:focus {
   height: var(--menu-tab-pill-height, 44px);
   min-height: var(--menu-tab-pill-height, 44px);
   padding: 0 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  background: #fff;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: #f8fafc;
   color: #334155;
   font-weight: 700;
   line-height: 1;
@@ -1068,9 +1089,9 @@ select:focus {
 }
 
 .menu-section-link.active {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border-color: transparent;
-  color: #fff;
+  background: #e2e8f0;
+  border-color: rgba(37, 99, 235, 0.32);
+  color: #0f172a;
 }
 
 .menu-section-link:disabled {
@@ -1111,9 +1132,13 @@ select:focus {
   overflow-x: auto;
   scrollbar-width: none;
   align-items: center;
-  min-height: var(--menu-nav-height, 64px);
-  padding-top: 8px;
-  padding-bottom: 8px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .menu-category-nav-sticky {
@@ -1133,12 +1158,16 @@ select:focus {
 .menu-category-link {
   white-space: nowrap;
   transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  border-radius: 10px;
+  height: 40px;
+  min-height: 40px;
+  background: #f8fafc;
 }
 
 .menu-category-link.active {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border-color: transparent;
-  color: #fff;
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.34);
+  color: #1d4ed8;
 }
 
 .menu-showcase-card {
