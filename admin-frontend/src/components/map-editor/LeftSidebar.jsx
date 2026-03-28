@@ -77,7 +77,19 @@ export default function LeftSidebar({
         </div>
       ) : null}
 
-      {activeTab === 'presets' ? <p className="muted">Preset templates for seasonal/event maps (placeholder).</p> : null}
+      {activeTab === 'presets' ? (
+        <div className="fp-list">
+          <div className="fp-list-item">
+            <strong>Territory presets</strong>
+            <small>sea, sand, deck, pathway, stairs, pier, building, winterRestaurant, bar, stage</small>
+          </div>
+          <div className="fp-list-item">
+            <strong>Bookable presets</strong>
+            <small>restaurant-table, terrace-table, lounger-bed, bungalow, hookah-table, vip-zone, pier-spot</small>
+          </div>
+          <p className="muted">All presets now resolve visual defaults from the centralized asset registry.</p>
+        </div>
+      ) : null}
     </aside>
   );
 }

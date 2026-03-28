@@ -1,3 +1,6 @@
+import { getAssetDefinitionForObject } from '../../lib/editor-assets';
+import { EDITOR_TEXTURE_REGISTRY } from '../../lib/editor-textures';
+
 const BASE_FIELDS = ['name', 'label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'zoneId'];
 
 export default function InspectorPanel({ selectedObject, zones, layoutModes, onFieldChange, onDelete, onDuplicate }) {
@@ -11,6 +14,15 @@ export default function InspectorPanel({ selectedObject, zones, layoutModes, onF
   }
 
   const isBookable = selectedObject.kind === 'bookable';
+  const assetDefinition = getAssetDefinitionForObject(selectedObject);
+  const visual = selectedObject.visual || {};
+
+  function updateVisualField(field, value) {
+    onFieldChange('visual', {
+      ...visual,
+      [field]: value
+    });
+  }
 
   return (
     <aside className="fp-inspector">
@@ -31,7 +43,7 @@ export default function InspectorPanel({ selectedObject, zones, layoutModes, onF
             ) : (
               <input
                 value={selectedObject[field] ?? ''}
-                onChange={(e) => onFieldChange(field, ['x','y','width','height','rotation','zIndex'].includes(field) ? Number(e.target.value) : e.target.value)}
+                onChange={(e) => onFieldChange(field, ['x', 'y', 'width', 'height', 'rotation', 'zIndex'].includes(field) ? Number(e.target.value) : e.target.value)}
               />
             )}
           </label>
@@ -69,6 +81,45 @@ export default function InspectorPanel({ selectedObject, zones, layoutModes, onF
               {layoutModes.map((layout) => <option key={layout.id} value={layout.code}>{layout.code}</option>)}
             </select>
           </label>
+        ) : null}
+
+        {assetDefinition ? (
+          <>
+            <label>
+              assetKey
+              <input value={visual.assetKey || assetDefinition.key} onChange={(e) => updateVisualField('assetKey', e.target.value || assetDefinition.key)} />
+            </label>
+            <label>
+              renderMode
+              <select value={visual.renderMode || assetDefinition.renderMode} onChange={(e) => updateVisualField('renderMode', e.target.value)}>
+                <option value="asset">asset</option>
+                <option value="shape">shape fallback</option>
+              </select>
+            </label>
+            <label className="editor-toggle-field">
+              <span>useTexture</span>
+              <input type="checkbox" checked={Boolean(visual.useTexture ?? assetDefinition.useTexture)} onChange={(e) => updateVisualField('useTexture', e.target.checked)} />
+            </label>
+            <label>
+              textureKey
+              <select
+                value={visual.textureKey || assetDefinition.textureKey || ''}
+                onChange={(e) => updateVisualField('textureKey', e.target.value || undefined)}
+                disabled={!Boolean(visual.useTexture ?? assetDefinition.useTexture)}
+              >
+                <option value="">none</option>
+                {Object.keys(EDITOR_TEXTURE_REGISTRY).map((textureKey) => <option key={textureKey} value={textureKey}>{textureKey}</option>)}
+              </select>
+            </label>
+            <label>
+              opacity
+              <input type="number" min="0.05" max="1" step="0.05" value={visual.opacity ?? 1} onChange={(e) => updateVisualField('opacity', Number(e.target.value))} />
+            </label>
+            <label>
+              tint
+              <input value={visual.tint || ''} placeholder="rgba(59,130,246,0.12)" onChange={(e) => updateVisualField('tint', e.target.value || undefined)} />
+            </label>
+          </>
         ) : null}
 
         {isBookable ? (
