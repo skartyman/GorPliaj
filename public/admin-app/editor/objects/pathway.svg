@@ -1,0 +1,54 @@
+<svg aria-labelledby="title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" height="200" width="600">
+  <title>Деревянная тропинка светлый орех с годовыми кольцами</title>
+
+  <defs>
+    
+    <linearGradient y2="100%" x2="0%" y1="0%" x1="0%" id="woodBase">
+      <stop stop-color="#d4b48c" offset="0%"></stop>
+      <stop stop-color="#c39f72" offset="50%"></stop>
+      <stop stop-color="#b38a5f" offset="100%"></stop>
+    </linearGradient>
+
+    
+    <filter height="100%" width="100%" y="0%" x="0%" id="annualRings">
+      
+      <feTurbulence result="rings" seed="42" numOctaves="5" baseFrequency="0.025" type="fractalNoise"></feTurbulence>
+      
+      
+      <feTurbulence result="fibers" seed="18" numOctaves="3" baseFrequency="0.8" type="fractalNoise"></feTurbulence>
+      
+      <feDisplacementMap yChannelSelector="G" xChannelSelector="R" scale="4.5" in2="rings" in="SourceGraphic"></feDisplacementMap>
+      
+      <feDisplacementMap scale="1.8" in2="fibers" in="SourceGraphic"></feDisplacementMap>
+    </filter>
+  </defs>
+
+  
+  <rect fill="#c39f72" rx="8" height="160" width="500" y="20" x="50"></rect>
+
+  
+  <g>
+    
+    <rect filter="url(#annualRings)" fill="url(#woodBase)" rx="3" height="22" width="470" y="35" x="65"></rect>
+
+    
+    <rect filter="url(#annualRings)" fill="url(#woodBase)" rx="3" height="22" width="470" y="68" x="65"></rect>
+
+    
+    <rect filter="url(#annualRings)" fill="url(#woodBase)" rx="3" height="22" width="470" y="101" x="65"></rect>
+
+    
+    <rect filter="url(#annualRings)" fill="url(#woodBase)" rx="3" height="22" width="470" y="134" x="65"></rect>
+  </g>
+
+  
+  <g opacity="0.78" fill="#a37a4f">
+    <rect height="4" width="480" y="57" x="60"></rect>
+    <rect height="4" width="480" y="90" x="60"></rect>
+    <rect height="4" width="480" y="123" x="60"></rect>
+  </g>
+
+  
+  <rect opacity="0.45" stroke-width="10" stroke="#a37a4f" fill="none" rx="8" height="150" width="490" y="25" x="55"></rect>
+
+</svg>

@@ -1,0 +1,41 @@
+<svg aria-labelledby="title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" height="500" width="800">
+  <title>Песок вид сверху</title>
+
+  <defs>
+    
+    <linearGradient y2="100%" x2="0%" y1="0%" x1="0%" id="sandBase">
+      <stop stop-color="#f5e8c7" offset="0%"></stop>
+      <stop stop-color="#e8d4a8" offset="50%"></stop>
+      <stop stop-color="#d9c18f" offset="100%"></stop>
+    </linearGradient>
+
+    
+    <filter height="100%" width="100%" y="0%" x="0%" id="sandNoise">
+      <feTurbulence result="noise" seed="5" numOctaves="5" baseFrequency="1.2" type="fractalNoise"></feTurbulence>
+      <feDisplacementMap scale="2.5" in2="noise" in="SourceGraphic"></feDisplacementMap>
+    </filter>
+
+    
+    <filter height="100%" width="100%" y="0%" x="0%" id="fineTexture">
+      <feTurbulence result="fine" seed="12" numOctaves="3" baseFrequency="3.5" type="fractalNoise"></feTurbulence>
+      <feDisplacementMap scale="1" in2="fine" in="SourceGraphic"></feDisplacementMap>
+    </filter>
+  </defs>
+
+  
+  <rect filter="url(#sandNoise)" fill="url(#sandBase)" height="500" width="800"></rect>
+
+  
+  <rect filter="url(#fineTexture)" opacity="0.35" fill="#e8d4a8" height="500" width="800"></rect>
+
+  
+  <path stroke-opacity="0.25" stroke-width="45" stroke="#d9c18f" fill="none" d="M0 80 Q120 40 250 85 Q380 130 500 65 Q620 110 750 70 Q800 95 800 150"></path>
+
+  <path stroke-opacity="0.22" stroke-width="38" stroke="#d9c18f" fill="none" d="M0 180 Q90 140 220 185 Q350 220 470 165 Q590 200 710 175 Q800 210 800 250"></path>
+
+  <path stroke-opacity="0.18" stroke-width="32" stroke="#d9c18f" fill="none" d="M0 290 Q150 250 280 295 Q410 330 530 275 Q650 310 770 285"></path>
+
+  
+  <path stroke-opacity="0.15" stroke-width="18" stroke="#e0cc9f" fill="none" d="M0 380 Q70 365 140 385 Q210 400 280 375 Q350 390 420 410 Q490 385 560 400 Q630 375 700 395 Q770 410 800 390"></path>
+
+</svg>

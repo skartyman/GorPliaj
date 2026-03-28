@@ -1,3 +1,5 @@
+import { resolveAdminPublicPath } from './admin-public-path';
+
 export type TextureKey = 'water-lines' | 'sand-pattern' | 'wood-pattern';
 
 export interface TextureConfig {
@@ -10,19 +12,19 @@ export interface TextureConfig {
 export const EDITOR_TEXTURE_REGISTRY: Record<TextureKey, TextureConfig> = {
   'water-lines': {
     key: 'water-lines',
-    path: '/editor/textures/water-lines.svg',
+    path: resolveAdminPublicPath('editor/textures/water-lines.svg'),
     size: '180px 180px',
     opacity: 0.35
   },
   'sand-pattern': {
     key: 'sand-pattern',
-    path: '/editor/textures/sand-pattern.svg',
+    path: resolveAdminPublicPath('editor/textures/sand-pattern.svg'),
     size: '110px 110px',
     opacity: 0.3
   },
   'wood-pattern': {
     key: 'wood-pattern',
-    path: '/editor/textures/wood-pattern.svg',
+    path: resolveAdminPublicPath('editor/textures/wood-pattern.svg'),
     size: '180px 80px',
     opacity: 0.28
   }

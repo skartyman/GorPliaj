@@ -1,0 +1,76 @@
+<svg aria-labelledby="title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 480" height="480" width="420">
+  <title>Узкие деревянные ступеньки светлый орех (9 ступенек)</title>
+
+  <defs>
+    
+    <linearGradient y2="100%" x2="0%" y1="0%" x1="0%" id="wood">
+      <stop stop-color="#d4b48c" offset="0%"></stop>
+      <stop stop-color="#c39f72" offset="50%"></stop>
+      <stop stop-color="#b38a5f" offset="100%"></stop>
+    </linearGradient>
+
+    
+    <filter height="100%" width="100%" y="0%" x="0%" id="rings">
+      <feTurbulence result="rings" seed="42" numOctaves="5" baseFrequency="0.028" type="fractalNoise"></feTurbulence>
+      <feTurbulence result="fibers" seed="19" numOctaves="3" baseFrequency="0.85" type="fractalNoise"></feTurbulence>
+      <feDisplacementMap yChannelSelector="G" xChannelSelector="R" scale="4.8" in2="rings" in="SourceGraphic"></feDisplacementMap>
+      <feDisplacementMap scale="1.6" in2="fibers" in="SourceGraphic"></feDisplacementMap>
+    </filter>
+  </defs>
+
+  
+  <g>
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="5" height="58" width="340" y="410" x="40"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="5" height="52" width="330" y="360" x="45"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="5" height="48" width="320" y="310" x="50"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="4" height="45" width="310" y="263" x="55"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="4" height="43" width="300" y="218" x="60"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="4" height="41" width="290" y="175" x="65"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="4" height="39" width="276" y="134" x="72"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="3" height="37" width="260" y="95" x="80"></rect>
+    
+    
+    <rect filter="url(#rings)" fill="url(#wood)" rx="3" height="35" width="240" y="58" x="90"></rect>
+  </g>
+
+  
+  <g opacity="0.78" fill="#a37a4f">
+    <rect height="5" width="340" y="405" x="40"></rect>
+    <rect height="5" width="330" y="355" x="45"></rect>
+    <rect height="5" width="320" y="305" x="50"></rect>
+    <rect height="5" width="310" y="258" x="55"></rect>
+    <rect height="5" width="300" y="213" x="60"></rect>
+    <rect height="5" width="290" y="170" x="65"></rect>
+    <rect height="5" width="276" y="129" x="72"></rect>
+    <rect height="5" width="260" y="90" x="80"></rect>
+  </g>
+
+  
+  <g opacity="0.45">
+    <rect stroke-width="8" stroke="#a37a4f" fill="none" rx="5" height="60" width="344" y="408" x="38"></rect>
+    <rect stroke-width="7.5" stroke="#a37a4f" fill="none" rx="5" height="54" width="334" y="358" x="43"></rect>
+    <rect stroke-width="7" stroke="#a37a4f" fill="none" rx="5" height="50" width="324" y="308" x="48"></rect>
+    <rect stroke-width="6.5" stroke="#a37a4f" fill="none" rx="4" height="47" width="314" y="261" x="53"></rect>
+    <rect stroke-width="6" stroke="#a37a4f" fill="none" rx="4" height="45" width="304" y="216" x="58"></rect>
+    <rect stroke-width="5.5" stroke="#a37a4f" fill="none" rx="4" height="43" width="294" y="173" x="63"></rect>
+    <rect stroke-width="5" stroke="#a37a4f" fill="none" rx="4" height="41" width="280" y="132" x="70"></rect>
+    <rect stroke-width="4.5" stroke="#a37a4f" fill="none" rx="3" height="39" width="264" y="93" x="78"></rect>
+    <rect stroke-width="4" stroke="#a37a4f" fill="none" rx="3" height="37" width="244" y="56" x="88"></rect>
+  </g>
+
+</svg>
