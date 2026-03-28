@@ -1,5 +1,7 @@
 import { STARTER_LAYOUT_MODES, type LayoutMode, type LayoutVisibility } from './layout-schema';
 import type { BookingKind } from './booking-schema';
+import type { ObjectVisualConfig } from './editor-assets';
+import { getDefaultVisualConfigForObject } from './editor-assets';
 
 export type TerritoryObjectType =
   | 'rect'
@@ -13,6 +15,7 @@ export type TerritoryObjectType =
   | 'sea'
   | 'pier'
   | 'building'
+  | 'winter_restaurant'
   | 'room'
   | 'bar'
   | 'stage'
@@ -38,6 +41,7 @@ export interface BaseRenderableObject {
   label?: string;
   zoneId?: string;
   visibleInLayoutModes: LayoutVisibility;
+  visual?: ObjectVisualConfig;
 }
 
 export interface TerritoryObject extends BaseRenderableObject {
@@ -126,7 +130,8 @@ export function createStarterDocument(): BaseMapDocument {
         fill: '#1d4ed8',
         stroke: '#1e40af',
         strokeWidth: 1,
-        visibleInLayoutModes: 'all'
+        visibleInLayoutModes: 'all',
+        visual: getDefaultVisualConfigForObject({ kind: 'territory', type: 'sea' })
       },
       {
         id: 'territory_sand',
@@ -144,7 +149,27 @@ export function createStarterDocument(): BaseMapDocument {
         stroke: '#78350f',
         strokeWidth: 1,
         zoneId: 'zone_beach',
-        visibleInLayoutModes: 'all'
+        visibleInLayoutModes: 'all',
+        visual: getDefaultVisualConfigForObject({ kind: 'territory', type: 'sand' })
+      },
+      {
+        id: 'territory_pier',
+        type: 'pier',
+        name: 'Pier',
+        x: 1240,
+        y: 160,
+        width: 360,
+        height: 120,
+        rotation: 0,
+        zIndex: 3,
+        locked: false,
+        hidden: false,
+        fill: '#7c2d12',
+        stroke: '#78350f',
+        strokeWidth: 1,
+        zoneId: 'zone_pier',
+        visibleInLayoutModes: 'all',
+        visual: getDefaultVisualConfigForObject({ kind: 'territory', type: 'pier' })
       }
     ],
     bookableObjects: [
@@ -167,7 +192,8 @@ export function createStarterDocument(): BaseMapDocument {
         capacityMax: 4,
         minSpend: 100,
         combinable: false,
-        zoneId: 'zone_restaurant'
+        zoneId: 'zone_restaurant',
+        visual: getDefaultVisualConfigForObject({ kind: 'bookable', objectType: 'round_table' })
       }
     ],
     metadata: { currency: 'USD' }

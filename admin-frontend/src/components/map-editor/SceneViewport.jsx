@@ -1,8 +1,9 @@
 import { Rnd } from 'react-rnd';
 import { isObjectVisibleForLayout, snap } from './editor-utils';
+import ObjectRenderer from '../map-common/ObjectRenderer';
 
 function getClassName(object) {
-  return object.kind === 'bookable' ? 'fp-object bookable' : `fp-object territory ${object.type || 'rect'}`;
+  return object.kind === 'bookable' ? 'bookable' : `territory ${object.type || 'rect'}`;
 }
 
 export default function SceneViewport({
@@ -51,12 +52,16 @@ export default function SceneViewport({
                   }
                   style={{ zIndex: obj.zIndex }}
                 >
-                  <button type="button" className={`${getClassName(obj)} ${selectedId === obj.id ? 'selected' : ''}`} onClick={() => onSelect(obj.id)}>
-                    <span>{obj.name}</span>
-                  </button>
-                  {selectedId === obj.id && !obj.locked ? (
-                    <button type="button" className="fp-rotate-handle" onClick={() => onRotate(obj.id, 15)}>↻</button>
-                  ) : null}
+                  <div
+                    className={`fp-object-shell ${getClassName(obj)} ${selectedId === obj.id ? 'selected' : ''} ${obj.locked ? 'locked' : ''}`}
+                    style={{ transform: `rotate(${Number(obj.rotation || 0)}deg)` }}
+                  >
+                    <ObjectRenderer object={obj} className="fp-object-visual" />
+                    <button type="button" className="fp-object-hit" onClick={() => onSelect(obj.id)} aria-label={obj.name} />
+                    {selectedId === obj.id && !obj.locked ? (
+                      <button type="button" className="fp-rotate-handle" onClick={() => onRotate(obj.id, 15)}>↻</button>
+                    ) : null}
+                  </div>
                 </Rnd>
               );
             })}

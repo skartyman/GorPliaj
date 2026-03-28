@@ -9,6 +9,7 @@ import StatusBar from '../components/map-editor/StatusBar';
 import { clampObject, downloadJson, duplicateObject } from '../components/map-editor/editor-utils';
 import { createStarterDocument } from '../lib/map-schema';
 import { saveDraftDocument, loadDraftDocument, publishDocument } from '../lib/map-editor-storage';
+import { getDefaultVisualConfigForObject } from '../lib/editor-assets';
 
 function nextId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -20,6 +21,31 @@ function toRenderableObjects(document) {
     ...document.bookableObjects.map((item) => ({ ...item, kind: 'bookable' }))
   ].sort((a, b) => a.zIndex - b.zIndex);
 }
+
+const TERRITORY_TOOL_PRESETS = {
+  addSea: { type: 'sea', name: 'Sea', fill: '#1d4ed8', stroke: '#1e40af' },
+  addSand: { type: 'sand', name: 'Sand', fill: '#a16207', stroke: '#78350f' },
+  addDeck: { type: 'deck', name: 'Deck', fill: '#7c2d12', stroke: '#78350f' },
+  addPathway: { type: 'pathway', name: 'Pathway', fill: '#475569', stroke: '#64748b', width: 180, height: 44 },
+  addStairs: { type: 'stairs', name: 'Stairs', fill: '#334155', stroke: '#64748b', width: 120, height: 52 },
+  addPier: { type: 'pier', name: 'Pier', fill: '#78350f', stroke: '#92400e', width: 240, height: 100 },
+  addBuilding: { type: 'building', name: 'Building', fill: '#1f2937', stroke: '#475569', width: 180, height: 130 },
+  addWinterRestaurant: { type: 'winter_restaurant', name: 'Winter Restaurant', fill: '#312e81', stroke: '#4338ca', width: 220, height: 140 },
+  addBar: { type: 'bar', name: 'Bar', fill: '#7c3aed', stroke: '#6d28d9', width: 140, height: 80 },
+  addStage: { type: 'stage', name: 'Stage', fill: '#7f1d1d', stroke: '#b91c1c', width: 200, height: 90 }
+};
+
+const BOOKABLE_TOOL_PRESETS = {
+  addRoundTable: { objectType: 'round_table', bookingKind: 'restaurant_table', name: 'Restaurant Table', tableCode: 'R' },
+  addRectTable: { objectType: 'rect_table', bookingKind: 'terrace_table', name: 'Terrace Table', tableCode: 'T' },
+  addSofa: { objectType: 'sofa', bookingKind: 'vip_zone', name: 'Sofa', width: 130, height: 74 },
+  addLoungerBed: { objectType: 'lounger_bed', bookingKind: 'lounger_bed', name: 'Lounger Bed', width: 130, height: 62 },
+  addBungalow: { objectType: 'bungalow', bookingKind: 'bungalow', name: 'Bungalow', width: 130, height: 100 },
+  addHookahTable: { objectType: 'hookah_table', bookingKind: 'hookah_table', name: 'Hookah Table', width: 92, height: 92 },
+  addVipZone: { objectType: 'vip_zone', bookingKind: 'vip_zone', name: 'VIP Zone', width: 180, height: 100 },
+  addTicketZone: { objectType: 'ticket_zone', bookingKind: 'ticket_zone', name: 'Ticket Zone', width: 180, height: 90 },
+  addPierSpot: { objectType: 'pier_bed', bookingKind: 'pier_spot', name: 'Pier Spot', width: 120, height: 58 }
+};
 
 function getDefaultObjectByTool(tool, editorMode) {
   const base = {
@@ -35,29 +61,37 @@ function getDefaultObjectByTool(tool, editorMode) {
     label: ''
   };
 
-  if (editorMode === 'bookable' || tool.startsWith('addRoundTable') || tool.startsWith('addRectTable')) {
-    return {
+  const bookablePreset = BOOKABLE_TOOL_PRESETS[tool];
+  if (editorMode === 'bookable' || bookablePreset) {
+    const preset = bookablePreset || BOOKABLE_TOOL_PRESETS.addRoundTable;
+    const object = {
       ...base,
+      ...preset,
       id: nextId('bookable'),
       kind: 'bookable',
-      objectType: tool === 'addLoungerBed' ? 'lounger_bed' : 'round_table',
-      bookingKind: 'restaurant_table',
-      name: 'Bookable object',
       capacityMin: 2,
       capacityMax: 4,
       combinable: false
     };
+
+    return {
+      ...object,
+      visual: getDefaultVisualConfigForObject({ kind: 'bookable', objectType: object.objectType })
+    };
   }
 
-  return {
+  const territoryPreset = TERRITORY_TOOL_PRESETS[tool] || { type: 'rect', name: 'Territory object', fill: '#334155', stroke: '#475569' };
+  const object = {
     ...base,
+    ...territoryPreset,
     id: nextId('territory'),
     kind: 'territory',
-    type: tool === 'addSea' ? 'sea' : tool === 'addSand' ? 'sand' : tool === 'addPier' ? 'pier' : 'rect',
-    name: 'Territory object',
-    fill: '#334155',
-    stroke: '#475569',
     strokeWidth: 1
+  };
+
+  return {
+    ...object,
+    visual: getDefaultVisualConfigForObject({ kind: 'territory', type: object.type })
   };
 }
 

@@ -1,27 +1,38 @@
-const EDITOR_TOOLS = [
-  'select',
-  'hand',
-  'addRect',
-  'addText',
-  'addLine',
-  'addSea',
-  'addSand',
-  'addDeck',
-  'addPathway',
-  'addStairs',
-  'addPier',
-  'addBuilding',
-  'addBar',
-  'addStage',
-  'addCashier',
-  'addRoundTable',
-  'addRectTable',
-  'addSofa',
-  'addLoungerBed',
-  'addBungalow',
-  'addHookahTable',
-  'addVipZone',
-  'addTicketZone'
+const TOOL_GROUPS = [
+  {
+    id: 'core',
+    tools: [
+      ['select', 'Select'],
+      ['hand', 'Pan']
+    ]
+  },
+  {
+    id: 'territory',
+    tools: [
+      ['addSea', 'Sea'],
+      ['addSand', 'Sand'],
+      ['addDeck', 'Deck'],
+      ['addPathway', 'Pathway'],
+      ['addStairs', 'Stairs'],
+      ['addPier', 'Pier'],
+      ['addBuilding', 'Building'],
+      ['addWinterRestaurant', 'Winter Rest.'],
+      ['addBar', 'Bar'],
+      ['addStage', 'Stage']
+    ]
+  },
+  {
+    id: 'bookable',
+    tools: [
+      ['addRoundTable', 'Round Table'],
+      ['addRectTable', 'Rect Table'],
+      ['addLoungerBed', 'Lounger'],
+      ['addBungalow', 'Bungalow'],
+      ['addHookahTable', 'Hookah'],
+      ['addVipZone', 'VIP Zone'],
+      ['addPierSpot', 'Pier Spot']
+    ]
+  }
 ];
 
 export default function EditorToolbar({
@@ -40,15 +51,19 @@ export default function EditorToolbar({
   return (
     <div className="fp-toolbar">
       <div className="fp-toolbar-section">
-        {EDITOR_TOOLS.map((tool) => (
-          <button
-            key={tool}
-            type="button"
-            className={`fp-chip ${activeTool === tool ? 'active' : ''}`}
-            onClick={() => onToolSelect(tool)}
-          >
-            {tool}
-          </button>
+        {TOOL_GROUPS.map((group) => (
+          <div key={group.id} className="fp-toolbar-group">
+            {group.tools.map(([tool, label]) => (
+              <button
+                key={tool}
+                type="button"
+                className={`fp-chip ${activeTool === tool ? 'active' : ''}`}
+                onClick={() => onToolSelect(tool)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         ))}
       </div>
 
