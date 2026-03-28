@@ -1,5 +1,6 @@
 import ObjectRenderer from '../map-common/ObjectRenderer';
 import { RUNTIME_STATUS_STYLE } from '../../lib/booking-schema';
+import { RUNTIME_STATUS_LABELS } from '../../lib/editor-locale';
 
 export default function RuntimeObjectRenderer({ object, mapWidth, mapHeight, status, title }) {
   const statusStyle = status ? RUNTIME_STATUS_STYLE[status] : null;
@@ -18,7 +19,7 @@ export default function RuntimeObjectRenderer({ object, mapWidth, mapHeight, sta
       title={title}
     >
       <ObjectRenderer object={object} statusStyle={statusStyle} showLabel={object.kind === 'bookable'} />
-      {status ? <small className="fp-runtime-status-chip" style={{ background: statusStyle?.badge }}>{status}</small> : null}
+      {status ? <small className="fp-runtime-status-chip" style={{ background: statusStyle?.badge }}>{RUNTIME_STATUS_LABELS[status]}</small> : null}
     </div>
   );
 }

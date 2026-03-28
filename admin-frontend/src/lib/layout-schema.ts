@@ -15,9 +15,9 @@ export interface LayoutMode {
 export const STARTER_LAYOUT_MODES: LayoutMode[] = [
   {
     id: 'layout_day',
-    name: 'Day · Beach + Restaurant',
+    name: 'День · Пляж + Ресторан',
     code: 'day_beach_restaurant',
-    description: 'Default day layout with beach and main restaurant zones.',
+    description: 'Дневной режим: пляж, ресторан и пирс открыты для гостей.',
     enabledZoneIds: ['zone_beach', 'zone_restaurant', 'zone_pier'],
     theme: 'day',
     defaultTimeRange: { from: '10:00', to: '18:00' },
@@ -25,9 +25,9 @@ export const STARTER_LAYOUT_MODES: LayoutMode[] = [
   },
   {
     id: 'layout_night',
-    name: 'Night · Restaurant + Event',
+    name: 'Вечер · Ресторан + Событие',
     code: 'night_restaurant_event',
-    description: 'Night event logic with terrace and expanded pier activity.',
+    description: 'Вечерний режим с террасой, сценой и активной event-зоной.',
     enabledZoneIds: ['zone_restaurant', 'zone_terrace', 'zone_event', 'zone_pier'],
     theme: 'night',
     defaultTimeRange: { from: '18:00', to: '02:00' },
@@ -35,9 +35,9 @@ export const STARTER_LAYOUT_MODES: LayoutMode[] = [
   },
   {
     id: 'layout_winter',
-    name: 'Winter · Indoor Restaurant',
+    name: 'Зима · Внутренний ресторан',
     code: 'winter_restaurant',
-    description: 'Indoor winter restaurant mode with fireplace room.',
+    description: 'Зимний режим с фокусом на внутренние и сервисные зоны.',
     enabledZoneIds: ['zone_winter', 'zone_indoor', 'zone_service'],
     theme: 'winter',
     defaultTimeRange: { from: '12:00', to: '23:00' },

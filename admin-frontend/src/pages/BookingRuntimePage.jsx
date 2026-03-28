@@ -9,6 +9,7 @@ import RuntimeObjectRenderer from '../components/map-runtime/RuntimeObjectRender
 import { loadDraftDocument } from '../lib/map-editor-storage';
 import { isVisibleInLayout } from '../lib/layout-schema';
 import { resolveMockRuntimeStatus } from '../lib/booking-schema';
+import { RUNTIME_STATUS_LABELS, t } from '../lib/editor-locale';
 
 function toRenderableObjects(document) {
   return [
@@ -27,7 +28,7 @@ export default function BookingRuntimePage() {
 
   return (
     <AdminLayout>
-      <PageContainer title="Booking Runtime Map" description="Runtime architecture placeholder with layout mode + status layer.">
+      <PageContainer title={t('runtime.pageTitle')} description={t('runtime.pageDescription')}>
         <div className="fp-runtime-toolbar">
           <LayoutModeSelector layoutModes={document.layoutModes} value={layoutCode} onChange={setLayoutCode} />
           <TimelineBar value={timeline} onChange={setTimeline} />
@@ -61,7 +62,7 @@ export default function BookingRuntimePage() {
                   mapWidth={document.width}
                   mapHeight={document.height}
                   status={status}
-                  title={status ? `${object.name} · ${status}` : object.name}
+                  title={status ? `${object.name} · ${RUNTIME_STATUS_LABELS[status]}` : object.name}
                 />
               );
             })}

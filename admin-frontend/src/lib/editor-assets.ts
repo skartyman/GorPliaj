@@ -53,11 +53,14 @@ export const BOOKABLE_ASSET_REGISTRY: Record<string, AssetDefinition> = {
 
 export function getAssetDefinitionForObject(object: { kind: 'territory' | 'bookable'; type?: string; objectType?: string; visual?: ObjectVisualConfig }): AssetDefinition | null {
   const directKey = object.visual?.assetKey;
+  const fallbackKey = object.kind === 'territory' ? object.type : object.objectType;
+  const resolvedKey = directKey || fallbackKey || '';
+
   if (object.kind === 'territory') {
-    return TERRITORY_ASSET_REGISTRY[directKey || object.type || ''] || null;
+    return TERRITORY_ASSET_REGISTRY[resolvedKey] || null;
   }
 
-  return BOOKABLE_ASSET_REGISTRY[directKey || object.objectType || ''] || null;
+  return BOOKABLE_ASSET_REGISTRY[resolvedKey] || null;
 }
 
 export function getDefaultVisualConfigForObject(object: { kind: 'territory' | 'bookable'; type?: string; objectType?: string }): ObjectVisualConfig {
@@ -77,6 +80,16 @@ export function getDefaultVisualConfigForObject(object: { kind: 'territory' | 'b
 
 export function resolveObjectVisualConfig(object: { kind: 'territory' | 'bookable'; type?: string; objectType?: string; visual?: ObjectVisualConfig }) {
   const definition = getAssetDefinitionForObject(object);
+
+  if (import.meta.env.DEV && object.visual?.assetKey && !definition) {
+    console.warn('[floor-plan] unknown assetKey detected, switching to fallback render', {
+      kind: object.kind,
+      assetKey: object.visual.assetKey,
+      type: object.type,
+      objectType: object.objectType
+    });
+  }
+
   const visual = {
     ...(definition ? getDefaultVisualConfigForObject(object) : {}),
     ...(object.visual || {})

@@ -1,3 +1,5 @@
+import { getLayoutModeLabel, t } from '../../lib/editor-locale';
+
 function TabButton({ id, active, onClick, children }) {
   return (
     <button type="button" className={`fp-tab ${active ? 'active' : ''}`} onClick={() => onClick(id)}>
@@ -23,10 +25,10 @@ export default function LeftSidebar({
   return (
     <aside className="fp-left-sidebar">
       <div className="fp-tabs">
-        <TabButton id="objects" active={activeTab === 'objects'} onClick={onTabChange}>Objects</TabButton>
-        <TabButton id="zones" active={activeTab === 'zones'} onClick={onTabChange}>Zones</TabButton>
-        <TabButton id="layouts" active={activeTab === 'layouts'} onClick={onTabChange}>Layout Modes</TabButton>
-        <TabButton id="presets" active={activeTab === 'presets'} onClick={onTabChange}>Presets</TabButton>
+        <TabButton id="objects" active={activeTab === 'objects'} onClick={onTabChange}>{t('tabs.objects')}</TabButton>
+        <TabButton id="zones" active={activeTab === 'zones'} onClick={onTabChange}>{t('tabs.zones')}</TabButton>
+        <TabButton id="layouts" active={activeTab === 'layouts'} onClick={onTabChange}>{t('tabs.layoutModes')}</TabButton>
+        <TabButton id="presets" active={activeTab === 'presets'} onClick={onTabChange}>{t('tabs.presets')}</TabButton>
       </div>
 
       {activeTab === 'objects' ? (
@@ -35,8 +37,8 @@ export default function LeftSidebar({
             <div key={item.id} className={`fp-list-item ${selectedId === item.id ? 'selected' : ''}`}>
               <button type="button" onClick={() => onSelect(item.id)}>{item.name}</button>
               <div className="fp-row-actions">
-                <button type="button" onClick={() => onToggleHidden(item.id)}>{item.hidden ? 'Show' : 'Hide'}</button>
-                <button type="button" onClick={() => onToggleLocked(item.id)}>{item.locked ? 'Unlock' : 'Lock'}</button>
+                <button type="button" onClick={() => onToggleHidden(item.id)}>{item.hidden ? t('common.show') : t('common.hide')}</button>
+                <button type="button" onClick={() => onToggleLocked(item.id)}>{item.locked ? t('common.unlock') : t('common.lock')}</button>
                 <button type="button" disabled={index === 0} onClick={() => onReorder(item.id, -1)}>↑</button>
                 <button type="button" disabled={index === objects.length - 1} onClick={() => onReorder(item.id, 1)}>↓</button>
               </div>
@@ -59,18 +61,18 @@ export default function LeftSidebar({
       {activeTab === 'layouts' ? (
         <div className="fp-list">
           <label>
-            Preview layout mode
+            {t('sidebar.previewLayout')}
             <select value={previewLayoutCode} onChange={(e) => onPreviewLayoutChange(e.target.value)}>
               {layoutModes.map((layout) => (
                 <option key={layout.id} value={layout.code}>
-                  {layout.code}
+                  {getLayoutModeLabel(layout)}
                 </option>
               ))}
             </select>
           </label>
           {layoutModes.map((layout) => (
             <div key={layout.id} className="fp-list-item">
-              <strong>{layout.name}</strong>
+              <strong>{getLayoutModeLabel(layout)}</strong>
               <small>{layout.description}</small>
             </div>
           ))}
@@ -80,14 +82,16 @@ export default function LeftSidebar({
       {activeTab === 'presets' ? (
         <div className="fp-list">
           <div className="fp-list-item">
-            <strong>Territory presets</strong>
-            <small>sea, sand, deck, pathway, stairs, pier, building, winterRestaurant, bar, stage</small>
+            <strong>{t('sidebar.territoryPresets')}</strong>
+            <small>{t('category.territory')}: {t('tool.addSea')}, {t('tool.addSand')}, {t('tool.addDeck')}, {t('tool.addPathway')}</small>
+            <small>{t('category.structures')}: {t('tool.addStairs')}, {t('tool.addPier')}, {t('tool.addBuilding')}, {t('tool.addWinterRestaurant')}, {t('tool.addBar')}</small>
+            <small>{t('category.event')}: {t('tool.addStage')}</small>
           </div>
           <div className="fp-list-item">
-            <strong>Bookable presets</strong>
-            <small>restaurant-table, terrace-table, lounger-bed, bungalow, hookah-table, vip-zone, pier-spot</small>
+            <strong>{t('sidebar.bookablePresets')}</strong>
+            <small>{t('category.bookable')}: {t('tool.addRoundTable')}, {t('tool.addRectTable')}, {t('tool.addLoungerBed')}, {t('tool.addBungalow')}, {t('tool.addHookahTable')}, {t('tool.addVipZone')}, {t('tool.addPierSpot')}</small>
           </div>
-          <p className="muted">All presets now resolve visual defaults from the centralized asset registry.</p>
+          <p className="muted">{t('sidebar.presetsHint')}</p>
         </div>
       ) : null}
     </aside>
