@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  --anchor-scroll-offset: 112px;
+  --anchor-scroll-offset: 92px;
   --glass-blur: 18px;
   --glass-blur-strong: 22px;
   --bg: #f8fafc;
@@ -894,11 +894,8 @@ select:focus {
 }
 
 .menu-page-header {
-  position: sticky;
-  top: 8px;
-  z-index: 34;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   border-radius: 20px;
 }
 
@@ -910,15 +907,8 @@ select:focus {
   color: #475569;
 }
 
-.menu-page-header-top,
-.menu-page-header-content {
+.menu-page-header-top {
   display: grid;
-  gap: 16px;
-}
-
-.menu-page-header-content {
-  display: flex;
-  justify-content: space-between;
   gap: 16px;
 }
 
@@ -929,25 +919,11 @@ select:focus {
   gap: 12px;
 }
 
-.menu-page-header-content {
-  align-items: end;
-}
-
 .menu-card-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 10px;
-}
-
-.menu-page-header-content {
-  padding-top: 8px;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-}
-
-.menu-page-header-content,
-.menu-showcase-card {
-  display: none;
 }
 
 .menu-page-header h1,
@@ -956,11 +932,6 @@ select:focus {
 .menu-card-item strong,
 .menu-page-header .brand strong {
   color: #0f172a;
-}
-
-.menu-page-header h1 {
-  margin: 0 0 10px;
-  font-size: clamp(2rem, 4vw, 3rem);
 }
 
 .menu-page-header .brand {
@@ -1049,10 +1020,19 @@ select:focus {
 }
 
 .menu-nav-stack {
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-  padding-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
   display: grid;
   gap: 8px;
+}
+
+.menu-nav-stack-sticky {
+  position: sticky;
+  top: 8px;
+  z-index: 35;
 }
 
 .menu-section-nav {
@@ -1451,7 +1431,6 @@ select:focus {
 
 @media (max-width: 720px) {
   .menu-preview-actions,
-  .menu-page-header-content,
   .menu-showcase-card {
     flex-direction: column;
     align-items: stretch;
@@ -1488,7 +1467,8 @@ select:focus {
   .menu-page-header,
   .menu-showcase-card,
   .menu-category-block,
-  .menu-category-nav {
+  .menu-category-nav,
+  .menu-nav-stack {
     padding: 12px;
   }
 
@@ -1526,10 +1506,6 @@ select:focus {
 
   .menu-page-header-top {
     gap: 12px;
-  }
-
-  .menu-page-header-content {
-    align-items: flex-start;
   }
 
   .menu-card-head {

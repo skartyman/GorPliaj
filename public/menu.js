@@ -2,12 +2,6 @@ const categoryNav = document.getElementById('categoryNav');
 const sectionNav = document.getElementById('sectionNav');
 const menuCatalog = document.getElementById('menuCatalog');
 const languageToggle = document.getElementById('languageToggle');
-const featuredDishName = document.getElementById('featuredDishName');
-const featuredDishText = document.getElementById('featuredDishText');
-const featuredDishCategory = document.getElementById('featuredDishCategory');
-const featuredDishPrice = document.getElementById('featuredDishPrice');
-const featuredDishImage = document.getElementById('featuredDishImage');
-const featuredDishImageFallback = document.getElementById('featuredDishImageFallback');
 const cartFab = document.getElementById('cartFab');
 const cartFabCount = document.getElementById('cartFabCount');
 const cartFabSummary = document.getElementById('cartFabSummary');
@@ -115,9 +109,7 @@ const translations = {
     menuPageTitle: 'Меню ГорПляжу',
     menuPageDescription: 'Окрема сторінка з категоріями та зручним переглядом основних позицій, як у digital menu.',
     menuBackHome: '← На головну',
-    menuFeatureLabel: 'Рекомендація',
     menuEmpty: 'Меню тимчасово недоступне.',
-    featuredPrefix: 'Сьогодні радимо спробувати одну з найпопулярніших позицій комплексу.',
     categoryCount: 'позицій',
     priceCurrency: '₴',
     dishImageFallback: 'Фото страви відсутнє',
@@ -151,9 +143,7 @@ const translations = {
     menuPageTitle: 'GorPliaj Menu',
     menuPageDescription: 'A dedicated page with categories and an easy overview of signature dishes, similar to a digital menu.',
     menuBackHome: '← Back home',
-    menuFeatureLabel: 'Recommended',
     menuEmpty: 'Menu is temporarily unavailable.',
-    featuredPrefix: 'Today we recommend trying one of the venue’s most popular items.',
     categoryCount: 'items',
     priceCurrency: '₴',
     dishImageFallback: 'Dish photo is not available',
@@ -496,63 +486,6 @@ function getFlatMenuItems() {
   ));
 }
 
-function getFeaturedItem() {
-  const items = getFlatMenuItems();
-  return [...items].sort((left, right) => {
-    const likesDifference = Number(right.likesCount || 0) - Number(left.likesCount || 0);
-    if (likesDifference !== 0) {
-      return likesDifference;
-    }
-
-    return Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
-  })[0];
-}
-
-function renderFeaturedDish() {
-  const dictionary = translations[currentLanguage];
-  const item = getFeaturedItem();
-
-  if (!item) {
-    featuredDishName.textContent = dictionary.menuEmpty;
-    featuredDishText.textContent = dictionary.featuredPrefix;
-    featuredDishCategory.textContent = '—';
-    featuredDishPrice.textContent = '—';
-    if (featuredDishImage) {
-      featuredDishImage.hidden = true;
-      featuredDishImage.removeAttribute('src');
-      featuredDishImage.alt = '';
-    }
-    if (featuredDishImageFallback) {
-      featuredDishImageFallback.hidden = false;
-      featuredDishImageFallback.textContent = 'GP';
-      featuredDishImageFallback.setAttribute('aria-label', dictionary.dishImageFallback);
-    }
-    return;
-  }
-
-  featuredDishName.textContent = getLocalizedValue(item.name);
-  featuredDishText.textContent = dictionary.featuredPrefix;
-  featuredDishCategory.textContent = getLocalizedValue(item.category);
-  featuredDishPrice.textContent = `${formatPrice(item.price)} ${dictionary.priceCurrency}`;
-
-  const imageUrl = getDishImage(item);
-  if (featuredDishImage && featuredDishImageFallback) {
-    if (imageUrl) {
-      featuredDishImage.src = imageUrl;
-      featuredDishImage.alt = `${dictionary.dishImageLabel}: ${getLocalizedValue(item.name)}`;
-      featuredDishImage.hidden = false;
-      featuredDishImageFallback.hidden = true;
-    } else {
-      featuredDishImage.hidden = true;
-      featuredDishImage.removeAttribute('src');
-      featuredDishImage.alt = '';
-      featuredDishImageFallback.hidden = false;
-      featuredDishImageFallback.textContent = 'GP';
-      featuredDishImageFallback.setAttribute('aria-label', dictionary.dishImageFallback);
-    }
-  }
-}
-
 function slugify(value) {
   return value
     .toLowerCase()
@@ -678,7 +611,6 @@ async function toggleLike(itemId) {
     targetItem.likesCount = nextLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1);
   }
 
-  renderFeaturedDish();
   renderCatalog(getActiveSectionMenu());
 
   try {
@@ -710,7 +642,6 @@ async function toggleLike(itemId) {
     }
   }
 
-  renderFeaturedDish();
   renderCatalog(getActiveSectionMenu());
 }
 
@@ -770,7 +701,6 @@ function translatePage() {
     ? activeCategory
     : (Object.keys(activeSectionMenu)[0] || '');
 
-  renderFeaturedDish();
   renderSectionNav(menuBySection);
   renderCategories(activeSectionMenu);
   renderCatalog(activeSectionMenu);
