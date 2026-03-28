@@ -1,818 +1,306 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Rnd } from 'react-rnd';
+import { useMemo, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
-import PanelCard from '../components/PanelCard';
-import { apiRequest } from '../lib/api';
-import { useAdminI18n } from '../lib/i18n';
+import EditorToolbar from '../components/map-editor/EditorToolbar';
+import LeftSidebar from '../components/map-editor/LeftSidebar';
+import InspectorPanel from '../components/map-editor/InspectorPanel';
+import SceneViewport from '../components/map-editor/SceneViewport';
+import StatusBar from '../components/map-editor/StatusBar';
+import { clampObject, downloadJson, duplicateObject } from '../components/map-editor/editor-utils';
+import { createStarterDocument } from '../lib/map-schema';
+import { saveDraftDocument, loadDraftDocument, publishDocument } from '../lib/map-editor-storage';
 
-const STATIC_TYPE_ACCENTS = {
-  BAR: 'bar',
-  STAGE: 'stage',
-  ENTRANCE: 'entrance',
-  WC: 'wc',
-  LABEL: 'label',
-  DECOR: 'decor',
-  STAIRS: 'stairs',
-  PATH: 'path'
-};
-
-const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'STAIRS', 'PATH', 'DECOR', 'LABEL'];
-const PROPERTY_FIELDS = [
-  { key: 'label', type: 'text', step: null },
-  { key: 'x', type: 'number', step: 1 },
-  { key: 'y', type: 'number', step: 1 },
-  { key: 'width', type: 'number', step: 1 },
-  { key: 'height', type: 'number', step: 1 },
-  { key: 'rotation', type: 'number', step: 1 },
-  { key: 'zIndex', type: 'number', step: 1 }
-];
-const CREATION_PRESETS = {
-  TABLE: { width: 108, height: 72 },
-  BAR: { width: 160, height: 64 },
-  STAGE: { width: 200, height: 120 },
-  ENTRANCE: { width: 110, height: 52 },
-  WC: { width: 96, height: 72 },
-  STAIRS: { width: 120, height: 84 },
-  PATH: { width: 220, height: 44 },
-  DECOR: { width: 120, height: 88 },
-  LABEL: { width: 180, height: 60 }
-};
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
+function nextId(prefix) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function roundCoordinate(value) {
-  return Math.round(Number(value) || 0);
+function toRenderableObjects(document) {
+  return [
+    ...document.territoryObjects.map((item) => ({ ...item, kind: 'territory' })),
+    ...document.bookableObjects.map((item) => ({ ...item, kind: 'bookable' }))
+  ].sort((a, b) => a.zIndex - b.zIndex);
 }
 
-function normalizeMap(map) {
-  if (!map) {
-    return null;
+function getDefaultObjectByTool(tool, editorMode) {
+  const base = {
+    x: 220,
+    y: 200,
+    width: 120,
+    height: 70,
+    rotation: 0,
+    zIndex: 10,
+    locked: false,
+    hidden: false,
+    visibleInLayoutModes: 'all',
+    label: ''
+  };
+
+  if (editorMode === 'bookable' || tool.startsWith('addRoundTable') || tool.startsWith('addRectTable')) {
+    return {
+      ...base,
+      id: nextId('bookable'),
+      kind: 'bookable',
+      objectType: tool === 'addLoungerBed' ? 'lounger_bed' : 'round_table',
+      bookingKind: 'restaurant_table',
+      name: 'Bookable object',
+      capacityMin: 2,
+      capacityMax: 4,
+      combinable: false
+    };
   }
 
   return {
-    ...map,
-    backgroundImage: String(map.backgroundImage || '').trim(),
-    backgroundColor: String(map.backgroundColor || '').trim() || '#f8fafc'
+    ...base,
+    id: nextId('territory'),
+    kind: 'territory',
+    type: tool === 'addSea' ? 'sea' : tool === 'addSand' ? 'sand' : tool === 'addPier' ? 'pier' : 'rect',
+    name: 'Territory object',
+    fill: '#334155',
+    stroke: '#475569',
+    strokeWidth: 1
   };
-}
-
-function normalizeObject(object, map) {
-  const width = Math.max(roundCoordinate(object.width), 24);
-  const height = Math.max(roundCoordinate(object.height), 24);
-  const maxX = Math.max((map?.width || 0) - width, 0);
-  const maxY = Math.max((map?.height || 0) - height, 0);
-
-  return {
-    ...object,
-    label: object.label || '',
-    tableId: Number.isInteger(Number(object.tableId)) && Number(object.tableId) > 0 ? Number(object.tableId) : null,
-    x: clamp(roundCoordinate(object.x), 0, maxX),
-    y: clamp(roundCoordinate(object.y), 0, maxY),
-    width,
-    height,
-    rotation: roundCoordinate(object.rotation),
-    zIndex: roundCoordinate(object.zIndex),
-    isActive: Boolean(object.isActive)
-  };
-}
-
-function buildEditorState(payload) {
-  const map = normalizeMap(payload.map);
-
-  return {
-    map,
-    zones: payload.zones || [],
-    tables: (payload.tables || []).map((table) => ({
-      ...table,
-      photoUrl: String(table.photoUrl || '').trim()
-    })),
-    objects: (payload.objects || []).map((object) => normalizeObject(object, map))
-  };
-}
-
-function getObjectAccent(object) {
-  if (object.type === 'TABLE') {
-    return 'table';
-  }
-
-  return STATIC_TYPE_ACCENTS[object.type] || 'static';
-}
-
-function getObjectDisplayName(object, tableMap, t) {
-  if (object.type === 'TABLE') {
-    const table = object.tableId ? tableMap.get(object.tableId) : null;
-    return table?.code || table?.name || object.label || t('mapEditor.objectType.TABLE');
-  }
-
-  return object.label || t(`mapEditor.objectType.${object.type}`);
-}
-
-function getNextSelectionId(nextObjects, preferredId = null) {
-  if (!nextObjects.length) {
-    return null;
-  }
-
-  if (preferredId !== null && nextObjects.some((object) => object.id === preferredId)) {
-    return preferredId;
-  }
-
-  return nextObjects[nextObjects.length - 1]?.id || null;
-}
-
-function resolveSavedSelection(prevState, nextData) {
-  if (!prevState.selectedObjectId) {
-    return nextData.objects[0]?.id || null;
-  }
-
-  if (nextData.objects.some((object) => object.id === prevState.selectedObjectId)) {
-    return prevState.selectedObjectId;
-  }
-
-  const previousObject = prevState.current?.objects?.find((object) => object.id === prevState.selectedObjectId);
-  if (!previousObject) {
-    return nextData.objects[0]?.id || null;
-  }
-
-  const matchedObject = nextData.objects.find(
-    (object) =>
-      object.type === previousObject.type &&
-      object.tableId === previousObject.tableId &&
-      object.label === previousObject.label &&
-      object.x === previousObject.x &&
-      object.y === previousObject.y &&
-      object.width === previousObject.width &&
-      object.height === previousObject.height
-  );
-
-  return matchedObject?.id || nextData.objects[0]?.id || null;
-}
-
-function MapSettings({ map, onMapFieldChange, t }) {
-  return (
-    <div className="editor-properties-stack">
-      <div>
-        <h4 className="panel-section-title">{t('mapEditor.mapSettingsTitle')}</h4>
-        <p className="muted small">{t('mapEditor.mapSettingsDescription')}</p>
-      </div>
-
-      <label>
-        {t('mapEditor.fields.backgroundImage')}
-        <input
-          type="url"
-          value={map.backgroundImage}
-          placeholder="https://example.com/floorplan.png"
-          onChange={(event) => onMapFieldChange('backgroundImage', event.target.value)}
-        />
-      </label>
-
-      <label>
-        {t('mapEditor.fields.backgroundColor')}
-        <input type="color" value={map.backgroundColor || '#f8fafc'} onChange={(event) => onMapFieldChange('backgroundColor', event.target.value)} />
-      </label>
-    </div>
-  );
-}
-
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, t }) {
-  if (!selectedObject) {
-    return <p className="muted">{t('mapEditor.noSelection')}</p>;
-  }
-
-  const table = selectedObject.tableId ? tableMap.get(selectedObject.tableId) : null;
-  const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
-
-  return (
-    <div className="editor-properties-stack">
-      <div className="editor-object-summary">
-        <span className={`editor-object-badge ${getObjectAccent(selectedObject)}`}>
-          {t(`mapEditor.objectType.${selectedObject.type}`)}
-        </span>
-        <strong>{getObjectDisplayName(selectedObject, tableMap, t)}</strong>
-        <span className="muted small">
-          #{selectedObject.id}
-          {table ? ` • ${table.code || table.name}` : ''}
-          {zone ? ` • ${zone.name}` : ''}
-        </span>
-      </div>
-
-      <div className="actions compact">
-        <button type="button" className="btn btn-secondary btn-small" onClick={onDuplicate}>
-          {t('mapEditor.duplicateSelected')}
-        </button>
-        <button type="button" className="btn btn-danger btn-small" onClick={onDelete}>
-          {t('mapEditor.deleteSelected')}
-        </button>
-      </div>
-
-      <div className="editor-form-grid">
-        {PROPERTY_FIELDS.map((field) => (
-          <label key={field.key}>
-            {t(`mapEditor.fields.${field.key}`)}
-            <input
-              type={field.type}
-              step={field.step ?? undefined}
-              value={selectedObject[field.key]}
-              onChange={(event) => onFieldChange(field.key, event.target.value)}
-            />
-          </label>
-        ))}
-
-        {selectedObject.type === 'TABLE' ? (
-          <>
-            <label>
-              {t('mapEditor.fields.tableId')}
-              <select value={selectedObject.tableId || ''} onChange={(event) => onFieldChange('tableId', event.target.value)}>
-                <option value="">{t('mapEditor.unassignedTable')}</option>
-                {tables.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.code || item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              {t('mapEditor.fields.tablePhotoUrl')}
-              <input
-                type="url"
-                value={table?.photoUrl || ''}
-                placeholder="https://example.com/table-photo.jpg"
-                onChange={(event) => onFieldChange('tablePhotoUrl', event.target.value)}
-                disabled={!selectedObject.tableId}
-              />
-            </label>
-
-            {table?.photoUrl ? (
-              <div className="editor-table-photo-preview">
-                <img src={table.photoUrl} alt={table.name || table.code || t('map.fields.table')} />
-              </div>
-            ) : null}
-          </>
-        ) : null}
-
-        <label className="editor-toggle-field">
-          <span>{t('mapEditor.fields.isActive')}</span>
-          <input type="checkbox" checked={selectedObject.isActive} onChange={(event) => onFieldChange('isActive', event.target.checked)} />
-        </label>
-      </div>
-    </div>
-  );
 }
 
 export default function MapEditorPage() {
-  const { t } = useAdminI18n();
-  const objectIdRef = useRef(0);
-  const [editorState, setEditorState] = useState({
-    loading: true,
-    saving: false,
-    error: '',
-    saveMessage: '',
-    defaultMapId: null,
-    original: null,
-    current: null,
-    selectedObjectId: null
-  });
+  const [document, setDocument] = useState(() => loadDraftDocument() || createStarterDocument());
+  const [selectedId, setSelectedId] = useState(null);
+  const [leftTab, setLeftTab] = useState('objects');
+  const [editorMode, setEditorMode] = useState('territory');
+  const [activeTool, setActiveTool] = useState('select');
+  const [layoutCode, setLayoutCode] = useState(document.layoutModes[0]?.code || 'day_beach_restaurant');
+  const [zoom, setZoom] = useState(0.7);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [gridSize] = useState(20);
+  const [history, setHistory] = useState([]);
+  const [future, setFuture] = useState([]);
 
-  useEffect(() => {
-    loadDefaultMapEditor().catch(() => {
-      setEditorState((prev) => ({
-        ...prev,
-        loading: false,
-        error: t('mapEditor.errors.load')
-      }));
+  const objects = useMemo(() => toRenderableObjects(document), [document]);
+  const selectedObject = useMemo(() => objects.find((item) => item.id === selectedId) || null, [objects, selectedId]);
+  const layoutMode = useMemo(() => document.layoutModes.find((mode) => mode.code === layoutCode), [document.layoutModes, layoutCode]);
+
+  function applyDocumentUpdate(updater) {
+    setDocument((prev) => {
+      const next = updater(prev);
+      setHistory((current) => [...current.slice(-39), prev]);
+      setFuture([]);
+      return next;
     });
-  }, [t]);
+  }
 
-  useEffect(() => {
-    function handleKeyDown(event) {
-      const tagName = event.target?.tagName;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
+  function setObjects(nextObjects) {
+    applyDocumentUpdate((prev) => ({
+      ...prev,
+      territoryObjects: nextObjects.filter((item) => item.kind === 'territory').map(({ kind, ...item }) => item),
+      bookableObjects: nextObjects.filter((item) => item.kind === 'bookable').map(({ kind, ...item }) => item)
+    }));
+  }
 
-      if (isEditableTarget || !editorState.selectedObjectId || !['Delete', 'Backspace'].includes(event.key)) {
-        return;
-      }
+  function addByTool(tool) {
+    const object = getDefaultObjectByTool(tool, editorMode);
+    setObjects([...objects, clampObject(object, document)]);
+    setSelectedId(object.id);
+  }
 
+  function handleToolSelect(tool) {
+    setActiveTool(tool);
+    if (tool !== 'select' && tool !== 'hand') {
+      addByTool(tool);
+    }
+  }
+
+  function updateObject(objectId, patch) {
+    const next = objects.map((item) => (item.id === objectId ? clampObject({ ...item, ...patch }, document) : item));
+    setObjects(next);
+  }
+
+  function handleMoveResize(objectId, patch) {
+    updateObject(objectId, patch);
+  }
+
+  function handleRotate(objectId, delta) {
+    const current = objects.find((item) => item.id === objectId);
+    if (!current) return;
+    updateObject(objectId, { rotation: Number(current.rotation || 0) + delta });
+  }
+
+  function handleDuplicate() {
+    if (!selectedObject) return;
+    const duplicated = duplicateObject(selectedObject, nextId(selectedObject.kind));
+    setObjects([...objects, duplicated]);
+    setSelectedId(duplicated.id);
+  }
+
+  function handleDelete() {
+    if (!selectedObject) return;
+    const next = objects.filter((item) => item.id !== selectedObject.id);
+    setObjects(next);
+    setSelectedId(next[0]?.id || null);
+  }
+
+  function handleReorder(objectId, delta) {
+    const index = objects.findIndex((item) => item.id === objectId);
+    if (index < 0) return;
+    const target = index + delta;
+    if (target < 0 || target >= objects.length) return;
+    const next = [...objects];
+    const [moved] = next.splice(index, 1);
+    next.splice(target, 0, moved);
+    setObjects(next.map((item, idx) => ({ ...item, zIndex: idx + 1 })));
+  }
+
+  function handleSaveDraft() {
+    saveDraftDocument(document);
+  }
+
+  function handlePublish() {
+    publishDocument(document);
+  }
+
+  function handleExport() {
+    downloadJson(`${document.id}.json`, document);
+  }
+
+  async function handleImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    setDocument(parsed);
+    setSelectedId(null);
+    setHistory([]);
+    setFuture([]);
+  }
+
+  function handleUndo() {
+    setHistory((prev) => {
+      if (!prev.length) return prev;
+      const previous = prev[prev.length - 1];
+      setFuture((items) => [document, ...items]);
+      setDocument(previous);
+      return prev.slice(0, -1);
+    });
+  }
+
+  function handleRedo() {
+    setFuture((prev) => {
+      if (!prev.length) return prev;
+      const [next, ...rest] = prev;
+      setHistory((items) => [...items, document]);
+      setDocument(next);
+      return rest;
+    });
+  }
+
+  function handleKeyDown(event) {
+    const hotkey = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd';
+    const undo = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey;
+    const redo = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'z';
+
+    if (['Delete', 'Backspace'].includes(event.key)) {
       event.preventDefault();
-      handleDeleteSelected();
+      handleDelete();
+    } else if (event.key === 'Escape') {
+      setSelectedId(null);
+    } else if (hotkey) {
+      event.preventDefault();
+      handleDuplicate();
+    } else if (undo) {
+      event.preventDefault();
+      handleUndo();
+    } else if (redo) {
+      event.preventDefault();
+      handleRedo();
     }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorState.selectedObjectId, editorState.current, t]);
-
-  async function loadDefaultMapEditor() {
-    setEditorState((prev) => ({
-      ...prev,
-      loading: true,
-      error: '',
-      saveMessage: ''
-    }));
-
-    const editorResult = await apiRequest('/api/admin/maps/default/editor');
-
-    if (!editorResult.response.ok || !editorResult.body?.map?.id) {
-      setEditorState((prev) => ({
-        ...prev,
-        loading: false,
-        error: editorResult.body?.message || t('mapEditor.errors.load')
-      }));
-      return;
-    }
-
-    const mapId = Number(editorResult.body.map.id);
-    const nextData = buildEditorState(editorResult.body);
-
-    setEditorState({
-      loading: false,
-      saving: false,
-      error: '',
-      saveMessage: '',
-      defaultMapId: mapId,
-      original: nextData,
-      current: nextData,
-      selectedObjectId: nextData.objects[0]?.id || null
-    });
   }
 
-  const map = editorState.current?.map;
-  const objects = editorState.current?.objects || [];
-  const tableMap = useMemo(
-    () => new Map((editorState.current?.tables || []).map((table) => [table.id, table])),
-    [editorState.current?.tables]
-  );
-  const zoneMap = useMemo(
-    () => new Map((editorState.current?.zones || []).map((zone) => [zone.id, zone])),
-    [editorState.current?.zones]
-  );
-  const selectedObject = useMemo(
-    () => objects.find((object) => object.id === editorState.selectedObjectId) || null,
-    [objects, editorState.selectedObjectId]
-  );
-  const hasChanges = useMemo(() => {
-    if (!editorState.original || !editorState.current) {
-      return false;
-    }
-
-    return JSON.stringify(editorState.original) !== JSON.stringify(editorState.current);
-  }, [editorState.current, editorState.original]);
-
-  function updateCurrent(updater) {
-    setEditorState((prev) => {
-      if (!prev.current?.map) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        ...updater(prev),
-        saveMessage: '',
-        error: ''
-      };
-    });
-  }
-
-  function updateObject(objectId, updater) {
-    updateCurrent((prev) => {
-      const nextObjects = prev.current.objects.map((object) => {
-        if (object.id !== objectId) {
-          return object;
-        }
-
-        return normalizeObject(updater(object), prev.current.map);
-      });
-
-      return {
-        current: {
-          ...prev.current,
-          objects: nextObjects
-        }
-      };
-    });
-  }
-
-  function handleFieldChange(field, value) {
-    if (!selectedObject) {
-      return;
-    }
-
-    if (field === 'tablePhotoUrl') {
-      if (!selectedObject.tableId) {
-        return;
-      }
-
-      updateCurrent((prev) => ({
-        current: {
-          ...prev.current,
-          tables: prev.current.tables.map((table) =>
-            table.id === selectedObject.tableId
-              ? {
-                  ...table,
-                  photoUrl: String(value)
-                }
-              : table
-          )
-        }
-      }));
-
-      return;
-    }
-
-    updateObject(selectedObject.id, (object) => {
-      if (field === 'label') {
-        return { ...object, label: String(value) };
-      }
-
-      if (field === 'isActive') {
-        return { ...object, isActive: Boolean(value) };
-      }
-
-      if (field === 'tableId') {
-        return {
-          ...object,
-          tableId: value === '' ? null : Number(value)
-        };
-      }
-
-
-      const numericValue = Number(value);
-      return {
-        ...object,
-        [field]: Number.isFinite(numericValue) ? numericValue : object[field]
-      };
-    });
-  }
-
-  function handleMapFieldChange(field, value) {
-    updateCurrent((prev) => ({
-      current: {
-        ...prev.current,
-        map: {
-          ...prev.current.map,
-          [field]: String(value)
-        }
-      }
-    }));
-  }
-
-  function handleDragStop(objectId, position) {
-    updateObject(objectId, (object) => ({
-      ...object,
-      x: roundCoordinate(position.x),
-      y: roundCoordinate(position.y)
-    }));
-  }
-
-  function handleResizeStop(objectId, position, size) {
-    updateObject(objectId, (object) => ({
-      ...object,
-      x: roundCoordinate(position.x),
-      y: roundCoordinate(position.y),
-      width: roundCoordinate(size.width),
-      height: roundCoordinate(size.height)
-    }));
-  }
-
-  function rotateSelected(delta) {
-    if (!selectedObject) {
-      return;
-    }
-
-    updateObject(selectedObject.id, (object) => ({
-      ...object,
-      rotation: object.rotation + delta
-    }));
-  }
-
-  function buildNewObject(type, currentMap, currentObjects) {
-    const preset = CREATION_PRESETS[type] || CREATION_PRESETS.DECOR;
-    const maxZIndex = currentObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0);
-    const width = preset.width;
-    const height = preset.height;
-    const centeredX = Math.round((currentMap.width - width) / 2);
-    const centeredY = Math.round((currentMap.height - height) / 2);
-
-    objectIdRef.current += 1;
-
-    return normalizeObject(
-      {
-        id: `tmp-${Date.now()}-${objectIdRef.current}`,
-        type,
-        label: type === 'LABEL' ? t('mapEditor.newLabelDefault') : '',
-        tableId: null,
-        x: centeredX,
-        y: centeredY,
-        width,
-        height,
-        rotation: 0,
-        zIndex: maxZIndex + 1,
-        isActive: true
-      },
-      currentMap
-    );
-  }
-
-  function createObject(type) {
-    updateCurrent((prev) => {
-      const newObject = buildNewObject(type, prev.current.map, prev.current.objects);
-      return {
-        current: {
-          ...prev.current,
-          objects: [...prev.current.objects, newObject]
-        },
-        selectedObjectId: newObject.id
-      };
-    });
-  }
-
-  function duplicateSelected() {
-    if (!selectedObject || !editorState.current?.map) {
-      return;
-    }
-
-    updateCurrent((prev) => {
-      const duplicate = normalizeObject(
-        {
-          ...selectedObject,
-          id: `tmp-${Date.now()}-${objectIdRef.current + 1}`,
-          x: selectedObject.x + 24,
-          y: selectedObject.y + 24,
-          zIndex: Math.max(selectedObject.zIndex + 1, prev.current.objects.reduce((max, object) => Math.max(max, object.zIndex), 0) + 1)
-        },
-        prev.current.map
-      );
-
-      objectIdRef.current += 1;
-
-      return {
-        current: {
-          ...prev.current,
-          objects: [...prev.current.objects, duplicate]
-        },
-        selectedObjectId: duplicate.id
-      };
-    });
-  }
-
-  function handleDeleteSelected() {
-    if (!selectedObject) {
-      return;
-    }
-
-    const confirmed = window.confirm(t('mapEditor.deleteConfirm', { name: getObjectDisplayName(selectedObject, tableMap, t) }));
-    if (!confirmed) {
-      return;
-    }
-
-    updateCurrent((prev) => {
-      const nextObjects = prev.current.objects.filter((object) => object.id !== prev.selectedObjectId);
-      return {
-        current: {
-          ...prev.current,
-          objects: nextObjects
-        },
-        selectedObjectId: getNextSelectionId(nextObjects)
-      };
-    });
-  }
-
-  async function saveChanges() {
-    if (!editorState.current || !editorState.defaultMapId) {
-      return;
-    }
-
-    setEditorState((prev) => ({
-      ...prev,
-      saving: true,
-      error: '',
-      saveMessage: ''
-    }));
-
-    const payload = {
-      map: {
-        backgroundImage: editorState.current.map.backgroundImage || null,
-        backgroundColor: editorState.current.map.backgroundColor || null
-      },
-      tables: editorState.current.tables.map((table) => ({
-        id: table.id,
-        photoUrl: table.photoUrl || null
-      })),
-      objects: editorState.current.objects.map((object) => ({
-        id: object.id,
-        type: object.type,
-        tableId: object.type === 'TABLE' ? object.tableId : null,
-        label: object.label || null,
-        x: object.x,
-        y: object.y,
-        width: object.width,
-        height: object.height,
-        rotation: object.rotation,
-        zIndex: object.zIndex,
-        isActive: object.isActive
-      }))
-    };
-
-    const result = await apiRequest(`/api/admin/maps/${editorState.defaultMapId}/editor`, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
-    });
-
-    if (!result.response.ok) {
-      setEditorState((prev) => ({
-        ...prev,
-        saving: false,
-        error: result.body?.message || t('mapEditor.errors.save')
-      }));
-      return;
-    }
-
-    const nextData = buildEditorState(result.body);
-    setEditorState((prev) => ({
-      ...prev,
-      saving: false,
-      error: '',
-      saveMessage: t('mapEditor.saveSuccess'),
-      original: nextData,
-      current: nextData,
-      selectedObjectId: resolveSavedSelection(prev, nextData)
-    }));
-  }
-
-  function resetChanges() {
-    setEditorState((prev) => {
-      if (!prev.original) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        current: prev.original,
-        error: '',
-        saveMessage: '',
-        selectedObjectId: prev.original.objects.some((object) => object.id === prev.selectedObjectId)
-          ? prev.selectedObjectId
-          : prev.original.objects[0]?.id || null
-      };
-    });
+  function handlePanMove(event) {
+    if (activeTool !== 'hand' || !isPanning) return;
+    setPan((prev) => ({ x: prev.x + event.movementX, y: prev.y + event.movementY }));
   }
 
   return (
     <AdminLayout>
-      <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')}>
-        <section className="page-hero compact map-editor-hero">
-          <div className="page-hero-copy">
-            <span className="eyebrow">{t('mapEditor.eyebrow')}</span>
-            <h3>{t('mapEditor.heroTitle')}</h3>
-            <p className="muted">{t('mapEditor.heroDescription')}</p>
-          </div>
-          <div className="hero-inline-note">{t('mapEditor.note')}</div>
-        </section>
+      <PageContainer title="Floor Plan Editor" description="Base territory + layout modes + bookable objects + runtime-ready status layer.">
+        <div className="floor-plan-editor" onKeyDown={handleKeyDown} tabIndex={0}>
+          <EditorToolbar
+            activeTool={activeTool}
+            onToolSelect={handleToolSelect}
+            editorMode={editorMode}
+            onModeChange={setEditorMode}
+            layoutCode={layoutCode}
+            layoutModes={document.layoutModes}
+            onLayoutChange={setLayoutCode}
+            onSaveDraft={handleSaveDraft}
+            onPublish={handlePublish}
+            onExport={handleExport}
+            onImport={handleImport}
+          />
 
-        <div className="map-editor-toolbar">
-          <div className="map-editor-toolbar-group">
-            <button type="button" className="btn" onClick={saveChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
-              {editorState.saving ? t('mapEditor.saving') : t('mapEditor.save')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
-              {t('mapEditor.reset')}
-            </button>
+          <div className="fp-main-grid">
+            <LeftSidebar
+              activeTab={leftTab}
+              onTabChange={setLeftTab}
+              objects={objects}
+              zones={document.zones}
+              layoutModes={document.layoutModes}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onToggleHidden={(id) => updateObject(id, { hidden: !objects.find((o) => o.id === id)?.hidden })}
+              onToggleLocked={(id) => updateObject(id, { locked: !objects.find((o) => o.id === id)?.locked })}
+              onReorder={handleReorder}
+              previewLayoutCode={layoutCode}
+              onPreviewLayoutChange={setLayoutCode}
+            />
+
+            <SceneViewport
+              map={document}
+              objects={objects}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              onMoveResize={handleMoveResize}
+              onRotate={handleRotate}
+              layoutMode={layoutMode}
+              snapToGrid={snapToGrid}
+              gridSize={gridSize}
+              zoom={zoom}
+              pan={pan}
+              onPan={handlePanMove}
+              onWheelZoom={(event) => {
+                event.preventDefault();
+                setZoom((value) => Math.max(0.35, Math.min(2.2, value + (event.deltaY > 0 ? -0.06 : 0.06))));
+              }}
+            />
+
+            <InspectorPanel
+              selectedObject={selectedObject}
+              zones={document.zones}
+              layoutModes={document.layoutModes}
+              onFieldChange={(field, value) => updateObject(selectedObject.id, { [field]: value })}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+            />
+          </div>
+
+          <div className="fp-controls-row">
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setZoom((z) => Math.max(0.35, z - 0.1))}>-</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => setZoom((z) => Math.min(2.2, z + 0.1))}>+</button>
             <button
               type="button"
-              className="btn btn-secondary"
-              onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: null }))}
-              disabled={!selectedObject}
+              className={`btn btn-secondary btn-small ${activeTool === 'hand' ? 'active' : ''}`}
+              onMouseDown={() => setIsPanning(true)}
+              onMouseUp={() => setIsPanning(false)}
+              onMouseLeave={() => setIsPanning(false)}
+              onClick={() => setActiveTool(activeTool === 'hand' ? 'select' : 'hand')}
             >
-              {t('mapEditor.clearSelection')}
+              Pan hand
             </button>
+            <label className="editor-toggle-field"><span>Snap to grid</span><input type="checkbox" checked={snapToGrid} onChange={(e) => setSnapToGrid(e.target.checked)} /></label>
           </div>
 
-          <div className="map-editor-toolbar-group compact-actions">
-            {CREATION_ACTIONS.map((type) => (
-              <button key={type} type="button" className="btn btn-secondary btn-small" onClick={() => createObject(type)} disabled={!map}>
-                {t('mapEditor.addObject', { type: t(`mapEditor.objectType.${type}`) })}
-              </button>
-            ))}
-          </div>
-
-          <div className="map-editor-toolbar-group">
-            <button type="button" className="btn btn-secondary btn-small" onClick={duplicateSelected} disabled={!selectedObject}>
-              {t('mapEditor.duplicateSelected')}
-            </button>
-            <button type="button" className="btn btn-danger btn-small" onClick={handleDeleteSelected} disabled={!selectedObject}>
-              {t('mapEditor.deleteSelected')}
-            </button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(-15)} disabled={!selectedObject}>
-              {t('mapEditor.rotateLeft')}
-            </button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(15)} disabled={!selectedObject}>
-              {t('mapEditor.rotateRight')}
-            </button>
-          </div>
+          <StatusBar document={document} selectedObject={selectedObject} layoutMode={layoutMode} zoom={zoom} mode={editorMode} />
         </div>
-
-        {map ? (
-          <div className="map-meta muted">
-            {t('mapEditor.meta', {
-              map: map.name || '—',
-              size: `${map.width}×${map.height}`,
-              objects: objects.length,
-              tables: editorState.current?.tables?.length || 0
-            })}
-          </div>
-        ) : null}
-
-        {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
-        {editorState.error ? <p className="error">{editorState.error}</p> : null}
-        {editorState.saveMessage ? <p className="success-text">{editorState.saveMessage}</p> : null}
-
-        {!editorState.loading && editorState.current ? (
-          <div className="map-editor-layout">
-            <PanelCard title={t('mapEditor.canvasTitle')} subtitle={t('mapEditor.canvasDescription')} className="full-height">
-              <div className="map-editor-canvas-shell">
-                <div
-                  className="map-editor-canvas"
-                  style={{
-                    width: `${map.width}px`,
-                    height: `${map.height}px`
-                  }}
-                >
-                  {map.backgroundImage ? (
-                    <div
-                      className="map-editor-canvas-background"
-                      style={{
-                        backgroundColor: map.backgroundColor || '#f8fafc',
-                        backgroundImage: map.backgroundImage ? `url(${map.backgroundImage})` : 'none'
-                      }}
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <div className="map-editor-canvas-background" style={{ backgroundColor: map.backgroundColor || '#f8fafc' }} aria-hidden="true" />
-                  )}
-                  <div className="map-editor-canvas-grid" aria-hidden="true" />
-
-                  {objects.map((object) => {
-                    const table = object.tableId ? tableMap.get(object.tableId) : null;
-                    const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
-
-                    return (
-                      <Rnd
-                        key={object.id}
-                        bounds="parent"
-                        size={{ width: object.width, height: object.height }}
-                        position={{ x: object.x, y: object.y }}
-                        onDragStop={(_, data) => handleDragStop(object.id, data)}
-                        onResizeStop={(_, __, ref, ___, position) =>
-                          handleResizeStop(object.id, position, {
-                            width: ref.offsetWidth,
-                            height: ref.offsetHeight
-                          })
-                        }
-                        onMouseDown={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id }))}
-                        enableResizing
-                        dragGrid={[1, 1]}
-                        resizeGrid={[1, 1]}
-                        className="map-editor-rnd"
-                        style={{ zIndex: object.zIndex }}
-                      >
-                        <button
-                          type="button"
-                          className={`map-editor-object ${getObjectAccent(object)} ${editorState.selectedObjectId === object.id ? 'selected' : ''} ${object.isActive ? '' : 'inactive'}`.trim()}
-                          onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id }))}
-                          title={zone ? `${getObjectDisplayName(object, tableMap, t)} • ${zone.name}` : getObjectDisplayName(object, tableMap, t)}
-                        >
-                          <span className="map-editor-object-type">{t(`mapEditor.objectType.${object.type}`)}</span>
-                          <strong>{getObjectDisplayName(object, tableMap, t)}</strong>
-                          {zone ? <span className="map-editor-object-meta">{zone.name}</span> : null}
-                        </button>
-                      </Rnd>
-                    );
-                  })}
-                </div>
-              </div>
-            </PanelCard>
-
-            <div className="editor-sidebar-stack">
-              <PanelCard title={t('mapEditor.mapSettingsTitle')} subtitle={t('mapEditor.mapSettingsDescription')} className="surface-muted">
-                <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
-              </PanelCard>
-
-              <PanelCard title={t('mapEditor.propertiesTitle')} subtitle={t('mapEditor.propertiesDescription')} className="full-height surface-muted">
-                <MapObjectProperties
-                  selectedObject={selectedObject}
-                  tableMap={tableMap}
-                  zoneMap={zoneMap}
-                  tables={editorState.current.tables}
-                  onFieldChange={handleFieldChange}
-                  onDuplicate={duplicateSelected}
-                  onDelete={handleDeleteSelected}
-                  t={t}
-                />
-              </PanelCard>
-            </div>
-          </div>
-        ) : null}
       </PageContainer>
     </AdminLayout>
   );

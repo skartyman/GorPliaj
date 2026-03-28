@@ -8,6 +8,7 @@ const navItems = [
   { to: '/admin/reservations', labelKey: 'nav.reservations' },
   { to: '/admin/map-editor', labelKey: 'nav.mapEditor' },
   { to: '/admin/map', labelKey: 'nav.map' },
+  { to: '/admin/booking-runtime', labelKey: 'nav.map' },
   { to: '/admin/menu', labelKey: 'nav.menu' },
   { to: '/admin/events', labelKey: 'nav.events' },
   { to: '/admin/news', labelKey: 'nav.news' },
