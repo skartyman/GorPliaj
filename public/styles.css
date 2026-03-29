@@ -3489,8 +3489,8 @@ body.cart-open {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(112deg, rgba(11, 28, 43, 0.7) 10%, rgba(21, 62, 89, 0.28) 45%, rgba(255, 231, 191, 0.22) 100%),
-    radial-gradient(circle at 80% 25%, rgba(255, 247, 233, 0.48), transparent 40%);
+    linear-gradient(112deg, rgba(7, 20, 33, 0.84) 8%, rgba(11, 40, 64, 0.52) 46%, rgba(44, 84, 113, 0.36) 100%),
+    radial-gradient(circle at 80% 25%, rgba(255, 247, 233, 0.2), transparent 42%);
 }
 .ocean-hero::after {
   content: '';
@@ -3499,7 +3499,7 @@ body.cart-open {
   width: 520px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.52), transparent 66%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 66%);
 }
 .ocean-hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.04); }
 .ocean-hero-inner,
@@ -3533,20 +3533,6 @@ body.cart-open {
 }
 .ocean-chip-card span { color: rgba(241, 248, 252, 0.87); font-size: 0.88rem; }
 .ocean-chip-card strong { display: block; margin-top: 0.32rem; font-size: 1.35rem; color: #fff; }
-
-.ocean-floating {
-  position: absolute;
-  z-index: 1;
-  opacity: 0.4;
-  pointer-events: none;
-  animation: oceanFloat 9s ease-in-out infinite;
-}
-.ocean-floating-wave { width: clamp(100px, 12vw, 170px); right: 8%; top: 17%; }
-.ocean-floating-mark { width: clamp(58px, 6vw, 92px); left: 48%; top: 16%; animation-delay: -3s; }
-@keyframes oceanFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
 
 .ocean-flow,
 .ocean-about,
