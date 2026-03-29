@@ -4,7 +4,7 @@
 #
 
 app = 'gorpliaj'
-primary_region = 'ams'
+primary_region = 'iad'
 
 [build]
 
