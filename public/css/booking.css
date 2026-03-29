@@ -564,6 +564,27 @@ textarea {
   border-color: rgba(125, 211, 252, 0.68);
 }
 
+.map-object--wood-path {
+  background: rgba(120, 89, 65, 0.24);
+  border-color: rgba(180, 126, 82, 0.72);
+}
+
+.map-object--deck {
+  background: rgba(161, 98, 7, 0.26);
+  border-color: rgba(217, 119, 6, 0.76);
+}
+
+.map-object--sand {
+  background: rgba(245, 222, 179, 0.34);
+  border-color: rgba(245, 158, 11, 0.62);
+  color: #7c2d12;
+}
+
+.map-object--sea {
+  background: rgba(14, 165, 233, 0.28);
+  border-color: rgba(56, 189, 248, 0.78);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -645,6 +666,11 @@ textarea {
 .reservation-form label {
   display: grid;
   gap: 8px;
+}
+
+.input-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .reservation-form input,

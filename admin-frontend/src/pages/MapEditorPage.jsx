@@ -18,6 +18,12 @@ const STATIC_TYPE_ACCENTS = {
 };
 
 const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'STAIRS', 'PATH', 'DECOR', 'LABEL'];
+const SURFACE_PRESETS = [
+  { key: 'WOOD_PATH', label: 'Wooden path', objectType: 'CUSTOM', objectLabel: 'Wooden path', width: 240, height: 56 },
+  { key: 'DECK', label: 'Wooden deck', objectType: 'CUSTOM', objectLabel: 'Deck', width: 260, height: 120 },
+  { key: 'SAND', label: 'Sand area', objectType: 'CUSTOM', objectLabel: 'Sand', width: 320, height: 160 },
+  { key: 'SEA', label: 'Sea area', objectType: 'CUSTOM', objectLabel: 'Sea', width: 360, height: 180 }
+];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', step: null },
   { key: 'x', type: 'number', step: 1 },
@@ -97,6 +103,12 @@ function getObjectAccent(object) {
   if (object.type === 'TABLE') {
     return 'table';
   }
+
+  const normalizedLabel = String(object.label || '').toLowerCase();
+  if (/(sand|пісок|песок)/i.test(normalizedLabel)) return 'sand';
+  if (/(sea|море)/i.test(normalizedLabel)) return 'sea';
+  if (/(deck|настил)/i.test(normalizedLabel)) return 'deck';
+  if (/(wooden path|дерев'яна доріжка|деревянная дорожка)/i.test(normalizedLabel)) return 'path';
 
   return STATIC_TYPE_ACCENTS[object.type] || 'static';
 }
@@ -527,6 +539,24 @@ export default function MapEditorPage() {
     });
   }
 
+  function createSurfacePreset(preset) {
+    updateCurrent((prev) => {
+      const newObject = buildNewObject(preset.objectType, prev.current.map, prev.current.objects);
+      newObject.label = preset.objectLabel;
+      newObject.width = preset.width;
+      newObject.height = preset.height;
+
+      const normalizedObject = normalizeObject(newObject, prev.current.map);
+      return {
+        current: {
+          ...prev.current,
+          objects: [...prev.current.objects, normalizedObject]
+        },
+        selectedObjectId: normalizedObject.id
+      };
+    });
+  }
+
   function duplicateSelected() {
     if (!selectedObject || !editorState.current?.map) {
       return;
@@ -692,6 +722,11 @@ export default function MapEditorPage() {
             {CREATION_ACTIONS.map((type) => (
               <button key={type} type="button" className="btn btn-secondary btn-small" onClick={() => createObject(type)} disabled={!map}>
                 {t('mapEditor.addObject', { type: t(`mapEditor.objectType.${type}`) })}
+              </button>
+            ))}
+            {SURFACE_PRESETS.map((preset) => (
+              <button key={preset.key} type="button" className="btn btn-secondary btn-small" onClick={() => createSurfacePreset(preset)} disabled={!map}>
+                + {preset.label}
               </button>
             ))}
           </div>

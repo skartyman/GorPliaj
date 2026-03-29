@@ -1116,6 +1116,21 @@ textarea {
   border-color: #0284c7;
 }
 
+.map-editor-object.deck {
+  background: rgba(254, 243, 199, 0.92);
+  border-color: #b45309;
+}
+
+.map-editor-object.sand {
+  background: rgba(254, 240, 138, 0.84);
+  border-color: #ca8a04;
+}
+
+.map-editor-object.sea {
+  background: rgba(186, 230, 253, 0.9);
+  border-color: #0284c7;
+}
+
 .map-editor-object.static {
   background: rgba(241, 245, 249, 0.96);
   border-color: #64748b;
