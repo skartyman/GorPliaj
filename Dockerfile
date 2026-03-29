@@ -12,11 +12,13 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3 && \
     rm -rf /var/lib/apt/lists/*
 
+# Cache backend/frontend dependency layers independently
 COPY package.json package-lock.json ./
 COPY admin-frontend/package.json admin-frontend/package-lock.json ./admin-frontend/
 
 RUN npm ci
 RUN npm ci --include=dev --prefix admin-frontend
+RUN test -x admin-frontend/node_modules/.bin/vite
 
 COPY . .
 
