@@ -18,6 +18,20 @@
   --warn: #f97316;
   --danger: #fb7185;
   --shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+  --type-h1-size: 2.25rem;
+  --type-h1-line: 2.625rem;
+  --type-h2-size: 1.375rem;
+  --type-h2-line: 1.75rem;
+  --type-h3-size: 1.125rem;
+  --type-h3-line: 1.5rem;
+  --type-body-size: 1rem;
+  --type-body-line: 1.5625rem;
+  --type-secondary-size: 0.875rem;
+  --type-secondary-line: 1.25rem;
+  --type-caption-size: 0.8125rem;
+  --type-caption-line: 1.125rem;
+  --type-button-size: 0.9375rem;
+  --type-button-line: 1.25rem;
 }
 
 * {
@@ -1561,6 +1575,83 @@ select:focus {
   color-scheme: light;
   background: #ffffff;
   color: #0f172a;
+  --home-text-primary: #0f172a;
+  --home-text-secondary: #475569;
+  --home-text-muted: #64748b;
+}
+
+.home-page-body h1,
+.home-page-body h2,
+.home-page-body h3 {
+  margin: 0;
+  color: var(--home-text-primary);
+}
+
+.home-page-body h1 {
+  font-size: clamp(1.9rem, 5vw, var(--type-h1-size));
+  line-height: var(--type-h1-line);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.home-page-body h2 {
+  font-size: clamp(1.25rem, 2.8vw, var(--type-h2-size));
+  line-height: var(--type-h2-line);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.home-page-body h3,
+.home-page-body .home-inline-title,
+.home-page-body .home-aside-title {
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: 600;
+}
+
+.home-page-body p,
+.home-page-body li,
+.home-page-body .feature-list {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+}
+
+.home-page-body .home-stat-card strong,
+.home-page-body .home-mini-card strong,
+.home-page-body .contact-card strong {
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: 600;
+}
+
+.home-page-body .menu-page-description,
+.home-page-body .menu-preview-copy,
+.home-page-body .home-mini-card span,
+.home-page-body .booking-legal-note,
+.home-page-body .booking-form label span,
+.home-page-body .home-page-scroll-track a,
+.home-page-body .home-scroll-action {
+  font-size: var(--type-secondary-size);
+  line-height: var(--type-secondary-line);
+  color: var(--home-text-secondary);
+}
+
+.home-page-body .section-chip,
+.home-page-body .brand small,
+.home-page-body .menu-meta,
+.home-page-body .reservation-meta,
+.home-page-body .booking-form label,
+.home-page-body .form-state {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  color: var(--home-text-muted);
+}
+
+.home-page-body .menu-page-description,
+.home-page-body .home-hero-description,
+.home-page-body .home-visual-copy .menu-page-description,
+.home-page-body .home-agreement-item .menu-page-description {
+  max-width: 66ch;
 }
 
 .home-page-shell {
@@ -1658,7 +1749,7 @@ select:focus {
   min-height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  color: #334155;
+  color: var(--home-text-secondary);
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
@@ -1716,8 +1807,7 @@ select:focus {
 }
 
 .home-hero-subtitle {
-  font-size: 1.12rem;
-  color: #334155;
+  color: var(--home-text-secondary);
 }
 
 .home-hero-description {
@@ -1913,7 +2003,7 @@ select:focus {
 }
 
 .home-mini-card span {
-  color: #475569;
+  color: var(--home-text-secondary);
 }
 
 .home-visual-card {
@@ -1937,9 +2027,7 @@ select:focus {
 
 .booking-legal-note {
   margin: -2px 0 0;
-  color: #475569;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  color: var(--home-text-secondary);
 }
 
 .home-page-body .booking-surface {
@@ -1953,7 +2041,7 @@ select:focus {
 .home-page-body .booking-form select,
 .home-page-body .booking-aside,
 .home-page-body .feature-list {
-  color: #334155;
+  color: var(--home-text-secondary);
 }
 
 .home-page-body .booking-form input,
@@ -2022,6 +2110,58 @@ select:focus {
 
 .home-agreement-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 1041px) {
+  .home-page-body {
+    --type-h1-size: 36px;
+    --type-h1-line: 42px;
+    --type-h2-size: 22px;
+    --type-h2-line: 28px;
+    --type-h3-size: 18px;
+    --type-h3-line: 24px;
+    --type-body-size: 16px;
+    --type-body-line: 25px;
+    --type-secondary-size: 14px;
+    --type-secondary-line: 20px;
+    --type-caption-size: 13px;
+    --type-caption-line: 18px;
+    --type-button-size: 14px;
+    --type-button-line: 20px;
+    --home-text-primary: #0b1426;
+    --home-text-secondary: #334155;
+    --home-text-muted: #475569;
+  }
+
+  .home-page-body .btn,
+  .home-page-body .booking-form button,
+  .home-page-body .menu-preview-actions .text-link,
+  .home-page-body .lang-toggle,
+  .home-page-body .home-page-scroll-track a,
+  .home-page-body .home-scroll-action {
+    font-size: var(--type-button-size);
+    line-height: var(--type-button-line);
+    font-weight: 600;
+  }
+
+  .home-page-body .btn,
+  .home-page-body .booking-form button {
+    min-height: 42px;
+    padding: 10px 18px;
+  }
+
+  .home-page-body .menu-preview-actions .text-link,
+  .home-page-body .lang-toggle,
+  .home-page-body .home-page-scroll-track a,
+  .home-page-body .home-scroll-action {
+    min-height: 40px;
+    padding-inline: 16px;
+  }
+
+  .home-page-body .home-page-header .brand strong {
+    font-size: 18px;
+    line-height: 24px;
+  }
 }
 
 @media (max-width: 1040px) {
