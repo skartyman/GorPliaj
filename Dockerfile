@@ -20,15 +20,18 @@ FROM base AS build
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
 
-# Install node modules
-COPY package-lock.json package.json ./
-RUN npm ci
-
-# Copy application code
+# Copy ALL code first
 COPY . .
 
-# Generate Prisma client after schema is available in image
+# Install deps
+RUN npm ci
+RUN npm ci --prefix admin-frontend
+
+# Prisma
 RUN npx prisma generate
+
+# Build admin
+RUN npm run build --prefix admin-frontend
 
 
 FROM base
