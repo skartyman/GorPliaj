@@ -1,42 +1,47 @@
 # syntax = docker/dockerfile:1
 
-# Adjust NODE_VERSION as desired
 ARG NODE_VERSION=22.21.1
 FROM node:${NODE_VERSION}-slim AS base
 
-LABEL fly_launch_runtime="Node.js"
-
-# Node.js app lives here
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
-
-
-# Throw-away build stage to reduce size of final image
+# ---------------- BUILD ----------------
 FROM base AS build
 
-# Install packages needed to build node modules
+# ВАЖНО: не production здесь!
+ENV NODE_ENV=development
+
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
 
-# Install node modules
-COPY package-lock.json package.json ./
-RUN npm ci
+# Копируем package.json отдельно для кеша
+COPY package.json package-lock.json ./
+COPY admin-frontend/package.json admin-frontend/package-lock.json ./admin-frontend/
 
-# Copy application code
+# Устанавливаем ВСЕ зависимости
+RUN npm ci
+RUN npm ci --prefix admin-frontend
+
+# Копируем остальной код
 COPY . .
 
-# Generate Prisma client after schema is available in image
+# Prisma
 RUN npx prisma generate
 
+# Build admin (vite теперь есть)
+RUN npm run build --prefix admin-frontend
 
+
+# ---------------- PROD ----------------
 FROM base
+
+ENV NODE_ENV=production
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl && \
     rm -rf /var/lib/apt/lists/*
 
+# Копируем только результат сборки
 COPY --from=build /app /app
 
 EXPOSE 8080
