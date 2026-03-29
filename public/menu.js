@@ -28,6 +28,7 @@ let categorySectionObserver = null;
 let isCategoryScrollSyncPaused = false;
 let categoryObserverAnimationFrame = null;
 let pendingObservedCategory = '';
+let lastObservedCategorySwitchAt = 0;
 
 function loadJsonState(storageKey) {
   try {
@@ -366,15 +367,26 @@ function setupCategoryObserver() {
       return;
     }
 
+    const stickyOffset = 132;
     const visible = entries
       .filter((entry) => entry.isIntersecting)
-      .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
+      .map((entry) => ({
+        entry,
+        topDistance: Math.abs(entry.boundingClientRect.top - stickyOffset)
+      }))
+      .sort((left, right) => {
+        if (left.topDistance !== right.topDistance) {
+          return left.topDistance - right.topDistance;
+        }
+
+        return right.entry.intersectionRatio - left.entry.intersectionRatio;
+      });
 
     if (!visible.length) {
       return;
     }
 
-    const categoryName = visible[0].target.getAttribute('data-category-name');
+    const categoryName = visible[0].entry.target.getAttribute('data-category-name');
     if (!categoryName) {
       return;
     }
@@ -390,7 +402,17 @@ function setupCategoryObserver() {
         return;
       }
 
+      const now = window.performance?.now ? window.performance.now() : Date.now();
+      const isSwitchTooFrequent = pendingObservedCategory !== activeCategory
+        && (now - lastObservedCategorySwitchAt) < 160;
+
+      if (isSwitchTooFrequent) {
+        pendingObservedCategory = '';
+        return;
+      }
+
       setActiveCategory(pendingObservedCategory, { shouldRender: false, autoScroll: true });
+      lastObservedCategorySwitchAt = now;
       pendingObservedCategory = '';
     });
   }, observerOptions);
@@ -756,7 +778,7 @@ categoryNav?.addEventListener('click', (event) => {
   const targetId = link.getAttribute('href');
   const targetSection = targetId ? document.querySelector(targetId) : null;
 
-  setActiveCategory(nextCategory, { shouldRender: false });
+  setActiveCategory(nextCategory, { shouldRender: false, autoScroll: true });
 
   if (!targetSection) {
     return;
