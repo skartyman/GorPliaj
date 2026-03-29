@@ -34,8 +34,9 @@ COPY . .
 # Prisma
 RUN npx prisma generate
 
-# Build admin
-RUN npm run build --prefix admin-frontend
+# Verify Vite local binary is present, then build admin
+RUN test -x admin-frontend/node_modules/.bin/vite
+RUN cd admin-frontend && npx vite build
 
 
 FROM base
