@@ -1,32 +1,40 @@
 # syntax = docker/dockerfile:1
 
+# Adjust NODE_VERSION as desired
 ARG NODE_VERSION=22.21.1
 FROM node:${NODE_VERSION}-slim AS base
+
+LABEL fly_launch_runtime="Node.js"
+
+# Node.js app lives here
 WORKDIR /app
 
+# Set production environment
+ENV NODE_ENV="production"
+
+
+# Throw-away build stage to reduce size of final image
 FROM base AS build
-ENV NODE_ENV=development
-ENV NPM_CONFIG_PRODUCTION=false
 
+# Install packages needed to build node modules
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3 && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
 
-# Cache backend/frontend dependency layers independently
-COPY package.json package-lock.json ./
-COPY admin-frontend/package.json admin-frontend/package-lock.json ./admin-frontend/
-
-RUN npm ci
-RUN npm ci --include=dev --prefix admin-frontend
-RUN test -x admin-frontend/node_modules/.bin/vite
-
+# Copy ALL code first
 COPY . .
 
+# Install deps
+RUN npm ci
+RUN npm ci --prefix admin-frontend
+
+# Prisma
 RUN npx prisma generate
+
+# Build admin
 RUN npm run build --prefix admin-frontend
 
-FROM base AS final
-ENV NODE_ENV=production
+
+FROM base
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl && \
