@@ -957,7 +957,7 @@ select:focus {
   height: 100%;
   object-fit: contain;
   object-position: center 42%;
-  transform: translateY(-0px) scale(1.01);
+  transform: translateY(-15px) scale(1.01);
 }
 
 .brand-with-logo strong {
