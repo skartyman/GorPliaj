@@ -1786,6 +1786,7 @@ select:focus {
 .home-hero-grid,
 .home-grid {
   gap: 16px;
+  align-items: start;
 }
 
 .home-hero-grid,
@@ -1835,7 +1836,6 @@ select:focus {
 
 .home-info-card.scenic {
   position: relative;
-  min-height: 100%;
   padding: 0;
   overflow: hidden;
   background: #dbeafe;
@@ -1929,7 +1929,7 @@ select:focus {
 }
 
 .home-card-wide {
-  min-height: 100%;
+  min-height: 0;
 }
 
 .home-metric-card {
@@ -2022,7 +2022,7 @@ select:focus {
 }
 
 .home-primary-actions {
-  align-items: stretch;
+  align-items: start;
 }
 
 .booking-legal-note {
@@ -2062,14 +2062,14 @@ select:focus {
 }
 
 .home-aside-photo-card {
-  min-height: 220px;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   border-radius: 24px;
 }
 
 .home-aside-photo-card img {
-  min-height: 220px;
+  min-height: 0;
 }
 
 .home-experience-list,
@@ -2162,22 +2162,69 @@ select:focus {
     font-size: 18px;
     line-height: 24px;
   }
-}
 
-@media (max-width: 1040px) {
-  .home-hero-grid,
-  .home-grid-double,
-  .home-grid-triple,
-  .home-booking-grid {
-    grid-template-columns: 1fr;
-    flex-direction: column;
-    align-items: stretch;
+  .home-hero-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: 14px;
   }
 
-  .home-gallery-strip,
-  .home-feature-grid,
+  .home-grid-double {
+    column-count: 2;
+    column-gap: 14px;
+    display: block;
+  }
+
+  .home-grid-double > * {
+    break-inside: avoid;
+    margin: 0 0 14px;
+  }
+
+  .home-grid-double > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1040px) {
+  .home-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .home-grid-double {
+    column-count: 2;
+    column-gap: 12px;
+    display: block;
+  }
+
+  .home-grid-double > * {
+    break-inside: avoid;
+    margin: 0 0 12px;
+  }
+
+  .home-grid-double > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .home-booking-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-gallery-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .home-agreement-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-card,
+  .home-card-muted,
+  .home-info-card {
+    border-radius: 24px;
   }
 }
 
@@ -2252,6 +2299,16 @@ select:focus {
     max-width: 100%;
     min-height: 46px;
     font-size: 0.98rem;
+  }
+
+  .home-hero-grid,
+  .home-grid-double,
+  .home-grid-triple,
+  .home-booking-grid,
+  .home-gallery-strip,
+  .home-feature-grid,
+  .home-agreement-grid {
+    grid-template-columns: 1fr;
   }
 }
 
