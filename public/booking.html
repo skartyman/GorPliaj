@@ -131,6 +131,19 @@
               <input type="number" name="guests" min="1" step="1" required />
             </label>
             <label>
+              <span data-i18n="visitMode">Режим</span>
+              <select name="visitMode" id="visitModeSelect">
+                <option value="DAY" data-i18n="visitModeDay">День (пляж + ресторан)</option>
+                <option value="EVENING" data-i18n="visitModeEvening">Вечер (ресторан + мероприятия)</option>
+                <option value="WINTER" data-i18n="visitModeWinter">Зима (зал с камином)</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="placeType">Тип места</span>
+              <select name="placeType" id="placeTypeSelect"></select>
+              <small id="placeTypeHint" class="input-hint hidden"></small>
+            </label>
+            <label>
               <span data-i18n="reservationDate">Дата</span>
               <input type="date" name="reservationDate" required />
               <div id="dateQuickSelect" class="date-quick-select" data-i18n-attr="aria-label:dateQuickSelectAria"></div>

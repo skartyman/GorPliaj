@@ -28,6 +28,10 @@ const eventBookingContext = document.getElementById('eventBookingContext');
 
 const reservationDateInput = reservationForm.elements.reservationDate;
 const timeFromInput = reservationForm.elements.timeFrom;
+const guestsInput = reservationForm.elements.guests;
+const visitModeSelect = reservationForm.elements.visitMode;
+const placeTypeSelect = reservationForm.elements.placeType;
+const placeTypeHint = document.getElementById('placeTypeHint');
 
 const mapStatFree = document.getElementById('mapStatFree');
 const mapStatBusy = document.getElementById('mapStatBusy');
@@ -48,6 +52,21 @@ let currentZoom = 1;
 let currentMapDimensions = null;
 let lastTapTimestamp = 0;
 let lastTapPoint = null;
+const PLACE_TYPES_BY_MODE = {
+  DAY: [
+    { value: 'TABLE', labelKey: 'placeTypeTable', maxGuests: null },
+    { value: 'SUNBED', labelKey: 'placeTypeSunbed', maxGuests: 4 },
+    { value: 'BUNGALOW', labelKey: 'placeTypeBungalow', maxGuests: 5 },
+    { value: 'PIER', labelKey: 'placeTypePier', maxGuests: 6 }
+  ],
+  EVENING: [
+    { value: 'TABLE', labelKey: 'placeTypeTable', maxGuests: null },
+    { value: 'EVENT', labelKey: 'placeTypeEvent', maxGuests: null }
+  ],
+  WINTER: [
+    { value: 'TABLE', labelKey: 'placeTypeTable', maxGuests: null }
+  ]
+};
 
 const touchState = {
   mode: null,
@@ -102,6 +121,18 @@ const translations = {
     guests: 'Гостей',
     reservationDate: 'Дата',
     reservationTimeFrom: 'Час від',
+    visitMode: 'Режим',
+    visitModeDay: 'День (пляж + ресторан)',
+    visitModeEvening: 'Вечір (ресторан + події)',
+    visitModeWinter: 'Зима (зал з каміном)',
+    placeType: 'Тип місця',
+    placeTypeTable: 'Стіл',
+    placeTypeSunbed: 'Лежак (до 4 гостей)',
+    placeTypeBungalow: 'Бунгало (до 5 гостей)',
+    placeTypePier: 'Пірс (до 6 гостей)',
+    placeTypeEvent: 'Квиток на подію',
+    placeTypeHintUnlimited: 'Обмеження гостей визначається столом.',
+    placeTypeHintLimited: 'Максимум гостей для цього типу: {max}.',
     reservationComment: 'Коментар',
     commentPlaceholder: 'Необовʼязково',
     confirmReservation: 'Підтвердити бронювання',
@@ -117,6 +148,7 @@ const translations = {
     seatRange: '{min} / {max}',
     selectedTableUnavailable: 'Обраний стіл уже недоступний на вказаний час. Оберіть інший.',
     tableUnavailable: 'Цей стіл недоступний на обраний час.',
+    guestsLimitExceeded: 'Для обраного типу місця перевищено ліміт гостей: максимум {max}.',
     chooseTableFirst: 'Спочатку оберіть столик на мапі.',
     bookingCreated: 'Бронювання створено успішно. Ви можете обрати інший стіл.',
     bookingCreateFailed: 'Не вдалося створити бронювання.',
@@ -165,6 +197,18 @@ const translations = {
     guests: 'Guests',
     reservationDate: 'Date',
     reservationTimeFrom: 'Time from',
+    visitMode: 'Mode',
+    visitModeDay: 'Day (beach + restaurant)',
+    visitModeEvening: 'Evening (restaurant + events)',
+    visitModeWinter: 'Winter (fireplace hall)',
+    placeType: 'Place type',
+    placeTypeTable: 'Table',
+    placeTypeSunbed: 'Sunbed (up to 4 guests)',
+    placeTypeBungalow: 'Bungalow (up to 5 guests)',
+    placeTypePier: 'Pier bed (up to 6 guests)',
+    placeTypeEvent: 'Event ticket',
+    placeTypeHintUnlimited: 'Guest limit depends on the selected table.',
+    placeTypeHintLimited: 'Max guests for this place type: {max}.',
     reservationComment: 'Comment',
     commentPlaceholder: 'Optional',
     confirmReservation: 'Confirm reservation',
@@ -180,6 +224,7 @@ const translations = {
     seatRange: '{min} / {max}',
     selectedTableUnavailable: 'The selected table is no longer available for the chosen time. Please select another one.',
     tableUnavailable: 'This table is unavailable for the selected time.',
+    guestsLimitExceeded: 'Guest limit exceeded for this place type: maximum {max}.',
     chooseTableFirst: 'Please choose a table on the map first.',
     bookingCreated: 'Reservation created successfully. You can choose another table.',
     bookingCreateFailed: 'Could not create the reservation.',
@@ -589,6 +634,24 @@ function updateTableAvailabilityUI() {
   }
 }
 
+function resolveSurfaceClassName(object) {
+  const typeName = String(object?.type || '').toLowerCase();
+  if (typeName === 'stairs') {
+    return 'map-object--stairs';
+  }
+  if (typeName === 'path') {
+    return 'map-object--path';
+  }
+
+  const normalizedLabel = String(object?.label || '').toLowerCase();
+  if (/(sand|пісок|песок)/i.test(normalizedLabel)) return 'map-object--sand';
+  if (/(sea|море)/i.test(normalizedLabel)) return 'map-object--sea';
+  if (/(deck|настил)/i.test(normalizedLabel)) return 'map-object--deck';
+  if (/(wooden path|дерев'яна доріжка|деревянная дорожка)/i.test(normalizedLabel)) return 'map-object--wood-path';
+
+  return '';
+}
+
 function createMapObjectElement(object, map, tableById, zoneById) {
   const element = document.createElement(object.type === 'TABLE' ? 'button' : 'div');
 
@@ -597,7 +660,8 @@ function createMapObjectElement(object, map, tableById, zoneById) {
   const width = (object.width / map.width) * 100;
   const height = (object.height / map.height) * 100;
 
-  element.className = `map-object ${object.type === 'TABLE' ? 'map-object--table' : `map-object--static map-object--${String(object.type || '').toLowerCase()}`}`;
+  const surfaceClassName = resolveSurfaceClassName(object);
+  element.className = `map-object ${object.type === 'TABLE' ? 'map-object--table' : `map-object--static map-object--${String(object.type || '').toLowerCase()} ${surfaceClassName}`}`.trim();
   element.style.left = `${left}%`;
   element.style.top = `${top}%`;
   element.style.width = `${width}%`;
@@ -685,6 +749,74 @@ function renderMap(data) {
   errorState.classList.add('hidden');
   bookingMapCanvas?.classList.remove('hidden');
   bookingMap.classList.remove('hidden');
+}
+
+function getCurrentModePlaceTypes() {
+  const mode = String(visitModeSelect?.value || 'DAY').toUpperCase();
+  return PLACE_TYPES_BY_MODE[mode] || PLACE_TYPES_BY_MODE.DAY;
+}
+
+function getSelectedPlaceTypeConfig() {
+  const placeType = String(placeTypeSelect?.value || 'TABLE').toUpperCase();
+  return getCurrentModePlaceTypes().find((item) => item.value === placeType) || null;
+}
+
+function updatePlaceTypeHint() {
+  if (!placeTypeHint) {
+    return;
+  }
+
+  const selected = getSelectedPlaceTypeConfig();
+  if (!selected) {
+    placeTypeHint.textContent = '';
+    placeTypeHint.classList.add('hidden');
+    return;
+  }
+
+  if (Number.isFinite(selected.maxGuests) && selected.maxGuests > 0) {
+    placeTypeHint.textContent = t('placeTypeHintLimited', { max: String(selected.maxGuests) });
+  } else {
+    placeTypeHint.textContent = t('placeTypeHintUnlimited');
+  }
+  placeTypeHint.classList.remove('hidden');
+}
+
+function syncGuestLimitWithPlaceType() {
+  const selected = getSelectedPlaceTypeConfig();
+  if (!guestsInput || !selected) {
+    return;
+  }
+
+  if (Number.isFinite(selected.maxGuests) && selected.maxGuests > 0) {
+    guestsInput.max = String(selected.maxGuests);
+    const guestsValue = Number(guestsInput.value);
+    if (Number.isFinite(guestsValue) && guestsValue > selected.maxGuests) {
+      guestsInput.value = String(selected.maxGuests);
+    }
+  } else {
+    guestsInput.removeAttribute('max');
+  }
+
+  updatePlaceTypeHint();
+}
+
+function renderPlaceTypeOptions() {
+  if (!placeTypeSelect) {
+    return;
+  }
+
+  const currentValue = String(placeTypeSelect.value || '').toUpperCase();
+  const options = getCurrentModePlaceTypes();
+  placeTypeSelect.innerHTML = options
+    .map((item) => `<option value="${item.value}">${t(item.labelKey)}</option>`)
+    .join('');
+
+  const next = options.some((item) => item.value === currentValue) ? currentValue : options[0]?.value;
+  if (next) {
+    placeTypeSelect.value = next;
+  }
+
+  syncGuestLimitWithPlaceType();
 }
 
 function getAvailabilityParams() {
@@ -949,16 +1081,29 @@ async function submitReservation(event) {
   resetMessages();
 
   const formData = new FormData(reservationForm);
+  const placeTypeConfig = getSelectedPlaceTypeConfig();
+  const guestsValue = Number(formData.get('guests'));
+
+  if (placeTypeConfig?.maxGuests && guestsValue > placeTypeConfig.maxGuests) {
+    showReservationError('', t('guestsLimitExceeded', { max: String(placeTypeConfig.maxGuests) }));
+    return;
+  }
+
+  const commentPrefix = [
+    `[mode:${String(formData.get('visitMode') || 'DAY').toUpperCase()}]`,
+    `[place:${String(formData.get('placeType') || 'TABLE').toUpperCase()}]`
+  ].join(' ');
+  const userComment = formData.get('commentCustomer')?.toString().trim() || '';
   const payload = {
     tableId: selectedTable.id,
     mapId: selectedTable.mapId,
     zoneId: selectedTable.zoneId,
     customerName: formData.get('customerName')?.toString().trim(),
     customerPhone: formData.get('customerPhone')?.toString().trim(),
-    guests: Number(formData.get('guests')),
+    guests: guestsValue,
     reservationDate: formData.get('reservationDate')?.toString(),
     timeFrom: formData.get('timeFrom')?.toString(),
-    commentCustomer: formData.get('commentCustomer')?.toString().trim() || ''
+    commentCustomer: `${commentPrefix}${userComment ? ` ${userComment}` : ''}`.trim()
   };
 
   try {
@@ -1008,6 +1153,7 @@ async function fetchDefaultMap() {
 function syncTranslatedState() {
   translateStaticContent();
   renderDateQuickSelect();
+  renderPlaceTypeOptions();
 
   if (currentMapData) {
     renderMap(currentMapData);
@@ -1040,6 +1186,8 @@ reservationDateInput.addEventListener('input', () => {
 });
 timeFromInput.addEventListener('change', fetchAvailability);
 timeFromInput.addEventListener('input', fetchAvailability);
+visitModeSelect?.addEventListener('change', renderPlaceTypeOptions);
+placeTypeSelect?.addEventListener('change', syncGuestLimitWithPlaceType);
 
 mapZoomInButton?.addEventListener('click', () => setMapZoom(currentZoom + zoomStep, { keepCenter: true }));
 mapZoomOutButton?.addEventListener('click', () => setMapZoom(currentZoom - zoomStep, { keepCenter: true }));
@@ -1052,6 +1200,7 @@ window.addEventListener('resize', () => updateMapViewport({ keepCenter: true }))
 
 ensureDefaultDateTime();
 translateStaticContent();
+renderPlaceTypeOptions();
 updateStats();
 updateSelectedStatusBadge();
 updateMapControls();
