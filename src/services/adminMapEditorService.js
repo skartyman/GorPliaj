@@ -25,6 +25,17 @@ const MAP_EDITOR_INCLUDE = {
     ]
   }
 };
+const MAP_LIST_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  description: true,
+  status: true,
+  isDefault: true,
+  width: true,
+  height: true,
+  updatedAt: true
+};
 
 function serializeMapEditorPayload(map) {
   if (!map) {
@@ -59,6 +70,155 @@ function getDefaultAdminMapEditor() {
     ],
     include: MAP_EDITOR_INCLUDE
   }).then(serializeMapEditorPayload);
+}
+
+function listAdminMaps() {
+  return prisma.map.findMany({
+    orderBy: [
+      { isDefault: 'desc' },
+      { updatedAt: 'desc' },
+      { id: 'desc' }
+    ],
+    select: MAP_LIST_SELECT
+  });
+}
+
+async function createAdminMapVariant({ name, slug, description, sourceMapId = null, makeDefault = false }) {
+  const normalizedName = String(name || '').trim();
+  const normalizedSlug = String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  const normalizedDescription = String(description || '').trim() || null;
+
+  if (!normalizedName) {
+    return { type: 'INVALID', message: 'Map name is required.' };
+  }
+
+  if (!normalizedSlug) {
+    return { type: 'INVALID', message: 'Map slug is required and may include only latin symbols, digits, and hyphens.' };
+  }
+
+  const existingBySlug = await prisma.map.findUnique({
+    where: { slug: normalizedSlug },
+    select: { id: true }
+  });
+  if (existingBySlug) {
+    return { type: 'CONFLICT', message: 'Map slug already exists.' };
+  }
+
+  const sourceMap = sourceMapId
+    ? await prisma.map.findUnique({
+        where: { id: Number(sourceMapId) },
+        include: {
+          zones: {
+            orderBy: { sortOrder: 'asc' }
+          },
+          tables: {
+            orderBy: { id: 'asc' }
+          },
+          mapObjects: {
+            orderBy: { id: 'asc' }
+          }
+        }
+      })
+    : await prisma.map.findFirst({
+        where: { isDefault: true },
+        include: {
+          zones: { orderBy: { sortOrder: 'asc' } },
+          tables: { orderBy: { id: 'asc' } },
+          mapObjects: { orderBy: { id: 'asc' } }
+        }
+      });
+
+  if (!sourceMap) {
+    return { type: 'NOT_FOUND', message: 'Source map for cloning is not found.' };
+  }
+
+  const createdMap = await prisma.$transaction(async (tx) => {
+    if (makeDefault) {
+      await tx.map.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false }
+      });
+    }
+
+    const map = await tx.map.create({
+      data: {
+        name: normalizedName,
+        slug: normalizedSlug,
+        description: normalizedDescription,
+        status: sourceMap.status,
+        isDefault: Boolean(makeDefault),
+        width: sourceMap.width,
+        height: sourceMap.height,
+        backgroundImage: sourceMap.backgroundImage,
+        backgroundColor: sourceMap.backgroundColor
+      }
+    });
+
+    const zoneIdMap = new Map();
+    for (const zone of sourceMap.zones) {
+      const createdZone = await tx.zone.create({
+        data: {
+          mapId: map.id,
+          name: zone.name,
+          color: zone.color,
+          sortOrder: zone.sortOrder
+        }
+      });
+      zoneIdMap.set(zone.id, createdZone.id);
+    }
+
+    const tableIdMap = new Map();
+    for (const table of sourceMap.tables) {
+      const createdTable = await tx.venueTable.create({
+        data: {
+          mapId: map.id,
+          zoneId: zoneIdMap.get(table.zoneId),
+          name: table.name,
+          code: table.code,
+          photoUrl: table.photoUrl,
+          seatsMin: table.seatsMin,
+          seatsMax: table.seatsMax,
+          deposit: table.deposit,
+          isActive: table.isActive,
+          isBookable: table.isBookable
+        }
+      });
+      tableIdMap.set(table.id, createdTable.id);
+    }
+
+    for (const object of sourceMap.mapObjects) {
+      await tx.mapObject.create({
+        data: {
+          mapId: map.id,
+          tableId: object.tableId ? tableIdMap.get(object.tableId) || null : null,
+          type: object.type,
+          label: object.label,
+          x: object.x,
+          y: object.y,
+          width: object.width,
+          height: object.height,
+          rotation: object.rotation,
+          zIndex: object.zIndex,
+          styleJson: object.styleJson ?? null,
+          metaJson: object.metaJson ?? null,
+          isActive: object.isActive
+        }
+      });
+    }
+
+    return map;
+  });
+
+  const payload = await getAdminMapEditor(createdMap.id);
+  return {
+    type: 'CREATED',
+    data: payload
+  };
 }
 
 function normalizeMapInput(mapInput) {
@@ -374,6 +534,8 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 }
 
 module.exports = {
+  listAdminMaps,
+  createAdminMapVariant,
   getAdminMapEditor,
   getDefaultAdminMapEditor,
   updateAdminMapEditor

@@ -199,6 +199,15 @@ const translations = {
       heroTitle: 'Создавайте, перемещайте, дублируйте и настраивайте объекты площадки',
       heroDescription: 'Редактор загружает текущую дефолтную карту, позволяет настраивать полноценный фон плана заведения, добавлять новые объекты и сохраняет актуальный список обратно через admin API.',
       note: 'Используйте верхнюю панель для быстрого добавления объектов, а правую колонку — для точной настройки выбранного элемента.',
+      mapVariant: 'Вариант карты',
+      defaultMapBadge: 'дефолт',
+      newMapPreset: 'Тип новой карты',
+      newMapNamePlaceholder: 'Название новой карты (например, Ночная посадка)',
+      newMapDescriptionPlaceholder: 'Описание (например, Концертная рассадка)',
+      makeDefault: 'Сделать дефолтной',
+      createMap: 'Создать вариант карты',
+      creatingMap: 'Создаем...',
+      mapCreatedSuccess: 'Новый вариант карты создан.',
       loading: 'Загружаем редактор карты...',
       save: 'Сохранить карту',
       saving: 'Сохраняем...',
@@ -251,7 +260,8 @@ const translations = {
       },
       errors: {
         load: 'Не удалось загрузить редактор карты.',
-        save: 'Не удалось сохранить изменения карты.'
+        save: 'Не удалось сохранить изменения карты.',
+        createMap: 'Не удалось создать вариант карты.'
       }
     },
 
@@ -716,6 +726,15 @@ const translations = {
       heroTitle: 'Create, move, duplicate, and tune venue objects visually',
       heroDescription: 'The editor loads the current default map, lets staff configure a full venue floor background, add new objects, and saves the latest layout back through the admin API.',
       note: 'Use the top action bar for quick object actions and the right-side panels for precise map and object settings.',
+      mapVariant: 'Map variant',
+      defaultMapBadge: 'default',
+      newMapPreset: 'New map type',
+      newMapNamePlaceholder: 'New map name (e.g. Night seating)',
+      newMapDescriptionPlaceholder: 'Description (e.g. Concert seated layout)',
+      makeDefault: 'Set as default',
+      createMap: 'Create map variant',
+      creatingMap: 'Creating...',
+      mapCreatedSuccess: 'New map variant created.',
       loading: 'Loading map editor...',
       save: 'Save map',
       saving: 'Saving...',
@@ -768,7 +787,8 @@ const translations = {
       },
       errors: {
         load: 'Failed to load the map editor.',
-        save: 'Failed to save map changes.'
+        save: 'Failed to save map changes.',
+        createMap: 'Failed to create a map variant.'
       }
     },
 
