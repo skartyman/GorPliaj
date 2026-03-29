@@ -13,7 +13,7 @@ const DEFAULT_FORM = {
   posterImage: '',
   startAt: '',
   endAt: '',
-  status: 'DRAFT',
+  status: 'PUBLISHED',
   isFeatured: false,
   ctaType: 'BOOKING',
   ticketUrl: ''
