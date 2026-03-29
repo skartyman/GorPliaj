@@ -2818,6 +2818,10 @@ body.cart-open {
   box-shadow: none;
 }
 
+.home-mobile-dock {
+  display: none;
+}
+
 @media (max-width: 1040px) {
   .home-landing {
     width: min(100%, calc(100vw - 20px));
@@ -2853,9 +2857,61 @@ body.cart-open {
 }
 
 @media (max-width: 720px) {
+  .home-landing {
+    width: min(100%, calc(100vw - 12px));
+    padding: 10px 0 calc(88px + env(safe-area-inset-bottom, 0px));
+    gap: 12px;
+  }
+
   .home-page-header {
+    position: static;
     top: 8px;
     border-radius: 18px;
+    padding: 12px;
+    background: rgba(11, 20, 38, 0.92);
+  }
+
+  .home-page-header .home-page-scroll-block {
+    display: none;
+  }
+
+  .home-mobile-dock {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border-radius: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.9);
+    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.3);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .home-mobile-dock a {
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .home-mobile-dock a:last-child {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-color: transparent;
   }
 
   .home-hero-card,
@@ -2868,7 +2924,47 @@ body.cart-open {
   }
 
   .home-hero-card {
-    min-height: 500px;
+    min-height: 440px;
+    align-items: end;
+    border-radius: 24px;
+  }
+
+  .home-hero-overlay {
+    background:
+      linear-gradient(180deg, rgba(7, 16, 28, 0.46) 0%, rgba(7, 16, 28, 0.86) 74%),
+      radial-gradient(circle at 80% 20%, rgba(34, 211, 238, 0.2), transparent 36%);
+  }
+
+  .home-page-body .home-hero-card h1 {
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+    line-height: 1.02;
+  }
+
+  .home-page-body .home-hero-description {
+    max-width: 100%;
+  }
+
+  .menu-preview-actions .btn,
+  .menu-preview-actions .text-link {
+    width: 100%;
+  }
+
+  .home-flow-main {
+    gap: 10px;
+  }
+
+  .home-mini-card,
+  .home-card-muted,
+  .contact-card {
+    border-radius: 16px;
+  }
+
+  .home-gallery-card {
+    min-height: 180px;
+  }
+
+  .home-gallery-card-wide {
+    min-height: 220px;
   }
 
   .home-highlight-stats,
