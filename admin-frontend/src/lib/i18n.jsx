@@ -128,6 +128,7 @@ const translations = {
         dateTime: 'Дата / время',
         phone: 'Телефон',
         tableZone: 'Стол / зона',
+        modePlace: 'Режим / тип',
         guests: 'Гости',
         status: 'Статус',
         actions: 'Быстрые действия'
@@ -166,12 +167,28 @@ const translations = {
         guest: 'Гость',
         phone: 'Телефон',
         guests: 'Количество гостей',
+        mode: 'Режим',
+        placeType: 'Тип места',
         comments: 'Комментарий',
         date: 'Дата',
         startTime: 'Время начала',
         table: 'Стол',
         zone: 'Зона',
         status: 'Статус'
+      }
+    },
+    reservationMeta: {
+      mode: {
+        DAY: 'День',
+        EVENING: 'Вечер',
+        WINTER: 'Зима'
+      },
+      place: {
+        TABLE: 'Стол',
+        SUNBED: 'Лежак',
+        BUNGALOW: 'Бунгало',
+        PIER: 'Пирс',
+        EVENT: 'Билет'
       }
     },
 
@@ -628,6 +645,7 @@ const translations = {
         dateTime: 'Date / time',
         phone: 'Phone',
         tableZone: 'Table / zone',
+        modePlace: 'Mode / type',
         guests: 'Guests',
         status: 'Status',
         actions: 'Quick actions'
@@ -666,12 +684,28 @@ const translations = {
         guest: 'Guest',
         phone: 'Phone',
         guests: 'Guests count',
+        mode: 'Mode',
+        placeType: 'Place type',
         comments: 'Comments',
         date: 'Date',
         startTime: 'Start time',
         table: 'Table',
         zone: 'Zone',
         status: 'Status'
+      }
+    },
+    reservationMeta: {
+      mode: {
+        DAY: 'Day',
+        EVENING: 'Evening',
+        WINTER: 'Winter'
+      },
+      place: {
+        TABLE: 'Table',
+        SUNBED: 'Sunbed',
+        BUNGALOW: 'Bungalow',
+        PIER: 'Pier',
+        EVENT: 'Ticket'
       }
     },
 

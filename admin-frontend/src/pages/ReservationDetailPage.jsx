@@ -5,6 +5,7 @@ import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { parseReservationMeta } from '../lib/reservationMeta';
 
 function DetailRow({ label, value }) {
   return (
@@ -67,6 +68,7 @@ export default function ReservationDetailPage() {
 
   const reservation = state.data?.reservation;
   const allowedNextStatuses = state.data?.allowedNextStatuses || [];
+  const reservationMeta = parseReservationMeta(reservation?.commentCustomer);
 
   return (
     <AdminLayout>
@@ -95,7 +97,9 @@ export default function ReservationDetailPage() {
                 <DetailRow label={t('reservationDetail.fields.guest')} value={reservation.customerName} />
                 <DetailRow label={t('reservationDetail.fields.phone')} value={reservation.customerPhone} />
                 <DetailRow label={t('reservationDetail.fields.guests')} value={reservation.guests} />
-                <DetailRow label={t('reservationDetail.fields.comments')} value={reservation.commentCustomer || reservation.commentAdmin || '—'} />
+                <DetailRow label={t('reservationDetail.fields.mode')} value={reservationMeta.mode ? t(`reservationMeta.mode.${reservationMeta.mode}`) : '—'} />
+                <DetailRow label={t('reservationDetail.fields.placeType')} value={reservationMeta.place ? t(`reservationMeta.place.${reservationMeta.place}`) : '—'} />
+                <DetailRow label={t('reservationDetail.fields.comments')} value={reservationMeta.cleanComment || reservation.commentAdmin || '—'} />
               </div>
             </PanelCard>
 

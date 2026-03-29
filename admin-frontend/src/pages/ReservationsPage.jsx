@@ -7,6 +7,7 @@ import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { parseReservationMeta } from '../lib/reservationMeta';
 
 export default function ReservationsPage() {
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
@@ -68,7 +69,9 @@ export default function ReservationsPage() {
         reservation.customerPhone,
         reservation.table?.code,
         reservation.table?.name,
-        reservation.zone?.name
+        reservation.zone?.name,
+        parseReservationMeta(reservation.commentCustomer).mode,
+        parseReservationMeta(reservation.commentCustomer).place
       ]
         .filter(Boolean)
         .join(' ')
@@ -148,6 +151,16 @@ export default function ReservationsPage() {
       key: 'guests',
       label: t('reservations.columns.guests'),
       render: (reservation) => reservation.guests || '—'
+    },
+    {
+      key: 'modePlace',
+      label: t('reservations.columns.modePlace'),
+      render: (reservation) => {
+        const meta = parseReservationMeta(reservation.commentCustomer);
+        const modeLabel = meta.mode ? t(`reservationMeta.mode.${meta.mode}`) : '—';
+        const placeLabel = meta.place ? t(`reservationMeta.place.${meta.place}`) : '—';
+        return `${modeLabel} / ${placeLabel}`;
+      }
     },
     { key: 'status', label: t('reservations.columns.status'), render: (reservation) => <StatusPill status={reservation.status} /> },
     {
