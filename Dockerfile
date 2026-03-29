@@ -16,6 +16,7 @@ COPY admin-frontend/package.json admin-frontend/package-lock.json ./admin-fronte
 
 RUN npm ci
 RUN npm ci --include=dev --prefix admin-frontend
+RUN npm exec --prefix admin-frontend vite --version
 
 COPY . .
 
