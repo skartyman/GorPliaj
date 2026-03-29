@@ -24,6 +24,12 @@ const SURFACE_PRESETS = [
   { key: 'SAND', label: 'Sand area', objectType: 'CUSTOM', objectLabel: 'Sand', width: 320, height: 160 },
   { key: 'SEA', label: 'Sea area', objectType: 'CUSTOM', objectLabel: 'Sea', width: 360, height: 180 }
 ];
+const MAP_VARIANT_PRESETS = [
+  { key: 'DAY', name: 'Day seating', slugPrefix: 'day-seating', description: 'Main daytime seating map' },
+  { key: 'NIGHT', name: 'Night seating', slugPrefix: 'night-seating', description: 'Evening/night layout map' },
+  { key: 'EVENT', name: 'Event layout', slugPrefix: 'event-layout', description: 'Event-focused layout' },
+  { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones' }
+];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', step: null },
   { key: 'x', type: 'number', step: 1 },
@@ -280,18 +286,27 @@ export default function MapEditorPage() {
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
+    mapsLoading: true,
+    creatingMap: false,
     error: '',
     saveMessage: '',
+    maps: [],
+    selectedMapId: null,
     defaultMapId: null,
+    newMapPreset: MAP_VARIANT_PRESETS[0].key,
+    newMapName: '',
+    newMapDescription: '',
+    makeNewMapDefault: false,
     original: null,
     current: null,
     selectedObjectId: null
   });
 
   useEffect(() => {
-    loadDefaultMapEditor().catch(() => {
+    loadInitialMapEditor().catch(() => {
       setEditorState((prev) => ({
         ...prev,
+        mapsLoading: false,
         loading: false,
         error: t('mapEditor.errors.load')
       }));
@@ -315,7 +330,52 @@ export default function MapEditorPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [editorState.selectedObjectId, editorState.current, t]);
 
-  async function loadDefaultMapEditor() {
+  async function loadInitialMapEditor() {
+    setEditorState((prev) => ({
+      ...prev,
+      mapsLoading: true,
+      loading: true,
+      error: '',
+      saveMessage: ''
+    }));
+
+    const mapsResult = await apiRequest('/api/admin/maps');
+    if (!mapsResult.response.ok) {
+      setEditorState((prev) => ({
+        ...prev,
+        mapsLoading: false,
+        loading: false,
+        error: mapsResult.body?.message || t('mapEditor.errors.load')
+      }));
+      return;
+    }
+
+    const maps = Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : [];
+    const defaultMap = maps.find((item) => item.isDefault) || maps[0];
+
+    if (!defaultMap?.id) {
+      setEditorState((prev) => ({
+        ...prev,
+        mapsLoading: false,
+        loading: false,
+        maps: [],
+        error: t('mapEditor.errors.load')
+      }));
+      return;
+    }
+
+    setEditorState((prev) => ({
+      ...prev,
+      mapsLoading: false,
+      maps,
+      selectedMapId: defaultMap.id,
+      defaultMapId: defaultMap.id
+    }));
+
+    await loadMapEditor(defaultMap.id);
+  }
+
+  async function loadMapEditor(mapId) {
     setEditorState((prev) => ({
       ...prev,
       loading: true,
@@ -323,7 +383,7 @@ export default function MapEditorPage() {
       saveMessage: ''
     }));
 
-    const editorResult = await apiRequest('/api/admin/maps/default/editor');
+    const editorResult = await apiRequest(`/api/admin/maps/${mapId}/editor`);
 
     if (!editorResult.response.ok || !editorResult.body?.map?.id) {
       setEditorState((prev) => ({
@@ -334,19 +394,21 @@ export default function MapEditorPage() {
       return;
     }
 
-    const mapId = Number(editorResult.body.map.id);
+    const currentMapId = Number(editorResult.body.map.id);
     const nextData = buildEditorState(editorResult.body);
 
-    setEditorState({
+    setEditorState((prev) => ({
+      ...prev,
       loading: false,
       saving: false,
       error: '',
       saveMessage: '',
-      defaultMapId: mapId,
+      defaultMapId: currentMapId,
+      selectedMapId: currentMapId,
       original: nextData,
       current: nextData,
       selectedObjectId: nextData.objects[0]?.id || null
-    });
+    }));
   }
 
   const map = editorState.current?.map;
@@ -688,6 +750,70 @@ export default function MapEditorPage() {
     });
   }
 
+  async function handleMapSelectionChange(nextMapId) {
+    if (!nextMapId || Number(nextMapId) === Number(editorState.selectedMapId)) {
+      return;
+    }
+
+    await loadMapEditor(Number(nextMapId));
+  }
+
+  function buildNewMapPayload() {
+    const preset = MAP_VARIANT_PRESETS.find((item) => item.key === editorState.newMapPreset) || MAP_VARIANT_PRESETS[0];
+    const baseName = String(editorState.newMapName || '').trim() || preset.name;
+    const baseSlug = `${preset.slugPrefix}-${Date.now()}`;
+
+    return {
+      name: baseName,
+      slug: baseSlug,
+      description: String(editorState.newMapDescription || '').trim() || preset.description,
+      sourceMapId: editorState.selectedMapId,
+      makeDefault: Boolean(editorState.makeNewMapDefault)
+    };
+  }
+
+  async function createMapVariant() {
+    setEditorState((prev) => ({
+      ...prev,
+      creatingMap: true,
+      error: '',
+      saveMessage: ''
+    }));
+
+    const result = await apiRequest('/api/admin/maps', {
+      method: 'POST',
+      body: JSON.stringify(buildNewMapPayload())
+    });
+
+    if (!result.response.ok || !result.body?.map?.id) {
+      setEditorState((prev) => ({
+        ...prev,
+        creatingMap: false,
+        error: result.body?.message || t('mapEditor.errors.createMap')
+      }));
+      return;
+    }
+
+    const mapsResult = await apiRequest('/api/admin/maps');
+    const maps = mapsResult.response.ok && Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : editorState.maps;
+    const nextData = buildEditorState(result.body);
+
+    setEditorState((prev) => ({
+      ...prev,
+      creatingMap: false,
+      maps,
+      defaultMapId: Number(result.body.map.id),
+      selectedMapId: Number(result.body.map.id),
+      original: nextData,
+      current: nextData,
+      selectedObjectId: nextData.objects[0]?.id || null,
+      newMapName: '',
+      newMapDescription: '',
+      makeNewMapDefault: false,
+      saveMessage: t('mapEditor.mapCreatedSuccess')
+    }));
+  }
+
   return (
     <AdminLayout>
       <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')}>
@@ -699,6 +825,67 @@ export default function MapEditorPage() {
           </div>
           <div className="hero-inline-note">{t('mapEditor.note')}</div>
         </section>
+
+        <div className="map-editor-toolbar">
+          <div className="map-editor-toolbar-group">
+            <label>
+              {t('mapEditor.mapVariant')}
+              <select
+                value={editorState.selectedMapId || ''}
+                onChange={(event) => handleMapSelectionChange(event.target.value)}
+                disabled={editorState.loading || editorState.mapsLoading || editorState.saving}
+              >
+                {(editorState.maps || []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.slug}){item.isDefault ? ` • ${t('mapEditor.defaultMapBadge')}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="map-editor-toolbar-group compact-actions">
+            <label>
+              {t('mapEditor.newMapPreset')}
+              <select
+                value={editorState.newMapPreset}
+                onChange={(event) => setEditorState((prev) => ({ ...prev, newMapPreset: event.target.value }))}
+                disabled={editorState.creatingMap}
+              >
+                {MAP_VARIANT_PRESETS.map((preset) => (
+                  <option key={preset.key} value={preset.key}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <input
+              type="text"
+              value={editorState.newMapName}
+              placeholder={t('mapEditor.newMapNamePlaceholder')}
+              onChange={(event) => setEditorState((prev) => ({ ...prev, newMapName: event.target.value }))}
+              disabled={editorState.creatingMap}
+            />
+            <input
+              type="text"
+              value={editorState.newMapDescription}
+              placeholder={t('mapEditor.newMapDescriptionPlaceholder')}
+              onChange={(event) => setEditorState((prev) => ({ ...prev, newMapDescription: event.target.value }))}
+              disabled={editorState.creatingMap}
+            />
+            <label className="editor-toggle-field">
+              <span>{t('mapEditor.makeDefault')}</span>
+              <input
+                type="checkbox"
+                checked={editorState.makeNewMapDefault}
+                onChange={(event) => setEditorState((prev) => ({ ...prev, makeNewMapDefault: event.target.checked }))}
+                disabled={editorState.creatingMap}
+              />
+            </label>
+            <button type="button" className="btn btn-secondary btn-small" onClick={createMapVariant} disabled={editorState.creatingMap || editorState.loading}>
+              {editorState.creatingMap ? t('mapEditor.creatingMap') : t('mapEditor.createMap')}
+            </button>
+          </div>
+        </div>
 
         <div className="map-editor-toolbar">
           <div className="map-editor-toolbar-group">

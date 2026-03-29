@@ -209,6 +209,48 @@ async function getDefaultAdminMapEditor(req, res) {
   }
 }
 
+async function listAdminMaps(req, res) {
+  try {
+    const maps = await adminMapEditorService.listAdminMaps();
+    return res.json({ maps });
+  } catch (error) {
+    console.error('[adminController.listAdminMaps] Failed to list maps.', error);
+    return res.status(500).json({ message: 'Unable to load maps list.' });
+  }
+}
+
+async function createAdminMapVariant(req, res) {
+  try {
+    const result = await adminMapEditorService.createAdminMapVariant({
+      name: req.body?.name,
+      slug: req.body?.slug,
+      description: req.body?.description,
+      sourceMapId: req.body?.sourceMapId,
+      makeDefault: req.body?.makeDefault
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'CONFLICT') {
+      return res.status(409).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.status(201).json({
+      success: true,
+      ...result.data
+    });
+  } catch (error) {
+    console.error('[adminController.createAdminMapVariant] Failed to create map variant.', error);
+    return res.status(500).json({ message: 'Unable to create map variant.' });
+  }
+}
+
 async function updateAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -250,6 +292,8 @@ module.exports = {
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,
+  listAdminMaps,
+  createAdminMapVariant,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor
