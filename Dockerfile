@@ -6,6 +6,7 @@ WORKDIR /app
 
 FROM base AS build
 ENV NODE_ENV=development
+ENV NPM_CONFIG_PRODUCTION=false
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3 && \
