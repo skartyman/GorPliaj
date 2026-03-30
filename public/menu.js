@@ -357,7 +357,7 @@ function setupCategoryObserver() {
 
   const observerOptions = {
     root: null,
-    threshold: [0.25, 0.5, 0.75],
+    threshold: 0.2,
     rootMargin: '-110px 0px -45% 0px'
   };
 
@@ -366,15 +366,22 @@ function setupCategoryObserver() {
       return;
     }
 
-    const visible = entries
-      .filter((entry) => entry.isIntersecting)
-      .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
+    let nextVisibleEntry = null;
+    for (const entry of entries) {
+      if (!entry.isIntersecting) {
+        continue;
+      }
 
-    if (!visible.length) {
+      if (!nextVisibleEntry || entry.intersectionRatio > nextVisibleEntry.intersectionRatio) {
+        nextVisibleEntry = entry;
+      }
+    }
+
+    if (!nextVisibleEntry) {
       return;
     }
 
-    const categoryName = visible[0].target.getAttribute('data-category-name');
+    const categoryName = nextVisibleEntry.target.getAttribute('data-category-name');
     if (!categoryName) {
       return;
     }
