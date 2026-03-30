@@ -1,7 +1,13 @@
 <script lang="ts">
   import EventCard from '$lib/features/events/EventCard.svelte';
+  import { t } from '$lib/stores/i18n';
   export let data;
 </script>
+
+<svelte:head>
+  <title>{$t('eventsMetaTitle')}</title>
+  <meta name='description' content={$t('eventsMetaDescription')} />
+</svelte:head>
 
 <section class="page-block">
   <h1>Афіша подій</h1>

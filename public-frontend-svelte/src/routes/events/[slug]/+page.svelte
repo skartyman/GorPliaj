@@ -22,7 +22,7 @@
           <ButtonLink href={data.event.ticketUrl} target="_blank" variant="secondary">Купить билет</ButtonLink>
         {/if}
       </div>
-      <p class="muted source-note">Джерело: {data.source === 'api' ? 'реальний API' : 'тимчасові mock-дані'}</p>
+      <p class="muted source-note">Джерело: реальний API</p>
     </div>
   </article>
 </section>
