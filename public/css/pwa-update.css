@@ -5,7 +5,6 @@
   z-index: 1100;
   width: min(calc(100vw - 24px), 420px);
   transform: translateX(-50%);
-  will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   padding: 14px;
@@ -13,9 +12,7 @@
   border-radius: 18px;
   background: rgba(15, 23, 42, 0.94);
   color: #f8fafc;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.22);
 }
 
 .pwa-update-toast__content {

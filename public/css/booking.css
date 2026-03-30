@@ -132,8 +132,6 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
 }
 
 .booking-hero,
@@ -390,9 +388,7 @@ textarea {
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.9);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
 }
 
 .map-control-button {
@@ -405,14 +401,11 @@ textarea {
   color: var(--text);
   font-weight: 700;
   cursor: pointer;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .map-control-button:hover {
-  transform: translateY(-1px);
   background: #ecfeff;
   border-color: rgba(34, 211, 238, 0.34);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
@@ -978,5 +971,27 @@ textarea {
   .date-chip,
   .map-controls--floating {
     background: rgba(255, 255, 255, 0.98);
+  }
+
+  .booking-hero,
+  .card,
+  .stat-card,
+  .date-chip,
+  .map-frame,
+  .map-controls--floating {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  }
+}
+
+@media (hover: none) and (pointer: coarse), (display-mode: standalone) {
+  .booking-hero,
+  .card,
+  .map-frame,
+  .booking-map-shell,
+  .map-controls--floating {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
   }
 }
