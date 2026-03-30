@@ -2,8 +2,14 @@
   import HomeHero from '$lib/components/home/HomeHero.svelte';
   import EventCard from '$lib/features/events/EventCard.svelte';
   import ButtonLink from '$lib/components/ui/ButtonLink.svelte';
+  import { t } from '$lib/stores/i18n';
   export let data;
 </script>
+
+<svelte:head>
+  <title>{$t('homeMetaTitle')}</title>
+  <meta name="description" content={$t('homeMetaDescription')} />
+</svelte:head>
 
 <HomeHero />
 
@@ -47,7 +53,7 @@
   </article>
   <article>
     <h2>Меню та атмосфера</h2>
-    <p class="muted">Перший етап: короткий preview. Детальна сторінка меню буде підключена в наступних спринтах.</p>
-    <ButtonLink href="/map" variant="secondary">Подивитися карту зон</ButtonLink>
+    <p class="muted">Повне меню доступне в новому public client з API-даними та кошиком для швидкого замовлення.</p>
+    <ButtonLink href="/menu" variant="secondary">Відкрити меню</ButtonLink>
   </article>
 </section>

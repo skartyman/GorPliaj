@@ -77,8 +77,11 @@ app.get('/booking', (req, res) => {
 });
 
 app.get('/menu', (req, res) => {
+  if (hasSveltePublicBuild) {
+    return sendSvelteIndex(res);
+  }
   setNoCacheHeaders(res);
-  res.sendFile(path.join(publicDir, 'menu.html'));
+  return res.sendFile(path.join(publicDir, 'menu.html'));
 });
 
 app.get('/events', (req, res) => {

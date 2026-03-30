@@ -47,28 +47,28 @@
       </article>
 
       <aside class="map-side-panel">
-        <h3>Выбранное место</h3>
+        <h3>Вибране місце</h3>
         {#if selectedTableId}
           {@const selected = result.map.zones.flatMap((z) => z.tables).find((item) => item.id === selectedTableId)}
           {#if selected}
             <p><strong>{selected.name}</strong></p>
-            <p class="muted">Мест: {selected.seatsMin}–{selected.seatsMax}</p>
+            <p class="muted">Місць: {selected.seatsMin}–{selected.seatsMax}</p>
             <a
               class="btn btn-primary"
               href={`/booking?date=${data.date || ''}&guests=${$page.url.searchParams.get('guests') || ''}&timeFrom=${data.timeFrom}&tableId=${selected.id}&mapId=${result.map.id}&zoneId=${selected.zoneId}`}
             >
-              Перейти к заявке
+              Перейти до заявки
             </a>
           {/if}
         {:else}
-          <p class="muted">Нажмите на место в зоне, чтобы выбрать его.</p>
+          <p class="muted">Натисніть на місце в зоні, щоб вибрати його.</p>
         {/if}
 
         <div class="map-legend">
-          <span><i class="legend-dot free"></i> Свободно</span>
-          <span><i class="legend-dot held"></i> В hold</span>
-          <span><i class="legend-dot busy"></i> Занято</span>
-          <span><i class="legend-dot no-fit"></i> Не подходит по гостям</span>
+          <span><i class="legend-dot free"></i> Вільно</span>
+          <span><i class="legend-dot held"></i> У hold</span>
+          <span><i class="legend-dot busy"></i> Зайнято</span>
+          <span><i class="legend-dot no-fit"></i> Не підходить за гостями</span>
         </div>
         <p class="muted source-note">Источник: API</p>
       </aside>

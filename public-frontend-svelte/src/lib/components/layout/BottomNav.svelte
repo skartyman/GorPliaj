@@ -6,6 +6,7 @@
   const links = [
     { href: '/', key: 'navHome' },
     { href: '/events', key: 'navEvents' },
+    { href: '/menu', key: 'navMenu' },
     { href: '/booking', key: 'navBooking' },
     { href: '/map', key: 'navMap' },
     { href: '/about', key: 'navAbout' }

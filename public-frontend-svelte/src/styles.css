@@ -397,3 +397,156 @@ select,
 textarea {
   touch-action: manipulation;
 }
+
+.bottom-nav {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.menu-section-nav,
+.menu-category-nav {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.6rem;
+}
+
+.menu-chip {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  white-space: nowrap;
+}
+
+.menu-chip.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.menu-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.menu-card {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.menu-image-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+}
+
+.menu-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-image-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.menu-like {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.3rem 0.5rem;
+}
+
+.menu-like.is-active {
+  color: #be123c;
+}
+
+.menu-card-body {
+  padding: 0.7rem;
+}
+
+.menu-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.menu-qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.menu-qty button {
+  border: 0;
+  background: #fff;
+  width: 2rem;
+  height: 2rem;
+}
+
+.menu-qty span {
+  min-width: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.menu-cart-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 5.2rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.65rem 0.85rem;
+  display: grid;
+  gap: 0.1rem;
+  z-index: 25;
+}
+
+.menu-cart-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.menu-cart-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.menu-cart-panel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(100%, 420px);
+  max-height: 88vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 1rem 1rem 0 0;
+  padding: 1rem;
+}
+
+.menu-cart-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eef2f7;
+}

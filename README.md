@@ -119,7 +119,7 @@ npm run admin:build
 
 Адмінка використовує cookie-based авторизацію і перевіряє сесію через `GET /api/admin/auth/me`.
 
-## Public frontend (SvelteKit, migration phase)
+## Public frontend (SvelteKit, final cutover-prep phase)
 
 Новий публічний фронтенд винесено в окремий SvelteKit-проєкт:
 
@@ -136,12 +136,12 @@ npm run public:svelte:check
 npm run public:svelte:build
 ```
 
-### Поточний serve-flow (phase 4)
+### Поточний serve-flow (phase 5)
 
-- Express спочатку пробує віддавати `public/public-svelte` як primary public client.
+- Express спочатку віддає `public/public-svelte` як primary public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu`.
 - Якщо Svelte build відсутній, автоматично використовується legacy public (`public/*.html`).
 - Маршрути `/admin/*` і `/api/*` працюють окремо, без змін для адмінки та backend API.
-- Legacy-сторінки доступні через `/legacy` (та `/legacy/*`) для безпечного fallback-доступу.
+- Legacy-публіка доступна через `/legacy` (та `/legacy/*`) як безпечний fallback під час cutover.
 
 ### Production build / deploy
 
@@ -150,3 +150,20 @@ Docker build тепер:
 2. збирає новий public client (`npm run public:svelte:build`);
 3. генерує Prisma client;
 4. запускає Express (`npm run start`).
+
+### Що вже повністю на SvelteKit
+
+- `/`
+- `/events`
+- `/events/:slug`
+- `/booking`
+- `/map`
+- `/about`
+- `/menu`
+
+### PWA / Service Worker
+
+- Service worker у `public-frontend-svelte/src/service-worker.ts` працює у консервативному режимі:
+  - **не кешує HTML-навігацію** (`navigate`/`document` йдуть у мережу);
+  - кешує статичні assets і очищає старі версії кешу за версією білду;
+  - підтримує безпечний апдейт через `SKIP_WAITING` message, без агресивного auto-takeover.
