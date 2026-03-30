@@ -4,22 +4,28 @@ import { eventsApi } from '$lib/api/events';
 export async function load() {
   const eventsResult = await eventsApi.list(false);
 
-  let menuCount = 0;
-  let menuSource: 'api' | 'unavailable' = 'unavailable';
+  let menuPreviewImages: string[] = [];
   try {
     const menu = await contentApi.menu();
-    menuCount = Array.isArray(menu)
-      ? menu.reduce((acc, category) => acc + (Array.isArray(category?.items) ? category.items.length : 0), 0)
-      : 0;
-    menuSource = 'api';
+    const images = Array.isArray(menu)
+      ? menu.flatMap((category) => (Array.isArray(category?.items) ? category.items.map((item) => item?.imageUrl).filter(Boolean) : []))
+      : [];
+    menuPreviewImages = images.slice(0, 8);
   } catch {
-    menuCount = 0;
+    menuPreviewImages = [];
+  }
+
+  let news: Array<{ id: number; title: string; summary?: string; publishedAt?: string }> = [];
+  try {
+    const newsResponse = await contentApi.news();
+    news = Array.isArray(newsResponse) ? newsResponse.slice(0, 4) : [];
+  } catch {
+    news = [];
   }
 
   return {
-    events: eventsResult.events.slice(0, 3),
-    eventsSource: eventsResult.source,
-    menuCount,
-    menuSource
+    events: eventsResult.events.slice(0, 8),
+    menuPreviewImages,
+    news
   };
 }
