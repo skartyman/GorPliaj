@@ -17,8 +17,8 @@
   </article>
   <article class="facts">
     <div><span>Формат</span><strong>Beach · Restaurant · Events</strong></div>
-    <div><span>Меню</span><strong>{data.menuCount}+ позицій</strong></div>
-    <div><span>Джерело меню</span><strong>{data.menuSource === 'api' ? 'API' : 'mock'}</strong></div>
+    <div><span>Меню</span><strong>{data.menuCount > 0 ? `${data.menuCount}+ позицій` : 'дані завантажуються'}</strong></div>
+    <div><span>Джерело меню</span><strong>{data.menuSource === 'api' ? 'API' : 'тимчасово недоступно'}</strong></div>
   </article>
 </section>
 
@@ -36,7 +36,7 @@
       <p class="muted">Скоро додамо нові події.</p>
     {/if}
   </div>
-  <p class="muted source-note">Джерело: {data.eventsSource === 'api' ? 'реальний API' : 'тимчасові mock-дані'}</p>
+  <p class="muted source-note">Джерело: реальний API</p>
 </section>
 
 <section class="page-block split">

@@ -23,9 +23,14 @@ RUN apt-get update -qq && \
 # Install node modules
 COPY package-lock.json package.json ./
 RUN npm ci
+COPY public-frontend-svelte/package-lock.json public-frontend-svelte/package.json ./public-frontend-svelte/
+RUN npm --prefix public-frontend-svelte ci
 
 # Copy application code
 COPY . .
+
+# Build new SvelteKit public client as primary static frontend
+RUN npm run public:svelte:build
 
 # Generate Prisma client after schema is available in image
 RUN npx prisma generate

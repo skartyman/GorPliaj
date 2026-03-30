@@ -70,7 +70,7 @@
           <span><i class="legend-dot busy"></i> Занято</span>
           <span><i class="legend-dot no-fit"></i> Не подходит по гостям</span>
         </div>
-        <p class="muted source-note">Источник: {result.source === 'api' ? 'API' : 'mock-адаптер'}</p>
+        <p class="muted source-note">Источник: API</p>
       </aside>
     </div>
   {:catch}

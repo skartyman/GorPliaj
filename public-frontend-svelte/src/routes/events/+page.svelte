@@ -18,7 +18,7 @@
           <EventCard {event} />
         {/each}
       </div>
-      <p class="muted source-note">Джерело: {result.source === 'api' ? 'реальний API' : 'тимчасові mock-дані (адаптер)'}</p>
+      <p class="muted source-note">Джерело: реальний API</p>
     {/if}
   {:catch}
     <div class="state state-error">Не вдалося завантажити події. Спробуйте ще раз пізніше.</div>

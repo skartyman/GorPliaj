@@ -1,5 +1,5 @@
 import { mapApi } from '$lib/api/map';
-import { mockMapData, type PublicMapData } from '$lib/features/booking/mockMap';
+import type { PublicMapData } from '$lib/features/map/types';
 
 interface ApiTable {
   id: number;
@@ -52,30 +52,26 @@ function toPublicMap(data: ApiMap): PublicMapData {
 }
 
 export async function getPublicMapData(params: MapLoadParams = {}) {
-  try {
-    const map = await mapApi.defaultMap<ApiMap>();
-    const normalizedMap = toPublicMap(map);
+  const map = await mapApi.defaultMap<ApiMap>();
+  const normalizedMap = toPublicMap(map);
 
-    if (params.date && params.timeFrom) {
-      const availability = await mapApi.availability<{
-        busyTableIds: number[];
-        heldTableIds: number[];
-      }>(normalizedMap.id, params.date, params.timeFrom);
+  if (params.date && params.timeFrom) {
+    const availability = await mapApi.availability<{
+      busyTableIds: number[];
+      heldTableIds: number[];
+    }>(normalizedMap.id, params.date, params.timeFrom);
 
-      const busy = new Set(availability.busyTableIds || []);
-      const held = new Set(availability.heldTableIds || []);
+    const busy = new Set(availability.busyTableIds || []);
+    const held = new Set(availability.heldTableIds || []);
 
-      normalizedMap.zones = normalizedMap.zones.map((zone) => ({
-        ...zone,
-        tables: zone.tables.map((table) => ({
-          ...table,
-          status: busy.has(table.id) ? 'busy' : held.has(table.id) ? 'held' : 'free'
-        }))
-      }));
-    }
-
-    return { map: normalizedMap, source: 'api' as const };
-  } catch {
-    return { map: mockMapData, source: 'mock' as const };
+    normalizedMap.zones = normalizedMap.zones.map((zone) => ({
+      ...zone,
+      tables: zone.tables.map((table) => ({
+        ...table,
+        status: busy.has(table.id) ? 'busy' : held.has(table.id) ? 'held' : 'free'
+      }))
+    }));
   }
+
+  return { map: normalizedMap, source: 'api' as const };
 }

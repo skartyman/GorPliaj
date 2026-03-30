@@ -10,6 +10,7 @@ PWA-проєкт для пляжно-ресторанного комплексу
 
 ```bash
 npm install
+npm --prefix public-frontend-svelte install
 npm run start
 ```
 
@@ -19,6 +20,12 @@ npm run start
 
 ```bash
 npm run dev
+```
+
+Окремо новий public client (SvelteKit):
+
+```bash
+npm run public:svelte:dev
 ```
 
 ### Змінні оточення
@@ -114,10 +121,11 @@ npm run admin:build
 
 ## Public frontend (SvelteKit, migration phase)
 
-Початковий каркас нового публічного фронтенду винесено окремо:
+Новий публічний фронтенд винесено в окремий SvelteKit-проєкт:
 
 - `public-frontend-svelte/` — SvelteKit-проєкт для поетапної міграції публічної частини.
-- Поточна legacy-публічна версія в `public/` лишається fallback і не видаляється.
+- Production build нового клієнта збирається в `public/public-svelte/`.
+- Legacy-публічна версія в `public/` збережена як fallback/архів і не видаляється агресивно.
 - Адмінка (`admin-frontend/`) працює окремо і не змінюється.
 
 ### Команди
@@ -127,3 +135,18 @@ npm run public:svelte:dev
 npm run public:svelte:check
 npm run public:svelte:build
 ```
+
+### Поточний serve-flow (phase 4)
+
+- Express спочатку пробує віддавати `public/public-svelte` як primary public client.
+- Якщо Svelte build відсутній, автоматично використовується legacy public (`public/*.html`).
+- Маршрути `/admin/*` і `/api/*` працюють окремо, без змін для адмінки та backend API.
+- Legacy-сторінки доступні через `/legacy` (та `/legacy/*`) для безпечного fallback-доступу.
+
+### Production build / deploy
+
+Docker build тепер:
+1. встановлює залежності root і `public-frontend-svelte/`;
+2. збирає новий public client (`npm run public:svelte:build`);
+3. генерує Prisma client;
+4. запускає Express (`npm run start`).
