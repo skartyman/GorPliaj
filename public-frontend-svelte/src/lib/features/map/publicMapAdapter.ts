@@ -9,6 +9,7 @@ interface ApiTable {
   seatsMax?: number;
   x: number;
   y: number;
+  zoneId?: number;
 }
 
 interface ApiZone {
@@ -23,6 +24,11 @@ interface ApiMap {
   zones: ApiZone[];
 }
 
+interface MapLoadParams {
+  date?: string;
+  timeFrom?: string;
+}
+
 function toPublicMap(data: ApiMap): PublicMapData {
   return {
     id: data.id,
@@ -32,6 +38,7 @@ function toPublicMap(data: ApiMap): PublicMapData {
       name: zone.name,
       tables: (zone.tables || []).map((table, index) => ({
         id: table.id,
+        zoneId: zone.id,
         code: table.code || `T-${table.id}`,
         name: table.name || `Table ${index + 1}`,
         seatsMin: table.seatsMin || 2,
@@ -44,10 +51,30 @@ function toPublicMap(data: ApiMap): PublicMapData {
   };
 }
 
-export async function getPublicMapData() {
+export async function getPublicMapData(params: MapLoadParams = {}) {
   try {
     const map = await mapApi.defaultMap<ApiMap>();
-    return { map: toPublicMap(map), source: 'api' as const };
+    const normalizedMap = toPublicMap(map);
+
+    if (params.date && params.timeFrom) {
+      const availability = await mapApi.availability<{
+        busyTableIds: number[];
+        heldTableIds: number[];
+      }>(normalizedMap.id, params.date, params.timeFrom);
+
+      const busy = new Set(availability.busyTableIds || []);
+      const held = new Set(availability.heldTableIds || []);
+
+      normalizedMap.zones = normalizedMap.zones.map((zone) => ({
+        ...zone,
+        tables: zone.tables.map((table) => ({
+          ...table,
+          status: busy.has(table.id) ? 'busy' : held.has(table.id) ? 'held' : 'free'
+        }))
+      }));
+    }
+
+    return { map: normalizedMap, source: 'api' as const };
   } catch {
     return { map: mockMapData, source: 'mock' as const };
   }
