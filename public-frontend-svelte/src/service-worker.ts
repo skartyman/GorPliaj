@@ -22,15 +22,11 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
   const isApi = url.pathname.startsWith('/api/');
 
-  if (isApi) {
+  if (!isSameOrigin || isApi || event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request));
-    return;
-  }
-
-  if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(() => caches.match('/')));
     return;
   }
 

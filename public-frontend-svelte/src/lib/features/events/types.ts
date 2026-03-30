@@ -13,5 +13,5 @@ export interface EventItem {
 
 export interface EventListResult {
   events: EventItem[];
-  source: 'api' | 'mock';
+  source: 'api';
 }

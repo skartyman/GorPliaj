@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { bookingsApi } from '$lib/api/bookings';
   import { getPublicMapData } from '$lib/features/map/publicMapAdapter';
-  import type { MapTable } from '$lib/features/booking/mockMap';
+  import type { MapTable } from '$lib/features/map/types';
   import { t } from '$lib/stores/i18n';
 
   const today = new Date().toISOString().slice(0, 10);

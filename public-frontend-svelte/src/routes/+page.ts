@@ -5,7 +5,7 @@ export async function load() {
   const eventsResult = await eventsApi.list(false);
 
   let menuCount = 0;
-  let menuSource: 'api' | 'mock' = 'mock';
+  let menuSource: 'api' | 'unavailable' = 'unavailable';
   try {
     const menu = await contentApi.menu();
     menuCount = Array.isArray(menu)
@@ -13,7 +13,7 @@ export async function load() {
       : 0;
     menuSource = 'api';
   } catch {
-    menuCount = 24;
+    menuCount = 0;
   }
 
   return {
