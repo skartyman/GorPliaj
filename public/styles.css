@@ -1688,15 +1688,13 @@ select:focus {
 .home-page-header,
 .menu-cart-fab,
 .menu-cart-panel {
-  transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
 .hero,
 .home-info-card.scenic,
-.home-gallery-card,
-.menu-cart-drawer {
+.home-gallery-card {
   isolation: isolate;
   contain: paint;
 }
@@ -2390,8 +2388,8 @@ select:focus {
   .menu-cart-panel {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
+    transform: none;
+    -webkit-transform: none;
   }
 
   .menu-item,
@@ -2399,7 +2397,49 @@ select:focus {
   .news-item,
   .home-card,
   .home-info-card {
-    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    transition: background-color 0.16s ease, border-color 0.16s ease;
+  }
+
+  .ocean-header {
+    background: #f7f4ee;
+  }
+
+  .ocean-header-shell,
+  .ocean-soft-panel,
+  .ocean-chip-card,
+  .home-mobile-dock,
+  .menu-cart-fab,
+  .menu-cart-panel {
+    background: #ffffff;
+    border-color: rgba(148, 163, 184, 0.34);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
+  }
+
+  .home-mobile-dock a {
+    background: #f8fafc;
+    border-color: rgba(148, 163, 184, 0.28);
+    color: #0f172a;
+  }
+
+  .ocean-hero::after {
+    display: none;
+  }
+
+  .ocean-hero::before {
+    background: linear-gradient(112deg, rgba(7, 20, 33, 0.82) 8%, rgba(11, 40, 64, 0.62) 52%, rgba(44, 84, 113, 0.54) 100%);
+  }
+
+  .ocean-hero-bg {
+    transform: none;
+  }
+
+  .reveal-on-scroll,
+  .reveal-on-scroll.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
@@ -2544,6 +2584,7 @@ body.cart-open {
     bottom: 12px;
     width: auto;
     max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
   }
 }
 
@@ -3736,7 +3777,7 @@ body.cart-open {
   .home-header-actions { display: flex; gap: 0.45rem; }
   .ocean-header-quicknav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ocean-header-quicknav a { min-height: 42px; font-size: 0.83rem; font-weight: 650; }
-  .ocean-hero { min-height: 540px; border-radius: 30px; padding: 1.1rem; }
+  .ocean-hero { min-height: 540px; min-height: clamp(500px, 72svh, 620px); border-radius: 30px; padding: 1.1rem; }
   .home-hero-kicker { font-size: 0.7rem; }
   .menu-preview-actions { flex-wrap: wrap; }
   .menu-preview-actions .btn { width: 100%; justify-content: center; }
