@@ -3604,6 +3604,57 @@ body.cart-open {
 }
 .ocean-header-quicknav { display: none; }
 
+.home-page-body .menu-page-header.home-page-header {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+  gap: 12px;
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.home-page-body .menu-page-header .menu-page-header-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-menu-like-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.home-menu-like-nav a,
+.home-page-body .menu-page-header .install-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-menu-like-nav a:hover,
+.home-menu-like-nav a:focus-visible,
+.home-page-body .menu-page-header .install-btn:hover,
+.home-page-body .menu-page-header .install-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(34, 211, 238, 0.32);
+  box-shadow: 0 12px 24px rgba(2, 6, 23, 0.12);
+}
+
 .ocean-nav { display: flex; justify-content: center; gap: 0.45rem; flex-wrap: wrap; }
 .ocean-header-quicknav a,
 .ocean-nav a,
@@ -3821,6 +3872,10 @@ body.cart-open {
 
 @media (max-width: 720px) {
   .home-ocean { width: min(100%, calc(100% - 1.25rem)); padding-bottom: 3rem; }
+  .home-page-body .menu-page-header .menu-page-header-top { grid-template-columns: 1fr auto; }
+  .home-menu-like-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-menu-like-nav a { text-align: center; }
+  .home-menu-like-nav a:last-child { grid-column: span 2; }
   .ocean-header-shell { border-radius: 22px; grid-template-columns: 1fr auto; }
   .brand small { display: none; }
   .home-header-actions { display: flex; gap: 0.45rem; }
