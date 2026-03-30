@@ -3789,6 +3789,29 @@ body.cart-open {
 }
 .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
 
+.performance-scroll-lite .reveal-on-scroll,
+.performance-scroll-lite .reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.performance-scroll-lite .ocean-header-shell,
+.performance-scroll-lite .ocean-chip-card,
+.performance-scroll-lite .ocean-soft-panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.performance-scroll-lite .ocean-hero::after {
+  display: none;
+}
+
+.performance-scroll-lite .ocean-hero-bg {
+  transform: none;
+}
+
 @media (max-width: 1080px) {
   .ocean-header-shell { grid-template-columns: auto 1fr auto; padding: 0.85rem 1rem; }
   .ocean-nav { display: none; }
