@@ -2441,6 +2441,55 @@ select:focus {
     transform: none;
     transition: none;
   }
+
+  .luxe-float,
+  .luxe-float-wave,
+  .luxe-float-logo {
+    animation: none;
+    transform: none;
+  }
+
+  .home-stat-card,
+  .luxe-menu,
+  .luxe-booking,
+  .luxe-atmosphere,
+  .luxe-events,
+  .luxe-contacts,
+  .luxe-agreement,
+  .home-page-header,
+  .home-luxe-header,
+  .home-mobile-dock {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal-on-scroll,
+  .reveal-on-scroll.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .luxe-float,
+  .luxe-float-wave,
+  .luxe-float-logo {
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 
