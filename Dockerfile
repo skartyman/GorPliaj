@@ -9,9 +9,6 @@ LABEL fly_launch_runtime="Node.js"
 # Node.js app lives here
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
-
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -23,6 +20,7 @@ RUN apt-get update -qq && \
 # Install node modules
 COPY package-lock.json package.json ./
 RUN npm ci
+
 COPY public-frontend-svelte/package-lock.json public-frontend-svelte/package.json ./public-frontend-svelte/
 RUN npm --prefix public-frontend-svelte ci
 
@@ -37,6 +35,9 @@ RUN npx prisma generate
 
 
 FROM base
+
+# Set production environment only for runtime image
+ENV NODE_ENV="production"
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl && \
