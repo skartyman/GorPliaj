@@ -340,3 +340,60 @@ textarea {
     padding-bottom: 1rem;
   }
 }
+
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.hero-bg,
+.event-card img,
+.event-detail-image {
+  content-visibility: auto;
+  contain-intrinsic-size: 180px;
+}
+
+.event-card-image-link {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.booking-success {
+  background: #e8fced;
+  color: #166534;
+}
+
+.map-legend {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  margin-right: 0.35rem;
+}
+
+.legend-dot.free { background: #22c55e; }
+.legend-dot.held { background: #f59e0b; }
+.legend-dot.busy { background: #ef4444; }
+.legend-dot.no-fit { background: #94a3b8; }
+
+.table-dot.no-fit {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}

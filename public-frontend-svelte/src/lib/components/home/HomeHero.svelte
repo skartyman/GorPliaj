@@ -3,7 +3,7 @@
 </script>
 
 <section class="home-hero">
-  <img class="hero-bg" src="/icons/lebedi.jpg" alt="Панорама ГорПляж" />
+  <img class="hero-bg" src="/icons/lebedi.jpg" alt="Панорама ГорПляж" fetchpriority="high" decoding="async" />
   <div class="hero-overlay">
     <p class="eyebrow">Пляж · Ресторан · Події</p>
     <h1>ГорПляж в Одесі</h1>

@@ -8,7 +8,7 @@
 
 <article class="event-card">
   <a href={`/events/${event.slug}`} class="event-card-image-link">
-    <img src={event.posterImage || '/icons/lebedi.jpg'} alt={event.title} loading="lazy" />
+    <img src={event.posterImage || '/icons/lebedi.jpg'} alt={event.title} loading="lazy" decoding="async" />
   </a>
   <div class="event-card-content">
     <p class="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { dictionary, locale } from '$lib/stores/i18n';
+  import { t } from '$lib/stores/i18n';
   import { classNames } from '$lib/utils/classNames';
 
   const links = [
@@ -15,7 +15,7 @@
 <nav class="bottom-nav" aria-label="Primary">
   {#each links as link}
     <a href={link.href} class={classNames('bottom-link', $page.url.pathname === link.href && 'is-active')}>
-      {dictionary[$locale][link.key]}
+      {$t(link.key)}
     </a>
   {/each}
 </nav>
