@@ -470,6 +470,15 @@ function initScrollReveal() {
   const revealItems = document.querySelectorAll('.reveal-on-scroll');
   if (!revealItems.length) return;
 
+  const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const prefersLowData = Boolean(navigator.connection?.saveData);
+  const isTouchDevice = window.matchMedia?.('(pointer: coarse)')?.matches;
+
+  if (prefersReducedMotion || prefersLowData || isTouchDevice) {
+    revealItems.forEach((item) => item.classList.add('is-visible'));
+    return;
+  }
+
   if (!('IntersectionObserver' in window)) {
     revealItems.forEach((item) => item.classList.add('is-visible'));
     return;
