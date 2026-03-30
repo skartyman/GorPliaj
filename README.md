@@ -111,3 +111,19 @@ npm run admin:build
 ```
 
 Адмінка використовує cookie-based авторизацію і перевіряє сесію через `GET /api/admin/auth/me`.
+
+## Public frontend (SvelteKit, migration phase)
+
+Початковий каркас нового публічного фронтенду винесено окремо:
+
+- `public-frontend-svelte/` — SvelteKit-проєкт для поетапної міграції публічної частини.
+- Поточна legacy-публічна версія в `public/` лишається fallback і не видаляється.
+- Адмінка (`admin-frontend/`) працює окремо і не змінюється.
+
+### Команди
+
+```bash
+npm run public:svelte:dev
+npm run public:svelte:check
+npm run public:svelte:build
+```
