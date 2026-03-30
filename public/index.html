@@ -16,8 +16,8 @@
   </head>
   <body class="menu-page-body home-page-body">
     <main class="home-ocean" id="top">
-      <header class="home-page-header ocean-header">
-        <div class="ocean-header-shell">
+      <header class="menu-page-header home-page-header" id="homeHeader">
+        <div class="menu-page-header-top home-page-header-top">
           <a class="brand brand-with-logo" href="#top">
             <span class="brand-mark brand-mark-image">
               <img src="/icons/Logo.png" alt="ГорПляж logo" />
@@ -28,24 +28,18 @@
             </span>
           </a>
 
-          <nav class="ocean-nav" aria-label="Site navigation">
-            <a href="#atmosphere" data-i18n="navAbout">Афіша</a>
-            <a href="#menu-section" data-i18n="navMenu">Меню</a>
-            <a href="#booking" data-i18n="navBooking">Бронювання</a>
-            <a href="#atmosphere" data-i18n="navAtmosphere">Атмосфера</a>
-            <a href="#contacts" data-i18n="navContacts">Контакти</a>
-          </nav>
-
           <div class="home-header-actions">
-            <button id="installBtn" class="install-btn home-scroll-action hidden" data-i18n="installApp">Встановити як застосунок</button>
-            <button id="languageToggle" class="lang-toggle home-header-action" type="button" aria-label="Switch language">EN</button>
+            <button id="installBtn" class="install-btn hidden" data-i18n="installApp">Встановити як застосунок</button>
+            <button id="languageToggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
           </div>
         </div>
 
-        <nav class="ocean-header-quicknav" aria-label="Mobile quick navigation">
+        <nav class="home-menu-like-nav" aria-label="Site navigation">
           <a href="#atmosphere" data-i18n="navAbout">Афіша</a>
           <a href="#menu-section" data-i18n="navMenu">Меню</a>
           <a href="#booking" data-i18n="navBooking">Бронювання</a>
+          <a href="#atmosphere" data-i18n="navAtmosphere">Атмосфера</a>
+          <a href="#contacts" data-i18n="navContacts">Контакти</a>
           <a href="/menu" data-i18n="menuPreviewCta">Відкрити меню</a>
         </nav>
       </header>
