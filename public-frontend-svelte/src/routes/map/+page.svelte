@@ -324,7 +324,7 @@
         <div class="map-controls">
           <button type="button" class="btn btn-secondary map-control-btn" on:click={zoomIn} aria-label={$t('mapZoomIn')}>+</button>
           <button type="button" class="btn btn-secondary map-control-btn" on:click={zoomOut} aria-label={$t('mapZoomOut')}>−</button>
-          <button type="button" class="btn btn-secondary map-control-btn map-control-btn-reset" on:click={zoomFit}>{$t('mapFit')}</button>
+          <button type="button" class="btn btn-secondary map-control-btn map-control-btn-reset" on:click={zoomFit} aria-label="Fit map">Fit</button>
           <span class="map-zoom-pill">{zoomPercent}%</span>
         </div>
 
