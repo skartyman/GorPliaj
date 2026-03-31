@@ -5,13 +5,34 @@
   export let data;
 
   let selectedTableId: number | null = null;
-  const minZoom = 1;
+  const minZoom = 0.75;
   const maxZoom = 2.5;
   const zoomStep = 0.25;
   let zoom = 1;
 
   function tableFitsGuests(table, guests: number) {
     return !guests || (guests >= table.seatsMin && guests <= table.seatsMax);
+  }
+
+  function parseStyleJson(styleJson?: string | null) {
+    if (!styleJson) {
+      return '';
+    }
+
+    try {
+      const style = typeof styleJson === 'string' ? JSON.parse(styleJson) : styleJson;
+      const rules: string[] = [];
+
+      if (typeof style?.background === 'string') rules.push(`background:${style.background}`);
+      if (typeof style?.borderColor === 'string') rules.push(`border-color:${style.borderColor}`);
+      if (typeof style?.color === 'string') rules.push(`color:${style.color}`);
+      if (Number.isFinite(style?.borderRadius)) rules.push(`border-radius:${style.borderRadius}px`);
+      if (Number.isFinite(style?.opacity)) rules.push(`opacity:${Math.max(0.2, Math.min(1, style.opacity))}`);
+
+      return rules.join(';');
+    } catch {
+      return '';
+    }
   }
 
   function zoomIn() {
@@ -39,6 +60,7 @@
   {#await data.mapPromise}
     <div class="state">Завантаження карти…</div>
   {:then result}
+    {@const tableById = new Map(result.map.zones.flatMap((zone) => zone.tables).map((table) => [table.id, table]))}
     <div class="map-layout">
       <article class="map-zone-board">
         <div class="map-controls">
@@ -48,25 +70,45 @@
             {$t('mapZoomReset')}
           </button>
         </div>
-        {#each result.map.zones as zone}
-          <section class="map-zone">
-            <h3>{zone.name}</h3>
-            <div class="tables-grid" style={`transform: scale(${zoom});`}>
-              {#each zone.tables as table}
-                <button
-                  type="button"
-                  class={`table-dot ${table.status} ${!tableFitsGuests(table, data.guests) ? 'no-fit' : ''} ${selectedTableId === table.id ? 'selected' : ''}`}
-                  style={`left:${table.x}%;top:${table.y}%;`}
-                  on:click={() => (selectedTableId = table.id)}
-                  disabled={table.status !== 'free' || !tableFitsGuests(table, data.guests)}
-                  aria-label={`${table.name} ${table.seatsMin}-${table.seatsMax}`}
-                >
-                  {table.code}
-                </button>
+
+        <div class="public-map-shell">
+          <div class="public-map-viewport">
+            <div
+              class="public-map-world"
+              style={`width:${result.map.width}px;height:${result.map.height}px;transform:scale(${zoom});`}
+            >
+              <div
+                class="public-map-background"
+                style={`background-color:${result.map.backgroundColor || '#d8e7f8'};${result.map.backgroundImage ? `background-image:url(${result.map.backgroundImage});` : ''}`}
+              ></div>
+
+              {#each result.map.objects as object}
+                {@const table = object.tableId ? tableById.get(object.tableId) : null}
+                {#if table}
+                  {@const tableDisabled = table.status !== 'free' || !tableFitsGuests(table, data.guests)}
+                  <button
+                    type="button"
+                    class={`public-map-table ${table.status} ${!tableFitsGuests(table, data.guests) ? 'no-fit' : ''} ${selectedTableId === table.id ? 'selected' : ''}`}
+                    style={`left:${object.x}px;top:${object.y}px;width:${object.width}px;height:${object.height}px;transform:rotate(${object.rotation}deg);z-index:${object.zIndex};${table.shape === 'ROUND' ? 'border-radius:999px;' : 'border-radius:12px;'}`}
+                    on:click={() => (selectedTableId = table.id)}
+                    disabled={tableDisabled}
+                    aria-label={`${table.name} ${table.seatsMin}-${table.seatsMax}`}
+                  >
+                    {table.code}
+                  </button>
+                {:else}
+                  <div
+                    class={`public-map-object object-${object.type.toLowerCase()}`}
+                    style={`left:${object.x}px;top:${object.y}px;width:${object.width}px;height:${object.height}px;transform:rotate(${object.rotation}deg);z-index:${object.zIndex};${parseStyleJson(object.styleJson)}`}
+                    title={object.label || object.type}
+                  >
+                    <span>{object.label || object.type}</span>
+                  </div>
+                {/if}
               {/each}
             </div>
-          </section>
-        {/each}
+          </div>
+        </div>
       </article>
 
       <aside class="map-side-panel">

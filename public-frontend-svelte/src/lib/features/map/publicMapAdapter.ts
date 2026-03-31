@@ -5,6 +5,9 @@ interface ApiTable {
   id: number;
   code?: string;
   name?: string;
+  shape?: string;
+  isActive?: boolean;
+  isBookable?: boolean;
   seatsMin?: number;
   seatsMax?: number;
   x?: number;
@@ -23,15 +26,23 @@ interface ApiMap {
   name: string;
   width?: number;
   height?: number;
+  backgroundColor?: string | null;
+  backgroundImage?: string | null;
   zones?: ApiZone[];
 }
 
 interface ApiObject {
   id: number;
   type?: string;
+  label?: string;
+  styleJson?: string | null;
   tableId?: number | null;
+  width?: number;
+  height?: number;
   x?: number;
   y?: number;
+  rotation?: number;
+  zIndex?: number;
 }
 
 interface ApiDefaultMapResponse {
@@ -81,6 +92,10 @@ function toPublicMap(data: ApiMap | ApiDefaultMapResponse): PublicMapData {
   return {
     id: mapData.id,
     name: mapData.name,
+    width: mapData.width || 1200,
+    height: mapData.height || 760,
+    backgroundColor: mapData.backgroundColor || null,
+    backgroundImage: mapData.backgroundImage || null,
     zones: zones.map((zone) => ({
       id: zone.id,
       name: zone.name,
@@ -88,17 +103,33 @@ function toPublicMap(data: ApiMap | ApiDefaultMapResponse): PublicMapData {
         const mapObject = tableObjectById.get(table.id);
 
         return {
-        id: table.id,
-        zoneId: zone.id,
-        code: table.code || `T-${table.id}`,
-        name: table.name || `Table ${index + 1}`,
-        seatsMin: table.seatsMin || 2,
-        seatsMax: table.seatsMax || 4,
-        x: toPercentCoordinate(table.x ?? mapObject?.x, mapData.width),
-        y: toPercentCoordinate(table.y ?? mapObject?.y, mapData.height),
-        status: 'free'
-      };
+          id: table.id,
+          zoneId: zone.id,
+          code: table.code || `T-${table.id}`,
+          name: table.name || `Table ${index + 1}`,
+          seatsMin: table.seatsMin || 2,
+          seatsMax: table.seatsMax || 4,
+          x: toPercentCoordinate(table.x ?? mapObject?.x, mapData.width),
+          y: toPercentCoordinate(table.y ?? mapObject?.y, mapData.height),
+          isBookable: table.isBookable ?? true,
+          isActive: table.isActive ?? true,
+          shape: String(table.shape || 'ROUND').toUpperCase(),
+          status: table.isActive === false || table.isBookable === false ? 'unavailable' : 'free'
+        };
       })
+    })),
+    objects: objects.map((object) => ({
+      id: object.id,
+      type: String(object.type || 'CUSTOM').toUpperCase(),
+      label: object.label || '',
+      styleJson: object.styleJson,
+      tableId: object.tableId ?? null,
+      width: Math.max(Number(object.width) || 44, 24),
+      height: Math.max(Number(object.height) || 44, 24),
+      x: Number(object.x) || 0,
+      y: Number(object.y) || 0,
+      rotation: Number(object.rotation) || 0,
+      zIndex: Number(object.zIndex) || 2
     }))
   };
 }
@@ -121,11 +152,18 @@ export async function getPublicMapData(params: MapLoadParams = {}) {
         ...zone,
         tables: zone.tables.map((table) => ({
           ...table,
-          status: busy.has(table.id) ? 'busy' : held.has(table.id) ? 'held' : 'free'
+          status:
+            !table.isActive || !table.isBookable
+              ? 'unavailable'
+              : busy.has(table.id)
+                ? 'busy'
+                : held.has(table.id)
+                  ? 'held'
+                  : 'free'
         }))
       }));
     } catch {
-      // If availability request fails, keep default "free" status instead of crashing booking/map pages.
+      // If availability request fails, keep default statuses instead of crashing booking/map pages.
     }
   }
 
