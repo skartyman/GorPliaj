@@ -18,6 +18,11 @@
   let cartOpen = false;
   let cart: Record<string, { quantity: number }> = {};
   let likes: Record<string, boolean> = {};
+  let navContainer: HTMLDivElement | null = null;
+  let categoryNavElement: HTMLDivElement | null = null;
+  let categoryAnchors: Record<string, HTMLElement | null> = {};
+  let categoryObserver: IntersectionObserver | null = null;
+  let navHeight = 96;
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -28,23 +33,42 @@
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
   }
-  $: activeItems = categories.find((entry) => entry.categoryKey === activeCategory)?.items || [];
+  $: if (browser) {
+    categoryAnchors = {};
+    setupCategoryObserver();
+  }
   $: cartEntries = getCartEntries(menu, cart, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
 
-  onMount(async () => {
+  onMount(() => {
     if (browser) {
       cart = loadState(CART_STORAGE_KEY);
       likes = loadState(LIKES_STORAGE_KEY);
     }
 
-    try {
-      menu = await data.menuPromise;
-      loading = false;
-    } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Failed to load menu.';
-      loading = false;
+    data.menuPromise
+      .then((payload) => {
+        menu = payload;
+        loading = false;
+      })
+      .catch((error) => {
+        errorMessage = error instanceof Error ? error.message : 'Failed to load menu.';
+        loading = false;
+      });
+
+    if (browser) {
+      const recalcNavHeight = () => {
+        navHeight = navContainer?.offsetHeight || 96;
+      };
+
+      recalcNavHeight();
+      window.addEventListener('resize', recalcNavHeight);
+
+      return () => {
+        window.removeEventListener('resize', recalcNavHeight);
+        categoryObserver?.disconnect();
+      };
     }
   });
 
@@ -179,6 +203,66 @@
 
     await navigator.clipboard.writeText(lines.join('\n'));
   }
+
+  function setupCategoryObserver() {
+    if (!browser) return;
+
+    categoryObserver?.disconnect();
+    categoryObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+        if (!visible.length) return;
+        const currentKey = visible[0].target.getAttribute('data-category-key');
+        if (currentKey) {
+          activeCategory = currentKey;
+          scrollActiveChipIntoView();
+        }
+      },
+      {
+        root: null,
+        rootMargin: `-${navHeight + 8}px 0px -65% 0px`,
+        threshold: [0.15, 0.4, 0.7]
+      }
+    );
+
+    requestAnimationFrame(() => {
+      Object.values(categoryAnchors).forEach((element) => {
+        if (element) {
+          categoryObserver?.observe(element);
+        }
+      });
+    });
+  }
+
+  function scrollToCategory(categoryKey: string) {
+    activeCategory = categoryKey;
+    const target = categoryAnchors[categoryKey];
+    if (!target) return;
+    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    scrollActiveChipIntoView();
+  }
+
+  function scrollActiveChipIntoView() {
+    if (!categoryNavElement || !activeCategory) return;
+    const activeChip = categoryNavElement.querySelector<HTMLButtonElement>(`button[data-category-chip="${CSS.escape(activeCategory)}"]`);
+    activeChip?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+
+  function selectSection(section: 'kitchen' | 'bar') {
+    activeSection = section;
+    const first = grouped[section][0]?.categoryKey;
+    if (first) {
+      activeCategory = first;
+      requestAnimationFrame(() => {
+        setupCategoryObserver();
+        scrollToCategory(first);
+      });
+    }
+  }
 </script>
 
 <svelte:head>
@@ -197,65 +281,79 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-section-nav">
-      {#each sections as section}
-        <button
-          type="button"
-          class={`menu-chip ${activeSection === section ? 'is-active' : ''}`}
-          on:click={() => (activeSection = section)}
-          disabled={!grouped[section].length}
-        >
-          {section === 'kitchen' ? $t('menuSectionKitchen') : $t('menuSectionBar')}
-        </button>
-      {/each}
+    <div class="menu-sticky-nav" bind:this={navContainer}>
+      <div class="menu-section-nav">
+        {#each sections as section}
+          <button
+            type="button"
+            class={`menu-chip menu-chip-section ${activeSection === section ? 'is-active' : ''}`}
+            on:click={() => selectSection(section)}
+            disabled={!grouped[section].length}
+          >
+            {section === 'kitchen' ? $t('menuSectionKitchen') : $t('menuSectionBar')}
+          </button>
+        {/each}
+      </div>
+
+      <div class="menu-category-nav" bind:this={categoryNavElement}>
+        {#each categories as category}
+          <button
+            type="button"
+            class={`menu-chip menu-chip-category ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
+            data-category-chip={category.categoryKey}
+            on:click={() => scrollToCategory(category.categoryKey)}
+          >
+            {category.categoryLabel}
+          </button>
+        {/each}
+      </div>
     </div>
 
-    <div class="menu-category-nav">
+    <div class="menu-section-content">
       {#each categories as category}
-        <button
-          type="button"
-          class={`menu-chip ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
-          on:click={() => (activeCategory = category.categoryKey)}
+        <section
+          class="menu-category-block"
+          data-category-key={category.categoryKey}
+          bind:this={categoryAnchors[category.categoryKey]}
         >
-          {category.categoryLabel}
-        </button>
-      {/each}
-    </div>
+          <h2 class="menu-category-title">{category.categoryLabel}</h2>
+          <div class="menu-grid">
+            {#each category.items as item}
+              <article class="menu-card">
+                <div class="menu-card-main">
+                  <div class="menu-card-body">
+                    <strong class="menu-title">{localizedText(item.name, $locale)}</strong>
+                    <p class="muted menu-description">{localizedText(item.description, $locale)}</p>
+                  </div>
 
-    <div class="menu-grid">
-      {#each activeItems as item}
-        <article class="menu-card">
-          <div class="menu-card-main">
-            <div class="menu-card-body">
-              <strong class="menu-title">{localizedText(item.name, $locale)}</strong>
-              <p class="muted menu-description">{localizedText(item.description, $locale)}</p>
-            </div>
+                  <span class="menu-price">{formatPrice(Number(item.price || 0))} ₴</span>
 
-            <span class="menu-price">{formatPrice(Number(item.price || 0))} ₴</span>
+                  <div class="menu-image-wrap">
+                    {#if item.imageUrl}
+                      <img src={item.imageUrl} alt={localizedText(item.name, $locale)} class="menu-image" loading="lazy" />
+                    {:else}
+                      <div class="menu-image-fallback">GP</div>
+                    {/if}
+                  </div>
+                </div>
 
-            <div class="menu-image-wrap">
-              {#if item.imageUrl}
-                <img src={item.imageUrl} alt={localizedText(item.name, $locale)} class="menu-image" loading="lazy" />
-              {:else}
-                <div class="menu-image-fallback">GP</div>
-              {/if}
-            </div>
+                <div class="menu-card-footer">
+                  <button
+                    type="button"
+                    class={`menu-like ${likes[String(item.id)] ? 'is-active' : ''}`}
+                    on:click={() => toggleLike(item.id)}
+                    aria-label={$t('menuLike')}
+                  >♥ {item.likesCount || 0}</button>
+                  <div class="menu-qty">
+                    <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
+                    <span>{getQuantity(item.id)}</span>
+                    <button type="button" on:click={() => updateQuantity(item.id, 1)}>+</button>
+                  </div>
+                </div>
+              </article>
+            {/each}
           </div>
-
-          <div class="menu-card-footer">
-            <button
-              type="button"
-              class={`menu-like ${likes[String(item.id)] ? 'is-active' : ''}`}
-              on:click={() => toggleLike(item.id)}
-              aria-label={$t('menuLike')}
-            >♥ {item.likesCount || 0}</button>
-            <div class="menu-qty">
-              <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
-              <span>{getQuantity(item.id)}</span>
-              <button type="button" on:click={() => updateQuantity(item.id, 1)}>+</button>
-            </div>
-          </div>
-        </article>
+        </section>
       {/each}
     </div>
   {/if}
