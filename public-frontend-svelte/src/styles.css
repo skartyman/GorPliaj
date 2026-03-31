@@ -526,6 +526,21 @@ textarea {
   gap: 0.8rem;
 }
 
+.map-controls {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.map-control-btn {
+  min-width: 2.4rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.map-control-btn-reset {
+  min-width: 4rem;
+}
+
 .map-zone {
   border: 0;
   border-radius: 0;
@@ -539,6 +554,8 @@ textarea {
   background: transparent;
   border-radius: 0.75rem;
   border: 0;
+  transform-origin: 50% 50%;
+  transition: transform 0.15s ease;
 }
 
 .table-dot {
