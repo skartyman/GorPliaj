@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
-import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { useInteractiveMap } from '../hooks/useInteractiveMap';
 
 function getTimeKey(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -16,7 +16,7 @@ function getDateKey(value = new Date()) {
 }
 
 function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTableIds) {
-  if (!table.isActive || !table.isBookable) {
+  if (!table?.isActive || !table?.isBookable) {
     return 'UNAVAILABLE';
   }
 
@@ -40,25 +40,36 @@ function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTab
   return 'FREE';
 }
 
-function toPercent(value, total) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || !total) {
-    return 0;
+function parseStyleJson(styleJson) {
+  if (!styleJson) {
+    return {};
   }
 
-  return (value / total) * 100;
+  try {
+    const parsed = typeof styleJson === 'string' ? JSON.parse(styleJson) : styleJson;
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+
+    return {
+      background: typeof parsed.background === 'string' ? parsed.background : undefined,
+      borderColor: typeof parsed.borderColor === 'string' ? parsed.borderColor : undefined,
+      color: typeof parsed.color === 'string' ? parsed.color : undefined,
+      borderRadius: Number.isFinite(parsed.borderRadius) ? `${parsed.borderRadius}px` : undefined,
+      opacity: Number.isFinite(parsed.opacity) ? Math.min(1, Math.max(0.2, parsed.opacity)) : undefined
+    };
+  } catch {
+    return {};
+  }
 }
 
-function getStaticObjectClassName(type = '') {
-  return `neutral map-object-${String(type).toLowerCase()}`;
-}
+function mapObjectLabel(object, t) {
+  if (object.label) {
+    return object.label;
+  }
 
-function DetailRow({ label, value }) {
-  return (
-    <div className="detail-row">
-      <span className="muted">{label}</span>
-      <strong>{value || '—'}</strong>
-    </div>
-  );
+  const fallback = t(`mapEditor.objectType.${object.type}`);
+  return fallback && fallback !== `mapEditor.objectType.${object.type}` ? fallback : object.type || 'OBJECT';
 }
 
 export default function MapPage() {
@@ -115,6 +126,18 @@ export default function MapPage() {
     });
   }, [t]);
 
+  const mapDimensions = {
+    width: state.mapData?.map?.width || 1200,
+    height: state.mapData?.map?.height || 760
+  };
+
+  const { containerRef, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
+    worldWidth: mapDimensions.width,
+    worldHeight: mapDimensions.height,
+    minScale: 0.45,
+    maxScale: 3
+  });
+
   const tableMap = useMemo(
     () => new Map((state.mapData?.tables || []).map((table) => [table.id, table])),
     [state.mapData?.tables]
@@ -145,43 +168,35 @@ export default function MapPage() {
   const heldTableIds = useMemo(() => new Set(state.availability.heldTableIds || []), [state.availability.heldTableIds]);
   const busyTableIds = useMemo(() => new Set(state.availability.busyTableIds || []), [state.availability.busyTableIds]);
 
-  const selectedTable = selectedTableId ? tableMap.get(selectedTableId) : null;
-  const selectedReservations = (selectedTable && reservationsByTable[selectedTable.id]) || [];
-  const selectedStatus = selectedTable
-    ? getTableDisplayStatus(selectedTable, reservationsByTable, heldTableIds, busyTableIds)
-    : null;
-
-  const mapDimensions = {
-    width: state.mapData?.map?.width || 1200,
-    height: state.mapData?.map?.height || 700
-  };
-
-  const mapObjects = useMemo(() => {
+  const mapEntities = useMemo(() => {
     const objects = state.mapData?.objects || [];
 
     return objects.map((object) => {
       const isTable = object.type === 'TABLE';
       const table = isTable && object.tableId ? tableMap.get(object.tableId) : null;
       const zone = table ? zoneMap.get(table.zoneId) : null;
-
       return {
         ...object,
         isTable,
         table,
         zone,
-        left: toPercent(object.x, mapDimensions.width),
-        top: toPercent(object.y, mapDimensions.height),
-        width: Math.max(toPercent(object.width, mapDimensions.width), 2.5),
-        height: Math.max(toPercent(object.height, mapDimensions.height), 2.5)
+        width: Math.max(Number(object.width) || 44, 24),
+        height: Math.max(Number(object.height) || 44, 24),
+        x: Number(object.x) || 0,
+        y: Number(object.y) || 0
       };
     });
-  }, [mapDimensions.height, mapDimensions.width, state.mapData?.objects, tableMap, zoneMap]);
+  }, [state.mapData?.objects, tableMap, zoneMap]);
 
-  const mapBackgroundStyle = {
-    width: '100%',
-    aspectRatio: `${state.mapData?.map?.width || 1200} / ${state.mapData?.map?.height || 700}`,
-    '--map-background-color': state.mapData?.map?.backgroundColor || '#f8fafc',
-    '--map-background-image': state.mapData?.map?.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+  const selectedTable = selectedTableId ? tableMap.get(selectedTableId) : null;
+  const selectedReservations = (selectedTable && reservationsByTable[selectedTable.id]) || [];
+  const selectedStatus = selectedTable
+    ? getTableDisplayStatus(selectedTable, reservationsByTable, heldTableIds, busyTableIds)
+    : null;
+
+  const onBookTable = (table) => {
+    // future booking flow callback
+    console.info('booking hook', table);
   };
 
   return (
@@ -203,10 +218,15 @@ export default function MapPage() {
           </div>
           <div className="hero-inline-note">{t('map.note')}</div>
         </section>
-        {state.loading ? <p>{t('map.loading')}</p> : null}
-        {state.error ? <p className="error">{state.error}</p> : null}
 
-        {!state.loading && !state.error && state.mapData ? (
+        {state.loading ? <div className="map-state">{t('map.loading')}</div> : null}
+        {state.error ? <div className="map-state error">{state.error}</div> : null}
+
+        {!state.loading && !state.error && !state.mapData?.map ? (
+          <div className="map-state muted">Map is empty. Add map data in editor.</div>
+        ) : null}
+
+        {!state.loading && !state.error && state.mapData?.map ? (
           <>
             <div className="map-meta muted">
               {t('map.meta', {
@@ -216,96 +236,77 @@ export default function MapPage() {
               })}
             </div>
 
-            <div className="map-layout">
-              <div className="admin-map-canvas" style={mapBackgroundStyle}>
-                <div className="admin-map-canvas-background" aria-hidden="true" />
-                <div className="admin-map-canvas-grid" aria-hidden="true" />
-
-                {mapObjects.map((object) => {
-                  const status = object.table
-                    ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
-                    : 'NEUTRAL';
-
-                  const baseStyle = {
-                    left: `${object.left}%`,
-                    top: `${object.top}%`,
-                    width: `${object.width}%`,
-                    height: `${object.height}%`,
-                    transform: `rotate(${object.rotation || 0}deg)`,
-                    zIndex: object.zIndex || 2
-                  };
-
-                  if (!object.isTable) {
-                    return (
-                      <div key={object.id} className={`map-object ${getStaticObjectClassName(object.type)}`} style={baseStyle} title={object.label || object.type}>
-                        <span>{object.label || t(`mapEditor.objectType.${object.type}`)}</span>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={object.id}
-                      type="button"
-                      className={`map-object ${status.toLowerCase()} ${selectedTableId === object.tableId ? 'selected' : ''}`}
-                      style={baseStyle}
-                      title={
-                        object.table
-                          ? `${object.table.name || object.table.code || t('map.fields.table')}${object.zone?.name ? ` • ${object.zone.name}` : ''}`
-                          : object.label || object.type
-                      }
-                      onClick={() => (object.tableId ? setSelectedTableId(object.tableId) : setSelectedTableId(null))}
-                    >
-                      <span>{object.table?.code || object.table?.name || object.label || t('map.fields.table')}</span>
-                    </button>
-                  );
-                })}
+            <div className="interactive-map-shell">
+              <div className="interactive-map-controls">
+                <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
+                <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>
+                <span className="map-zoom-indicator">
+                  {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
+                </span>
               </div>
 
-              <PanelCard title={t('map.tableDetails')} subtitle={t('map.tableDetailsDescription')} className="full-height">
-                {!selectedTable ? <p className="muted">{t('map.noTableSelected')}</p> : null}
-                {selectedTable ? (
-                  <>
-                    {selectedTable.photoUrl ? (
-                      <div className="table-photo-card">
-                        <img src={selectedTable.photoUrl} alt={t('map.tablePhotoAlt', { table: selectedTable.code || selectedTable.name || t('map.fields.table') })} />
-                      </div>
-                    ) : null}
+              <div className="interactive-map-viewport" ref={containerRef} {...handlers}>
+                <div
+                  className="interactive-map-world"
+                  style={{
+                    width: mapDimensions.width,
+                    height: mapDimensions.height,
+                    transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
+                  }}
+                >
+                  <div
+                    className="interactive-map-background"
+                    style={{
+                      backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
+                      backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+                    }}
+                  />
 
-                    <div className="details-grid compact">
-                      <DetailRow label={t('map.fields.table')} value={selectedTable.code || selectedTable.name} />
-                      <DetailRow label={t('map.fields.zone')} value={zoneMap.get(selectedTable.zoneId)?.name || '—'} />
-                      <DetailRow label={t('map.fields.availability')} value={<StatusPill status={selectedStatus} />} />
-                      <DetailRow label={t('map.fields.capacity')} value={`${selectedTable.seatsMin || '—'}-${selectedTable.seatsMax || '—'}`} />
-                    </div>
+                  {mapEntities.map((object) => {
+                    const rotation = Number(object.rotation) || 0;
+                    const baseStyle = {
+                      left: object.x,
+                      top: object.y,
+                      width: object.width,
+                      height: object.height,
+                      transform: `rotate(${rotation}deg)`,
+                      zIndex: object.zIndex || 2
+                    };
 
-                    <h4>{t('map.activeReservations')}</h4>
-                    {!selectedReservations.length ? <p className="muted">{t('map.noActiveReservations')}</p> : null}
-                    {selectedReservations.length ? (
-                      <ul className="plain-list compact">
-                        {selectedReservations.slice(0, 3).map((reservation) => (
-                          <li key={reservation.id}>
-                            <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
-                            {formatDate(reservation.reservationDate, locale)} {formatTime(reservation.timeFrom, locale)} • <StatusPill status={reservation.status} />
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
+                    if (!object.isTable) {
+                      return (
+                        <div
+                          key={object.id}
+                          className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()}`}
+                          style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
+                          title={mapObjectLabel(object, t)}
+                        >
+                          <span>{mapObjectLabel(object, t)}</span>
+                        </div>
+                      );
+                    }
 
-                    <div className="actions">
-                      <button type="button" className="btn btn-secondary" disabled>
-                        {t('map.holdSoon', { soon: t('common.soon') })}
+                    const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
+                    const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
+
+                    return (
+                      <button
+                        key={object.id}
+                        type="button"
+                        className={`interactive-map-table ${status.toLowerCase()} ${selectedTableId === object.tableId ? 'selected' : ''}`}
+                        style={{
+                          ...baseStyle,
+                          borderRadius: tableShape === 'ROUND' ? 999 : 12
+                        }}
+                        title={object.table?.name || object.table?.code || t('map.fields.table')}
+                        onClick={() => setSelectedTableId(object.tableId)}
+                      >
+                        <span>{object.table?.code || object.table?.name || 'T'}</span>
                       </button>
-                      <button type="button" className="btn btn-secondary" disabled>
-                        {t('map.freeSoon', { soon: t('common.soon') })}
-                      </button>
-                      <button type="button" className="btn btn-secondary" disabled>
-                        {t('map.moveSoon', { soon: t('common.soon') })}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </PanelCard>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="map-legend">
@@ -315,6 +316,40 @@ export default function MapPage() {
               <span><i className="dot held" /> {t('map.legend.held')}</span>
               <span><i className="dot unavailable" /> {t('map.legend.unavailable')}</span>
             </div>
+
+            {selectedTable ? (
+              <div className="table-bottom-sheet" role="dialog" aria-live="polite">
+                <div className="table-sheet-head">
+                  <h4>{selectedTable.name || selectedTable.code || t('map.fields.table')}</h4>
+                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedTableId(null)}>Close</button>
+                </div>
+
+                <div className="details-grid compact table-sheet-grid">
+                  <div className="detail-row"><span className="muted">Code</span><strong>{selectedTable.code || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">Capacity</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">Deposit</span><strong>{selectedTable.deposit || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">Zone</span><strong>{zoneMap.get(selectedTable.zoneId)?.name || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">Bookable</span><strong>{selectedTable.isBookable ? 'Yes' : 'No'}</strong></div>
+                  <div className="detail-row"><span className="muted">Status</span><strong><StatusPill status={selectedStatus} /></strong></div>
+                </div>
+
+                {!selectedReservations.length ? <p className="muted">{t('map.noActiveReservations')}</p> : null}
+                {selectedReservations.length ? (
+                  <ul className="plain-list compact">
+                    {selectedReservations.slice(0, 3).map((reservation) => (
+                      <li key={reservation.id}>
+                        <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
+                        {formatDate(reservation.reservationDate, locale)} {formatTime(reservation.timeFrom, locale)} • <StatusPill status={reservation.status} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                <div className="actions">
+                  <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Prepare booking</button>
+                </div>
+              </div>
+            ) : null}
           </>
         ) : null}
       </PageContainer>
