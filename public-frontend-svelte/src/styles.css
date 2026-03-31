@@ -971,7 +971,7 @@ textarea {
 
 .menu-sticky-nav {
   position: sticky;
-  top: 0.55rem;
+  top: var(--menu-sticky-top, 0.55rem);
   z-index: 20;
   margin-bottom: 0.85rem;
   border: 1px solid var(--border);
@@ -989,7 +989,7 @@ textarea {
 }
 
 .menu-category-block {
-  scroll-margin-top: 7.25rem;
+  scroll-margin-top: 11rem;
 }
 
 .menu-category-title {
