@@ -40,16 +40,24 @@
     </div>
     <div class="h-scroll cards-scroll">
       {#if data.events?.length}
-        {#each data.events as event}
-          <article class="premium-card event-premium-card">
+        {#each data.events as event, index}
+          <article class={`premium-card event-premium-card ${index === 0 ? 'event-premium-card-featured' : ''}`}>
             <a href={`/events/${event.slug}`} class="media-link">
               <img src={event.posterImage || '/icons/lebedi.jpg'} alt={event.title} loading="lazy" decoding="async" />
+              {#if index === 0}
+                <div class="event-premium-overlay-copy">
+                  <p class="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
+                  <h3>{event.title}</h3>
+                </div>
+              {/if}
             </a>
-            <div class="event-copy">
-              <p class="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
-              <h3>{event.title}</h3>
-              <a class="btn btn-primary" href={`/events/${event.slug}`}>Смотреть</a>
-            </div>
+            {#if index !== 0}
+              <div class="event-copy">
+                <p class="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
+                <h3>{event.title}</h3>
+                <a class="btn btn-primary" href={`/events/${event.slug}`}>Смотреть</a>
+              </div>
+            {/if}
           </article>
         {/each}
       {:else}

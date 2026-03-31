@@ -20,8 +20,8 @@
       <div class="state">Поки немає опублікованих подій.</div>
     {:else}
       <div class="events-grid">
-        {#each result.events as event}
-          <EventCard {event} />
+        {#each result.events as event, index}
+          <EventCard {event} featured={index === 0} />
         {/each}
       </div>
       <p class="muted source-note">Джерело: реальний API</p>
