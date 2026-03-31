@@ -22,9 +22,7 @@
   let categoryNavElement: HTMLDivElement | null = null;
   let categoryAnchors: Record<string, HTMLElement | null> = {};
   let categoryObserver: IntersectionObserver | null = null;
-  let headerHeight = 64;
   let navHeight = 96;
-  let stickyTopOffset = 72;
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -35,7 +33,8 @@
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
   }
-  $: if (browser && categories.length) {
+  $: if (browser) {
+    categoryAnchors = {};
     setupCategoryObserver();
   }
   $: cartEntries = getCartEntries(menu, cart, $locale);
@@ -60,9 +59,7 @@
 
     if (browser) {
       const recalcNavHeight = () => {
-        headerHeight = document.querySelector<HTMLElement>('.site-header')?.offsetHeight || 64;
         navHeight = navContainer?.offsetHeight || 96;
-        stickyTopOffset = headerHeight + 8;
       };
 
       recalcNavHeight();
@@ -78,8 +75,7 @@
   function loadState(key: string) {
     try {
       const value = window.localStorage.getItem(key);
-      const parsed = value ? JSON.parse(value) : {};
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      return value ? JSON.parse(value) : {};
     } catch {
       return {};
     }
@@ -134,9 +130,13 @@
   function updateQuantity(itemId: number, delta: number) {
     const key = String(itemId);
     const nextQty = Math.max(0, getQuantity(itemId) + delta);
-    cart = !nextQty
-      ? Object.fromEntries(Object.entries(cart).filter(([itemKey]) => itemKey !== key))
-      : { ...cart, [key]: { quantity: nextQty } };
+    if (!nextQty) {
+      delete cart[key];
+    } else {
+      cart[key] = { quantity: nextQty };
+    }
+
+    cart = { ...cart };
     persistState(CART_STORAGE_KEY, cart);
   }
 
@@ -223,7 +223,7 @@
       },
       {
         root: null,
-        rootMargin: `-${stickyTopOffset + navHeight + 8}px 0px -60% 0px`,
+        rootMargin: `-${navHeight + 8}px 0px -65% 0px`,
         threshold: [0.15, 0.4, 0.7]
       }
     );
@@ -241,7 +241,7 @@
     activeCategory = categoryKey;
     const target = categoryAnchors[categoryKey];
     if (!target) return;
-    const top = target.getBoundingClientRect().top + window.scrollY - stickyTopOffset - navHeight - 14;
+    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     scrollActiveChipIntoView();
   }
@@ -281,7 +281,7 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-sticky-nav" style={`--menu-sticky-top: ${stickyTopOffset}px;`} bind:this={navContainer}>
+    <div class="menu-sticky-nav" bind:this={navContainer}>
       <div class="menu-section-nav">
         {#each sections as section}
           <button
