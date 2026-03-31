@@ -770,19 +770,46 @@ textarea {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  border: 0;
-  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 1.15rem;
   overflow: hidden;
-  background: transparent;
+  background: #fff;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.menu-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "body price"
+    "body image";
+  gap: 0.55rem 0.7rem;
+  align-items: start;
+}
+
+.menu-card-body {
+  grid-area: body;
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.menu-title {
+  font-size: 1.05rem;
+  line-height: 1.15;
 }
 
 .menu-image-wrap {
+  grid-area: image;
   position: relative;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  aspect-ratio: 16 / 10;
+  width: min(45vw, 10.5rem);
+  aspect-ratio: 4 / 3;
+  border-radius: 0.95rem;
   overflow: hidden;
+  justify-self: end;
 }
 
 .menu-image {
@@ -803,23 +830,16 @@ textarea {
 }
 
 .menu-like {
-  position: absolute;
-  right: 0.6rem;
-  bottom: 0.6rem;
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 0.3rem 0.5rem;
+  background: #fff;
+  padding: 0.3rem 0.8rem;
+  min-height: 2.45rem;
+  font-weight: 600;
 }
 
 .menu-like.is-active {
   color: #be123c;
-}
-
-.menu-card-body {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.55rem 0.65rem 0.6rem;
 }
 
 .menu-description {
@@ -827,19 +847,26 @@ textarea {
   font-size: 0.9rem;
   line-height: 1.35;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .menu-price {
-  font-weight: 600;
+  grid-area: price;
+  justify-self: end;
+  align-self: start;
+  background: linear-gradient(135deg, #5f2eea, #b06cff);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-weight: 700;
   line-height: 1.2;
 }
 
 .menu-card-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 0.5rem;
 }
@@ -850,19 +877,45 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 999px;
   overflow: hidden;
+  background: #fff;
 }
 
 .menu-qty button {
   border: 0;
   background: #fff;
-  width: 2rem;
-  height: 2rem;
+  width: 2.35rem;
+  height: 2.35rem;
+}
+
+.menu-qty button:last-child {
+  background: #1f60ff;
+  color: #fff;
 }
 
 .menu-qty span {
-  min-width: 1.5rem;
+  min-width: 1.8rem;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+@media (max-width: 360px) {
+  .menu-card-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "price"
+      "image"
+      "body";
+  }
+
+  .menu-price,
+  .menu-image-wrap {
+    justify-self: start;
+  }
+
+  .menu-card-footer {
+    justify-content: space-between;
+  }
 }
 
 .menu-cart-fab {
