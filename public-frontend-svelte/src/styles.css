@@ -632,8 +632,8 @@ textarea {
   position: absolute;
   inset: 0;
   border-radius: 0.75rem;
-  background-size: contain;
-  background-position: center;
+  background-size: 100% 100%;
+  background-position: 0 0;
   background-repeat: no-repeat;
 }
 
