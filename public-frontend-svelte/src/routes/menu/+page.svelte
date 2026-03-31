@@ -23,6 +23,7 @@
   let categoryAnchors: Record<string, HTMLElement | null> = {};
   let categoryObserver: IntersectionObserver | null = null;
   let navHeight = 96;
+  let navTopOffset = 0;
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -60,6 +61,7 @@
     if (browser) {
       const recalcNavHeight = () => {
         navHeight = navContainer?.offsetHeight || 96;
+        navTopOffset = navContainer ? Number.parseFloat(window.getComputedStyle(navContainer).top || '0') || 0 : 0;
       };
 
       recalcNavHeight();
@@ -223,7 +225,7 @@
       },
       {
         root: null,
-        rootMargin: `-${navHeight + 8}px 0px -65% 0px`,
+        rootMargin: `-${navHeight + navTopOffset + 8}px 0px -65% 0px`,
         threshold: [0.15, 0.4, 0.7]
       }
     );
@@ -241,15 +243,15 @@
     activeCategory = categoryKey;
     const target = categoryAnchors[categoryKey];
     if (!target) return;
-    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 14;
+    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - navTopOffset - 14;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-    scrollActiveChipIntoView();
+    scrollActiveChipIntoView('smooth');
   }
 
-  function scrollActiveChipIntoView() {
+  function scrollActiveChipIntoView(behavior: ScrollBehavior = 'auto') {
     if (!categoryNavElement || !activeCategory) return;
     const activeChip = categoryNavElement.querySelector<HTMLButtonElement>(`button[data-category-chip="${CSS.escape(activeCategory)}"]`);
-    activeChip?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    activeChip?.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
   }
 
   function selectSection(section: 'kitchen' | 'bar') {
@@ -271,9 +273,6 @@
 </svelte:head>
 
 <section class="page-block menu-page">
-  <h1>{$t('menuTitle')}</h1>
-  <p class="muted">{$t('menuSubtitle')}</p>
-
   {#if loading}
     <div class="state">{$t('menuLoading')}</div>
   {:else if errorMessage}
@@ -308,6 +307,9 @@
         {/each}
       </div>
     </div>
+
+    <h1>{$t('menuTitle')}</h1>
+    <p class="muted">{$t('menuSubtitle')}</p>
 
     <div class="menu-section-content">
       {#each categories as category}

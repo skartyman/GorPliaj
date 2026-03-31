@@ -7,6 +7,7 @@
   --accent-soft: #d9ecf8;
   --border: #d6dee7;
   --danger: #c03434;
+  --header-sticky-height: calc(3.75rem + env(safe-area-inset-top));
 }
 
 *,
@@ -971,7 +972,7 @@ textarea {
 
 .menu-sticky-nav {
   position: sticky;
-  top: 0.55rem;
+  top: calc(var(--header-sticky-height) + 0.4rem);
   z-index: 20;
   margin-bottom: 0.85rem;
   border: 1px solid var(--border);
@@ -989,7 +990,7 @@ textarea {
 }
 
 .menu-category-block {
-  scroll-margin-top: 7.25rem;
+  scroll-margin-top: 10.75rem;
 }
 
 .menu-category-title {
