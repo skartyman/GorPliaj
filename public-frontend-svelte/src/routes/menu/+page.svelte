@@ -225,29 +225,34 @@
     <div class="menu-grid">
       {#each activeItems as item}
         <article class="menu-card">
-          <div class="menu-image-wrap">
-            {#if item.imageUrl}
-              <img src={item.imageUrl} alt={localizedText(item.name, $locale)} class="menu-image" loading="lazy" />
-            {:else}
-              <div class="menu-image-fallback">GP</div>
-            {/if}
+          <div class="menu-card-main">
+            <div class="menu-card-body">
+              <strong class="menu-title">{localizedText(item.name, $locale)}</strong>
+              <p class="muted menu-description">{localizedText(item.description, $locale)}</p>
+            </div>
+
+            <span class="menu-price">{formatPrice(Number(item.price || 0))} ₴</span>
+
+            <div class="menu-image-wrap">
+              {#if item.imageUrl}
+                <img src={item.imageUrl} alt={localizedText(item.name, $locale)} class="menu-image" loading="lazy" />
+              {:else}
+                <div class="menu-image-fallback">GP</div>
+              {/if}
+            </div>
+          </div>
+
+          <div class="menu-card-footer">
             <button
               type="button"
               class={`menu-like ${likes[String(item.id)] ? 'is-active' : ''}`}
               on:click={() => toggleLike(item.id)}
               aria-label={$t('menuLike')}
             >♥ {item.likesCount || 0}</button>
-          </div>
-          <div class="menu-card-body">
-            <strong>{localizedText(item.name, $locale)}</strong>
-            <p class="muted menu-description">{localizedText(item.description, $locale)}</p>
-            <div class="menu-card-footer">
-              <span class="menu-price">{formatPrice(Number(item.price || 0))} ₴</span>
-              <div class="menu-qty">
-                <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
-                <span>{getQuantity(item.id)}</span>
-                <button type="button" on:click={() => updateQuantity(item.id, 1)}>+</button>
-              </div>
+            <div class="menu-qty">
+              <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
+              <span>{getQuantity(item.id)}</span>
+              <button type="button" on:click={() => updateQuantity(item.id, 1)}>+</button>
             </div>
           </div>
         </article>
