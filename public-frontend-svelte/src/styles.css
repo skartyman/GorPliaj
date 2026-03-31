@@ -28,7 +28,7 @@ a {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto;
 }
 
 .site-header {
@@ -126,25 +126,25 @@ a {
 }
 
 .page-content {
-  padding: 0.9rem 1rem 5rem;
+  padding: 1rem 1.25rem 2rem;
 }
 
 .home-flow {
   display: grid;
-  gap: 1.1rem;
+  gap: 1.75rem;
   max-width: 980px;
   margin: 0 auto;
 }
 
 .home-section {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
 .premium-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 1.15rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -171,7 +171,7 @@ a {
 }
 
 .event-copy {
-  padding: 0.95rem;
+  padding: 1rem 0.1rem;
   display: grid;
   gap: 0.6rem;
 }
@@ -183,12 +183,15 @@ a {
 
 .media-link {
   display: block;
+  position: relative;
+  border-radius: 1.1rem;
+  overflow: hidden;
 }
 
 .booking-card,
 .about-card {
-  padding: 1.2rem;
-  border-radius: 1.25rem;
+  padding: 0.3rem 0;
+  border-radius: 0;
 }
 
 .booking-main-btn,
@@ -226,7 +229,7 @@ a {
 }
 
 .map-embed-wrap {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 1rem;
   overflow: hidden;
 }
@@ -238,12 +241,12 @@ a {
 }
 
 .page-block {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 1rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0.3rem 0;
   max-width: 980px;
-  margin: 0 auto 0.75rem;
+  margin: 0 auto;
 }
 
 .home-hero {
@@ -295,10 +298,13 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.55rem 0.85rem;
-  border-radius: 0.65rem;
+  padding: 0.78rem 1.25rem;
+  border-radius: 1rem;
   font-weight: 600;
-  border: 1px solid transparent;
+  border: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  text-decoration: none;
 }
 
 .btn-primary {
@@ -307,9 +313,8 @@ a {
 }
 
 .btn-secondary {
-  background: #fff;
+  background: color-mix(in srgb, var(--accent) 12%, white);
   color: var(--accent);
-  border-color: var(--accent-soft);
 }
 
 .split {
@@ -333,14 +338,16 @@ a {
 
 .events-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 1.8rem;
 }
 
 .event-card {
-  border: 1px solid var(--border);
-  border-radius: 0.8rem;
+  border: 0;
+  border-radius: 1.1rem;
   overflow: hidden;
-  background: #fff;
+  background: transparent;
+  display: grid;
+  gap: 0.8rem;
 }
 
 .event-card img,
@@ -352,7 +359,7 @@ a {
 }
 
 .event-card-content {
-  padding: 0.75rem;
+  padding: 0 0.1rem;
 }
 
 .event-date {
@@ -412,8 +419,8 @@ textarea {
 }
 
 .map-zone {
-  border: 1px solid var(--border);
-  border-radius: 0.8rem;
+  border: 0;
+  border-radius: 0;
   padding: 0.75rem;
   margin-bottom: 0.6rem;
 }
@@ -421,9 +428,9 @@ textarea {
 .tables-grid {
   position: relative;
   min-height: 160px;
-  background: #f8fbff;
+  background: transparent;
   border-radius: 0.75rem;
-  border: 1px solid var(--accent-soft);
+  border: 0;
 }
 
 .table-dot {
@@ -442,8 +449,8 @@ textarea {
 .table-dot.selected { border-color: #111827; }
 
 .map-side-panel {
-  border: 1px solid var(--border);
-  border-radius: 0.8rem;
+  border: 0;
+  border-radius: 0;
   padding: 0.8rem;
 }
 
@@ -458,30 +465,9 @@ textarea {
 }
 
 .site-footer {
-  padding: 0.75rem 1rem 4.5rem;
+  padding: 2rem 1rem 1.5rem;
   text-align: center;
   color: var(--muted);
-}
-
-.bottom-nav {
-  position: fixed;
-  inset: auto 0 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.bottom-link {
-  text-align: center;
-  padding: 0.7rem 0.2rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.bottom-link.is-active {
-  color: var(--accent);
-  font-weight: 700;
 }
 
 .text-link {
@@ -490,7 +476,7 @@ textarea {
 
 @media (min-width: 768px) {
   .page-content {
-    padding: 1rem 1rem 2rem;
+    padding: 1.25rem 1.5rem 2.5rem;
   }
 
   .split,
@@ -500,15 +486,8 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bottom-nav {
-    position: static;
-    border-top: none;
-    border-bottom: 1px solid var(--border);
-    order: 1;
-  }
-
   .site-footer {
-    padding-bottom: 1rem;
+    padding-bottom: 1.5rem;
   }
 }
 
@@ -529,6 +508,58 @@ img {
   display: block;
   aspect-ratio: 16 / 9;
   overflow: hidden;
+  position: relative;
+  border-radius: 1.1rem;
+}
+
+.event-card-image-link::after,
+.event-premium-card-featured .media-link::after {
+  content: '';
+  position: absolute;
+  inset: 42% 0 0;
+  background: linear-gradient(180deg, rgba(8, 19, 31, 0) 0%, rgba(8, 19, 31, 0.72) 100%);
+  pointer-events: none;
+}
+
+.event-card-featured {
+  grid-column: 1 / -1;
+}
+
+.event-card-featured .event-card-image-link {
+  aspect-ratio: 21 / 9;
+}
+
+.event-card-overlay-copy,
+.event-premium-overlay-copy {
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: 1rem;
+  z-index: 1;
+  color: #fff;
+}
+
+.event-card-overlay-copy h3,
+.event-premium-overlay-copy h3 {
+  margin: 0.3rem 0 0;
+}
+
+.event-card-overlay-copy .event-date,
+.event-premium-overlay-copy .event-date {
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+}
+
+.event-premium-card-featured {
+  grid-column: span 2;
+}
+
+.event-premium-card-featured .media-link {
+  aspect-ratio: 21 / 9;
+}
+
+.event-premium-card-featured .event-copy {
+  display: none;
 }
 
 .booking-success {
@@ -569,10 +600,6 @@ textarea {
   touch-action: manipulation;
 }
 
-.bottom-nav {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-}
-
 .menu-section-nav,
 .menu-category-nav {
   display: flex;
@@ -602,10 +629,10 @@ textarea {
 }
 
 .menu-card {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 0.85rem;
   overflow: hidden;
-  background: #fff;
+  background: transparent;
 }
 
 .menu-image-wrap {

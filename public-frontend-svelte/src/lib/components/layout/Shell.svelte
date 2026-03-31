@@ -1,6 +1,5 @@
 <script lang="ts">
   import Header from './Header.svelte';
-  import BottomNav from './BottomNav.svelte';
   import Footer from './Footer.svelte';
 </script>
 
@@ -10,5 +9,4 @@
     <slot />
   </main>
   <Footer />
-  <BottomNav />
 </div>
