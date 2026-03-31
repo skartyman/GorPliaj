@@ -18,6 +18,9 @@
   const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/lebedi.jpg'];
 
   $: menuPhotos = data.menuPreviewImages?.length ? data.menuPreviewImages : fallbackMenuPhotos;
+  const mapLink = 'https://maps.google.com/?q=Otrada%20Beach%20Odesa';
+  const mapPreview = '';
+
   $: newsCards = data.news?.length
     ? data.news
     : [
@@ -123,12 +126,14 @@
         <p><strong>Расписание:</strong> ежедневно 10:00 – 23:00</p>
       </div>
       <div class="map-embed-wrap">
-        <iframe
-          title="Карта ГорПляж"
-          src="https://maps.google.com/maps?q=Otrada%20Beach%20Odesa&t=&z=13&ie=UTF8&iwloc=&output=embed"
-          loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade"
-        ></iframe>
+        {#if mapPreview}
+          <img class="map-preview" src={mapPreview} alt="Предпросмотр карты" loading="lazy" decoding="async" />
+        {:else}
+          <div class="map-cta-card">
+            <p class="muted">Карта временно не загружена. Откройте локацию в приложении карт.</p>
+            <a href={mapLink} class="btn btn-primary" target="_blank" rel="noreferrer">Открыть карту</a>
+          </div>
+        {/if}
       </div>
     </article>
   </section>
