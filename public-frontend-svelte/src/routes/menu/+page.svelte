@@ -1,6 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { menuApi, type MenuCategory, type MenuItem } from '$lib/api/menu';
   import { locale, t } from '$lib/stores/i18n';
 
@@ -18,12 +18,16 @@
   let cartOpen = false;
   let cart: Record<string, { quantity: number }> = {};
   let likes: Record<string, boolean> = {};
-  let navContainer: HTMLDivElement | null = null;
+  let stickyStackElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
-  let categoryAnchors: Record<string, HTMLElement | null> = {};
+  let categoryButtons = new Map<string, HTMLButtonElement>();
+  let sectionNodes = new Map<string, HTMLElement>();
   let categoryObserver: IntersectionObserver | null = null;
-  let navHeight = 96;
-  let navTopOffset = 0;
+  let stickyStackHeight = 96;
+  let headerOffset = 0;
+  let lastScrolledCategory = '';
+  let isProgrammaticScroll = false;
+  let programmaticScrollResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -34,13 +38,14 @@
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
   }
-  $: if (browser) {
-    categoryAnchors = {};
-    setupCategoryObserver();
-  }
   $: cartEntries = getCartEntries(menu, cart, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
+  $: sectionScrollMarginTop = `${stickyStackHeight + headerOffset + 16}px`;
+  $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
+    scrollActiveChipIntoView('smooth');
+    lastScrolledCategory = activeCategory;
+  }
 
   onMount(() => {
     if (browser) {
@@ -59,18 +64,27 @@
       });
 
     if (browser) {
-      const recalcNavHeight = () => {
-        navHeight = navContainer?.offsetHeight || 96;
-        navTopOffset = navContainer ? Number.parseFloat(window.getComputedStyle(navContainer).top || '0') || 0 : 0;
+      const recalcStickyHeights = () => {
+        stickyStackHeight = stickyStackElement?.offsetHeight || 96;
+        headerOffset = Number.parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--header-sticky-height') || '0'
+        ) || 0;
       };
 
-      recalcNavHeight();
-      window.addEventListener('resize', recalcNavHeight);
+      recalcStickyHeights();
+      setupCategoryObserver();
+      window.addEventListener('resize', recalcStickyHeights);
 
       return () => {
-        window.removeEventListener('resize', recalcNavHeight);
-        categoryObserver?.disconnect();
+        window.removeEventListener('resize', recalcStickyHeights);
       };
+    }
+  });
+
+  onDestroy(() => {
+    categoryObserver?.disconnect();
+    if (programmaticScrollResetTimer) {
+      clearTimeout(programmaticScrollResetTimer);
     }
   });
 
@@ -210,47 +224,55 @@
     if (!browser) return;
 
     categoryObserver?.disconnect();
+    if (!sectionNodes.size) return;
+
     categoryObserver = new IntersectionObserver(
       (entries) => {
+        if (isProgrammaticScroll) return;
+
         const visible = entries
           .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio || a.boundingClientRect.top - b.boundingClientRect.top);
 
         if (!visible.length) return;
         const currentKey = visible[0].target.getAttribute('data-category-key');
         if (currentKey) {
           activeCategory = currentKey;
-          scrollActiveChipIntoView();
         }
       },
       {
         root: null,
-        rootMargin: `-${navHeight + navTopOffset + 8}px 0px -65% 0px`,
-        threshold: [0.15, 0.4, 0.7]
+        rootMargin: `-${stickyStackHeight + headerOffset + 10}px 0px -50% 0px`,
+        threshold: [0.25, 0.45, 0.65, 0.85]
       }
     );
 
-    requestAnimationFrame(() => {
-      Object.values(categoryAnchors).forEach((element) => {
-        if (element) {
-          categoryObserver?.observe(element);
-        }
-      });
+    sectionNodes.forEach((element) => {
+      categoryObserver?.observe(element);
     });
   }
 
   function scrollToCategory(categoryKey: string) {
     activeCategory = categoryKey;
-    const target = categoryAnchors[categoryKey];
+    const target = sectionNodes.get(categoryKey);
     if (!target) return;
-    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - navTopOffset - 14;
+    isProgrammaticScroll = true;
+    if (programmaticScrollResetTimer) {
+      clearTimeout(programmaticScrollResetTimer);
+    }
+
+    const top = target.getBoundingClientRect().top + window.scrollY - stickyStackHeight - headerOffset - 16;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     scrollActiveChipIntoView('smooth');
+
+    programmaticScrollResetTimer = setTimeout(() => {
+      isProgrammaticScroll = false;
+    }, 550);
   }
 
   function scrollActiveChipIntoView(behavior: ScrollBehavior = 'auto') {
     if (!categoryNavElement || !activeCategory) return;
-    const activeChip = categoryNavElement.querySelector<HTMLButtonElement>(`button[data-category-chip="${CSS.escape(activeCategory)}"]`);
+    const activeChip = categoryButtons.get(activeCategory);
     activeChip?.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
   }
 
@@ -264,6 +286,26 @@
         scrollToCategory(first);
       });
     }
+  }
+
+  function bindCategoryButton(node: HTMLButtonElement, categoryKey: string) {
+    categoryButtons.set(categoryKey, node);
+    return {
+      destroy() {
+        categoryButtons.delete(categoryKey);
+      }
+    };
+  }
+
+  function bindCategorySection(node: HTMLElement, categoryKey: string) {
+    sectionNodes.set(categoryKey, node);
+    setupCategoryObserver();
+    return {
+      destroy() {
+        sectionNodes.delete(categoryKey);
+        categoryObserver?.unobserve(node);
+      }
+    };
   }
 </script>
 
@@ -280,7 +322,7 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-sticky-nav" bind:this={navContainer}>
+    <div class="menu-sticky-stack" bind:this={stickyStackElement}>
       <div class="menu-section-nav">
         {#each sections as section}
           <button
@@ -300,6 +342,7 @@
             type="button"
             class={`menu-chip menu-chip-category ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
             data-category-chip={category.categoryKey}
+            use:bindCategoryButton={category.categoryKey}
             on:click={() => scrollToCategory(category.categoryKey)}
           >
             {category.categoryLabel}
@@ -316,7 +359,8 @@
         <section
           class="menu-category-block"
           data-category-key={category.categoryKey}
-          bind:this={categoryAnchors[category.categoryKey]}
+          style:scroll-margin-top={sectionScrollMarginTop}
+          use:bindCategorySection={category.categoryKey}
         >
           <h2 class="menu-category-title">{category.categoryLabel}</h2>
           <div class="menu-grid">
