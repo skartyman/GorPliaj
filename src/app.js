@@ -68,7 +68,7 @@ app.get('/legacy/*', (req, res) => {
   });
 });
 
-app.get('/booking', (req, res) => {
+app.get(['/booking', '/booking/*'], (req, res) => {
   if (hasSveltePublicBuild) {
     return sendSvelteIndex(res);
   }

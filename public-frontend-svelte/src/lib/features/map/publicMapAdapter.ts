@@ -56,21 +56,25 @@ export async function getPublicMapData(params: MapLoadParams = {}) {
   const normalizedMap = toPublicMap(map);
 
   if (params.date && params.timeFrom) {
-    const availability = await mapApi.availability<{
-      busyTableIds: number[];
-      heldTableIds: number[];
-    }>(normalizedMap.id, params.date, params.timeFrom);
+    try {
+      const availability = await mapApi.availability<{
+        busyTableIds: number[];
+        heldTableIds: number[];
+      }>(normalizedMap.id, params.date, params.timeFrom);
 
-    const busy = new Set(availability.busyTableIds || []);
-    const held = new Set(availability.heldTableIds || []);
+      const busy = new Set(availability.busyTableIds || []);
+      const held = new Set(availability.heldTableIds || []);
 
-    normalizedMap.zones = normalizedMap.zones.map((zone) => ({
-      ...zone,
-      tables: zone.tables.map((table) => ({
-        ...table,
-        status: busy.has(table.id) ? 'busy' : held.has(table.id) ? 'held' : 'free'
-      }))
-    }));
+      normalizedMap.zones = normalizedMap.zones.map((zone) => ({
+        ...zone,
+        tables: zone.tables.map((table) => ({
+          ...table,
+          status: busy.has(table.id) ? 'busy' : held.has(table.id) ? 'held' : 'free'
+        }))
+      }));
+    } catch {
+      // If availability request fails, keep default "free" status instead of crashing booking/map pages.
+    }
   }
 
   return { map: normalizedMap, source: 'api' as const };
