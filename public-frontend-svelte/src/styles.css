@@ -719,13 +719,32 @@ textarea {
 .menu-section-nav,
 .menu-category-nav {
   display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.25rem;
+  overflow-x: hidden;
   margin-bottom: 0.6rem;
 }
 
+.menu-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.menu-page > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .menu-chip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--border);
   background: #fff;
   border-radius: 999px;
@@ -741,10 +760,16 @@ textarea {
 
 .menu-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .menu-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 0;
   border-radius: 0.85rem;
   overflow: hidden;
@@ -753,13 +778,18 @@ textarea {
 
 .menu-image-wrap {
   position: relative;
-  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
 }
 
 .menu-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .menu-image-fallback {
@@ -787,13 +817,31 @@ textarea {
 }
 
 .menu-card-body {
-  padding: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.55rem 0.65rem 0.6rem;
+}
+
+.menu-description {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.menu-price {
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .menu-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .menu-qty {
@@ -863,4 +911,11 @@ textarea {
   gap: 0.6rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid #eef2f7;
+}
+
+@media (max-width: 767px) {
+  .menu-page,
+  .menu-page * {
+    box-sizing: border-box;
+  }
 }

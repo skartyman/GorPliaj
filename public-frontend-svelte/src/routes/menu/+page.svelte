@@ -186,7 +186,7 @@
   <meta name="description" content={$t('menuMetaDescription')} />
 </svelte:head>
 
-<section class="page-block">
+<section class="page-block menu-page">
   <h1>{$t('menuTitle')}</h1>
   <p class="muted">{$t('menuSubtitle')}</p>
 
@@ -240,9 +240,9 @@
           </div>
           <div class="menu-card-body">
             <strong>{localizedText(item.name, $locale)}</strong>
-            <p class="muted">{localizedText(item.description, $locale)}</p>
+            <p class="muted menu-description">{localizedText(item.description, $locale)}</p>
             <div class="menu-card-footer">
-              <span>{formatPrice(Number(item.price || 0))} ₴</span>
+              <span class="menu-price">{formatPrice(Number(item.price || 0))} ₴</span>
               <div class="menu-qty">
                 <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
                 <span>{getQuantity(item.id)}</span>
