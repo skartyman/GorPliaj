@@ -18,16 +18,20 @@
   let cartOpen = false;
   let cart: Record<string, { quantity: number }> = {};
   let likes: Record<string, boolean> = {};
-  let stickyStackElement: HTMLDivElement | null = null;
+  let sectionNavElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
   let categoryButtons = new Map<string, HTMLButtonElement>();
   let sectionNodes = new Map<string, HTMLElement>();
   let categoryObserver: IntersectionObserver | null = null;
-  let stickyStackHeight = 96;
-  let headerOffset = 0;
+  let sectionNavHeight = 44;
+  let categoryNavHeight = 44;
+  let headerHeight = 0;
+  let observerEntries = new Map<string, IntersectionObserverEntry>();
   let lastScrolledCategory = '';
   let isProgrammaticScroll = false;
+  let programmaticScrollTargetY: number | null = null;
   let programmaticScrollResetTimer: ReturnType<typeof setTimeout> | null = null;
+  let activeCategoryChangedAt = 0;
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -41,7 +45,10 @@
   $: cartEntries = getCartEntries(menu, cart, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
-  $: sectionScrollMarginTop = `${stickyStackHeight + headerOffset + 16}px`;
+  $: stickyTop = headerHeight;
+  $: categoryStickyTop = headerHeight + sectionNavHeight;
+  $: contentAnchorOffset = headerHeight + sectionNavHeight + categoryNavHeight;
+  $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
     scrollActiveChipIntoView('smooth');
     lastScrolledCategory = activeCategory;
@@ -65,10 +72,12 @@
 
     if (browser) {
       const recalcStickyHeights = () => {
-        stickyStackHeight = stickyStackElement?.offsetHeight || 96;
-        headerOffset = Number.parseFloat(
+        headerHeight = Number.parseFloat(
           getComputedStyle(document.documentElement).getPropertyValue('--header-sticky-height') || '0'
         ) || 0;
+        sectionNavHeight = sectionNavElement?.offsetHeight || 44;
+        categoryNavHeight = categoryNavElement?.offsetHeight || 44;
+        setupCategoryObserver();
       };
 
       recalcStickyHeights();
@@ -220,30 +229,70 @@
     await navigator.clipboard.writeText(lines.join('\n'));
   }
 
+  function getCategoryByAnchor() {
+    const anchorY = headerHeight + sectionNavHeight + categoryNavHeight + 8;
+    const candidates = categories
+      .map((category) => {
+        const element = sectionNodes.get(category.categoryKey);
+        const entry = observerEntries.get(category.categoryKey);
+        if (!element || !entry) return null;
+        return {
+          key: category.categoryKey,
+          top: entry.boundingClientRect.top,
+          intersecting: entry.isIntersecting
+        };
+      })
+      .filter(Boolean) as Array<{ key: string; top: number; intersecting: boolean }>;
+
+    if (!candidates.length) return null;
+
+    const intersecting = candidates.filter((candidate) => candidate.intersecting);
+    if (intersecting.length) {
+      return intersecting.sort((a, b) => Math.abs(a.top - anchorY) - Math.abs(b.top - anchorY))[0].key;
+    }
+
+    const passed = candidates.filter((candidate) => candidate.top <= anchorY + 1).sort((a, b) => b.top - a.top);
+    if (passed.length) return passed[0].key;
+    return candidates.sort((a, b) => a.top - b.top)[0].key;
+  }
+
   function setupCategoryObserver() {
     if (!browser) return;
 
     categoryObserver?.disconnect();
+    observerEntries.clear();
     if (!sectionNodes.size) return;
 
     categoryObserver = new IntersectionObserver(
       (entries) => {
-        if (isProgrammaticScroll) return;
+        entries.forEach((entry) => {
+          const key = entry.target.getAttribute('data-category-key');
+          if (!key) return;
+          observerEntries.set(key, entry);
+        });
 
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio || a.boundingClientRect.top - b.boundingClientRect.top);
+        const currentKey = getCategoryByAnchor();
+        if (!currentKey) return;
 
-        if (!visible.length) return;
-        const currentKey = visible[0].target.getAttribute('data-category-key');
-        if (currentKey) {
+        if (isProgrammaticScroll) {
+          if (programmaticScrollTargetY !== null && Math.abs(window.scrollY - programmaticScrollTargetY) < 8) {
+            isProgrammaticScroll = false;
+            programmaticScrollTargetY = null;
+          } else {
+            return;
+          }
+        }
+
+        const now = Date.now();
+        if (currentKey !== activeCategory && now - activeCategoryChangedAt > 120) {
           activeCategory = currentKey;
+          activeCategoryChangedAt = now;
         }
       },
       {
         root: null,
-        rootMargin: `-${stickyStackHeight + headerOffset + 10}px 0px -50% 0px`,
-        threshold: [0.25, 0.45, 0.65, 0.85]
+        rootMargin: `-${contentAnchorOffset + 8}px 0px -55% 0px`,
+        threshold: [0, 0.15, 0.35, 0.6, 0.85, 1]
       }
     );
 
@@ -261,13 +310,15 @@
       clearTimeout(programmaticScrollResetTimer);
     }
 
-    const top = target.getBoundingClientRect().top + window.scrollY - stickyStackHeight - headerOffset - 16;
-    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    const top = target.getBoundingClientRect().top + window.scrollY - contentAnchorOffset - 16;
+    programmaticScrollTargetY = Math.max(0, top);
+    window.scrollTo({ top: programmaticScrollTargetY, behavior: 'smooth' });
     scrollActiveChipIntoView('smooth');
 
     programmaticScrollResetTimer = setTimeout(() => {
       isProgrammaticScroll = false;
-    }, 550);
+      programmaticScrollTargetY = null;
+    }, 700);
   }
 
   function scrollActiveChipIntoView(behavior: ScrollBehavior = 'auto') {
@@ -322,8 +373,7 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-sticky-stack" bind:this={stickyStackElement}>
-      <div class="menu-section-nav">
+    <div class="menu-section-nav menu-sticky-layer" bind:this={sectionNavElement} style:top={`${stickyTop}px`}>
         {#each sections as section}
           <button
             type="button"
@@ -334,9 +384,13 @@
             {section === 'kitchen' ? $t('menuSectionKitchen') : $t('menuSectionBar')}
           </button>
         {/each}
-      </div>
+    </div>
 
-      <div class="menu-category-nav" bind:this={categoryNavElement}>
+    <div
+      class="menu-category-nav menu-sticky-layer menu-category-sticky"
+      bind:this={categoryNavElement}
+      style:top={`${categoryStickyTop}px`}
+    >
         {#each categories as category}
           <button
             type="button"
@@ -348,7 +402,6 @@
             {category.categoryLabel}
           </button>
         {/each}
-      </div>
     </div>
 
     <h1>{$t('menuTitle')}</h1>

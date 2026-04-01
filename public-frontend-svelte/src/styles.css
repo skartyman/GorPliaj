@@ -934,7 +934,6 @@ textarea {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow-x: hidden;
 }
 
 .menu-page > * {
@@ -971,22 +970,31 @@ textarea {
   font-size: 0.82rem;
 }
 
-.menu-sticky-stack {
-  position: sticky;
-  top: var(--header-sticky-height);
-  z-index: 45;
-  margin-bottom: 0.85rem;
-  border-bottom: 1px solid rgba(214, 222, 231, 0.9);
-  background: rgba(247, 245, 241, 0.97);
-  backdrop-filter: blur(10px);
-  padding: 0.4rem 0.1rem 0.36rem;
-  display: grid;
-  gap: 0.22rem;
-}
-
 .menu-section-nav,
 .menu-category-nav {
+  margin-inline: -0.05rem;
   padding-inline: 0.1rem;
+}
+
+.menu-sticky-layer {
+  position: sticky;
+  z-index: 45;
+  background: rgba(247, 245, 241, 0.98);
+}
+
+.menu-section-nav.menu-sticky-layer {
+  z-index: 49;
+  padding-top: 0.35rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(214, 222, 231, 0.85);
+}
+
+.menu-category-sticky {
+  z-index: 48;
+  padding-top: 0.3rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(214, 222, 231, 0.85);
+  margin-bottom: 0.85rem;
 }
 
 .menu-section-content {
