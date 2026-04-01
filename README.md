@@ -119,13 +119,12 @@ npm run admin:build
 
 Адмінка використовує cookie-based авторизацію і перевіряє сесію через `GET /api/admin/auth/me`.
 
-## Public frontend (SvelteKit, final cutover-prep phase)
+## Public frontend (SvelteKit, production)
 
 Новий публічний фронтенд винесено в окремий SvelteKit-проєкт:
 
-- `public-frontend-svelte/` — SvelteKit-проєкт для поетапної міграції публічної частини.
-- Production build нового клієнта збирається в `public/public-svelte/`.
-- Legacy-публічна версія в `public/` збережена як fallback/архів і не видаляється агресивно.
+- `public-frontend-svelte/` — SvelteKit-проєкт публічної частини.
+- Production build публічного клієнта збирається в `public/public-svelte/`.
 - Адмінка (`admin-frontend/`) працює окремо і не змінюється.
 
 ### Команди
@@ -136,12 +135,11 @@ npm run public:svelte:check
 npm run public:svelte:build
 ```
 
-### Поточний serve-flow (phase 5)
+### Поточний serve-flow
 
-- Express спочатку віддає `public/public-svelte` як primary public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu`.
-- Якщо Svelte build відсутній, автоматично використовується legacy public (`public/*.html`).
+- Express віддає `public/public-svelte` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu` та інших публічних маршрутів.
+- Якщо Svelte build відсутній, сервер завершує запуск з помилкою конфігурації.
 - Маршрути `/admin/*` і `/api/*` працюють окремо, без змін для адмінки та backend API.
-- Legacy-публіка доступна через `/legacy` (та `/legacy/*`) як безпечний fallback під час cutover.
 
 ### Production build / deploy
 

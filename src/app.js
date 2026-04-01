@@ -12,7 +12,8 @@ const app = express();
 const publicDir = path.join(__dirname, '..', 'public');
 const publicSvelteDir = path.join(publicDir, 'public-svelte');
 const adminAppDir = path.join(publicDir, 'admin-app');
-const hasSveltePublicBuild = fs.existsSync(path.join(publicSvelteDir, 'index.html'));
+const svelteIndexPath = path.join(publicSvelteDir, 'index.html');
+const hasSveltePublicBuild = fs.existsSync(svelteIndexPath);
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   Pragma: 'no-cache',
@@ -34,9 +35,11 @@ function setStaticHeaders(res, filePath) {
 }
 
 app.use(express.json());
-if (hasSveltePublicBuild) {
-  app.use(express.static(publicSvelteDir, { setHeaders: setStaticHeaders }));
+if (!hasSveltePublicBuild) {
+  throw new Error(`Svelte public build is missing: ${svelteIndexPath}`);
 }
+
+app.use(express.static(publicSvelteDir, { setHeaders: setStaticHeaders }));
 app.use(express.static(publicDir, { setHeaders: setStaticHeaders }));
 app.use('/admin/assets', express.static(path.join(adminAppDir, 'assets')));
 
@@ -46,72 +49,31 @@ app.use('/api/payments', paymentsRoutes);
 
 function sendSvelteIndex(res) {
   setNoCacheHeaders(res);
-  return res.sendFile(path.join(publicSvelteDir, 'index.html'));
+  return res.sendFile(svelteIndexPath);
 }
-
-function sendLegacyIndex(res) {
-  setNoCacheHeaders(res);
-  return res.sendFile(path.join(publicDir, 'index.html'));
-}
-
-app.get('/legacy', (req, res) => {
-  return sendLegacyIndex(res);
-});
-
-app.get('/legacy/*', (req, res) => {
-  const legacyPath = req.params[0] || '';
-  const safePath = path.normalize(legacyPath).replace(/^(\.\.(\/|\\|$))+/, '');
-  return res.sendFile(path.join(publicDir, safePath), (error) => {
-    if (error) {
-      sendLegacyIndex(res);
-    }
-  });
-});
 
 app.get(['/booking', '/booking/*'], (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  setNoCacheHeaders(res);
-  return res.sendFile(path.join(publicDir, 'booking.html'));
+  return sendSvelteIndex(res);
 });
 
 app.get('/menu', (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  setNoCacheHeaders(res);
-  return res.sendFile(path.join(publicDir, 'menu.html'));
+  return sendSvelteIndex(res);
 });
 
 app.get('/events', (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  setNoCacheHeaders(res);
-  return res.sendFile(path.join(publicDir, 'events.html'));
+  return sendSvelteIndex(res);
 });
 
 app.get('/events/:slug', (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  setNoCacheHeaders(res);
-  return res.sendFile(path.join(publicDir, 'event.html'));
+  return sendSvelteIndex(res);
 });
 
 app.get('/map', (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  return sendLegacyIndex(res);
+  return sendSvelteIndex(res);
 });
 
 app.get('/about', (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  return sendLegacyIndex(res);
+  return sendSvelteIndex(res);
 });
 
 app.get('/admin', (req, res) => {
@@ -124,10 +86,7 @@ app.get('/admin/*', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  if (hasSveltePublicBuild) {
-    return sendSvelteIndex(res);
-  }
-  return sendLegacyIndex(res);
+  return sendSvelteIndex(res);
 });
 
 module.exports = app;
