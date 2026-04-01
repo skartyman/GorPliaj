@@ -159,10 +159,6 @@
     }).format(value);
   }
 
-  function getQuantity(itemId: number) {
-    return Number($cartStore[String(itemId)]?.quantity || 0);
-  }
-
   function updateQuantity(itemId: number, delta: number) {
     cartStore.updateQuantity(itemId, delta);
   }
@@ -426,6 +422,7 @@
           <h2 class="menu-category-title">{category.categoryLabel}</h2>
           <div class="menu-grid">
             {#each category.items as item}
+              {@const quantity = Number(cartQuantities[String(item.id)]?.quantity || 0)}
               <article class="menu-card">
                 <div class="menu-card-main">
                   <div class="menu-card-body">
@@ -452,8 +449,8 @@
                     aria-label={$t('menuLike')}
                   >♥ {item.likesCount || 0}</button>
                   <div class="menu-qty">
-                    <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
-                    <span>{getQuantity(item.id)}</span>
+                    <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
+                    <span>{quantity}</span>
                     <button type="button" on:click={() => updateQuantity(item.id, 1)}>+</button>
                   </div>
                 </div>
