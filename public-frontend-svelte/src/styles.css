@@ -984,7 +984,7 @@ textarea {
 
 .menu-nav-stack {
   position: sticky;
-  top: var(--site-header-height);
+  top: calc(var(--site-header-height) - 1px);
   z-index: 46;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
@@ -992,20 +992,24 @@ textarea {
   margin: 0 auto;
   background: var(--bg);
   box-shadow: 0 1px 0 rgba(214, 222, 231, 0.85);
+  border: 1px solid rgba(214, 222, 231, 0.85);
+  border-top: 0;
+  border-radius: 0 0 0.9rem 0.9rem;
+  backdrop-filter: saturate(1.05) blur(6px);
 }
 
 .menu-section-nav {
   z-index: 49;
-  padding-top: 0.2rem;
-  padding-bottom: 0.3rem;
+  padding-top: 0.22rem;
+  padding-bottom: 0.28rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
   background: inherit;
 }
 
 .menu-category-sticky {
   z-index: 48;
-  padding-top: 0.25rem;
-  padding-bottom: 0.35rem;
+  padding-top: 0.16rem;
+  padding-bottom: 0.32rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
   background: inherit;
 }
@@ -1013,6 +1017,11 @@ textarea {
 .menu-section-content {
   display: grid;
   gap: 1rem;
+  padding-top: 0.9rem;
+}
+
+body.menu-unified-header .page-content {
+  padding-top: 0;
 }
 
 .menu-category-title {

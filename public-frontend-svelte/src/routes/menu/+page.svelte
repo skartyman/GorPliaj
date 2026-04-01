@@ -86,6 +86,7 @@
 
   onMount(() => {
     if (browser) {
+      document.body.classList.add('menu-unified-header');
       cartStore.hydrate();
       likes = loadState(LIKES_STORAGE_KEY);
     }
@@ -123,6 +124,9 @@
       categoryObserver?.disconnect();
       navResizeObserver?.disconnect();
       cleanupProgrammaticScrollLock();
+      if (browser) {
+        document.body.classList.remove('menu-unified-header');
+      }
       window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('scroll', onWindowScroll);
       if ('onscrollend' in window) {
@@ -135,6 +139,9 @@
     categoryObserver?.disconnect();
     navResizeObserver?.disconnect();
     cleanupProgrammaticScrollLock();
+    if (browser) {
+      document.body.classList.remove('menu-unified-header');
+    }
   });
 
   function onWindowResize() {
@@ -522,9 +529,6 @@
           {/each}
       </div>
     </div>
-
-    <h1>{$t('menuTitle')}</h1>
-    <p class="muted">{$t('menuSubtitle')}</p>
 
     <div class="menu-section-content">
       {#each categories as category}
