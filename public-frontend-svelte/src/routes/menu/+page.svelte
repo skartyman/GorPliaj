@@ -495,6 +495,11 @@
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
     <div class="menu-nav-stack">
+      <header class="menu-control-header">
+        <h1>{$t('menuTitle')}</h1>
+        <p class="muted">{$t('menuSubtitle')}</p>
+      </header>
+
       <div class="menu-section-nav" bind:this={sectionNavElement}>
         {#each sections as section}
           <button
@@ -522,9 +527,6 @@
           {/each}
       </div>
     </div>
-
-    <h1>{$t('menuTitle')}</h1>
-    <p class="muted">{$t('menuSubtitle')}</p>
 
     <div class="menu-section-content">
       {#each categories as category}
