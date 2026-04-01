@@ -9,63 +9,84 @@
 
   const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
   const MENU_SCROLLED_CLASS = 'menu-page-scrolled';
+
+  // Sticky/nav metrics.
   const HEADER_OFFSET = 12;
   const NAV_SPACER_EXTRA = 10;
-  const PROGRAMMATIC_SCROLL_TIMEOUT = 900;
-  const INTERSECTION_BOTTOM_MARGIN = 0.58;
 
-  const sections: Array<'kitchen' | 'bar'> = ['kitchen', 'bar'];
+  // Scroll locking.
+  const PROGRAMMATIC_SCROLL_TIMEOUT = 1100;
+  const PROGRAMMATIC_SCROLL_TOLERANCE = 10;
 
+  // Observer tuning for stable mobile switching.
+  const INTERSECTION_BOTTOM_MARGIN = 0.62;
+  const INTERSECTION_THRESHOLDS = [0, 0.08, 0.2, 0.4, 0.65, 0.9, 1];
+
+  type MenuSection = 'kitchen' | 'bar';
+  type GroupedCategory = { categoryLabel: string; categoryKey: string; items: MenuItem[] };
+
+  const sections: MenuSection[] = ['kitchen', 'bar'];
+
+  // Data/UI state.
   let menu: MenuCategory[] = [];
-  let activeSection: 'kitchen' | 'bar' = 'kitchen';
-  let activeCategory = '';
   let loading = true;
   let errorMessage = '';
   let cartOpen = false;
   let likes: Record<string, boolean> = {};
 
+  // Navigation state.
+  let activeSection: MenuSection = 'kitchen';
+  let activeCategory = '';
+  let lastCenteredChip = '';
+
+  // Sticky elements and metrics.
+  let stickyTop = 0;
   let sectionNavElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
+  let sectionNavHeight = 44;
+  let categoryNavHeight = 44;
+
+  // Node registries.
   let categoryButtons = new Map<string, HTMLButtonElement>();
   let sectionNodes = new Map<string, HTMLElement>();
 
+  // Observer state.
   let categoryObserver: IntersectionObserver | null = null;
   let navResizeObserver: ResizeObserver | null = null;
   let observerEntries = new Map<string, IntersectionObserverEntry>();
 
-  let sectionNavHeight = 44;
-  let categoryNavHeight = 44;
-
-  // Blocking observer updates during smooth programmatic scroll.
+  // Programmatic scroll lock.
   let isProgrammaticScroll = false;
+  let pendingScrollTargetKey: string | null = null;
   let programmaticScrollTargetY: number | null = null;
   let programmaticScrollResetTimer: ReturnType<typeof setTimeout> | null = null;
 
-  let lastScrolledCategory = '';
-
+  // Derived data.
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
   $: if (availableSections.length && !availableSections.includes(activeSection)) {
     activeSection = availableSections[0];
   }
+
   $: categories = grouped[activeSection] || [];
   $: navStackHeight = sectionNavHeight + categoryNavHeight;
   $: contentAnchorOffset = navStackHeight + HEADER_OFFSET;
   $: sectionScrollMarginTop = `${contentAnchorOffset}px`;
   $: navSpacerHeight = navStackHeight + NAV_SPACER_EXTRA;
+
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
   }
-  $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
+
+  $: if (browser && activeCategory && activeCategory !== lastCenteredChip) {
     scrollActiveChipIntoView('smooth');
-    lastScrolledCategory = activeCategory;
+    lastCenteredChip = activeCategory;
   }
 
   $: cartEntries = getCartEntries(menu, $cartStore, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: cartQuantities = $cartStore;
-  $: stickyTop = 0;
 
   onMount(() => {
     if (browser) {
@@ -85,44 +106,66 @@
 
     if (!browser) return;
 
-    const recalcNavMetrics = () => {
-      sectionNavHeight = sectionNavElement?.offsetHeight || 44;
-      categoryNavHeight = categoryNavElement?.offsetHeight || 44;
-      setupCategoryObserver();
-    };
-
-    const syncScrolledState = () => {
-      document.documentElement.classList.toggle(MENU_SCROLLED_CLASS, window.scrollY > 8);
-      maybeFinishProgrammaticScroll();
-    };
-
     recalcNavMetrics();
     syncScrolledState();
     setupCategoryObserver();
 
-    navResizeObserver = new ResizeObserver(() => recalcNavMetrics());
+    navResizeObserver = new ResizeObserver(() => {
+      recalcNavMetrics();
+      setupCategoryObserver();
+    });
+
     if (sectionNavElement) navResizeObserver.observe(sectionNavElement);
     if (categoryNavElement) navResizeObserver.observe(categoryNavElement);
 
-    window.addEventListener('resize', recalcNavMetrics);
-    window.addEventListener('scroll', syncScrolledState, { passive: true });
+    window.addEventListener('resize', onWindowResize, { passive: true });
+    window.addEventListener('scroll', onWindowScroll, { passive: true });
+    if ('onscrollend' in window) {
+      window.addEventListener('scrollend', onWindowScrollEnd as EventListener, { passive: true });
+    }
 
     return () => {
+      categoryObserver?.disconnect();
       navResizeObserver?.disconnect();
-      navResizeObserver = null;
-      window.removeEventListener('resize', recalcNavMetrics);
-      window.removeEventListener('scroll', syncScrolledState);
+      cleanupProgrammaticScrollLock();
       document.documentElement.classList.remove(MENU_SCROLLED_CLASS);
+      window.removeEventListener('resize', onWindowResize);
+      window.removeEventListener('scroll', onWindowScroll);
+      if ('onscrollend' in window) {
+        window.removeEventListener('scrollend', onWindowScrollEnd as EventListener);
+      }
     };
   });
 
   onDestroy(() => {
     categoryObserver?.disconnect();
     navResizeObserver?.disconnect();
-    if (programmaticScrollResetTimer) {
-      clearTimeout(programmaticScrollResetTimer);
-    }
+    cleanupProgrammaticScrollLock();
   });
+
+  function onWindowResize() {
+    recalcNavMetrics();
+    setupCategoryObserver();
+    maybeFinishProgrammaticScroll('position');
+  }
+
+  function onWindowScroll() {
+    syncScrolledState();
+  }
+
+  function onWindowScrollEnd() {
+    maybeFinishProgrammaticScroll('scrollend');
+  }
+
+  function syncScrolledState() {
+    document.documentElement.classList.toggle(MENU_SCROLLED_CLASS, window.scrollY > 8);
+    maybeFinishProgrammaticScroll('position');
+  }
+
+  function recalcNavMetrics() {
+    sectionNavHeight = sectionNavElement?.offsetHeight || 44;
+    categoryNavHeight = categoryNavElement?.offsetHeight || 44;
+  }
 
   function loadState(key: string) {
     try {
@@ -144,7 +187,7 @@
     return value[currentLocale] || value.uk || value.en || '';
   }
 
-  function resolveCategorySection(categoryName: string, sectionKey?: string): 'kitchen' | 'bar' {
+  function resolveCategorySection(categoryName: string, sectionKey?: string): MenuSection {
     const explicit = String(sectionKey || '').toLowerCase();
     if (explicit === 'bar' || explicit === 'kitchen') return explicit;
 
@@ -154,7 +197,10 @@
   }
 
   function groupMenuBySection(menuData: MenuCategory[], currentLocale: 'uk' | 'en') {
-    const base = { kitchen: [] as Array<{ categoryLabel: string; categoryKey: string; items: MenuItem[] }>, bar: [] as Array<{ categoryLabel: string; categoryKey: string; items: MenuItem[] }> };
+    const base = {
+      kitchen: [] as GroupedCategory[],
+      bar: [] as GroupedCategory[]
+    };
 
     for (const category of menuData) {
       const categoryLabel = localizedText(category.name, currentLocale);
@@ -211,18 +257,16 @@
 
     menu = menu.map((category) => ({
       ...category,
-      items: category.items.map((item) => (item.id === itemId
-        ? { ...item, likesCount: Math.max(0, Number(item.likesCount || 0) + (nextLiked ? 1 : -1)) }
-        : item))
+      items: category.items.map((item) =>
+        item.id === itemId ? { ...item, likesCount: Math.max(0, Number(item.likesCount || 0) + (nextLiked ? 1 : -1)) } : item
+      )
     }));
 
     try {
       const response = await menuApi.setLike(itemId, nextLiked);
       menu = menu.map((category) => ({
         ...category,
-        items: category.items.map((item) => (item.id === itemId
-          ? { ...item, likesCount: Number(response.item.likesCount || 0) }
-          : item))
+        items: category.items.map((item) => (item.id === itemId ? { ...item, likesCount: Number(response.item.likesCount || 0) } : item))
       }));
     } catch {
       likes[key] = !nextLiked;
@@ -239,30 +283,41 @@
     }
 
     lines.push(`${$t('menuCartTotal')}: ${formatPrice(cartTotalPrice)} ₴`);
-
     await navigator.clipboard.writeText(lines.join('\n'));
   }
 
+  /**
+   * Chooses the category whose header is closest to the current visual anchor line
+   * below sticky navigation.
+   */
   function getCategoryByAnchor() {
     const anchorY = contentAnchorOffset;
+
     const candidates = categories
       .map((category) => {
         const element = sectionNodes.get(category.categoryKey);
         const entry = observerEntries.get(category.categoryKey);
         if (!element || !entry) return null;
+
         return {
           key: category.categoryKey,
           top: entry.boundingClientRect.top,
-          intersecting: entry.isIntersecting
+          intersecting: entry.isIntersecting,
+          ratio: entry.intersectionRatio
         };
       })
-      .filter(Boolean) as Array<{ key: string; top: number; intersecting: boolean }>;
+      .filter(Boolean) as Array<{ key: string; top: number; intersecting: boolean; ratio: number }>;
 
     if (!candidates.length) return null;
 
     const intersecting = candidates.filter((candidate) => candidate.intersecting);
     if (intersecting.length) {
-      return intersecting.sort((a, b) => Math.abs(a.top - anchorY) - Math.abs(b.top - anchorY))[0].key;
+      intersecting.sort((a, b) => {
+        const distanceDelta = Math.abs(a.top - anchorY) - Math.abs(b.top - anchorY);
+        if (distanceDelta !== 0) return distanceDelta;
+        return b.ratio - a.ratio;
+      });
+      return intersecting[0].key;
     }
 
     const passed = candidates.filter((candidate) => candidate.top <= anchorY + 1).sort((a, b) => b.top - a.top);
@@ -271,6 +326,10 @@
     return candidates.sort((a, b) => a.top - b.top)[0].key;
   }
 
+  /**
+   * Recreates observer with dynamic root margins based on sticky stack height.
+   * Narrow active zone reduces false category flips on fast mobile scroll.
+   */
   function setupCategoryObserver() {
     if (!browser) return;
 
@@ -279,64 +338,88 @@
 
     if (!sectionNodes.size || !categories.length) return;
 
-    const topOffset = contentAnchorOffset + 2;
+    const topOffset = contentAnchorOffset + 4;
     const bottomOffsetPercent = Math.round(INTERSECTION_BOTTOM_MARGIN * 100);
 
     categoryObserver = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
+        for (const entry of entries) {
           const key = entry.target.getAttribute('data-category-key');
-          if (!key) return;
+          if (!key) continue;
           observerEntries.set(key, entry);
-        });
+        }
 
-        if (isProgrammaticScroll && !maybeFinishProgrammaticScroll()) {
+        if (isProgrammaticScroll && !maybeFinishProgrammaticScroll('position')) {
           return;
         }
 
-        const currentKey = getCategoryByAnchor();
-        if (currentKey && currentKey !== activeCategory) {
-          activeCategory = currentKey;
+        const nextActiveKey = getCategoryByAnchor();
+        if (nextActiveKey && nextActiveKey !== activeCategory) {
+          activeCategory = nextActiveKey;
         }
       },
       {
         root: null,
-        // Top margin accounts for sticky stacked header, bottom margin stabilizes active chip handover.
         rootMargin: `-${topOffset}px 0px -${bottomOffsetPercent}% 0px`,
-        threshold: [0, 0.2, 0.4, 0.7, 1]
+        threshold: INTERSECTION_THRESHOLDS
       }
     );
 
-    categories.forEach((category) => {
+    for (const category of categories) {
       const node = sectionNodes.get(category.categoryKey);
-      if (node) categoryObserver?.observe(node);
-    });
-  }
-
-  function maybeFinishProgrammaticScroll() {
-    if (!isProgrammaticScroll || programmaticScrollTargetY === null) return false;
-    if (Math.abs(window.scrollY - programmaticScrollTargetY) <= 8) {
-      isProgrammaticScroll = false;
-      programmaticScrollTargetY = null;
-      return true;
+      if (node) categoryObserver.observe(node);
     }
-    return false;
   }
 
-  function startProgrammaticScrollLock(targetY: number) {
-    isProgrammaticScroll = true;
-    programmaticScrollTargetY = Math.max(0, targetY);
-
+  function cleanupProgrammaticScrollLock() {
     if (programmaticScrollResetTimer) {
       clearTimeout(programmaticScrollResetTimer);
+      programmaticScrollResetTimer = null;
     }
+    isProgrammaticScroll = false;
+    pendingScrollTargetKey = null;
+    programmaticScrollTargetY = null;
+  }
 
+  /**
+   * Starts a temporary lock while smooth scroll animation is in progress.
+   * The lock is released by scrollend (if supported), by position check, or by timeout fallback.
+   */
+  function startProgrammaticScrollLock(targetY: number, targetKey: string) {
+    isProgrammaticScroll = true;
+    pendingScrollTargetKey = targetKey;
+    programmaticScrollTargetY = Math.max(0, targetY);
+
+    if (programmaticScrollResetTimer) clearTimeout(programmaticScrollResetTimer);
     programmaticScrollResetTimer = setTimeout(() => {
-      isProgrammaticScroll = false;
-      programmaticScrollTargetY = null;
+      cleanupProgrammaticScrollLock();
     }, PROGRAMMATIC_SCROLL_TIMEOUT);
   }
 
+  /**
+   * Finalizes programmatic scrolling when we reached target coordinates
+   * or when browser emits scrollend for smooth scroll completion.
+   */
+  function maybeFinishProgrammaticScroll(mode: 'position' | 'scrollend') {
+    if (!isProgrammaticScroll || programmaticScrollTargetY === null) return false;
+
+    const reachedTarget = Math.abs(window.scrollY - programmaticScrollTargetY) <= PROGRAMMATIC_SCROLL_TOLERANCE;
+    if (mode === 'scrollend' || reachedTarget) {
+      const targetKey = pendingScrollTargetKey;
+      cleanupProgrammaticScrollLock();
+      if (targetKey) {
+        activeCategory = targetKey;
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Smoothly scrolls viewport to category block, keeping comfortable offset
+   * below sticky navigation.
+   */
   function scrollToCategory(categoryKey: string) {
     const target = sectionNodes.get(categoryKey);
     if (!target) return;
@@ -345,12 +428,16 @@
     scrollActiveChipIntoView('smooth');
 
     const top = target.getBoundingClientRect().top + window.scrollY - contentAnchorOffset;
-    startProgrammaticScrollLock(top);
+    startProgrammaticScrollLock(top, categoryKey);
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 
+  /**
+   * Horizontally centers active chip in its scroll container.
+   */
   function scrollActiveChipIntoView(behavior: ScrollBehavior = 'auto') {
     if (!categoryNavElement || !activeCategory) return;
+
     const activeChip = categoryButtons.get(activeCategory);
     if (!activeChip) return;
 
@@ -360,7 +447,11 @@
     categoryNavElement.scrollTo({ left: Math.max(0, nextLeft), behavior });
   }
 
-  function selectSection(section: 'kitchen' | 'bar') {
+  /**
+   * Section switcher: updates active section and predictably scrolls to
+   * first category of that section after DOM has been patched.
+   */
+  function selectSection(section: MenuSection) {
     if (activeSection === section) return;
 
     activeSection = section;
@@ -369,7 +460,6 @@
 
     activeCategory = firstCategory;
 
-    // Wait until DOM is updated for the new section categories, then scroll to first category.
     requestAnimationFrame(() => {
       setupCategoryObserver();
       scrollToCategory(firstCategory);
