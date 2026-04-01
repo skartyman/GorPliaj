@@ -25,7 +25,6 @@
   let sectionNavHeight = 44;
   let categoryNavHeight = 44;
   let navStackHeight = 88;
-  let headerHeight = 0;
   let observerEntries = new Map<string, IntersectionObserverEntry>();
   let lastScrolledCategory = '';
   let isProgrammaticScroll = false;
@@ -46,8 +45,8 @@
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: cartQuantities = $cartStore;
-  $: stickyTop = headerHeight;
-  $: contentAnchorOffset = headerHeight + navStackHeight;
+  $: stickyTop = 0;
+  $: contentAnchorOffset = navStackHeight;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
   $: navSpacerHeight = navStackHeight + 10;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
@@ -73,8 +72,6 @@
 
     if (browser) {
       const recalcStickyHeights = () => {
-        const headerElement = document.querySelector('.site-header') as HTMLElement | null;
-        headerHeight = Math.round(headerElement?.getBoundingClientRect().height || 0);
         sectionNavHeight = sectionNavElement?.offsetHeight || 44;
         categoryNavHeight = categoryNavElement?.offsetHeight || 44;
         navStackHeight = sectionNavHeight + categoryNavHeight;
@@ -218,7 +215,7 @@
   }
 
   function getCategoryByAnchor() {
-    const anchorY = headerHeight + sectionNavHeight + categoryNavHeight + 8;
+    const anchorY = sectionNavHeight + categoryNavHeight + 8;
     const candidates = categories
       .map((category) => {
         const element = sectionNodes.get(category.categoryKey);
