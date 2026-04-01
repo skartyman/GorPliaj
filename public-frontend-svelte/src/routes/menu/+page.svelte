@@ -8,6 +8,12 @@
   export let data: { menuPromise: Promise<MenuCategory[]> };
 
   const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
+  const MENU_SCROLLED_CLASS = 'menu-page-scrolled';
+  const HEADER_OFFSET = 12;
+  const NAV_SPACER_EXTRA = 10;
+  const PROGRAMMATIC_SCROLL_TIMEOUT = 900;
+  const INTERSECTION_BOTTOM_MARGIN = 0.58;
+
   const sections: Array<'kitchen' | 'bar'> = ['kitchen', 'bar'];
 
   let menu: MenuCategory[] = [];
@@ -17,21 +23,25 @@
   let errorMessage = '';
   let cartOpen = false;
   let likes: Record<string, boolean> = {};
+
   let sectionNavElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
   let categoryButtons = new Map<string, HTMLButtonElement>();
   let sectionNodes = new Map<string, HTMLElement>();
+
   let categoryObserver: IntersectionObserver | null = null;
+  let navResizeObserver: ResizeObserver | null = null;
+  let observerEntries = new Map<string, IntersectionObserverEntry>();
+
   let sectionNavHeight = 44;
   let categoryNavHeight = 44;
-  let navStackHeight = 88;
-  let observerEntries = new Map<string, IntersectionObserverEntry>();
-  let lastScrolledCategory = '';
+
+  // Blocking observer updates during smooth programmatic scroll.
   let isProgrammaticScroll = false;
   let programmaticScrollTargetY: number | null = null;
   let programmaticScrollResetTimer: ReturnType<typeof setTimeout> | null = null;
-  let activeCategoryChangedAt = 0;
-  const MENU_SCROLLED_CLASS = 'menu-page-scrolled';
+
+  let lastScrolledCategory = '';
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -39,21 +49,23 @@
     activeSection = availableSections[0];
   }
   $: categories = grouped[activeSection] || [];
+  $: navStackHeight = sectionNavHeight + categoryNavHeight;
+  $: contentAnchorOffset = navStackHeight + HEADER_OFFSET;
+  $: sectionScrollMarginTop = `${contentAnchorOffset}px`;
+  $: navSpacerHeight = navStackHeight + NAV_SPACER_EXTRA;
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
   }
+  $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
+    scrollActiveChipIntoView('smooth');
+    lastScrolledCategory = activeCategory;
+  }
+
   $: cartEntries = getCartEntries(menu, $cartStore, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: cartQuantities = $cartStore;
   $: stickyTop = 0;
-  $: contentAnchorOffset = navStackHeight;
-  $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
-  $: navSpacerHeight = navStackHeight + 10;
-  $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
-    scrollActiveChipIntoView('smooth');
-    lastScrolledCategory = activeCategory;
-  }
 
   onMount(() => {
     if (browser) {
@@ -71,33 +83,42 @@
         loading = false;
       });
 
-    if (browser) {
-      const recalcStickyHeights = () => {
-        sectionNavHeight = sectionNavElement?.offsetHeight || 44;
-        categoryNavHeight = categoryNavElement?.offsetHeight || 44;
-        navStackHeight = sectionNavHeight + categoryNavHeight;
-        setupCategoryObserver();
-      };
-      const syncScrolledState = () => {
-        document.documentElement.classList.toggle(MENU_SCROLLED_CLASS, window.scrollY > 8);
-      };
+    if (!browser) return;
 
-      recalcStickyHeights();
+    const recalcNavMetrics = () => {
+      sectionNavHeight = sectionNavElement?.offsetHeight || 44;
+      categoryNavHeight = categoryNavElement?.offsetHeight || 44;
       setupCategoryObserver();
-      syncScrolledState();
-      window.addEventListener('resize', recalcStickyHeights);
-      window.addEventListener('scroll', syncScrolledState, { passive: true });
+    };
 
-      return () => {
-        window.removeEventListener('resize', recalcStickyHeights);
-        window.removeEventListener('scroll', syncScrolledState);
-        document.documentElement.classList.remove(MENU_SCROLLED_CLASS);
-      };
-    }
+    const syncScrolledState = () => {
+      document.documentElement.classList.toggle(MENU_SCROLLED_CLASS, window.scrollY > 8);
+      maybeFinishProgrammaticScroll();
+    };
+
+    recalcNavMetrics();
+    syncScrolledState();
+    setupCategoryObserver();
+
+    navResizeObserver = new ResizeObserver(() => recalcNavMetrics());
+    if (sectionNavElement) navResizeObserver.observe(sectionNavElement);
+    if (categoryNavElement) navResizeObserver.observe(categoryNavElement);
+
+    window.addEventListener('resize', recalcNavMetrics);
+    window.addEventListener('scroll', syncScrolledState, { passive: true });
+
+    return () => {
+      navResizeObserver?.disconnect();
+      navResizeObserver = null;
+      window.removeEventListener('resize', recalcNavMetrics);
+      window.removeEventListener('scroll', syncScrolledState);
+      document.documentElement.classList.remove(MENU_SCROLLED_CLASS);
+    };
   });
 
   onDestroy(() => {
     categoryObserver?.disconnect();
+    navResizeObserver?.disconnect();
     if (programmaticScrollResetTimer) {
       clearTimeout(programmaticScrollResetTimer);
     }
@@ -223,7 +244,7 @@
   }
 
   function getCategoryByAnchor() {
-    const anchorY = sectionNavHeight + categoryNavHeight + 8;
+    const anchorY = contentAnchorOffset;
     const candidates = categories
       .map((category) => {
         const element = sectionNodes.get(category.categoryKey);
@@ -246,6 +267,7 @@
 
     const passed = candidates.filter((candidate) => candidate.top <= anchorY + 1).sort((a, b) => b.top - a.top);
     if (passed.length) return passed[0].key;
+
     return candidates.sort((a, b) => a.top - b.top)[0].key;
   }
 
@@ -254,7 +276,11 @@
 
     categoryObserver?.disconnect();
     observerEntries.clear();
-    if (!sectionNodes.size) return;
+
+    if (!sectionNodes.size || !categories.length) return;
+
+    const topOffset = contentAnchorOffset + 2;
+    const bottomOffsetPercent = Math.round(INTERSECTION_BOTTOM_MARGIN * 100);
 
     categoryObserver = new IntersectionObserver(
       (entries) => {
@@ -264,54 +290,63 @@
           observerEntries.set(key, entry);
         });
 
-        const currentKey = getCategoryByAnchor();
-        if (!currentKey) return;
-
-        if (isProgrammaticScroll) {
-          if (programmaticScrollTargetY !== null && Math.abs(window.scrollY - programmaticScrollTargetY) < 8) {
-            isProgrammaticScroll = false;
-            programmaticScrollTargetY = null;
-          } else {
-            return;
-          }
+        if (isProgrammaticScroll && !maybeFinishProgrammaticScroll()) {
+          return;
         }
 
-        const now = Date.now();
-        if (currentKey !== activeCategory && now - activeCategoryChangedAt > 120) {
+        const currentKey = getCategoryByAnchor();
+        if (currentKey && currentKey !== activeCategory) {
           activeCategory = currentKey;
-          activeCategoryChangedAt = now;
         }
       },
       {
         root: null,
-        rootMargin: `-${contentAnchorOffset + 8}px 0px -55% 0px`,
-        threshold: [0, 0.15, 0.35, 0.6, 0.85, 1]
+        // Top margin accounts for sticky stacked header, bottom margin stabilizes active chip handover.
+        rootMargin: `-${topOffset}px 0px -${bottomOffsetPercent}% 0px`,
+        threshold: [0, 0.2, 0.4, 0.7, 1]
       }
     );
 
-    sectionNodes.forEach((element) => {
-      categoryObserver?.observe(element);
+    categories.forEach((category) => {
+      const node = sectionNodes.get(category.categoryKey);
+      if (node) categoryObserver?.observe(node);
     });
   }
 
-  function scrollToCategory(categoryKey: string) {
-    activeCategory = categoryKey;
-    const target = sectionNodes.get(categoryKey);
-    if (!target) return;
+  function maybeFinishProgrammaticScroll() {
+    if (!isProgrammaticScroll || programmaticScrollTargetY === null) return false;
+    if (Math.abs(window.scrollY - programmaticScrollTargetY) <= 8) {
+      isProgrammaticScroll = false;
+      programmaticScrollTargetY = null;
+      return true;
+    }
+    return false;
+  }
+
+  function startProgrammaticScrollLock(targetY: number) {
     isProgrammaticScroll = true;
+    programmaticScrollTargetY = Math.max(0, targetY);
+
     if (programmaticScrollResetTimer) {
       clearTimeout(programmaticScrollResetTimer);
     }
 
-    const top = target.getBoundingClientRect().top + window.scrollY - contentAnchorOffset - 16;
-    programmaticScrollTargetY = Math.max(0, top);
-    window.scrollTo({ top: programmaticScrollTargetY, behavior: 'smooth' });
-    scrollActiveChipIntoView('smooth');
-
     programmaticScrollResetTimer = setTimeout(() => {
       isProgrammaticScroll = false;
       programmaticScrollTargetY = null;
-    }, 700);
+    }, PROGRAMMATIC_SCROLL_TIMEOUT);
+  }
+
+  function scrollToCategory(categoryKey: string) {
+    const target = sectionNodes.get(categoryKey);
+    if (!target) return;
+
+    activeCategory = categoryKey;
+    scrollActiveChipIntoView('smooth');
+
+    const top = target.getBoundingClientRect().top + window.scrollY - contentAnchorOffset;
+    startProgrammaticScrollLock(top);
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 
   function scrollActiveChipIntoView(behavior: ScrollBehavior = 'auto') {
@@ -326,15 +361,19 @@
   }
 
   function selectSection(section: 'kitchen' | 'bar') {
+    if (activeSection === section) return;
+
     activeSection = section;
-    const first = grouped[section][0]?.categoryKey;
-    if (first) {
-      activeCategory = first;
-      requestAnimationFrame(() => {
-        setupCategoryObserver();
-        scrollToCategory(first);
-      });
-    }
+    const firstCategory = grouped[section][0]?.categoryKey;
+    if (!firstCategory) return;
+
+    activeCategory = firstCategory;
+
+    // Wait until DOM is updated for the new section categories, then scroll to first category.
+    requestAnimationFrame(() => {
+      setupCategoryObserver();
+      scrollToCategory(firstCategory);
+    });
   }
 
   function bindCategoryButton(node: HTMLButtonElement, categoryKey: string) {
@@ -349,10 +388,12 @@
   function bindCategorySection(node: HTMLElement, categoryKey: string) {
     sectionNodes.set(categoryKey, node);
     setupCategoryObserver();
+
     return {
       destroy() {
         sectionNodes.delete(categoryKey);
         categoryObserver?.unobserve(node);
+        observerEntries.delete(categoryKey);
       }
     };
   }
