@@ -984,7 +984,7 @@ textarea {
 
 .menu-nav-stack {
   position: sticky;
-  top: var(--site-header-height);
+  top: calc(var(--site-header-height) - 1px);
   z-index: 46;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
@@ -1034,6 +1034,11 @@ textarea {
 .menu-section-content {
   display: grid;
   gap: 1rem;
+  padding-top: 0.9rem;
+}
+
+body.menu-unified-header .page-content {
+  padding-top: 0;
 }
 
 .menu-category-title {
