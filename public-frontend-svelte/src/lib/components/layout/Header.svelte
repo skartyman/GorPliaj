@@ -17,6 +17,8 @@
   ];
 
   let drawerOpen = false;
+  let headerElement: HTMLElement | null = null;
+  let headerResizeObserver: ResizeObserver | null = null;
 
   function openDrawer() {
     drawerOpen = true;
@@ -35,16 +37,28 @@
   }
 
   onMount(() => {
+    const syncHeaderHeightVar = () => {
+      const nextHeight = headerElement?.offsetHeight ?? 0;
+      document.documentElement.style.setProperty('--site-header-height', `${nextHeight}px`);
+    };
+
+    syncHeaderHeightVar();
+    headerResizeObserver = new ResizeObserver(syncHeaderHeightVar);
+    if (headerElement) {
+      headerResizeObserver.observe(headerElement);
+    }
+
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
+      headerResizeObserver?.disconnect();
       document.body.style.overflow = '';
     };
   });
 </script>
 
-<header class="site-header premium-header">
+<header class="site-header premium-header" bind:this={headerElement}>
   <a href="/" class="header-logo" aria-label="ГорПляж">
     <img src="/icons/Logo.png" alt="Логотип ГорПляж" loading="eager" decoding="async" />
     <span>ГорПляж</span>
