@@ -9,7 +9,7 @@
 
   const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
   // Sticky/nav metrics.
-  const HEADER_OFFSET = 12;
+  const HEADER_GAP = 8;
 
   // Scroll locking.
   const PROGRAMMATIC_SCROLL_TIMEOUT = 1100;
@@ -39,6 +39,7 @@
   // Sticky elements and metrics.
   let sectionNavElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
+  let siteHeaderHeight = 60;
   let sectionNavHeight = 44;
   let categoryNavHeight = 44;
 
@@ -66,7 +67,7 @@
 
   $: categories = grouped[activeSection] || [];
   $: navStackHeight = sectionNavHeight + categoryNavHeight;
-  $: contentAnchorOffset = navStackHeight + HEADER_OFFSET;
+  $: contentAnchorOffset = siteHeaderHeight + navStackHeight + HEADER_GAP;
   $: sectionScrollMarginTop = `${contentAnchorOffset}px`;
 
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
@@ -151,6 +152,9 @@
   }
 
   function recalcNavMetrics() {
+    const rootStyles = getComputedStyle(document.documentElement);
+    const parsedHeaderHeight = parseFloat(rootStyles.getPropertyValue('--site-header-height') || '0');
+    siteHeaderHeight = Number.isFinite(parsedHeaderHeight) && parsedHeaderHeight > 0 ? parsedHeaderHeight : 60;
     sectionNavHeight = sectionNavElement?.offsetHeight || 44;
     categoryNavHeight = categoryNavElement?.offsetHeight || 44;
   }

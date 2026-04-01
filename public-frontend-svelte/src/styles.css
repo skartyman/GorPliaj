@@ -984,27 +984,30 @@ textarea {
 
 .menu-nav-stack {
   position: sticky;
-  top: 0;
-  z-index: 45;
+  top: var(--site-header-height);
+  z-index: 46;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
   max-width: 980px;
   margin: 0 auto;
   background: var(--bg);
+  box-shadow: 0 1px 0 rgba(214, 222, 231, 0.85);
 }
 
 .menu-section-nav {
   z-index: 49;
-  padding-top: 0.35rem;
+  padding-top: 0.2rem;
   padding-bottom: 0.3rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
+  background: inherit;
 }
 
 .menu-category-sticky {
   z-index: 48;
-  padding-top: 0.3rem;
+  padding-top: 0.25rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
+  background: inherit;
 }
 
 .menu-section-content {
@@ -1180,7 +1183,7 @@ textarea {
 .menu-cart-fab {
   position: fixed;
   right: 1rem;
-  bottom: calc(1rem + env(safe-area-inset-bottom));
+  bottom: calc(4.8rem + env(safe-area-inset-bottom));
   border: 0;
   border-radius: 0.8rem;
   background: var(--accent);
