@@ -64,6 +64,10 @@ a {
   padding: calc(0.35rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0.35rem max(1rem, env(safe-area-inset-left));
 }
 
+html.menu-page-scrolled .site-header {
+  display: none;
+}
+
 .premium-header .header-logo {
   display: inline-flex;
   align-items: center;
