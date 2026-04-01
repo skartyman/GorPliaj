@@ -982,7 +982,7 @@ textarea {
 }
 
 .menu-fixed-navs {
-  position: sticky;
+  position: fixed;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
   z-index: 49;
@@ -1005,7 +1005,10 @@ textarea {
   padding-top: 0.3rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
-  margin-bottom: 0.6rem;
+}
+
+.menu-fixed-navs-spacer {
+  width: 100%;
 }
 
 .menu-section-content {

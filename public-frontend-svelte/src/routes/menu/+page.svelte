@@ -25,6 +25,7 @@
   let categoryObserver: IntersectionObserver | null = null;
   let sectionNavHeight = 44;
   let categoryNavHeight = 44;
+  let navStackHeight = 88;
   let headerHeight = 0;
   let observerEntries = new Map<string, IntersectionObserverEntry>();
   let lastScrolledCategory = '';
@@ -46,8 +47,9 @@
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: stickyTop = headerHeight;
-  $: contentAnchorOffset = headerHeight + sectionNavHeight + categoryNavHeight;
+  $: contentAnchorOffset = headerHeight + navStackHeight;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
+  $: navSpacerHeight = navStackHeight + 10;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
     scrollActiveChipIntoView('smooth');
     lastScrolledCategory = activeCategory;
@@ -75,6 +77,7 @@
         headerHeight = Math.round(headerElement?.getBoundingClientRect().height || 0);
         sectionNavHeight = sectionNavElement?.offsetHeight || 44;
         categoryNavHeight = categoryNavElement?.offsetHeight || 44;
+        navStackHeight = sectionNavHeight + categoryNavHeight;
         setupCategoryObserver();
       };
 
@@ -404,6 +407,7 @@
           {/each}
       </div>
     </div>
+    <div class="menu-fixed-navs-spacer" style:height={`${navSpacerHeight}px`} aria-hidden="true"></div>
 
     <h1>{$t('menuTitle')}</h1>
     <p class="muted">{$t('menuSubtitle')}</p>
