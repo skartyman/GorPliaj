@@ -1,7 +1,7 @@
 import { menuApi } from '$lib/api/menu';
 
-export function load() {
+export function load({ fetch }: { fetch: typeof globalThis.fetch }) {
   return {
-    menuPromise: menuApi.list()
+    menuPromise: menuApi.list(fetch)
   };
 }
