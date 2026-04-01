@@ -1046,7 +1046,7 @@ select:focus {
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
   display: grid;
   gap: 4px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .menu-nav-stack-sticky {
@@ -1490,7 +1490,6 @@ select:focus {
 
   .menu-page-shell {
     padding: 10px 8px;
-    zoom: 1;
   }
 
   .menu-page-surface {
