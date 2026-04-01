@@ -8,6 +8,7 @@
   --border: #d6dee7;
   --danger: #c03434;
   --header-sticky-height: calc(3.75rem + env(safe-area-inset-top));
+  --site-header-height: var(--header-sticky-height);
 }
 
 *,
@@ -62,10 +63,6 @@ a {
   gap: 0.75rem;
   min-height: 3.75rem;
   padding: calc(0.35rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0.35rem max(1rem, env(safe-area-inset-left));
-}
-
-html.menu-page-scrolled .site-header {
-  display: none;
 }
 
 .premium-header .header-logo {
@@ -716,7 +713,7 @@ textarea {
     padding: 1.25rem max(1.5rem, env(safe-area-inset-right)) calc(2.5rem + env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
   }
 
-  .menu-fixed-navs {
+  .menu-nav-stack {
     left: max(1.5rem, env(safe-area-inset-left));
     right: max(1.5rem, env(safe-area-inset-right));
   }
@@ -985,16 +982,15 @@ textarea {
   padding-inline: 0.1rem;
 }
 
-.menu-fixed-navs {
-  position: fixed;
+.menu-nav-stack {
+  position: sticky;
+  top: var(--site-header-height);
+  z-index: 45;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
-  z-index: 49;
   max-width: 980px;
   margin: 0 auto;
-  padding-top: 0;
-  background: rgba(247, 245, 241, 0.98);
-  backdrop-filter: blur(8px);
+  background: var(--bg);
 }
 
 .menu-section-nav {
@@ -1009,10 +1005,6 @@ textarea {
   padding-top: 0.3rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
-}
-
-.menu-fixed-navs-spacer {
-  width: 100%;
 }
 
 .menu-section-content {

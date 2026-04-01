@@ -8,11 +8,8 @@
   export let data: { menuPromise: Promise<MenuCategory[]> };
 
   const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
-  const MENU_SCROLLED_CLASS = 'menu-page-scrolled';
-
   // Sticky/nav metrics.
   const HEADER_OFFSET = 12;
-  const NAV_SPACER_EXTRA = 10;
 
   // Scroll locking.
   const PROGRAMMATIC_SCROLL_TIMEOUT = 1100;
@@ -40,7 +37,6 @@
   let lastCenteredChip = '';
 
   // Sticky elements and metrics.
-  let stickyTop = 0;
   let sectionNavElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
   let sectionNavHeight = 44;
@@ -72,7 +68,6 @@
   $: navStackHeight = sectionNavHeight + categoryNavHeight;
   $: contentAnchorOffset = navStackHeight + HEADER_OFFSET;
   $: sectionScrollMarginTop = `${contentAnchorOffset}px`;
-  $: navSpacerHeight = navStackHeight + NAV_SPACER_EXTRA;
 
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
@@ -107,7 +102,6 @@
     if (!browser) return;
 
     recalcNavMetrics();
-    syncScrolledState();
     setupCategoryObserver();
 
     navResizeObserver = new ResizeObserver(() => {
@@ -128,7 +122,6 @@
       categoryObserver?.disconnect();
       navResizeObserver?.disconnect();
       cleanupProgrammaticScrollLock();
-      document.documentElement.classList.remove(MENU_SCROLLED_CLASS);
       window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('scroll', onWindowScroll);
       if ('onscrollend' in window) {
@@ -150,16 +143,11 @@
   }
 
   function onWindowScroll() {
-    syncScrolledState();
+    maybeFinishProgrammaticScroll('position');
   }
 
   function onWindowScrollEnd() {
     maybeFinishProgrammaticScroll('scrollend');
-  }
-
-  function syncScrolledState() {
-    document.documentElement.classList.toggle(MENU_SCROLLED_CLASS, window.scrollY > 8);
-    maybeFinishProgrammaticScroll('position');
   }
 
   function recalcNavMetrics() {
@@ -502,7 +490,7 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-fixed-navs" style:top={`${stickyTop}px`}>
+    <div class="menu-nav-stack">
       <div class="menu-section-nav" bind:this={sectionNavElement}>
         {#each sections as section}
           <button
@@ -530,7 +518,6 @@
           {/each}
       </div>
     </div>
-    <div class="menu-fixed-navs-spacer" style:height={`${navSpacerHeight}px`} aria-hidden="true"></div>
 
     <h1>{$t('menuTitle')}</h1>
     <p class="muted">{$t('menuSubtitle')}</p>
