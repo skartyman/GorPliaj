@@ -47,7 +47,6 @@
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: stickyTop = headerHeight;
   $: contentAnchorOffset = headerHeight + sectionNavHeight + categoryNavHeight;
-  $: navSpacerHeight = sectionNavHeight + categoryNavHeight + 12;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
     scrollActiveChipIntoView('smooth');
@@ -405,8 +404,6 @@
           {/each}
       </div>
     </div>
-
-    <div class="menu-nav-spacer" style:height={`${navSpacerHeight}px`} aria-hidden="true"></div>
 
     <h1>{$t('menuTitle')}</h1>
     <p class="muted">{$t('menuSubtitle')}</p>

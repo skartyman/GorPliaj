@@ -982,12 +982,13 @@ textarea {
 }
 
 .menu-fixed-navs {
-  position: fixed;
+  position: sticky;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
   z-index: 49;
   max-width: 980px;
   margin: 0 auto;
+  padding-top: 0;
   background: rgba(247, 245, 241, 0.98);
   backdrop-filter: blur(8px);
 }
@@ -1004,11 +1005,7 @@ textarea {
   padding-top: 0.3rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
-  margin-bottom: 0.85rem;
-}
-
-.menu-nav-spacer {
-  width: 100%;
+  margin-bottom: 0.6rem;
 }
 
 .menu-section-content {
