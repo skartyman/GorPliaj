@@ -17,6 +17,7 @@ export interface MenuCategory {
 }
 
 export const menuApi = {
-  list: () => apiClient.get<MenuCategory[]>('/menu'),
-  setLike: (itemId: number, liked: boolean) => apiClient.post<{ item: MenuItem }>(`/menu/items/${itemId}/like`, { liked })
+  list: (customFetch?: typeof fetch) => apiClient.get<MenuCategory[]>('/menu', customFetch),
+  setLike: (itemId: number, liked: boolean, customFetch?: typeof fetch) =>
+    apiClient.post<{ item: MenuItem }>(`/menu/items/${itemId}/like`, { liked }, customFetch)
 };

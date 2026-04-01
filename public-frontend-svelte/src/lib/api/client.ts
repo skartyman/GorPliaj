@@ -1,7 +1,14 @@
 const API_BASE = '/api';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+function resolveFetch(customFetch?: FetchLike): FetchLike {
+  if (customFetch) return customFetch;
+  return fetch;
+}
+
+async function request<T>(path: string, init?: RequestInit, customFetch?: FetchLike): Promise<T> {
+  const response = await resolveFetch(customFetch)(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...(init?.headers || {})
@@ -28,10 +35,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body: unknown) =>
-    request<T>(path, {
-      method: 'POST',
-      body: JSON.stringify(body)
-    })
+  get: <T>(path: string, customFetch?: FetchLike) => request<T>(path, undefined, customFetch),
+  post: <T>(path: string, body: unknown, customFetch?: FetchLike) =>
+    request<T>(
+      path,
+      {
+        method: 'POST',
+        body: JSON.stringify(body)
+      },
+      customFetch
+    )
 };
