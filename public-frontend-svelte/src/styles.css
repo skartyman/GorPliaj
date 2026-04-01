@@ -984,7 +984,7 @@ textarea {
 
 .menu-nav-stack {
   position: sticky;
-  top: var(--site-header-height);
+  top: 0;
   z-index: 45;
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
