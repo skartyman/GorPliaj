@@ -46,8 +46,8 @@
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: stickyTop = headerHeight;
-  $: categoryStickyTop = headerHeight + sectionNavHeight;
   $: contentAnchorOffset = headerHeight + sectionNavHeight + categoryNavHeight;
+  $: navSpacerHeight = sectionNavHeight + categoryNavHeight + 12;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
     scrollActiveChipIntoView('smooth');
@@ -72,9 +72,8 @@
 
     if (browser) {
       const recalcStickyHeights = () => {
-        headerHeight = Number.parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--header-sticky-height') || '0'
-        ) || 0;
+        const headerElement = document.querySelector('.site-header') as HTMLElement | null;
+        headerHeight = Math.round(headerElement?.getBoundingClientRect().height || 0);
         sectionNavHeight = sectionNavElement?.offsetHeight || 44;
         categoryNavHeight = categoryNavElement?.offsetHeight || 44;
         setupCategoryObserver();
@@ -324,7 +323,12 @@
   function scrollActiveChipIntoView(behavior: ScrollBehavior = 'auto') {
     if (!categoryNavElement || !activeCategory) return;
     const activeChip = categoryButtons.get(activeCategory);
-    activeChip?.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
+    if (!activeChip) return;
+
+    const containerRect = categoryNavElement.getBoundingClientRect();
+    const chipRect = activeChip.getBoundingClientRect();
+    const nextLeft = categoryNavElement.scrollLeft + (chipRect.left - containerRect.left) - (containerRect.width - chipRect.width) / 2;
+    categoryNavElement.scrollTo({ left: Math.max(0, nextLeft), behavior });
   }
 
   function selectSection(section: 'kitchen' | 'bar') {
@@ -373,7 +377,8 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-section-nav menu-sticky-layer" bind:this={sectionNavElement} style:top={`${stickyTop}px`}>
+    <div class="menu-fixed-navs" style:top={`${stickyTop}px`}>
+      <div class="menu-section-nav" bind:this={sectionNavElement}>
         {#each sections as section}
           <button
             type="button"
@@ -384,25 +389,24 @@
             {section === 'kitchen' ? $t('menuSectionKitchen') : $t('menuSectionBar')}
           </button>
         {/each}
+      </div>
+
+      <div class="menu-category-nav menu-category-sticky" bind:this={categoryNavElement}>
+          {#each categories as category}
+            <button
+              type="button"
+              class={`menu-chip menu-chip-category ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
+              data-category-chip={category.categoryKey}
+              use:bindCategoryButton={category.categoryKey}
+              on:click={() => scrollToCategory(category.categoryKey)}
+            >
+              {category.categoryLabel}
+            </button>
+          {/each}
+      </div>
     </div>
 
-    <div
-      class="menu-category-nav menu-sticky-layer menu-category-sticky"
-      bind:this={categoryNavElement}
-      style:top={`${categoryStickyTop}px`}
-    >
-        {#each categories as category}
-          <button
-            type="button"
-            class={`menu-chip menu-chip-category ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
-            data-category-chip={category.categoryKey}
-            use:bindCategoryButton={category.categoryKey}
-            on:click={() => scrollToCategory(category.categoryKey)}
-          >
-            {category.categoryLabel}
-          </button>
-        {/each}
-    </div>
+    <div class="menu-nav-spacer" style:height={`${navSpacerHeight}px`} aria-hidden="true"></div>
 
     <h1>{$t('menuTitle')}</h1>
     <p class="muted">{$t('menuSubtitle')}</p>
