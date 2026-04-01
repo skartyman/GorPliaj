@@ -2,11 +2,11 @@
   import { browser } from '$app/environment';
   import { onDestroy, onMount } from 'svelte';
   import { menuApi, type MenuCategory, type MenuItem } from '$lib/api/menu';
+  import { cartStore } from '$lib/stores/cart';
   import { locale, t } from '$lib/stores/i18n';
 
   export let data: { menuPromise: Promise<MenuCategory[]> };
 
-  const CART_STORAGE_KEY = 'gorpliaj-menu-cart';
   const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
   const sections: Array<'kitchen' | 'bar'> = ['kitchen', 'bar'];
 
@@ -16,7 +16,6 @@
   let loading = true;
   let errorMessage = '';
   let cartOpen = false;
-  let cart: Record<string, { quantity: number }> = {};
   let likes: Record<string, boolean> = {};
   let sectionNavElement: HTMLDivElement | null = null;
   let categoryNavElement: HTMLDivElement | null = null;
@@ -43,9 +42,10 @@
   $: if (categories.length && !categories.some((entry) => entry.categoryKey === activeCategory)) {
     activeCategory = categories[0].categoryKey;
   }
-  $: cartEntries = getCartEntries(menu, cart, $locale);
+  $: cartEntries = getCartEntries(menu, $cartStore, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
+  $: cartQuantities = $cartStore;
   $: stickyTop = headerHeight;
   $: contentAnchorOffset = headerHeight + navStackHeight;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
@@ -57,7 +57,7 @@
 
   onMount(() => {
     if (browser) {
-      cart = loadState(CART_STORAGE_KEY);
+      cartStore.hydrate();
       likes = loadState(LIKES_STORAGE_KEY);
     }
 
@@ -149,21 +149,8 @@
     }).format(value);
   }
 
-  function getQuantity(itemId: number) {
-    return Number(cart[String(itemId)]?.quantity || 0);
-  }
-
   function updateQuantity(itemId: number, delta: number) {
-    const key = String(itemId);
-    const nextQty = Math.max(0, getQuantity(itemId) + delta);
-    if (!nextQty) {
-      delete cart[key];
-    } else {
-      cart[key] = { quantity: nextQty };
-    }
-
-    cart = { ...cart };
-    persistState(CART_STORAGE_KEY, cart);
+    cartStore.updateQuantity(itemId, delta);
   }
 
   function getCartEntries(menuData: MenuCategory[], state: Record<string, { quantity: number }>, currentLocale: 'uk' | 'en') {
@@ -423,6 +410,7 @@
           <h2 class="menu-category-title">{category.categoryLabel}</h2>
           <div class="menu-grid">
             {#each category.items as item}
+              {@const quantity = Number(cartQuantities[String(item.id)]?.quantity || 0)}
               <article class="menu-card">
                 <div class="menu-card-main">
                   <div class="menu-card-body">
@@ -449,8 +437,8 @@
                     aria-label={$t('menuLike')}
                   >♥ {item.likesCount || 0}</button>
                   <div class="menu-qty">
-                    <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={getQuantity(item.id) === 0}>−</button>
-                    <span>{getQuantity(item.id)}</span>
+                    <button type="button" on:click={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
+                    <span>{quantity}</span>
                     <button type="button" on:click={() => updateQuantity(item.id, 1)}>+</button>
                   </div>
                 </div>
@@ -491,7 +479,7 @@
       <p><strong>{$t('menuCartTotal')}: {formatPrice(cartTotalPrice)} ₴</strong></p>
       <div class="hero-cta">
         <button class="btn btn-secondary" type="button" on:click={copyOrder}>{$t('menuCartCopy')}</button>
-        <button class="btn" type="button" on:click={() => { cart = {}; persistState(CART_STORAGE_KEY, cart); }}>{$t('menuCartClear')}</button>
+        <button class="btn" type="button" on:click={() => cartStore.clear()}>{$t('menuCartClear')}</button>
       </div>
     </section>
   </div>
