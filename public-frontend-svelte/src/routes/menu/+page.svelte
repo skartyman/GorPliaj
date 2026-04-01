@@ -26,6 +26,7 @@
   let categoryNavHeight = 44;
   let navStackHeight = 88;
   let headerHeight = 0;
+  let topShellHeight = 132;
   let observerEntries = new Map<string, IntersectionObserverEntry>();
   let lastScrolledCategory = '';
   let isProgrammaticScroll = false;
@@ -45,11 +46,9 @@
   $: cartEntries = getCartEntries(menu, $cartStore, $locale);
   $: cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
-  $: cartQuantities = $cartStore;
-  $: stickyTop = headerHeight;
-  $: contentAnchorOffset = headerHeight + navStackHeight;
+  $: contentAnchorOffset = topShellHeight;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
-  $: navSpacerHeight = navStackHeight + 10;
+  $: navSpacerHeight = topShellHeight;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
     scrollActiveChipIntoView('smooth');
     lastScrolledCategory = activeCategory;
@@ -72,12 +71,16 @@
       });
 
     if (browser) {
+      document.body.classList.add('menu-top-shell-mode');
+
       const recalcStickyHeights = () => {
         const headerElement = document.querySelector('.site-header') as HTMLElement | null;
         headerHeight = Math.round(headerElement?.getBoundingClientRect().height || 0);
         sectionNavHeight = sectionNavElement?.offsetHeight || 44;
         categoryNavHeight = categoryNavElement?.offsetHeight || 44;
         navStackHeight = sectionNavHeight + categoryNavHeight;
+        topShellHeight = headerHeight + navStackHeight;
+        document.documentElement.style.setProperty('--menu-top-shell-height', `${topShellHeight}px`);
         setupCategoryObserver();
       };
 
@@ -87,6 +90,8 @@
 
       return () => {
         window.removeEventListener('resize', recalcStickyHeights);
+        document.body.classList.remove('menu-top-shell-mode');
+        document.documentElement.style.removeProperty('--menu-top-shell-height');
       };
     }
   });
@@ -95,6 +100,11 @@
     categoryObserver?.disconnect();
     if (programmaticScrollResetTimer) {
       clearTimeout(programmaticScrollResetTimer);
+    }
+
+    if (browser) {
+      document.body.classList.remove('menu-top-shell-mode');
+      document.documentElement.style.removeProperty('--menu-top-shell-height');
     }
   });
 
@@ -366,8 +376,9 @@
   {:else if !menu.length}
     <div class="state">{$t('menuEmpty')}</div>
   {:else}
-    <div class="menu-fixed-navs" style:top={`${stickyTop}px`}>
-      <div class="menu-section-nav" bind:this={sectionNavElement}>
+    <div class="menu-top-shell">
+      <div class="menu-top-shell-inner">
+        <div class="menu-section-nav" bind:this={sectionNavElement}>
         {#each sections as section}
           <button
             type="button"
@@ -378,9 +389,9 @@
             {section === 'kitchen' ? $t('menuSectionKitchen') : $t('menuSectionBar')}
           </button>
         {/each}
-      </div>
+        </div>
 
-      <div class="menu-category-nav menu-category-sticky" bind:this={categoryNavElement}>
+        <div class="menu-category-nav" bind:this={categoryNavElement}>
           {#each categories as category}
             <button
               type="button"
@@ -392,9 +403,10 @@
               {category.categoryLabel}
             </button>
           {/each}
+        </div>
       </div>
     </div>
-    <div class="menu-fixed-navs-spacer" style:height={`${navSpacerHeight}px`} aria-hidden="true"></div>
+    <div class="menu-top-shell-spacer" style:height={`${navSpacerHeight}px`} aria-hidden="true"></div>
 
     <h1>{$t('menuTitle')}</h1>
     <p class="muted">{$t('menuSubtitle')}</p>
