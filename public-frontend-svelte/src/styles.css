@@ -992,15 +992,32 @@ textarea {
   margin: 0 auto;
   background: var(--bg);
   box-shadow: 0 1px 0 rgba(214, 222, 231, 0.85);
-  border: 1px solid rgba(214, 222, 231, 0.85);
-  border-top: 0;
   border-radius: 0 0 0.9rem 0.9rem;
+  padding-top: 0.2rem;
   backdrop-filter: saturate(1.05) blur(6px);
+}
+
+.menu-control-header {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.25rem 0.1rem 0.35rem;
+}
+
+.menu-control-header h1 {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.9vw, 1.3rem);
+  line-height: 1.2;
+}
+
+.menu-control-header .muted {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .menu-section-nav {
   z-index: 49;
-  padding-top: 0.22rem;
+  padding-top: 0.12rem;
   padding-bottom: 0.28rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
   background: inherit;
