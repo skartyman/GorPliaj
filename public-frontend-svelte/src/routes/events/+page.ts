@@ -1,7 +1,7 @@
 import { eventsApi } from '$lib/api/events';
 
-export async function load() {
+export async function load({ fetch }) {
   return {
-    eventsPromise: eventsApi.list(true)
+    eventsPromise: eventsApi.list(true, fetch)
   };
 }

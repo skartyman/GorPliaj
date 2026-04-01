@@ -1,6 +1,8 @@
 import { apiClient } from './client';
 
+type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 export const contentApi = {
-  news: () => apiClient.get('/news'),
-  menu: () => apiClient.get('/menu')
+  news: (customFetch?: FetchLike) => apiClient.get('/news', customFetch),
+  menu: (customFetch?: FetchLike) => apiClient.get('/menu', customFetch)
 };
