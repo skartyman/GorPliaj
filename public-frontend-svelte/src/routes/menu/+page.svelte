@@ -47,7 +47,7 @@
   $: cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   $: stickyTop = headerHeight;
   $: contentAnchorOffset = headerHeight + sectionNavHeight + categoryNavHeight;
-  $: navSpacerHeight = sectionNavHeight + categoryNavHeight + 12;
+  $: navSpacerHeight = sectionNavHeight + categoryNavHeight;
   $: sectionScrollMarginTop = `${contentAnchorOffset + 16}px`;
   $: if (browser && activeCategory && activeCategory !== lastScrolledCategory) {
     scrollActiveChipIntoView('smooth');

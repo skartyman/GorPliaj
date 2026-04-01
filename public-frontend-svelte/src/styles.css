@@ -1004,7 +1004,7 @@ textarea {
   padding-top: 0.3rem;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid rgba(214, 222, 231, 0.85);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0;
 }
 
 .menu-nav-spacer {
