@@ -31,6 +31,7 @@
   let programmaticScrollTargetY: number | null = null;
   let programmaticScrollResetTimer: ReturnType<typeof setTimeout> | null = null;
   let activeCategoryChangedAt = 0;
+  const MENU_SCROLLED_CLASS = 'menu-page-scrolled';
 
   $: grouped = groupMenuBySection(menu, $locale);
   $: availableSections = sections.filter((section) => grouped[section].length > 0);
@@ -77,13 +78,20 @@
         navStackHeight = sectionNavHeight + categoryNavHeight;
         setupCategoryObserver();
       };
+      const syncScrolledState = () => {
+        document.documentElement.classList.toggle(MENU_SCROLLED_CLASS, window.scrollY > 8);
+      };
 
       recalcStickyHeights();
       setupCategoryObserver();
+      syncScrolledState();
       window.addEventListener('resize', recalcStickyHeights);
+      window.addEventListener('scroll', syncScrolledState, { passive: true });
 
       return () => {
         window.removeEventListener('resize', recalcStickyHeights);
+        window.removeEventListener('scroll', syncScrolledState);
+        document.documentElement.classList.remove(MENU_SCROLLED_CLASS);
       };
     }
   });
