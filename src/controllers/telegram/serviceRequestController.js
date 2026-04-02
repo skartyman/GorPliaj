@@ -36,14 +36,6 @@ function createServiceRequestController(serviceRequestService) {
       return res.json(equipment);
     },
 
-    async getEquipmentById(req, res) {
-      const equipment = await serviceRequestService.getEquipmentDetails(req.params.clientId, req.params.equipmentId);
-      if (!equipment) {
-        return res.status(404).json({ message: 'Equipment not found.' });
-      }
-      return res.json(equipment);
-    },
-
     async create(req, res) {
       try {
         const created = await serviceRequestService.createServiceRequest(req.body || {});
@@ -86,20 +78,6 @@ function createServiceRequestController(serviceRequestService) {
 
       const media = await serviceRequestService.saveMedia(req.file);
       return res.status(201).json(media);
-    },
-
-    async statusUpdatedWebhook(req, res) {
-      const request = await serviceRequestService.getServiceRequestById(req.params.id);
-      if (!request) {
-        return res.status(404).json({ message: 'Service request not found.' });
-      }
-
-      return res.json({
-        ok: true,
-        requestId: request.id,
-        status: request.status,
-        updatedAt: request.updatedAt
-      });
     }
   };
 }
