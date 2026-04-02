@@ -7,7 +7,7 @@ require('./config/env');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const paymentsRoutes = require('./routes/payments');
-const telegramRoutes = require('./routes/telegram');
+const { ENABLE_TELEGRAM_MINIAPP } = require('./config/env');
 
 const app = express();
 const publicDir = path.join(__dirname, '..', 'public');
@@ -47,7 +47,10 @@ app.use('/admin/assets', express.static(path.join(adminAppDir, 'assets')));
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
-app.use('/api/telegram', telegramRoutes);
+if (ENABLE_TELEGRAM_MINIAPP) {
+  const telegramRoutes = require('./routes/telegram');
+  app.use('/api/telegram', telegramRoutes);
+}
 
 function sendSvelteIndex(res) {
   setNoCacheHeaders(res);
