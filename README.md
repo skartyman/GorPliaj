@@ -169,18 +169,64 @@ Docker build тепер:
 
 ## Service requests MVP (Telegram Mini App)
 
-Реалізовано перший end-to-end сервісний сценарій (тільки service requests):
+⚠️ Telegram Mini App flow ізольований feature flag'ом і безпечно вимкнений за замовчуванням.
+
+### Staging launch only (safe-by-default)
+
+`ENABLE_TELEGRAM_MINIAPP=false` (за замовчуванням):
+- старий PWA runtime працює без змін;
+- `/api/telegram/*` і webhook routes не підключаються;
+- нові Telegram env не є обов'язковими.
+
+`ENABLE_TELEGRAM_MINIAPP=true`:
+- підключаються лише Telegram Mini App endpoint'и (`/api/telegram/*`);
+- активується flow service request для staging;
+- uploads ізольовано в окремому public namespace `miniapp-telegram/uploads/*` (або кастомний `TELEGRAM_MINIAPP_UPLOADS_ROOT`).
+
+### Mini App env (для staging)
+
+```env
+ENABLE_TELEGRAM_MINIAPP=true
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_MANAGER_CHAT_ID=
+TELEGRAM_MINIAPP_UPLOADS_ROOT=miniapp-telegram/uploads
+TELEGRAM_MINIAPP_STATUS_WEBHOOK_URL=
+```
+
+Нотатки:
+- `ENABLE_TELEGRAM_MINIAPP` — єдиний перемикач підключення Mini App runtime.
+- `TELEGRAM_BOT_TOKEN` потрібен для валідації `initData` і Telegram notify.
+- `TELEGRAM_MANAGER_CHAT_ID` використовується для manager notifications.
+- `TELEGRAM_MINIAPP_STATUS_WEBHOOK_URL` опційний (hook викликається тільки якщо вказаний).
+
+### Staging API flow (service request MVP)
 
 - `POST /api/telegram/init/validate` — валідація Telegram `initData`.
 - `GET /api/telegram/clients/me?telegramUserId=...` — профіль клієнта.
 - `GET /api/telegram/clients/me/equipment?clientId=...` — обладнання клієнта.
+- `GET /api/telegram/clients/:clientId/equipment/:equipmentId` — деталі обладнання.
 - `POST /api/telegram/service-requests/media` — upload фото/відео (multipart, field `media`).
 - `POST /api/telegram/service-requests` — створення заявки.
 - `GET /api/telegram/service-requests/:id` — картка заявки.
 - `GET /api/telegram/clients/:clientId/service-requests` — історія заявок.
 - `PATCH /api/telegram/service-requests/:id/status` — зміна статусу (manager/backoffice flow).
+- `POST /api/telegram/webhooks/service-requests/:id/status-updated` — status page hook для Mini App polling/integration.
 
 Статуси заявки: `NEW`, `TRIAGE`, `WAITING_MANAGER`, `WAITING_CLIENT`, `IN_PROGRESS`, `WAITING_PARTS`, `DONE`, `CANCELLED`.
+
+### Manager notification template
+
+Після створення заявки менеджеру відправляється Telegram повідомлення з полями:
+- client
+- phone
+- equipment
+- internal/serial
+- category
+- urgency
+- canOperateNow
+- description
+- attachments count
+- request id
 
 ### Де зберігаються дані
 
@@ -188,9 +234,46 @@ Docker build тепер:
 - Реальне сховище MVP: `src/data/serviceRequests.json`.
 - Adapter контракт винесено окремо (`src/repositories/serviceRequestRepository.js`) для простої заміни на Google Sheets.
 - Підготовлено заглушку `GoogleSheetsServiceRequestRepository`.
+- Upload файли Mini App: `public/miniapp-telegram/uploads/service-requests/*` (за замовчуванням).
 
 ### Frontend сторінки (Svelte)
 
 - `/service` — покрокове створення заявки.
 - `/service/history` — історія заявок клієнта.
 - `/service/requests/:id` — статус/деталі заявки.
+
+### Local staging quick checks (curl)
+
+```bash
+# 1) Feature flag OFF: Telegram API should be unavailable
+ENABLE_TELEGRAM_MINIAPP=false npm run start
+curl -i http://localhost:8080/api/telegram/init/validate
+
+# 2) Feature flag ON: Telegram API should be mounted
+ENABLE_TELEGRAM_MINIAPP=true npm run start
+curl -i -X POST http://localhost:8080/api/telegram/init/validate \
+  -H "Content-Type: application/json" \
+  -d '{"initData":"test"}'
+
+# 3) Service request create
+curl -i -X POST http://localhost:8080/api/telegram/service-requests \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clientId":"client_001",
+    "equipmentId":"eq_001",
+    "category":"hardware",
+    "description":"Не запускається",
+    "urgency":"high",
+    "canOperateNow":false,
+    "attachments":[]
+  }'
+```
+
+### Self-check checklist (minimum)
+
+- [ ] old PWA unchanged
+- [ ] server boots with feature flag off
+- [ ] server boots with feature flag on
+- [ ] `/api/telegram/*` works
+- [ ] file uploads work
+- [ ] manager notification works
