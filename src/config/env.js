@@ -23,11 +23,6 @@ function getRequiredEnv(name) {
   return value;
 }
 
-function getBooleanEnv(name, fallbackValue = false) {
-  const value = getOptionalEnv(name, fallbackValue ? 'true' : 'false').toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(value);
-}
-
 const NODE_ENV = getOptionalEnv('NODE_ENV', 'development');
 const isLocalDevelopment = NODE_ENV === 'development';
 
@@ -59,8 +54,5 @@ module.exports = {
   R2_CONFIG,
   isR2Configured,
   isLocalDevelopment,
-  getRequiredEnv,
-  ENABLE_TELEGRAM_MINIAPP: getBooleanEnv('ENABLE_TELEGRAM_MINIAPP', false),
-  TELEGRAM_MINIAPP_UPLOADS_ROOT: getOptionalEnv('TELEGRAM_MINIAPP_UPLOADS_ROOT', 'miniapp-telegram/uploads'),
-  TELEGRAM_MINIAPP_STATUS_WEBHOOK_URL: getOptionalEnv('TELEGRAM_MINIAPP_STATUS_WEBHOOK_URL', '')
+  getRequiredEnv
 };

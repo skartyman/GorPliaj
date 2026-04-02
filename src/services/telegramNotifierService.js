@@ -20,17 +20,16 @@ class TelegramNotifierService {
   async notifyCreated({ client, equipment, request }) {
     const managerText = [
       '🛠 <b>Новая сервисная заявка</b>',
-      '',
-      `<b>Client:</b> ${client?.name || request.clientId}`,
-      `<b>Phone:</b> ${client?.phone || '—'}`,
-      `<b>Equipment:</b> ${equipment.name}`,
-      `<b>Internal/Serial:</b> ${equipment.internalNumber} / ${equipment.serialNumber}`,
-      `<b>Category:</b> ${request.category}`,
-      `<b>Urgency:</b> ${request.urgency}`,
-      `<b>Can operate now:</b> ${request.canOperateNow ? 'Yes' : 'No'}`,
-      `<b>Description:</b> ${request.description}`,
-      `<b>Attachments count:</b> ${request.attachments.length}`,
-      `<b>Request ID:</b> <code>${request.id}</code>`
+      `Клиент: <b>${client?.name || request.clientId}</b>`,
+      `Телефон: ${client?.phone || '—'}`,
+      `Оборудование: ${equipment.name}`,
+      `Serial/Internal: ${equipment.serialNumber} / ${equipment.internalNumber}`,
+      `Категория: ${request.category}`,
+      `Описание: ${request.description}`,
+      `Срочность: ${request.urgency}`,
+      `Может работать: ${request.canOperateNow ? 'Да' : 'Нет'}`,
+      `Вложений: ${request.attachments.length}`,
+      `Заявка: <code>${request.id}</code>`
     ].join('\n');
 
     const clientText = [
