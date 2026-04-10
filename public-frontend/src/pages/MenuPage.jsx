@@ -1,3 +1,4 @@
+import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { menuApi } from '../lib/api';
 import { localizeField } from '../lib/i18n';
@@ -19,6 +20,7 @@ function resolveCategorySection(categoryName, sectionKey) {
 
 export default function MenuPage() {
   const { locale, t } = useLocale();
+  const location = useLocation();
   const { items, updateQuantity, clear } = useCart();
   const [menu, setMenu] = useState([]);
   const [likes, setLikes] = useState({});
@@ -68,6 +70,18 @@ export default function MenuPage() {
 
   const availableSections = useMemo(() => ['kitchen', 'bar'].filter((section) => grouped[section].length), [grouped]);
   const categories = grouped[activeSection]?.length ? grouped[activeSection] : grouped[availableSections[0]] || [];
+  const appLinks = useMemo(
+    () => [
+      { to: '/', label: t('navHome') },
+      { to: '/events', label: t('navEvents') },
+      { to: '/menu', label: t('navMenu') },
+      { to: '/booking', label: t('navBooking') },
+      { to: '/map', label: t('navMap') },
+      { to: '/about', label: t('navAbout') },
+      { to: '/service', label: t('navService') }
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (!availableSections.length) return;
@@ -210,6 +224,21 @@ export default function MenuPage() {
       {!loading && !error && menu.length ? (
         <div className="menu-layout">
           <aside className="menu-sidebar">
+            <div className="menu-sidebar-section">
+              <p className="menu-sidebar-eyebrow">Навигация</p>
+              <div className="menu-sidebar-links">
+                {appLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    className={`menu-sidebar-link ${location.pathname === link.to ? 'is-active' : ''}`}
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+
             <div className="menu-sidebar-card">
               <p className="menu-sidebar-eyebrow">{t('menuSidebarTitle')}</p>
               <strong>{t('menuSidebarHint')}</strong>
