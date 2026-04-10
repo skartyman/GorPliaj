@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useLocale } from '../state/locale';
 
@@ -13,10 +13,12 @@ const links = [
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
   const { locale, setLocale, t } = useLocale();
+  const isMenuRoute = location.pathname === '/menu';
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
       <header className="site-header">
         <NavLink to="/" className="brand" onClick={() => setMenuOpen(false)}>
           <img src="/icons/Logo.png" alt="GorPliaj" />
@@ -47,7 +49,7 @@ export default function Layout() {
         </nav>
       </aside>
 
-      <main className="page-shell">
+      <main className={`page-shell${isMenuRoute ? ' page-shell-menu' : ''}`}>
         <Outlet />
       </main>
 
