@@ -1,15 +1,6 @@
-const reservationForm = document.getElementById('reservationForm');
-const reservationFormState = document.getElementById('reservationFormState');
-const installBtn = document.getElementById('installBtn');
-const languageToggle = document.getElementById('languageToggle');
-const heroMenuCount = document.getElementById('heroMenuCount');
-const menuCountChip = document.getElementById('menuCountChip');
+import { useState, useEffect, createContext, useContext } from 'react';
 
-let deferredPrompt;
-let currentLanguage = localStorage.getItem('language') || 'uk';
-let menuCache = [];
-
-const translations = {
+export const translations = {
   uk: {
     pageTitle: 'ГорПляж — Одеса, пляж Отрада',
     brandSubtitle: 'Beach · Restaurant · Events',
@@ -27,14 +18,6 @@ const translations = {
     heroPanelLabel: 'Готово до графіки',
     heroPanelTitle: 'Сучасний публічний фронт для гостей',
     heroPanelText: 'Простий шлях від першого враження до бронювання столу: меню, події, карта та контактна інформація працюють як єдина система.',
-    service1Title: 'Онлайн бронювання',
-    service1Text: 'Створення заявки за хвилину прямо з головної.',
-    service2Title: 'Інтерактивна карта',
-    service2Text: 'Швидкий перехід до вибору конкретного столу.',
-    service3Title: 'Події та акції',
-    service3Text: 'Анонси та спецпропозиції для залучення гостей.',
-    languageToggleLabel: 'EN',
-    languageToggleAria: 'Switch language to English',
     navAbout: 'Про заклад',
     navMenu: 'Меню',
     navBooking: 'Бронювання',
@@ -58,7 +41,7 @@ const translations = {
     menuPreviewSecondary: 'Спочатку забронювати столик',
     bookingKicker: 'Fast reservation',
     bookingTitle: 'Онлайн-бронювання',
-    guestName: 'Ім’я гостя',
+    guestName: 'Імʼя гостя',
     phone: 'Телефон',
     date: 'Дата',
     time: 'Час',
@@ -80,8 +63,8 @@ const translations = {
     bookingGraphicHint: 'Hero/background: 1600×900, promo cards: 3:2, icons: 128×128 PNG/SVG.',
     eventsKicker: 'Live atmosphere',
     eventsTitle: 'Афіша та анонси',
-    event1Title: 'П’ятничні заходи сонця з діджеєм',
-    event1Text: 'Щоп’ятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.',
+    event1Title: 'Пʼятничні заходи сонця з діджеєм',
+    event1Text: 'Щопʼятниці з 19:00 — музичний вечір на пляжі та фірмові коктейлі.',
     event2Title: 'Сімейні вихідні',
     event2Text: 'Субота та неділя — анімація для дітей і зона сімейного відпочинку.',
     event3Title: 'Кіно просто неба',
@@ -100,7 +83,14 @@ const translations = {
     reservationError: 'Не вдалося створити бронювання. Перевірте поля форми.',
     reservationSuccess: 'Бронювання створено. Ми вже готуємо найкраще місце для вас.',
     loadingError: 'Помилка завантаження даних. Перевірте сервер.',
-    menuItemsCount: 'позицій'
+    menuItemsCount: 'позицій',
+    menuPageKicker: 'Kitchen & bar',
+    menuPageTitle: 'Меню ГорПляжу',
+    menuPageDescription: 'Окрема сторінка з категоріями та зручним переглядом основних позицій, як у digital menu.',
+    menuBackHome: '← На головну',
+    menuFeatureLabel: 'Рекомендація',
+    featuredPrefix: 'Сьогодні радимо спробувати одну з найпопулярніших позицій комплексу.',
+    categoryCount: 'позицій'
   },
   en: {
     pageTitle: 'GorPliaj — Odesa, Otrada Beach',
@@ -119,14 +109,6 @@ const translations = {
     heroPanelLabel: 'Graphics ready',
     heroPanelTitle: 'Modern guest-facing frontend',
     heroPanelText: 'A clean path from first impression to table booking: menu, events, map, and contact details work together as one flow.',
-    service1Title: 'Online booking',
-    service1Text: 'Create a booking request in a minute from the homepage.',
-    service2Title: 'Interactive map',
-    service2Text: 'Jump quickly to a specific table selection.',
-    service3Title: 'Events and offers',
-    service3Text: 'Announcements and promotions to attract guests.',
-    languageToggleLabel: 'UK',
-    languageToggleAria: 'Перемкнути мову на українську',
     navAbout: 'About',
     navMenu: 'Menu',
     navBooking: 'Booking',
@@ -192,98 +174,52 @@ const translations = {
     reservationError: 'Could not create booking. Please check form fields.',
     reservationSuccess: 'Booking created. We are already preparing the best spot for you.',
     loadingError: 'Data loading error. Please check the server.',
-    menuItemsCount: 'items'
+    menuItemsCount: 'items',
+    menuPageKicker: 'Kitchen & bar',
+    menuPageTitle: 'GorPliaj Menu',
+    menuPageDescription: 'A dedicated page with categories and an easy overview of signature dishes, similar to a digital menu.',
+    menuBackHome: '← Back home',
+    menuFeatureLabel: 'Recommended',
+    featuredPrefix: 'Today we recommend trying one of the venueʼs most popular items.',
+    categoryCount: 'items'
   }
 };
 
-function updateCounters() {
-  const dictionary = translations[currentLanguage];
-  const menuCount = menuCache.length;
+const LanguageContext = createContext();
 
-  heroMenuCount.textContent = menuCount;
-  menuCountChip.textContent = `${menuCount} ${dictionary.menuItemsCount}`;
+export function LanguageProvider({ children }) {
+  const [currentLanguage, setCurrentLanguage] = useState(() => 
+    localStorage.getItem('language') || 'uk'
+  );
+
+  useEffect(() => {
+    const handleLanguageChange = (event) => {
+      setCurrentLanguage(event.detail.language);
+    };
+
+    window.addEventListener('languageChange', handleLanguageChange);
+    return () => window.removeEventListener('languageChange', handleLanguageChange);
+  }, []);
+
+  const setLanguage = (lang) => {
+    localStorage.setItem('language', lang);
+    setCurrentLanguage(lang);
+    window.dispatchEvent(new CustomEvent('languageChange', { detail: { language: lang } }));
+  };
+
+  const t = (key) => translations[currentLanguage][key] || key;
+
+  return (
+    <LanguageContext.Provider value={{ t, currentLanguage, setLanguage }}>
+      {children}
+    </LanguageContext.Provider>
+  );
 }
 
-function setFormState(message = '', tone = '') {
-  reservationFormState.textContent = message;
-  reservationFormState.className = `form-state${message ? '' : ' hidden'}${tone ? ` is-${tone}` : ''}`;
-}
-
-function translatePage() {
-  const dictionary = translations[currentLanguage];
-  document.documentElement.lang = currentLanguage;
-  document.title = dictionary.pageTitle;
-
-  document.querySelectorAll('[data-i18n]').forEach((element) => {
-    const key = element.dataset.i18n;
-    if (dictionary[key]) {
-      element.textContent = dictionary[key];
-    }
-  });
-
-  if (languageToggle) {
-    languageToggle.textContent = dictionary.languageToggleLabel;
-    languageToggle.setAttribute('aria-label', dictionary.languageToggleAria);
+export function useTranslations() {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useTranslations must be used within a LanguageProvider');
   }
-
-  updateCounters();
+  return context;
 }
-
-async function fetchMenu() {
-  const response = await fetch('/api/menu');
-  menuCache = await response.json();
-  updateCounters();
-}
-
-reservationForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const formData = new FormData(reservationForm);
-  const payload = Object.fromEntries(formData.entries());
-  setFormState('');
-
-  const response = await fetch('/api/reservations', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    setFormState(translations[currentLanguage].reservationError, 'error');
-    return;
-  }
-
-  reservationForm.reset();
-  setFormState(translations[currentLanguage].reservationSuccess, 'success');
-});
-
-languageToggle?.addEventListener('click', () => {
-  currentLanguage = currentLanguage === 'uk' ? 'en' : 'uk';
-  localStorage.setItem('language', currentLanguage);
-  translatePage();
-});
-
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault();
-  deferredPrompt = event;
-  installBtn.classList.remove('hidden');
-});
-
-installBtn.addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  installBtn.classList.add('hidden');
-});
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js');
-  });
-}
-
-translatePage();
-
-fetchMenu().catch(() => {
-  menuCountChip.textContent = translations[currentLanguage].loadingError;
-});
