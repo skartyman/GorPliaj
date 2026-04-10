@@ -6,7 +6,7 @@ import { useMeta } from '../hooks/useMeta';
 export default function ServiceRequestPage() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
-  useMeta('Service request status · GorPliaj', 'Status of a service request.');
+  useMeta('Статус заявки · ГорПляж', 'Статус сервисной заявки.');
 
   useEffect(() => {
     if (!id) return;
@@ -15,27 +15,27 @@ export default function ServiceRequestPage() {
 
   return (
     <main className="page-block">
-      <h1>Request status</h1>
+      <h1>Статус заявки</h1>
       {item ? (
         <div className="premium-card">
           <p>
             <b>ID:</b> {item.id}
           </p>
           <p>
-            <b>Status:</b> {item.status}
+            <b>Статус:</b> {item.status}
           </p>
           <p>
-            <b>Category:</b> {item.category}
+            <b>Категория:</b> {item.category}
           </p>
           <p>
-            <b>Description:</b> {item.description}
+            <b>Описание:</b> {item.description}
           </p>
           <p>
-            <b>Attachments:</b> {item.attachments.length}
+            <b>Вложений:</b> {item.attachments.length}
           </p>
         </div>
       ) : (
-        <p>Loading request...</p>
+        <p>Загрузка заявки...</p>
       )}
     </main>
   );

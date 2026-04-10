@@ -93,7 +93,19 @@ export async function getPublicMapData(mapApi, params = {}) {
   const mapData = data.map || data;
   const zones = data.zones || mapData.zones || [];
   const rootTables = data.tables || [];
-  const objects = data.objects || [];
+  const objects = (data.objects || []).map((object) => ({ ...object }));
+
+  const linkedTableObjects = objects.filter((object) => object.tableId && (object.type === 'TABLE' || !object.type));
+  const linkedTableIds = new Set(linkedTableObjects.map((object) => object.tableId));
+  const fallbackTableObjects = objects.filter((object) => !object.tableId && String(object.type || '').toUpperCase() === 'TABLE');
+  const unlinkedTables = rootTables.filter((table) => !linkedTableIds.has(table.id));
+
+  fallbackTableObjects.forEach((object, index) => {
+    const table = unlinkedTables[index];
+    if (table) {
+      object.tableId = table.id;
+    }
+  });
 
   const tableObjectById = new Map(
     objects.filter((object) => object.tableId && (object.type === 'TABLE' || !object.type)).map((object) => [object.tableId, object])

@@ -9,27 +9,27 @@ export default function AboutPage() {
   return (
     <section className="page-block">
       <h1>GorPliaj</h1>
-      <p className="muted">Beach restaurant space at Otrada beach in Odesa: daytime rest, kitchen, bar and evening events.</p>
+      <p className="muted">Пляжно-ресторанное пространство на пляже Отрада в Одессе: дневной отдых, кухня, бар и вечерние события.</p>
       <div className="split">
         <article>
-          <h2>What is available online</h2>
+          <h2>Что доступно онлайн</h2>
           <ul>
-            <li>Current events.</li>
-            <li>Venue map and live table statuses.</li>
-            <li>Online booking request.</li>
-            <li>Public menu from API.</li>
+            <li>Актуальная афиша событий.</li>
+            <li>Карта заведения и живые статусы столов.</li>
+            <li>Онлайн-заявка на бронирование.</li>
+            <li>Публичное меню из API.</li>
           </ul>
         </article>
         <article>
-          <h2>Contacts</h2>
+          <h2>Контакты</h2>
           <p>
-            <strong>Location:</strong> Odesa, Otrada beach
+            <strong>Локация:</strong> Одесса, пляж Отрада
           </p>
           <p>
-            <strong>Booking:</strong> via <Link to="/booking">/booking</Link>
+            <strong>Бронирование:</strong> через <Link to="/booking">/booking</Link>
           </p>
           <p>
-            <strong>Map:</strong> <Link to="/map">/map</Link>
+            <strong>Карта:</strong> <Link to="/map">/map</Link>
           </p>
         </article>
       </div>

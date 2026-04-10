@@ -27,7 +27,7 @@ export default function BookingPage() {
     customerPhone: '',
     commentCustomer: ''
   });
-  useMeta(`${t('bookingTitle')} · GorPliaj`, 'Online booking form.');
+  useMeta(`${t('bookingTitle')} · ГорПляж`, 'Форма онлайн-бронирования.');
 
   useEffect(() => {
     async function loadMap() {
@@ -53,7 +53,7 @@ export default function BookingPage() {
           };
         });
       } catch {
-        setErrorMessage('Failed to load available tables.');
+        setErrorMessage('Не удалось загрузить доступные столы.');
       } finally {
         setLoading(false);
       }
@@ -65,7 +65,7 @@ export default function BookingPage() {
   async function submitBooking(event) {
     event.preventDefault();
     if (!selected.tableId || !selected.mapId || !selected.zoneId) {
-      setErrorMessage('Choose a table on the map before submit.');
+      setErrorMessage('Перед отправкой выберите стол на карте.');
       return;
     }
 
@@ -87,9 +87,9 @@ export default function BookingPage() {
         commentCustomer: form.commentCustomer
       });
 
-      setSuccessMessage('Booking request created. Manager will contact you.');
+      setSuccessMessage('Заявка на бронирование создана. Менеджер свяжется с вами.');
     } catch (error) {
-      setErrorMessage(error.message || 'Failed to create booking.');
+      setErrorMessage(error.message || 'Не удалось создать бронирование.');
     } finally {
       setLoading(false);
     }
@@ -98,17 +98,17 @@ export default function BookingPage() {
   return (
     <section className="page-block">
       <h1>{t('bookingTitle')}</h1>
-      <p className="muted">Choose a free table and send your booking request.</p>
-      {searchParams.get('event') ? <p className="booking-event-context">Booking for event: {searchParams.get('event')}</p> : null}
+      <p className="muted">Выберите свободный стол и отправьте заявку на бронирование.</p>
+      {searchParams.get('event') ? <p className="booking-event-context">Бронирование для события: {searchParams.get('event')}</p> : null}
 
       <form className="booking-form-lite" onSubmit={submitBooking}>
         <label>
-          Date
+          Дата
           <input type="date" value={form.date} min={today} required onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))} />
         </label>
 
         <label>
-          Guests
+          Гостей
           <input
             type="number"
             value={form.guests}
@@ -120,12 +120,12 @@ export default function BookingPage() {
         </label>
 
         <label>
-          Start time
+          Время начала
           <input type="time" value={form.timeFrom} required onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))} />
         </label>
 
         <label>
-          Available tables ({mapName || 'map'})
+          Доступные столы ({mapName || 'карта'})
           <select
             value={selected.tableId}
             onChange={(event) => {
@@ -137,7 +137,7 @@ export default function BookingPage() {
               }));
             }}
           >
-            {!tableOptions.length ? <option value="">No free tables for these params</option> : null}
+            {!tableOptions.length ? <option value="">Нет свободных столов под эти параметры</option> : null}
             {tableOptions.map((table) => (
               <option key={table.id} value={table.id}>
                 {table.name} ({table.seatsMin}-{table.seatsMax})
@@ -147,30 +147,30 @@ export default function BookingPage() {
         </label>
 
         <label>
-          Name
+          Имя
           <input type="text" value={form.customerName} required minLength="2" onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))} />
         </label>
 
         <label>
-          Phone
+          Телефон
           <input type="tel" value={form.customerPhone} required minLength="7" onChange={(event) => setForm((current) => ({ ...current, customerPhone: event.target.value }))} />
         </label>
 
         <label>
-          Comment
+          Комментарий
           <textarea rows="3" value={form.commentCustomer} onChange={(event) => setForm((current) => ({ ...current, commentCustomer: event.target.value }))} />
         </label>
 
         <div className="hero-cta">
           <button type="submit" className="btn btn-primary" disabled={loading || !tableOptions.length}>
-            Send request
+            Отправить заявку
           </button>
           <Link className="btn btn-secondary" to={`/map?date=${form.date}&guests=${form.guests}&timeFrom=${form.timeFrom}`}>
-            Open map
+            Открыть карту
           </Link>
         </div>
 
-        {loading ? <div className="state">Refreshing data...</div> : null}
+        {loading ? <div className="state">Обновляем данные...</div> : null}
         {errorMessage ? <div className="state state-error">{errorMessage}</div> : null}
         {successMessage ? <div className="state booking-success">{successMessage}</div> : null}
       </form>

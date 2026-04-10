@@ -24,11 +24,11 @@ export default function Layout() {
         </NavLink>
 
         <div className="header-actions">
-          <button type="button" className="locale-switch" onClick={() => setLocale(locale === 'uk' ? 'en' : 'uk')}>
-            {locale === 'uk' ? 'EN' : 'UK'}
+          <button type="button" className="locale-switch" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
+            {t('localeSwitch')}
           </button>
           <button type="button" className="burger-btn" onClick={() => setMenuOpen((value) => !value)}>
-            Menu
+            {t('drawerMenu')}
           </button>
         </div>
       </header>
@@ -42,7 +42,7 @@ export default function Layout() {
             </NavLink>
           ))}
           <NavLink to="/service" onClick={() => setMenuOpen(false)}>
-            Service
+            {t('navService')}
           </NavLink>
         </nav>
       </aside>

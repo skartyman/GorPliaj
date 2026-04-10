@@ -6,14 +6,14 @@ const LocaleContext = createContext(null);
 
 function detectLocale() {
   const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (saved === 'uk' || saved === 'en') {
+  if (saved === 'ru' || saved === 'en') {
     return saved;
   }
-  return navigator.language.toLowerCase().startsWith('en') ? 'en' : 'uk';
+  return navigator.language.toLowerCase().startsWith('en') ? 'en' : 'ru';
 }
 
 export function LocaleProvider({ children }) {
-  const [locale, setLocaleState] = useState('uk');
+  const [locale, setLocaleState] = useState('ru');
 
   useEffect(() => {
     const nextLocale = detectLocale();

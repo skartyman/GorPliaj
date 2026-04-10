@@ -7,7 +7,7 @@ const CLIENT_ID = 'client_001';
 
 export default function ServiceHistoryPage() {
   const [items, setItems] = useState([]);
-  useMeta('Service history · GorPliaj', 'Client service request history.');
+  useMeta('История заявок · ГорПляж', 'История сервисных заявок клиента.');
 
   useEffect(() => {
     serviceApi.fetchServiceHistory(CLIENT_ID).then(setItems).catch(() => setItems([]));
@@ -15,8 +15,8 @@ export default function ServiceHistoryPage() {
 
   return (
     <main className="page-block">
-      <h1>Request history</h1>
-      {!items.length ? <p>No requests yet.</p> : null}
+      <h1>История заявок</h1>
+      {!items.length ? <p>Пока заявок нет.</p> : null}
       <div className="news-stack">
         {items.map((item) => (
           <Link key={item.id} to={`/service/requests/${item.id}`} className="premium-card news-card">

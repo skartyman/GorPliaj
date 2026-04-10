@@ -5,13 +5,13 @@ import { useMeta } from '../hooks/useMeta';
 
 const TELEGRAM_USER_ID = '10001';
 const categories = [
-  'Does not turn on',
-  'No water / no flow',
-  'No heating',
-  'Display error',
-  'Leak',
-  'Poor extraction / coffee quality',
-  'Other'
+  'Не включается',
+  'Нет воды / нет пролива',
+  'Не греет',
+  'Ошибка на дисплее',
+  'Течь',
+  'Плохой пролив / качество кофе',
+  'Другое'
 ];
 
 export default function ServicePage() {
@@ -28,7 +28,7 @@ export default function ServicePage() {
   const [canOperateNow, setCanOperateNow] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [createdId, setCreatedId] = useState('');
-  useMeta('Service request · GorPliaj', 'Public service request flow.');
+  useMeta('Сервисная заявка · ГорПляж', 'Публичный сценарий сервисной заявки.');
 
   useEffect(() => {
     async function init() {
@@ -68,15 +68,15 @@ export default function ServicePage() {
   }
 
   if (loading) {
-    return <p>Loading service cabinet...</p>;
+    return <p>Загрузка сервисного кабинета...</p>;
   }
 
   return (
     <main className="page-block service-page">
-      <h1>Service request</h1>
+      <h1>Сервисная заявка</h1>
       {step === 1 ? (
         <>
-          <h2>1. Equipment</h2>
+          <h2>1. Оборудование</h2>
           <div className="stack-grid">
             {equipment.map((item) => (
               <button key={item.id} type="button" className={`select-card ${item.id === selectedEquipmentId ? 'selected' : ''}`} onClick={() => setSelectedEquipmentId(item.id)}>
@@ -86,14 +86,14 @@ export default function ServicePage() {
             ))}
           </div>
           <button type="button" className="btn btn-primary" onClick={() => setStep(2)}>
-            Next
+            Далее
           </button>
         </>
       ) : null}
 
       {step === 2 ? (
         <>
-          <h2>2. Category</h2>
+          <h2>2. Категория</h2>
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
             {categories.map((item) => (
               <option key={item} value={item}>
@@ -102,70 +102,70 @@ export default function ServicePage() {
             ))}
           </select>
           <button type="button" className="btn btn-primary" onClick={() => setStep(3)}>
-            Next
+            Далее
           </button>
         </>
       ) : null}
 
       {step === 3 ? (
         <>
-          <h2>3. Description</h2>
+          <h2>3. Описание</h2>
           <textarea rows="5" value={description} onChange={(event) => setDescription(event.target.value)} />
           <button type="button" className="btn btn-primary" onClick={() => setStep(4)}>
-            Next
+            Далее
           </button>
         </>
       ) : null}
 
       {step === 4 ? (
         <>
-          <h2>4. Urgency</h2>
+          <h2>4. Срочность</h2>
           <select value={urgency} onChange={(event) => setUrgency(event.target.value)}>
-            <option>Critical</option>
-            <option>High</option>
-            <option>Planned</option>
+            <option>Критично</option>
+            <option>Высокая</option>
+            <option>Планово</option>
           </select>
           <label className="checkbox-row">
-            <input type="checkbox" checked={canOperateNow} onChange={(event) => setCanOperateNow(event.target.checked)} /> Equipment can still work
+            <input type="checkbox" checked={canOperateNow} onChange={(event) => setCanOperateNow(event.target.checked)} /> Оборудование пока может работать
           </label>
           <button type="button" className="btn btn-primary" onClick={() => setStep(5)}>
-            Next
+            Далее
           </button>
         </>
       ) : null}
 
       {step === 5 ? (
         <>
-          <h2>5. Photos / video</h2>
+          <h2>5. Фото / видео</h2>
           <input type="file" multiple accept="image/*,video/*" onChange={onUpload} />
-          <p>Uploaded: {attachments.length}</p>
+          <p>Загружено: {attachments.length}</p>
           <button type="button" className="btn btn-primary" onClick={() => setStep(6)}>
-            Next
+            Далее
           </button>
         </>
       ) : null}
 
       {step === 6 ? (
         <>
-          <h2>6. Confirm</h2>
+          <h2>6. Подтверждение</h2>
           <p>{category}</p>
           <p>{description}</p>
           <button type="button" className="btn btn-primary" disabled={creating} onClick={submit}>
-            Create request
+            Создать заявку
           </button>
         </>
       ) : null}
 
       {step === 7 ? (
         <>
-          <h2>Request sent</h2>
-          <p>Request ID: {createdId}</p>
+          <h2>Заявка отправлена</h2>
+          <p>Номер заявки: {createdId}</p>
           <div className="hero-cta">
             <button type="button" className="btn btn-primary" onClick={() => navigate(`/service/requests/${createdId}`)}>
-              Open request
+              Открыть заявку
             </button>
             <Link className="btn btn-secondary" to="/service/history">
-              Request history
+              История заявок
             </Link>
           </div>
         </>

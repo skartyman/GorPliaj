@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { contentApi, eventsApi } from '../lib/api';
 import { formatEventDateRange } from '../lib/events';
 import { useMeta } from '../hooks/useMeta';
+import { useLocale } from '../state/locale';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/lebedi.jpg'];
 
 export default function HomePage() {
+  const { t } = useLocale();
   const [state, setState] = useState({ events: [], menuPreviewImages: [], news: [] });
-  useMeta('GorPliaj', 'Beach, restaurant, events and booking in one public app.');
+  useMeta(t('homeMetaTitle'), t('homeMetaDescription'));
 
   useEffect(() => {
     async function load() {
@@ -31,18 +33,18 @@ export default function HomePage() {
   const newsCards = state.news.length
     ? state.news
     : [
-        { id: 1, title: 'New evening sets', summary: 'Updated the music program for the ближайшие weekends.' },
-        { id: 2, title: 'Seasonal menu', summary: 'Added light dishes and signature cocktails.' },
-        { id: 3, title: 'Summer bookings', summary: 'Pre-booking is open for evening dates.' }
+        { id: 1, title: 'Новые вечерние сеты', summary: 'Обновили музыкальную программу на ближайшие выходные.' },
+        { id: 2, title: 'Сезонное меню', summary: 'Добавили лёгкие блюда и авторские коктейли.' },
+        { id: 3, title: 'Летние бронирования', summary: 'Открыли предварительную бронь на вечерние даты.' }
       ];
 
   return (
     <div className="home-flow">
       <section className="home-section">
         <div className="section-head">
-          <h2>Events</h2>
+          <h2>Афиша</h2>
           <Link to="/events" className="text-link">
-            All events
+            Все события
           </Link>
         </div>
         <div className="cards-grid">
@@ -56,17 +58,17 @@ export default function HomePage() {
                   <p className="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
                   <h3>{event.title}</h3>
                   <Link className="btn btn-primary" to={`/events/${event.slug}`}>
-                    Open
+                    Смотреть
                   </Link>
                 </div>
               </article>
             ))
           ) : (
             <article className="premium-card event-card">
-              <img src="/icons/lebedi.jpg" alt="Soon" loading="lazy" />
+              <img src="/icons/lebedi.jpg" alt="Скоро" loading="lazy" />
               <div className="event-copy">
-                <p className="event-date">Soon</p>
-                <h3>New events will appear soon</h3>
+                <p className="event-date">Скоро</p>
+                <h3>Новые события скоро появятся</h3>
               </div>
             </article>
           )}
@@ -75,32 +77,32 @@ export default function HomePage() {
 
       <section className="home-section">
         <div className="premium-card booking-card">
-          <h2>Booking</h2>
-          <p className="muted">Choose a date and table on the interactive map.</p>
+          <h2>Бронирование</h2>
+          <p className="muted">Выберите дату и стол на интерактивной карте.</p>
           <Link to="/map" className="btn btn-primary">
-            Book a table
+            Забронировать
           </Link>
         </div>
       </section>
 
       <section className="home-section">
         <div className="section-head">
-          <h2>Menu</h2>
+          <h2>Меню</h2>
           <Link to="/menu" className="text-link">
-            Open menu
+            Открыть меню
           </Link>
         </div>
         <div className="gallery-grid">
           {menuPhotos.map((photo) => (
             <article key={photo} className="premium-card menu-image-card">
-              <img src={photo} alt="Menu item" loading="lazy" />
+              <img src={photo} alt="Позиция меню" loading="lazy" />
             </article>
           ))}
         </div>
       </section>
 
       <section className="home-section">
-        <h2>News</h2>
+        <h2>Новости</h2>
         <div className="news-stack">
           {newsCards.map((item) => (
             <article key={item.id} className="premium-card news-card">
@@ -113,20 +115,20 @@ export default function HomePage() {
 
       <section className="home-section">
         <article className="premium-card about-card">
-          <h2>About</h2>
-          <p className="muted">GorPliaj is a modern restaurant by the sea with live music and evening events.</p>
+          <h2>О нас</h2>
+          <p className="muted">ГорПляж это современный ресторан у моря с живой музыкой, кухней и вечерними событиями.</p>
           <div className="about-grid">
             <p>
-              <strong>Phone:</strong> <a href="tel:+380000000000">+38 (000) 000-00-00</a>
+              <strong>Телефон:</strong> <a href="tel:+380000000000">+38 (000) 000-00-00</a>
             </p>
             <p>
               <strong>Email:</strong> <a href="mailto:hello@gorpliaj.com">hello@gorpliaj.com</a>
             </p>
             <p>
-              <strong>Address:</strong> Otrada beach, Odesa
+              <strong>Адрес:</strong> пляж Отрада, Одесса
             </p>
             <p>
-              <strong>Hours:</strong> daily 10:00 - 23:00
+              <strong>График:</strong> ежедневно 10:00 - 23:00
             </p>
           </div>
         </article>

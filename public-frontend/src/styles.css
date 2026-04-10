@@ -147,7 +147,57 @@ img { display: block; max-width: 100%; }
 .booking-card, .news-card, .about-card { padding: 24px; }
 
 .chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 8px; }
+.menu-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; }
+.menu-sidebar { position: sticky; top: 96px; align-self: start; }
+.menu-sidebar-card, .menu-sidebar-section {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 16px;
+}
+.menu-sidebar-eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.menu-sidebar-section + .menu-sidebar-section { margin-top: 14px; }
+.menu-sidebar-links { display: grid; gap: 8px; margin-top: 12px; }
+.menu-sidebar-link {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+  cursor: pointer;
+}
+.menu-sidebar-heading { font-weight: 700; }
+.menu-sidebar-link.is-active {
+  background: rgba(15, 95, 120, 0.12);
+  color: var(--brand);
+  border-color: rgba(15, 95, 120, 0.18);
+}
+.menu-main { min-width: 0; }
+.menu-sticky-stack {
+  position: sticky;
+  top: 82px;
+  z-index: 10;
+  padding-bottom: 10px;
+  background: linear-gradient(180deg, rgba(244, 239, 230, 0.98) 0%, rgba(244, 239, 230, 0.88) 76%, rgba(244, 239, 230, 0) 100%);
+}
+.menu-section-row { margin-top: 18px; }
+.menu-category-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 8px 2px 6px;
+  scrollbar-width: none;
+}
+.menu-category-carousel::-webkit-scrollbar { display: none; }
 .menu-chip { padding: 10px 14px; }
+.menu-chip-category { flex: 0 0 auto; white-space: nowrap; }
 .menu-category-block + .menu-category-block { margin-top: 24px; }
 
 .menu-card {
@@ -277,11 +327,14 @@ img { display: block; max-width: 100%; }
 .checkbox-row { display: inline-flex; align-items: center; gap: 10px; }
 
 @media (max-width: 900px) {
-  .map-layout, .event-detail { grid-template-columns: 1fr; }
+  .map-layout, .event-detail, .menu-layout { grid-template-columns: 1fr; }
+  .menu-sidebar { display: none; }
 }
 
 @media (max-width: 767px) {
   .page-shell { width: min(100% - 20px, 1120px); padding-top: 16px; }
   .page-block { padding: 18px; }
   .public-map-viewport { height: 52vh; min-height: 320px; }
+  .menu-sticky-stack { top: 72px; }
+  .map-control-btn { padding: 10px 12px; font-size: 0.85rem; }
 }

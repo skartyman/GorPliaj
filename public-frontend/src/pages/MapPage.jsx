@@ -38,7 +38,7 @@ export default function MapPage() {
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
-  useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table status.');
+  useMeta(`${t('mapTitle')} · ГорПляж`, 'Интерактивная карта заведения с живыми статусами столов.');
 
   const date = searchParams.get('date') || new Date().toISOString().slice(0, 10);
   const timeFrom = searchParams.get('timeFrom') || '12:00';
@@ -186,7 +186,7 @@ export default function MapPage() {
   }
 
   if (state.loading) {
-    return <div className="state">Loading map...</div>;
+    return <div className="state">Загрузка карты...</div>;
   }
 
   if (state.error || !state.result || !transform.initial) {
@@ -202,17 +202,17 @@ export default function MapPage() {
         <article className="map-zone-board">
           <div className="map-controls">
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale * 1.15)}>
-              +
+              {t('mapZoomIn')}
             </button>
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale / 1.15)}>
-              -
+              {t('mapZoomOut')}
             </button>
             <button
               type="button"
               className="btn btn-secondary map-control-btn map-control-btn-reset"
               onClick={() => applyTransform(transform.initial.scale, transform.initial.translateX, transform.initial.translateY)}
             >
-              Fit
+              {t('mapFit')}
             </button>
             <span className="map-zoom-pill">{Math.round(transform.scale * 100)}%</span>
           </div>
@@ -305,7 +305,7 @@ export default function MapPage() {
           {!state.result.map.objects.length ? <p className="muted">{t('mapEmpty')}</p> : null}
 
           <button type="button" className="map-legend-toggle" onClick={() => setIsLegendOpen((value) => !value)}>
-            Table status
+            {t('mapLegendTitle')}
           </button>
           <div className={`map-legend ${isLegendOpen || !isMobileViewport ? 'is-open' : ''}`}>
             <span>
@@ -331,7 +331,7 @@ export default function MapPage() {
                 <strong>{selectedTable.name}</strong>
               </p>
               <p className="muted">
-                Seats: {selectedTable.seatsMin}-{selectedTable.seatsMax}
+                {t('mapSeats')}: {selectedTable.seatsMin}-{selectedTable.seatsMax}
               </p>
               <Link
                 className="btn btn-primary"
