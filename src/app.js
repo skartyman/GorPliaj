@@ -11,10 +11,10 @@ const telegramRoutes = require('./routes/telegram');
 
 const app = express();
 const publicDir = path.join(__dirname, '..', 'public');
-const publicSvelteDir = path.join(publicDir, 'public-svelte');
+const publicAppDir = path.join(publicDir, 'public-app');
 const adminAppDir = path.join(publicDir, 'admin-app');
-const svelteIndexPath = path.join(publicSvelteDir, 'index.html');
-const hasSveltePublicBuild = fs.existsSync(svelteIndexPath);
+const publicIndexPath = path.join(publicAppDir, 'index.html');
+const hasPublicBuild = fs.existsSync(publicIndexPath);
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   Pragma: 'no-cache',
@@ -36,11 +36,11 @@ function setStaticHeaders(res, filePath) {
 }
 
 app.use(express.json());
-if (!hasSveltePublicBuild) {
-  throw new Error(`Svelte public build is missing: ${svelteIndexPath}`);
+if (!hasPublicBuild) {
+  throw new Error(`Public React build is missing: ${publicIndexPath}`);
 }
 
-app.use(express.static(publicSvelteDir, { setHeaders: setStaticHeaders }));
+app.use(express.static(publicAppDir, { setHeaders: setStaticHeaders }));
 app.use(express.static(publicDir, { setHeaders: setStaticHeaders }));
 app.use('/admin/assets', express.static(path.join(adminAppDir, 'assets')));
 
@@ -49,33 +49,37 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/telegram', telegramRoutes);
 
-function sendSvelteIndex(res) {
+function sendPublicIndex(res) {
   setNoCacheHeaders(res);
-  return res.sendFile(svelteIndexPath);
+  return res.sendFile(publicIndexPath);
 }
 
 app.get(['/booking', '/booking/*'], (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
 });
 
 app.get('/menu', (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
 });
 
 app.get('/events', (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
 });
 
 app.get('/events/:slug', (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
 });
 
 app.get('/map', (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
 });
 
 app.get('/about', (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
+});
+
+app.get(['/service', '/service/*'], (req, res) => {
+  return sendPublicIndex(res);
 });
 
 app.get('/admin', (req, res) => {
@@ -88,7 +92,7 @@ app.get('/admin/*', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  return sendSvelteIndex(res);
+  return sendPublicIndex(res);
 });
 
 module.exports = app;

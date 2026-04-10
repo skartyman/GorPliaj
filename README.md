@@ -10,7 +10,7 @@ PWA-проєкт для пляжно-ресторанного комплексу
 
 ```bash
 npm install
-npm --prefix public-frontend-svelte install
+npm --prefix public-frontend install
 npm run start
 ```
 
@@ -22,10 +22,10 @@ npm run start
 npm run dev
 ```
 
-Окремо новий public client (SvelteKit):
+Окремо public client (React + Vite):
 
 ```bash
-npm run public:svelte:dev
+npm run public:dev
 ```
 
 ### Змінні оточення
@@ -119,37 +119,36 @@ npm run admin:build
 
 Адмінка використовує cookie-based авторизацію і перевіряє сесію через `GET /api/admin/auth/me`.
 
-## Public frontend (SvelteKit, production)
+## Public frontend (React + Vite, production)
 
-Новий публічний фронтенд винесено в окремий SvelteKit-проєкт:
+Публічний фронтенд винесено в окремий React/Vite-проєкт:
 
-- `public-frontend-svelte/` — SvelteKit-проєкт публічної частини.
-- Production build публічного клієнта збирається в `public/public-svelte/`.
+- `public-frontend/` — React SPA публічної частини.
+- Production build публічного клієнта збирається в `public/public-app/`.
 - Адмінка (`admin-frontend/`) працює окремо і не змінюється.
 
 ### Команди
 
 ```bash
-npm run public:svelte:dev
-npm run public:svelte:check
-npm run public:svelte:build
+npm run public:dev
+npm run public:build
 ```
 
 ### Поточний serve-flow
 
-- Express віддає `public/public-svelte` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu` та інших публічних маршрутів.
-- Якщо Svelte build відсутній, сервер завершує запуск з помилкою конфігурації.
+- Express віддає `public/public-app` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu`, `/service/*` та інших публічних маршрутів.
+- Якщо public React build відсутній, сервер завершує запуск з помилкою конфігурації.
 - Маршрути `/admin/*` і `/api/*` працюють окремо, без змін для адмінки та backend API.
 
 ### Production build / deploy
 
 Docker build тепер:
-1. встановлює залежності root і `public-frontend-svelte/`;
-2. збирає новий public client (`npm run public:svelte:build`);
+1. встановлює залежності root і `public-frontend/`;
+2. збирає новий public client (`npm run public:build`);
 3. генерує Prisma client;
 4. запускає Express (`npm run start`).
 
-### Що вже повністю на SvelteKit
+### Що вже повністю на React public app
 
 - `/`
 - `/events`
@@ -158,14 +157,6 @@ Docker build тепер:
 - `/map`
 - `/about`
 - `/menu`
-
-### PWA / Service Worker
-
-- Service worker у `public-frontend-svelte/src/service-worker.ts` працює у консервативному режимі:
-  - **не кешує HTML-навігацію** (`navigate`/`document` йдуть у мережу);
-  - кешує статичні assets і очищає старі версії кешу за версією білду;
-  - підтримує безпечний апдейт через `SKIP_WAITING` message, без агресивного auto-takeover.
-
 
 ## Service requests MVP (Telegram Mini App)
 
@@ -189,7 +180,7 @@ Docker build тепер:
 - Adapter контракт винесено окремо (`src/repositories/serviceRequestRepository.js`) для простої заміни на Google Sheets.
 - Підготовлено заглушку `GoogleSheetsServiceRequestRepository`.
 
-### Frontend сторінки (Svelte)
+### Frontend сторінки (React public app)
 
 - `/service` — покрокове створення заявки.
 - `/service/history` — історія заявок клієнта.

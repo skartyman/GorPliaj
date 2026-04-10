@@ -12,9 +12,8 @@
     "prisma:seed": "node prisma/seed.js",
     "admin:dev": "npm --prefix admin-frontend run dev",
     "admin:build": "npm --prefix admin-frontend run build",
-    "public:svelte:dev": "npm --prefix public-frontend-svelte run dev",
-    "public:svelte:build": "npm --prefix public-frontend-svelte run build",
-    "public:svelte:check": "npm --prefix public-frontend-svelte run check"
+    "public:dev": "npm --prefix public-frontend run dev",
+    "public:build": "npm --prefix public-frontend run build"
   },
   "keywords": [
     "pwa",
