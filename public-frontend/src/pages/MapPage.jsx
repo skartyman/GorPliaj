@@ -87,6 +87,13 @@ export default function MapPage() {
     return new Map(state.result.map.zones.flatMap((zone) => zone.tables).map((table) => [table.id, table]));
   }, [state.result]);
 
+  const canInteractWithMap = Boolean(state.result && transform.initial);
+  const resetTransform = transform.initial || {
+    scale: 1,
+    translateX: 0,
+    translateY: 0
+  };
+
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
@@ -189,7 +196,7 @@ export default function MapPage() {
     return <div className="state">Загрузка карты...</div>;
   }
 
-  if (state.error || !state.result || !transform.initial) {
+  if (state.error || !state.result) {
     return <div className="state state-error">{state.error || t('mapLoadFailed')}</div>;
   }
 
@@ -210,7 +217,8 @@ export default function MapPage() {
             <button
               type="button"
               className="btn btn-secondary map-control-btn map-control-btn-reset"
-              onClick={() => applyTransform(transform.initial.scale, transform.initial.translateX, transform.initial.translateY)}
+              onClick={() => applyTransform(resetTransform.scale, resetTransform.translateX, resetTransform.translateY)}
+              disabled={!canInteractWithMap}
             >
               {t('mapFit')}
             </button>
@@ -223,6 +231,7 @@ export default function MapPage() {
               ref={viewportRef}
               role="application"
               onWheel={(event) => {
+                if (!canInteractWithMap) return;
                 event.preventDefault();
                 const rect = viewportRef.current.getBoundingClientRect();
                 zoomTo(transform.scale * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX - rect.left, event.clientY - rect.top);
@@ -233,6 +242,7 @@ export default function MapPage() {
               onPointerCancel={handlePointerEnd}
               onPointerLeave={handlePointerEnd}
               onDoubleClick={(event) => {
+                if (!canInteractWithMap) return;
                 const rect = viewportRef.current.getBoundingClientRect();
                 zoomTo(transform.scale * 1.25, event.clientX - rect.left, event.clientY - rect.top);
               }}
@@ -301,6 +311,8 @@ export default function MapPage() {
               </div>
             </div>
           </div>
+
+          {!canInteractWithMap ? <p className="muted">Подготавливаем карту...</p> : null}
 
           {!state.result.map.objects.length ? <p className="muted">{t('mapEmpty')}</p> : null}
 
