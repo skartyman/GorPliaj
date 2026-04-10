@@ -7,7 +7,7 @@ import { useCart } from '../state/cart';
 import { useMeta } from '../hooks/useMeta';
 
 const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
-const HEADER_OFFSET = 156;
+const HEADER_OFFSET = 92;
 
 function resolveCategorySection(categoryName, sectionKey) {
   const explicit = String(sectionKey || '').toLowerCase();
@@ -277,11 +277,6 @@ export default function MenuPage() {
           </aside>
 
           <div className="menu-main">
-            <header className="menu-control-header">
-              <h1>{t('menuTitle')}</h1>
-              <p className="muted">{t('menuSubtitle')}</p>
-            </header>
-
             <div className="menu-sticky-stack">
               <div className="chip-row menu-section-row">
                 {availableSections.map((section) => (
