@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslations } from '../lib/i18n';
 import { useMenu } from '../hooks/useApi';
+import './MenuPage.css';
 
 export default function MenuPage() {
   const { t, currentLanguage, setLanguage } = useTranslations();
