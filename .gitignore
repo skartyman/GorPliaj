@@ -1,4 +1,25 @@
+```
+# Dependencies
 node_modules/
-.DS_Store
-npm-debug.log*
+
+# Build artifacts
+dist/
+build/
+public/assets/
+
+# Environment
 .env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+```
