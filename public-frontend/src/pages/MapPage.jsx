@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { mapApi } from '../lib/api';
-import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, getUsefulContentBounds, zoomAroundViewportPoint } from '../lib/map';
+import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint } from '../lib/map';
 import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
@@ -61,8 +61,7 @@ export default function MapPage() {
   useEffect(() => {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
-    const usefulBounds = getUsefulContentBounds(state.result.map);
-    const initial = getInitialViewTransform(state.result.map.width, state.result.map.height, rect.width, rect.height, MAP_PADDING, usefulBounds);
+    const initial = getInitialViewTransform(state.result.map.width, state.result.map.height, rect.width, rect.height, MAP_PADDING);
     const minScale = clamp(initial.scale * 0.55, 0.25, 2);
     const maxScale = Math.max(minScale + 0.35, Math.max(2.4, initial.scale * 3));
     const constrained = clampTranslate(state.result.map.width, state.result.map.height, rect.width, rect.height, initial.scale, initial.translateX, initial.translateY);
@@ -151,7 +150,6 @@ export default function MapPage() {
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
     if (pointersRef.current.size === 1 && isDragging) {
-      event.preventDefault();
       const dx = event.clientX - dragStartRef.current.x;
       const dy = event.clientY - dragStartRef.current.y;
       applyTransform(transform.scale, dragStartRef.current.translateX + dx, dragStartRef.current.translateY + dy);
@@ -159,7 +157,6 @@ export default function MapPage() {
     }
 
     if (pointersRef.current.size === 2 && viewportRef.current) {
-      event.preventDefault();
       const [a, b] = Array.from(pointersRef.current.values());
       const currentDistance = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
       const rect = viewportRef.current.getBoundingClientRect();
