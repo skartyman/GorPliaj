@@ -326,7 +326,7 @@ img { display: block; max-width: 100%; }
 
 .public-map-world { position: absolute; top: 0; left: 0; transform-origin: top left; }
 .public-map-background, .public-map-object, .public-map-table { position: absolute; }
-.public-map-background { inset: 0; background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
+.public-map-background { inset: 0; background-size: cover; background-position: center; }
 .public-map-object, .public-map-table { display: grid; place-items: center; font-size: 0.82rem; border: 1px solid rgba(22, 48, 66, 0.18); }
 .public-map-table { background: white; }
 .public-map-table.free { background: #f4fbf7; }

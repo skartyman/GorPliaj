@@ -93,21 +93,6 @@ export default function MapPage() {
     translateY: 0
   };
 
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport || !canInteractWithMap) return undefined;
-
-    function handleWheel(event) {
-      event.preventDefault();
-      const rect = viewport.getBoundingClientRect();
-      const direction = event.deltaY > 0 ? 0.92 : 1.08;
-      zoomTo(transform.scale * direction, event.clientX - rect.left, event.clientY - rect.top);
-    }
-
-    viewport.addEventListener('wheel', handleWheel, { passive: false });
-    return () => viewport.removeEventListener('wheel', handleWheel);
-  }, [canInteractWithMap, transform.scale, transform.translateX, transform.translateY, transform.minScale, transform.maxScale]);
-
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
@@ -242,6 +227,12 @@ export default function MapPage() {
               className="public-map-viewport"
               ref={viewportRef}
               role="application"
+              onWheel={(event) => {
+                if (!canInteractWithMap) return;
+                event.preventDefault();
+                const rect = viewportRef.current.getBoundingClientRect();
+                zoomTo(transform.scale * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX - rect.left, event.clientY - rect.top);
+              }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
