@@ -129,7 +129,7 @@ export default function Layout() {
             <h3 style={{ color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16, marginTop: 0 }}>
               {locale === 'en' ? 'How to find us' : 'Как найти заведение'}
             </h3>
-            <div className="footer-map">
+            <div className="footer-bottom-map">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2772.5!2d30.69!3d46.43!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDbCsDI1JzQ4LjAiTiAzMMKwNDEnMjQuMCJF!5e0!3m2!1sru!2sua!4v1"
                 allowFullScreen
