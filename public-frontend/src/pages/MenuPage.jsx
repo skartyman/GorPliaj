@@ -233,7 +233,7 @@ export default function MenuPage() {
       </div>
 
       {/* Content */}
-      <div className="page-container">
+      <div className="page-container menu-page-content">
         {loading && <div className="state-msg">{t('menuLoading')}</div>}
         {!loading && error && <div className="state-msg state-error">{error}</div>}
         {!loading && !error && !menu.length && <div className="state-msg">{t('menuEmpty')}</div>}
@@ -256,11 +256,6 @@ export default function MenuPage() {
 
                   return (
                     <article key={item.id} className="menu-card">
-                      <div className="menu-card-body">
-                        <h3>{name}</h3>
-                        <p className="muted">{localizeField(item.description, locale)}</p>
-                        <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
-                      </div>
                       <div className="menu-card-image">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={name} loading="lazy" />
@@ -268,14 +263,21 @@ export default function MenuPage() {
                           <div className="menu-card-fallback">GP</div>
                         )}
                       </div>
-                      <div className="menu-card-footer">
-                        <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={() => toggleLike(item.id)}>
-                          ♥ {item.likesCount || 0}
-                        </button>
-                        <div className="menu-qty">
-                          <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
-                          <span>{quantity}</span>
-                          <button type="button" onClick={() => updateQuantity(item.id, 1)}>+</button>
+                      <div className="menu-card-body">
+                        <h3>{name}</h3>
+                        <p className="muted">{localizeField(item.description, locale)}</p>
+                        <div className="menu-card-bottom">
+                          <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
+                          <div className="menu-card-actions">
+                            <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={() => toggleLike(item.id)}>
+                              ♥ {item.likesCount || 0}
+                            </button>
+                            <div className="menu-qty">
+                              <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
+                              <span>{quantity}</span>
+                              <button type="button" onClick={() => updateQuantity(item.id, 1)}>+</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </article>
