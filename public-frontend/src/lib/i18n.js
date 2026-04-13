@@ -51,7 +51,11 @@ export const dictionary = {
     menuSidebarTitle: 'Разделы меню',
     menuSidebarHint: 'Быстрый переход по категориям',
     menuCategories: 'Категории',
-    menuOpenCart: 'Открыть заказ'
+    menuOpenCart: 'Открыть заказ',
+    eventsLoadError: 'Не удалось загрузить афишу.',
+    eventsEmpty: 'Пока нет опубликованных событий.',
+    eventsLoading: 'Загрузка событий...',
+    mapLoading: 'Загрузка карты...'
   },
   en: {
     footerText: 'GorPliaj · Odesa, Otrada Beach',
@@ -98,7 +102,11 @@ export const dictionary = {
     menuCartTitle: 'My order',
     menuCartTotal: 'Total',
     menuCartCopy: 'Copy',
-    menuCartClear: 'Clear'
+    menuCartClear: 'Clear',
+    eventsLoadError: 'Failed to load events.',
+    eventsEmpty: 'No published events yet.',
+    eventsLoading: 'Loading events...',
+    mapLoading: 'Loading map...'
   }
 };
 

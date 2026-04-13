@@ -37,9 +37,7 @@ export default function MenuPage() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(LIKES_STORAGE_KEY);
-      if (raw) {
-        setLikes(JSON.parse(raw));
-      }
+      if (raw) setLikes(JSON.parse(raw));
     } catch {}
 
     menuApi
@@ -70,18 +68,6 @@ export default function MenuPage() {
 
   const availableSections = useMemo(() => ['kitchen', 'bar'].filter((section) => grouped[section].length), [grouped]);
   const categories = grouped[activeSection]?.length ? grouped[activeSection] : grouped[availableSections[0]] || [];
-  const appLinks = useMemo(
-    () => [
-      { to: '/', label: t('navHome') },
-      { to: '/events', label: t('navEvents') },
-      { to: '/menu', label: t('navMenu') },
-      { to: '/booking', label: t('navBooking') },
-      { to: '/map', label: t('navMap') },
-      { to: '/about', label: t('navAbout') },
-      { to: '/service', label: t('navService') }
-    ],
-    [t]
-  );
 
   useEffect(() => {
     if (!availableSections.length) return;
@@ -104,19 +90,12 @@ export default function MenuPage() {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => Math.abs(a.boundingClientRect.top - HEADER_OFFSET) - Math.abs(b.boundingClientRect.top - HEADER_OFFSET));
-
         if (visible[0]) {
           const key = visible[0].target.getAttribute('data-category-key');
-          if (key) {
-            setActiveCategory(key);
-          }
+          if (key) setActiveCategory(key);
         }
       },
-      {
-        root: null,
-        rootMargin: `-${HEADER_OFFSET}px 0px -55% 0px`,
-        threshold: [0, 0.12, 0.25, 0.5, 0.8]
-      }
+      { root: null, rootMargin: `-${HEADER_OFFSET}px 0px -55% 0px`, threshold: [0, 0.12, 0.25, 0.5, 0.8] }
     );
 
     categories.forEach((category) => {
@@ -131,11 +110,9 @@ export default function MenuPage() {
     if (!activeCategory || !categoryNavRef.current) return;
     const activeChip = categoryButtonsRef.current.get(activeCategory);
     if (!activeChip) return;
-
     const containerRect = categoryNavRef.current.getBoundingClientRect();
     const chipRect = activeChip.getBoundingClientRect();
-    const nextLeft =
-      categoryNavRef.current.scrollLeft + (chipRect.left - containerRect.left) - (containerRect.width - chipRect.width) / 2;
+    const nextLeft = categoryNavRef.current.scrollLeft + (chipRect.left - containerRect.left) - (containerRect.width - chipRect.width) / 2;
     categoryNavRef.current.scrollTo({ left: Math.max(0, nextLeft), behavior: 'smooth' });
   }, [activeCategory]);
 
@@ -206,7 +183,6 @@ export default function MenuPage() {
     if (sectionKey !== activeSection) {
       setActiveSection(sectionKey);
     }
-
     requestAnimationFrame(() => {
       const target = sectionNodesRef.current.get(categoryKey);
       if (!target) return;
@@ -216,212 +192,142 @@ export default function MenuPage() {
     });
   }
 
+  const isEn = locale === 'en';
+
   return (
-    <section className="page-block menu-page">
-      {loading ? <div className="state">{t('menuLoading')}</div> : null}
-      {!loading && error ? <div className="state state-error">{error}</div> : null}
-      {!loading && !error && !menu.length ? <div className="state">{t('menuEmpty')}</div> : null}
-      {!loading && !error && menu.length ? (
-        <div className="menu-layout">
-          <aside className="menu-sidebar">
-            <div className="menu-sidebar-section">
-              <p className="menu-sidebar-eyebrow">Навигация</p>
-              <div className="menu-sidebar-links">
-                {appLinks.map((link) => (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    className={`menu-sidebar-link ${location.pathname === link.to ? 'is-active' : ''}`}
-                  >
-                    {link.label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-
-            <div className="menu-sidebar-card">
-              <p className="menu-sidebar-eyebrow">{t('menuSidebarTitle')}</p>
-              <strong>{t('menuSidebarHint')}</strong>
-            </div>
-
-            {availableSections.map((section) => (
-              <div key={section} className="menu-sidebar-section">
-                <button
-                  type="button"
-                  className={`menu-sidebar-link menu-sidebar-heading ${activeSection === section ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setActiveSection(section);
-                    const firstCategory = grouped[section][0]?.categoryKey;
-                    if (firstCategory) {
-                      scrollToCategory(firstCategory, section);
-                    }
-                  }}
-                >
-                  {section === 'kitchen' ? t('menuSectionKitchen') : t('menuSectionBar')}
-                </button>
-
-                <div className="menu-sidebar-links">
-                  {grouped[section].map((category) => (
-                    <button
-                      key={`${section}-${category.categoryKey}`}
-                      type="button"
-                      className={`menu-sidebar-link ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
-                      onClick={() => scrollToCategory(category.categoryKey, section)}
-                    >
-                      {category.categoryLabel}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </aside>
-
-          <div className="menu-main">
-            <div className="menu-sticky-stack">
-              <div className="chip-row menu-section-row">
-                {availableSections.map((section) => (
-                  <button
-                    key={section}
-                    type="button"
-                    className={`menu-chip ${activeSection === section ? 'is-active' : ''}`}
-                    onClick={() => {
-                      setActiveSection(section);
-                      const firstCategory = grouped[section][0]?.categoryKey;
-                      if (firstCategory) {
-                        scrollToCategory(firstCategory, section);
-                      }
-                    }}
-                  >
-                    {section === 'kitchen' ? t('menuSectionKitchen') : t('menuSectionBar')}
-                  </button>
-                ))}
-              </div>
-
-              <div className="menu-category-carousel" ref={categoryNavRef}>
-                {categories.map((category) => (
-                  <button
-                    key={category.categoryKey}
-                    type="button"
-                    className={`menu-chip menu-chip-category ${activeCategory === category.categoryKey ? 'is-active' : ''}`}
-                    ref={(node) => {
-                      if (node) {
-                        categoryButtonsRef.current.set(category.categoryKey, node);
-                      } else {
-                        categoryButtonsRef.current.delete(category.categoryKey);
-                      }
-                    }}
-                    onClick={() => scrollToCategory(category.categoryKey, activeSection)}
-                  >
-                    {category.categoryLabel}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="menu-section-content">
-              {categories.map((category) => (
-                <section
-                  key={category.categoryKey}
-                  className="menu-category-block"
-                  data-category-key={category.categoryKey}
-                  ref={(node) => {
-                    if (node) {
-                      sectionNodesRef.current.set(category.categoryKey, node);
-                    } else {
-                      sectionNodesRef.current.delete(category.categoryKey);
-                    }
-                  }}
-                >
-                  <h2 className="menu-category-title">{category.categoryLabel}</h2>
-                  <div className="menu-grid">
-                    {category.items.map((item) => {
-                      const quantity = Number(items[String(item.id)]?.quantity || 0);
-                      const name = localizeField(item.name, locale);
-
-                      return (
-                        <article key={item.id} className="menu-card">
-                          <div className="menu-card-main">
-                            <div className="menu-card-body">
-                              <strong className="menu-title">{name}</strong>
-                              <p className="muted menu-description">{localizeField(item.description, locale)}</p>
-                            </div>
-                            <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
-                            <div className="menu-image-wrap">
-                              {item.imageUrl ? <img src={item.imageUrl} alt={name} className="menu-image" loading="lazy" /> : <div className="menu-image-fallback">GP</div>}
-                            </div>
-                          </div>
-                          <div className="menu-card-footer">
-                            <button type="button" className={`menu-like ${likes[String(item.id)] ? 'is-active' : ''}`} onClick={() => toggleLike(item.id)}>
-                              {t('menuLike')} {item.likesCount || 0}
-                            </button>
-                            <div className="menu-qty">
-                              <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>
-                                -
-                              </button>
-                              <span>{quantity}</span>
-                              <button type="button" onClick={() => updateQuantity(item.id, 1)}>
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </div>
+    <>
+      {/* Sticky header */}
+      <div className="menu-page-header">
+        <div className="menu-section-tabs">
+          {availableSections.map((section) => (
+            <button
+              key={section}
+              type="button"
+              className={`menu-tab ${activeSection === section ? 'active' : ''}`}
+              onClick={() => {
+                setActiveSection(section);
+                const firstCategory = grouped[section][0]?.categoryKey;
+                if (firstCategory) scrollToCategory(firstCategory, section);
+              }}
+            >
+              {section === 'kitchen' ? (isEn ? 'Kitchen' : 'Кухня') : (isEn ? 'Bar' : 'Бар')}
+            </button>
+          ))}
         </div>
-      ) : null}
+        <div className="menu-category-scroll" ref={categoryNavRef}>
+          {categories.map((category) => (
+            <button
+              key={category.categoryKey}
+              type="button"
+              className={`menu-category-chip ${activeCategory === category.categoryKey ? 'active' : ''}`}
+              ref={(node) => {
+                if (node) categoryButtonsRef.current.set(category.categoryKey, node);
+                else categoryButtonsRef.current.delete(category.categoryKey);
+              }}
+              onClick={() => scrollToCategory(category.categoryKey, activeSection)}
+            >
+              {category.categoryLabel}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {cartTotalItems > 0 ? (
-        <button type="button" className="menu-cart-fab" onClick={() => setCartOpen(true)}>
-          <strong>{t('menuCartTitle')}</strong>
+      {/* Content */}
+      <div className="page-container">
+        {loading && <div className="state-msg">{t('menuLoading')}</div>}
+        {!loading && error && <div className="state-msg state-error">{error}</div>}
+        {!loading && !error && !menu.length && <div className="state-msg">{t('menuEmpty')}</div>}
+        {!loading && !error && menu.length ? (
+          categories.map((category) => (
+            <section
+              key={category.categoryKey}
+              className="content-section"
+              data-category-key={category.categoryKey}
+              ref={(node) => {
+                if (node) sectionNodesRef.current.set(category.categoryKey, node);
+                else sectionNodesRef.current.delete(category.categoryKey);
+              }}
+            >
+              <h2>{category.categoryLabel}</h2>
+              <div className="menu-grid">
+                {category.items.map((item) => {
+                  const quantity = Number(items[String(item.id)]?.quantity || 0);
+                  const name = localizeField(item.name, locale);
+
+                  return (
+                    <article key={item.id} className="menu-card">
+                      <div className="menu-card-image">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={name} loading="lazy" />
+                        ) : (
+                          <div className="menu-card-fallback">GP</div>
+                        )}
+                      </div>
+                      <div className="menu-card-body">
+                        <h3>{name}</h3>
+                        <p className="muted">{localizeField(item.description, locale)}</p>
+                        <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
+                      </div>
+                      <div className="menu-card-footer">
+                        <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={() => toggleLike(item.id)}>
+                          ♥ {item.likesCount || 0}
+                        </button>
+                        <div className="menu-qty">
+                          <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
+                          <span>{quantity}</span>
+                          <button type="button" onClick={() => updateQuantity(item.id, 1)}>+</button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))
+        ) : null}
+      </div>
+
+      {/* Cart FAB */}
+      {cartTotalItems > 0 && (
+        <button type="button" className="cart-fab" onClick={() => setCartOpen(true)}>
+          <span>{t('menuCartTitle')}</span>
           <span>
             {cartTotalItems} · {formatPrice(cartTotalPrice)} грн
           </span>
         </button>
-      ) : null}
+      )}
 
-      {cartOpen ? (
-        <div className="menu-cart-overlay" role="dialog" aria-modal="true">
-          <button className="menu-cart-backdrop" onClick={() => setCartOpen(false)} aria-label={t('menuOpenCart')} />
-          <section className="menu-cart-panel">
+      {/* Cart Panel */}
+      {cartOpen && (
+        <div className="cart-overlay" role="dialog" aria-modal="true">
+          <button className="cart-backdrop" onClick={() => setCartOpen(false)} aria-label={t('menuOpenCart')} />
+          <section className="cart-panel">
             <h2>{t('menuCartTitle')}</h2>
             {cartEntries.map((entry) => (
-              <div key={entry.itemId} className="menu-cart-row">
+              <div key={entry.itemId} className="cart-item">
                 <div>
                   <strong>{entry.name}</strong>
-                  <p className="muted">{entry.category}</p>
+                  <p className="muted" style={{ margin: '2px 0 0', fontSize: '0.82rem' }}>{entry.category}</p>
                 </div>
                 <div className="menu-qty">
-                  <button type="button" onClick={() => updateQuantity(entry.itemId, -1)}>
-                    -
-                  </button>
+                  <button type="button" onClick={() => updateQuantity(entry.itemId, -1)}>−</button>
                   <span>{entry.quantity}</span>
-                  <button type="button" onClick={() => updateQuantity(entry.itemId, 1)}>
-                    +
-                  </button>
+                  <button type="button" onClick={() => updateQuantity(entry.itemId, 1)}>+</button>
                 </div>
               </div>
             ))}
-            <p>
+            <p style={{ marginTop: 20 }}>
               <strong>
                 {t('menuCartTotal')}: {formatPrice(cartTotalPrice)} грн
               </strong>
             </p>
-            <div className="hero-cta">
-              <button className="btn btn-secondary" type="button" onClick={copyOrder}>
-                {t('menuCartCopy')}
-              </button>
-              <button className="btn" type="button" onClick={clear}>
-                {t('menuCartClear')}
-              </button>
+            <div className="btn-group" style={{ marginTop: 16 }}>
+              <button className="btn btn-secondary" type="button" onClick={copyOrder}>{t('menuCartCopy')}</button>
+              <button className="btn btn-secondary" type="button" onClick={clear}>{t('menuCartClear')}</button>
             </div>
           </section>
         </div>
-      ) : null}
-    </section>
+      )}
+    </>
   );
 }

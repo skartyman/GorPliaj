@@ -6,7 +6,7 @@ import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
 export default function BookingPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [searchParams] = useSearchParams();
   const today = new Date().toISOString().slice(0, 10);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function BookingPage() {
     customerPhone: '',
     commentCustomer: ''
   });
-  useMeta(`${t('bookingTitle')} · ГорПляж`, 'Форма онлайн-бронирования.');
+  useMeta(`${t('bookingTitle')} · GorPliaj`, 'Онлайн-бронирование столов.');
 
   useEffect(() => {
     async function loadMap() {
@@ -53,7 +53,7 @@ export default function BookingPage() {
           };
         });
       } catch {
-        setErrorMessage('Не удалось загрузить доступные столы.');
+        setErrorMessage(locale === 'en' ? 'Failed to load available tables.' : 'Не удалось загрузить доступные столы.');
       } finally {
         setLoading(false);
       }
@@ -65,7 +65,7 @@ export default function BookingPage() {
   async function submitBooking(event) {
     event.preventDefault();
     if (!selected.tableId || !selected.mapId || !selected.zoneId) {
-      setErrorMessage('Перед отправкой выберите стол на карте.');
+      setErrorMessage(locale === 'en' ? 'Please select a table before submitting.' : 'Перед отправкой выберите стол на карте.');
       return;
     }
 
@@ -87,46 +87,51 @@ export default function BookingPage() {
         commentCustomer: form.commentCustomer
       });
 
-      setSuccessMessage('Заявка на бронирование создана. Менеджер свяжется с вами.');
+      setSuccessMessage(locale === 'en' ? 'Booking request created. Manager will contact you.' : 'Заявка на бронирование создана. Менеджер свяжется с вами.');
     } catch (error) {
-      setErrorMessage(error.message || 'Не удалось создать бронирование.');
+      setErrorMessage(error.message || (locale === 'en' ? 'Failed to create booking.' : 'Не удалось создать бронирование.'));
     } finally {
       setLoading(false);
     }
   }
 
+  const isEn = locale === 'en';
+
   return (
-    <section className="page-block">
-      <h1>{t('bookingTitle')}</h1>
-      <p className="muted">Выберите свободный стол и отправьте заявку на бронирование.</p>
-      {searchParams.get('event') ? <p className="booking-event-context">Бронирование для события: {searchParams.get('event')}</p> : null}
+    <>
+      <div className="section-header">
+        <div>
+          <h1>{isEn ? 'Book a table' : 'Бронирование'}</h1>
+          <p className="muted">{isEn ? 'Select a free table and submit a booking request.' : 'Выберите свободный стол и отправьте заявку на бронирование.'}</p>
+        </div>
+      </div>
 
-      <form className="booking-form-lite" onSubmit={submitBooking}>
-        <label>
-          Дата
-          <input type="date" value={form.date} min={today} required onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))} />
-        </label>
+      {searchParams.get('event') && (
+        <p style={{ background: 'rgba(201,168,108,0.1)', padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginBottom: 24 }}>
+          {isEn ? 'Booking for event' : 'Бронирование для события'}: <strong>{searchParams.get('event')}</strong>
+        </p>
+      )}
 
-        <label>
-          Гостей
-          <input
-            type="number"
-            value={form.guests}
-            min="1"
-            max="20"
-            required
-            onChange={(event) => setForm((current) => ({ ...current, guests: Number(event.target.value) }))}
-          />
-        </label>
+      <form onSubmit={submitBooking} className="form-grid">
+        <div className="form-group">
+          <label>{isEn ? 'Date' : 'Дата'}</label>
+          <input type="date" className="form-input" value={form.date} min={today} required onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))} />
+        </div>
 
-        <label>
-          Время начала
-          <input type="time" value={form.timeFrom} required onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))} />
-        </label>
+        <div className="form-group">
+          <label>{isEn ? 'Guests' : 'Гостей'}</label>
+          <input type="number" className="form-input" value={form.guests} min="1" max="20" required onChange={(event) => setForm((current) => ({ ...current, guests: Number(event.target.value) }))} />
+        </div>
 
-        <label>
-          Доступные столы ({mapName || 'карта'})
+        <div className="form-group">
+          <label>{isEn ? 'Start time' : 'Время начала'}</label>
+          <input type="time" className="form-input" value={form.timeFrom} required onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))} />
+        </div>
+
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label>{isEn ? 'Available tables' : 'Доступные столы'} ({mapName || isEn ? 'map' : 'карта'})</label>
           <select
+            className="form-input"
             value={selected.tableId}
             onChange={(event) => {
               const nextTable = tableOptions.find((table) => table.id === Number(event.target.value));
@@ -137,43 +142,43 @@ export default function BookingPage() {
               }));
             }}
           >
-            {!tableOptions.length ? <option value="">Нет свободных столов под эти параметры</option> : null}
+            {!tableOptions.length ? <option value="">{isEn ? 'No free tables for these parameters' : 'Нет свободных столов под эти параметры'}</option> : null}
             {tableOptions.map((table) => (
               <option key={table.id} value={table.id}>
-                {table.name} ({table.seatsMin}-{table.seatsMax})
+                {table.name} ({table.seatsMin}-{table.seatsMax} {isEn ? 'seats' : 'мест'})
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label>
-          Имя
-          <input type="text" value={form.customerName} required minLength="2" onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))} />
-        </label>
+        <div className="form-group">
+          <label>{isEn ? 'Name' : 'Имя'}</label>
+          <input type="text" className="form-input" value={form.customerName} required minLength="2" onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))} />
+        </div>
 
-        <label>
-          Телефон
-          <input type="tel" value={form.customerPhone} required minLength="7" onChange={(event) => setForm((current) => ({ ...current, customerPhone: event.target.value }))} />
-        </label>
+        <div className="form-group">
+          <label>{isEn ? 'Phone' : 'Телефон'}</label>
+          <input type="tel" className="form-input" value={form.customerPhone} required minLength="7" onChange={(event) => setForm((current) => ({ ...current, customerPhone: event.target.value }))} />
+        </div>
 
-        <label>
-          Комментарий
-          <textarea rows="3" value={form.commentCustomer} onChange={(event) => setForm((current) => ({ ...current, commentCustomer: event.target.value }))} />
-        </label>
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label>{isEn ? 'Comment' : 'Комментарий'}</label>
+          <textarea className="form-input" rows="3" value={form.commentCustomer} onChange={(event) => setForm((current) => ({ ...current, commentCustomer: event.target.value }))} />
+        </div>
 
-        <div className="hero-cta">
+        <div className="btn-group">
           <button type="submit" className="btn btn-primary" disabled={loading || !tableOptions.length}>
-            Отправить заявку
+            {isEn ? 'Submit request' : 'Отправить заявку'}
           </button>
           <Link className="btn btn-secondary" to={`/map?date=${form.date}&guests=${form.guests}&timeFrom=${form.timeFrom}`}>
-            Открыть карту
+            {isEn ? 'Open map' : 'Открыть карту'}
           </Link>
         </div>
 
-        {loading ? <div className="state">Обновляем данные...</div> : null}
-        {errorMessage ? <div className="state state-error">{errorMessage}</div> : null}
-        {successMessage ? <div className="state booking-success">{successMessage}</div> : null}
+        {loading && <div className="state-msg">{isEn ? 'Updating data...' : 'Обновляем данные...'}</div>}
+        {errorMessage && <div className="state-msg state-error">{errorMessage}</div>}
+        {successMessage && <div className="state-msg state-success">{successMessage}</div>}
       </form>
-    </section>
+    </>
   );
 }

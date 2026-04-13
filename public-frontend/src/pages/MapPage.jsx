@@ -190,19 +190,23 @@ export default function MapPage() {
   }
 
   if (state.loading) {
-    return <div className="state">Загрузка карты...</div>;
+    return <div className="state-msg">{t('mapLoading') || 'Загрузка карты...'}</div>;
   }
 
   if (state.error || !state.result) {
-    return <div className="state state-error">{state.error || t('mapLoadFailed')}</div>;
+    return <div className="state-msg state-error">{state.error || t('mapLoadFailed')}</div>;
   }
 
   return (
-    <section className="page-block map-page">
-      <h1>{t('mapTitle')}</h1>
-      <p className="muted">{t('mapSubtitle')}</p>
+    <>
+      <div className="section-header">
+        <div>
+          <h1>{t('mapTitle')}</h1>
+          <p className="muted">{t('mapSubtitle')}</p>
+        </div>
+      </div>
 
-      <div className="map-layout">
+      <div className="map-container">
         <article className="map-zone-board">
           <div className="map-controls">
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale * 1.15)}>
@@ -355,6 +359,6 @@ export default function MapPage() {
           <p className="muted source-note">{t('mapSource')}</p>
         </aside>
       </div>
-    </section>
+    </>
   );
 }

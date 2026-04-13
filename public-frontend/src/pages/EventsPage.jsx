@@ -13,26 +13,31 @@ export default function EventsPage() {
     eventsApi
       .list()
       .then((events) => setState({ loading: false, error: '', events }))
-      .catch(() => setState({ loading: false, error: 'Не удалось загрузить афишу.', events: [] }));
+      .catch(() => setState({ loading: false, error: t('eventsLoadError') || 'Не удалось загрузить афишу.', events: [] }));
   }, []);
 
   return (
-    <section className="page-block">
-      <h1>Афиша</h1>
-      <p className="muted">Все опубликованные события ГорПляжа.</p>
-      {state.loading ? <div className="state">Загрузка событий...</div> : null}
-      {state.error ? <div className="state state-error">{state.error}</div> : null}
-      {!state.loading && !state.error ? (
+    <>
+      <div className="section-header">
+        <div>
+          <h1>{t('navEvents')}</h1>
+          <p className="muted">{t('eventsMetaDescription')}</p>
+        </div>
+      </div>
+
+      {state.loading && <div className="state-msg">{t('eventsLoading') || 'Загрузка событий...'}</div>}
+      {state.error && <div className="state-msg state-error">{state.error}</div>}
+      {!state.loading && !state.error && (
         state.events.length ? (
-          <div className="cards-grid">
+          <div className="events-grid">
             {state.events.map((event, index) => (
               <EventCard key={event.id} event={event} featured={index === 0} />
             ))}
           </div>
         ) : (
-          <div className="state">Пока нет опубликованных событий.</div>
+          <div className="state-msg">{t('eventsEmpty') || 'Пока нет опубликованных событий.'}</div>
         )
-      ) : null}
-    </section>
+      )}
+    </>
   );
 }

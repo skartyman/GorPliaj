@@ -9,53 +9,57 @@ export default function EventDetailPage() {
   const { locale } = useLocale();
   const { slug } = useParams();
   const [state, setState] = useState({ loading: true, error: '', event: null });
-  useMeta(state.event ? `${state.event.title} · ГорПляж` : 'Событие · ГорПляж', state.event?.shortDescription || 'Детали события.');
+  useMeta(state.event ? `${state.event.title} · GorPliaj` : 'Event · GorPliaj', state.event?.shortDescription || 'Event details.');
 
   useEffect(() => {
     if (!slug) return;
     eventsApi
       .bySlug(slug)
       .then((event) => setState({ loading: false, error: '', event }))
-      .catch(() => setState({ loading: false, error: 'Не удалось загрузить событие.', event: null }));
+      .catch(() => setState({ loading: false, error: locale === 'en' ? 'Failed to load event.' : 'Не удалось загрузить событие.', event: null }));
   }, [slug]);
 
   if (state.loading) {
-    return <div className="state">Загрузка события...</div>;
+    return <div className="state-msg">{locale === 'en' ? 'Loading event...' : 'Загрузка события...'}</div>;
   }
 
   if (state.error || !state.event) {
-    return <div className="state state-error">{state.error || 'Событие не найдено.'}</div>;
+    return <div className="state-msg state-error">{state.error || (locale === 'en' ? 'Event not found.' : 'Событие не найдено.')}</div>;
   }
 
   const event = state.event;
+  const isEn = locale === 'en';
 
   return (
-    <section className="page-block">
-      <Link to="/events" className="text-link">
-        Назад к афише
+    <>
+      <Link to="/events" className="text-link" style={{ display: 'inline-block', marginBottom: 24 }}>
+        ← {isEn ? 'Back to events' : 'Назад к афише'}
       </Link>
-      <article className="event-detail">
-        <img src={event.posterImage || '/icons/lebedi.jpg'} alt={event.title} className="event-detail-image" />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 400px) 1fr', gap: 32, alignItems: 'start' }}>
+        <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+          <img src={event.posterImage || '/icons/lebedi.jpg'} alt={event.title} style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover' }} />
+        </div>
         <div>
-          <h1>{event.title}</h1>
-          <p className="event-date">{formatEventDateRange(event.startAt, event.endAt, locale === 'en' ? 'en-US' : 'ru-RU')}</p>
-          <p className="muted">{event.shortDescription}</p>
-          <p>{event.fullDescription}</p>
-          <div className="hero-cta">
+          <p className="event-date">{formatEventDateRange(event.startAt, event.endAt, isEn ? 'en-US' : 'ru-RU')}</p>
+          <h1 style={{ marginTop: 8 }}>{event.title}</h1>
+          <p className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>{event.shortDescription}</p>
+          {event.fullDescription && <p style={{ lineHeight: 1.7, marginTop: 16 }}>{event.fullDescription}</p>}
+          <div className="btn-group" style={{ marginTop: 28 }}>
             <Link className="btn btn-primary" to={`/booking?event=${event.slug}`}>
-              Забронировать стол
+              {isEn ? 'Book a table' : 'Забронировать стол'}
             </Link>
             <Link className="btn btn-secondary" to="/map">
-              Открыть карту
+              {isEn ? 'Open map' : 'Открыть карту'}
             </Link>
             {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl ? (
               <a className="btn btn-secondary" href={event.ticketUrl} target="_blank" rel="noreferrer">
-                Купить билет
+                {isEn ? 'Buy ticket' : 'Купить билет'}
               </a>
             ) : null}
           </div>
         </div>
-      </article>
-    </section>
+      </div>
+    </>
   );
 }
