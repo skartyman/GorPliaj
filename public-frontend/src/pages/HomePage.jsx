@@ -5,7 +5,7 @@ import { formatEventDateRange } from '../lib/events';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 
-const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/lebedi.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
+const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
 export default function HomePage() {
   const { t, locale } = useLocale();
@@ -65,7 +65,7 @@ export default function HomePage() {
             state.events.map((event) => (
               <article key={event.id} className="event-card">
                 <Link to={`/events/${event.slug}`} className="media-link">
-                  <img src={event.posterImage || '/icons/lebedi.jpg'} alt={event.title} loading="lazy" />
+                  <img src={event.posterImage || '/icons/moonpirs.jpg'} alt={event.title} loading="lazy" />
                   <div className="event-overlay">
                     <p className="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
                     <h3>{event.title}</h3>
@@ -88,7 +88,7 @@ export default function HomePage() {
             <Link to="/map" className="btn btn-primary">{isEn ? 'Open map' : 'Открыть карту'}</Link>
           </div>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32, display: 'grid', placeItems: 'center' }}>
-            <img src="/icons/lebedi.jpg" alt="" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} loading="lazy" />
+            <img src="/icons/moonpirs.jpg" alt="" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} loading="lazy" />
           </div>
         </div>
       </section>
