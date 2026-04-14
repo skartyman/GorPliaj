@@ -1352,7 +1352,15 @@ h3 {
 }
 
 @media (max-width: 767px) {
+  /* On mobile, menu page: top-bar scrolls away, menu header stays sticky */
   .menu-route .top-bar {
     display: flex;
+    position: static;
+    z-index: 1;
+  }
+
+  .menu-route .menu-page-header {
+    top: 0;
+    z-index: 60;
   }
 }
