@@ -6,6 +6,12 @@ import { LocaleProvider } from './state/locale';
 import { CartProvider } from './state/cart';
 import './styles.css';
 
+// Sync theme before React mounts
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+  document.documentElement.dataset.theme = 'light';
+}
+
 async function cleanupLegacyServiceWorkers() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return;

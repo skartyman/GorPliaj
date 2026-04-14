@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useLocale } from '../state/locale';
 
 const navItems = [
@@ -31,6 +32,12 @@ export default function Layout() {
   const location = useLocation();
   const { locale, setLocale, t } = useLocale();
   const isMenuRoute = location.pathname === '/menu';
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme === 'light' ? 'light' : '';
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   return (
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
@@ -67,6 +74,14 @@ export default function Layout() {
         <div className="sidebar-footer">
           <button type="button" className="locale-btn" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
             {t('localeSwitch')}
+          </button>
+          <button
+            type="button"
+            className="locale-btn"
+            onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+            style={{ marginTop: 4 }}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
       </aside>
