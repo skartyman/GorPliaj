@@ -27,6 +27,7 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [activeSection, setActiveSection] = useState('kitchen');
   const [activeCategory, setActiveCategory] = useState('');
   const categoryNavRef = useRef(null);
@@ -255,7 +256,7 @@ export default function MenuPage() {
                   const name = localizeField(item.name, locale);
 
                   return (
-                    <article key={item.id} className="menu-card">
+                    <article key={item.id} className="menu-card" onClick={() => setSelectedItem({ ...item, name, category: localizeField(category.categoryLabel, locale) })}>
                       <div className="menu-card-image">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={name} loading="lazy" />
@@ -269,10 +270,10 @@ export default function MenuPage() {
                         <div className="menu-card-bottom">
                           <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
                           <div className="menu-card-actions">
-                            <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={() => toggleLike(item.id)}>
+                            <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }}>
                               ♥ {item.likesCount || 0}
                             </button>
-                            <div className="menu-qty">
+                            <div className="menu-qty" onClick={(e) => e.stopPropagation()}>
                               <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
                               <span>{quantity}</span>
                               <button type="button" onClick={() => updateQuantity(item.id, 1)}>+</button>
@@ -328,6 +329,42 @@ export default function MenuPage() {
               <button className="btn btn-secondary" type="button" onClick={clear}>{t('menuCartClear')}</button>
             </div>
           </section>
+        </div>
+      )}
+
+      {/* Item Detail Modal (bottom sheet) */}
+      {selectedItem && (
+        <div className="modal-overlay modal-item" role="dialog" aria-modal="true">
+          <button className="modal-backdrop" onClick={() => setSelectedItem(null)} aria-label={isEn ? 'Close' : 'Закрыть'} />
+          <div className="modal-sheet">
+            <div className="modal-sheet-handle" />
+            {selectedItem.imageUrl && (
+              <img className="modal-sheet-image" src={selectedItem.imageUrl} alt={selectedItem.name} />
+            )}
+            <div className="modal-sheet-body">
+              <div className="modal-sheet-header">
+                <div>
+                  <p className="modal-sheet-category">{selectedItem.category}</p>
+                  <h2 style={{ margin: '4px 0 0' }}>{selectedItem.name}</h2>
+                </div>
+                <button className="modal-close-btn" onClick={() => setSelectedItem(null)} aria-label={isEn ? 'Close' : 'Закрыть'}>✕</button>
+              </div>
+              <p className="modal-sheet-desc">{localizeField(selectedItem.description, locale)}</p>
+              <div className="modal-sheet-footer">
+                <div className="modal-sheet-price">{formatPrice(Number(selectedItem.price || 0))} грн</div>
+                <div className="modal-sheet-actions">
+                  <div className="menu-qty">
+                    <button type="button" onClick={() => updateQuantity(selectedItem.id, -1)} disabled={Number(items[String(selectedItem.id)]?.quantity || 0) === 0}>−</button>
+                    <span>{Number(items[String(selectedItem.id)]?.quantity || 0)}</span>
+                    <button type="button" onClick={() => updateQuantity(selectedItem.id, 1)}>+</button>
+                  </div>
+                  <button className="btn btn-primary" onClick={() => { updateQuantity(selectedItem.id, 1); setSelectedItem(null); }}>
+                    {isEn ? 'Add to order' : 'В заказ'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
