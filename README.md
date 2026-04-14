@@ -78,7 +78,7 @@ npm run prisma:seed
 - `src/server.js` — запуск HTTP-сервера.
 - `src/routes/*` — публічні, admin і payments роутери.
 - `src/controllers/*` — контролери endpoint'ів.
-- `src/services/*` — бізнес-логіка (поки без БД).
+- `src/services/*` — бізнес-логіка.
 - `src/config/*` — конфігурація середовища.
 
 ## Поточні endpoint'и
@@ -136,7 +136,7 @@ npm run public:build
 
 ### Поточний serve-flow
 
-- Express віддає `public/public-app` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu`, `/service/*` та інших публічних маршрутів.
+- Express віддає `public/public-app` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu` та інших публічних маршрутів.
 - Якщо public React build відсутній, сервер завершує запуск з помилкою конфігурації.
 - Маршрути `/admin/*` і `/api/*` працюють окремо, без змін для адмінки та backend API.
 
@@ -157,31 +157,3 @@ Docker build тепер:
 - `/map`
 - `/about`
 - `/menu`
-
-## Service requests MVP (Telegram Mini App)
-
-Реалізовано перший end-to-end сервісний сценарій (тільки service requests):
-
-- `POST /api/telegram/init/validate` — валідація Telegram `initData`.
-- `GET /api/telegram/clients/me?telegramUserId=...` — профіль клієнта.
-- `GET /api/telegram/clients/me/equipment?clientId=...` — обладнання клієнта.
-- `POST /api/telegram/service-requests/media` — upload фото/відео (multipart, field `media`).
-- `POST /api/telegram/service-requests` — створення заявки.
-- `GET /api/telegram/service-requests/:id` — картка заявки.
-- `GET /api/telegram/clients/:clientId/service-requests` — історія заявок.
-- `PATCH /api/telegram/service-requests/:id/status` — зміна статусу (manager/backoffice flow).
-
-Статуси заявки: `NEW`, `TRIAGE`, `WAITING_MANAGER`, `WAITING_CLIENT`, `IN_PROGRESS`, `WAITING_PARTS`, `DONE`, `CANCELLED`.
-
-### Де зберігаються дані
-
-- Тимчасовий repository adapter: `src/infrastructure/fileServiceRequestRepository.js`.
-- Реальне сховище MVP: `src/data/serviceRequests.json`.
-- Adapter контракт винесено окремо (`src/repositories/serviceRequestRepository.js`) для простої заміни на Google Sheets.
-- Підготовлено заглушку `GoogleSheetsServiceRequestRepository`.
-
-### Frontend сторінки (React public app)
-
-- `/service` — покрокове створення заявки.
-- `/service/history` — історія заявок клієнта.
-- `/service/requests/:id` — статус/деталі заявки.

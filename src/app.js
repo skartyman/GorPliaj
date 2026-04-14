@@ -7,7 +7,6 @@ require('./config/env');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const paymentsRoutes = require('./routes/payments');
-const telegramRoutes = require('./routes/telegram');
 
 const app = express();
 const publicDir = path.join(__dirname, '..', 'public');
@@ -47,7 +46,6 @@ app.use('/admin/assets', express.static(path.join(adminAppDir, 'assets')));
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
-app.use('/api/telegram', telegramRoutes);
 
 function sendPublicIndex(res) {
   setNoCacheHeaders(res);
@@ -75,10 +73,6 @@ app.get('/map', (req, res) => {
 });
 
 app.get('/about', (req, res) => {
-  return sendPublicIndex(res);
-});
-
-app.get(['/service', '/service/*'], (req, res) => {
   return sendPublicIndex(res);
 });
 
