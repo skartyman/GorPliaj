@@ -89,8 +89,8 @@ img { display: block; max-width: 100%; }
 }
 
 .sidebar-logo img {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   border-radius: 12px;
   flex-shrink: 0;
@@ -261,8 +261,8 @@ img { display: block; max-width: 100%; }
 }
 
 .top-bar-logo {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   border-radius: 8px;
   filter: invert(1) brightness(1.2);
