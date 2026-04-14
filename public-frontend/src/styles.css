@@ -532,11 +532,8 @@ h3 {
 
 /* ===== Menu Page ===== */
 .menu-page-header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  margin: 0 -40px 24px;
-  padding: 14px 40px 16px;
+  margin: -48px -40px 0;
+  padding: 14px 40px 0;
   background: rgba(14, 14, 16, 0.96);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--line);
@@ -564,6 +561,19 @@ h3 {
   background: var(--brand);
   color: #0e0e10;
   border-color: var(--brand);
+}
+
+.menu-category-scroll-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 12px 0 12px;
+  background: rgba(14, 14, 16, 0.98);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--line);
+  margin: 0 -40px;
+  padding-left: 40px;
+  padding-right: 40px;
 }
 
 .menu-category-scroll {
@@ -1100,8 +1110,14 @@ h3 {
   }
 
   .menu-page-header {
-    margin: -32px -24px 24px;
-    padding: 12px 24px 14px;
+    margin: -32px -24px 0;
+    padding: 12px 24px 0;
+  }
+
+  .menu-category-scroll-wrapper {
+    margin: 0 -24px;
+    padding-left: 24px;
+    padding-right: 24px;
   }
 
   .menu-grid {
@@ -1137,8 +1153,14 @@ h3 {
   }
 
   .menu-page-header {
-    margin: 0 -14px 16px;
-    padding: 10px 14px 12px;
+    margin: -20px -14px 0;
+    padding: 10px 14px 0;
+  }
+
+  .menu-category-scroll-wrapper {
+    margin: 0 -14px;
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
   .hero {
@@ -1282,8 +1304,14 @@ h3 {
   }
 
   .menu-page-header {
-    margin: -16px -10px 16px;
-    padding: 8px 10px 10px;
+    margin: -16px -10px 0;
+    padding: 8px 10px 0;
+  }
+
+  .menu-category-scroll-wrapper {
+    margin: 0 -10px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .hero {

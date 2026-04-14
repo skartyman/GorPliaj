@@ -196,7 +196,7 @@ export default function MenuPage() {
 
   return (
     <>
-      {/* Sticky header */}
+      {/* Header: tabs (scrollable) */}
       <div className="menu-page-header">
         <div className="menu-section-tabs">
           {availableSections.map((section) => (
@@ -214,6 +214,10 @@ export default function MenuPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Sticky category chips */}
+      <div className="menu-category-scroll-wrapper">
         <div className="menu-category-scroll" ref={categoryNavRef}>
           {categories.map((category) => (
             <button
@@ -233,7 +237,7 @@ export default function MenuPage() {
       </div>
 
       {/* Content */}
-      <div className="page-container menu-page-content">
+      <div className="page-container">
         {loading && <div className="state-msg">{t('menuLoading')}</div>}
         {!loading && error && <div className="state-msg state-error">{error}</div>}
         {!loading && !error && !menu.length && <div className="state-msg">{t('menuEmpty')}</div>}
