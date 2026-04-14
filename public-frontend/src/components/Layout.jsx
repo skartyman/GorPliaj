@@ -87,14 +87,19 @@ export default function Layout() {
       </aside>
 
       {/* Top bar (mobile) */}
-      <header className="top-bar">
+      <header className={`top-bar${isMenuRoute ? ' menu-top-bar' : ''}`}>
         <NavLink to="/" className="top-bar-brand">
-          <img src="/icons/Logo.png" alt="GorPliaj" />
+          <img className="top-bar-logo" src="/icons/Logo.png" alt="GorPliaj" />
           <span>GorPliaj</span>
         </NavLink>
-        <button type="button" className="locale-btn" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
-          {t('localeSwitch')}
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" className="locale-btn" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
+            {t('localeSwitch')}
+          </button>
+          <button type="button" className="locale-btn" onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}>
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+        </div>
       </header>
 
       {/* Main content */}
