@@ -55,25 +55,3 @@ export const bookingsApi = {
       body: JSON.stringify(payload)
     })
 };
-
-export const serviceApi = {
-  fetchClientProfile: (telegramUserId) =>
-    request(`/telegram/clients/me?telegramUserId=${encodeURIComponent(telegramUserId)}`),
-  fetchClientEquipment: (clientId) =>
-    request(`/telegram/clients/me/equipment?clientId=${encodeURIComponent(clientId)}`),
-  createServiceRequest: (payload) =>
-    request('/telegram/service-requests', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }),
-  fetchServiceHistory: (clientId) => request(`/telegram/clients/${clientId}/service-requests`),
-  fetchServiceRequest: (id) => request(`/telegram/service-requests/${id}`),
-  uploadMedia: (file) => {
-    const formData = new FormData();
-    formData.append('media', file);
-    return request('/telegram/service-requests/media', {
-      method: 'POST',
-      body: formData
-    });
-  }
-};

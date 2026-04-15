@@ -7,9 +7,6 @@ import MenuPage from './pages/MenuPage';
 import MapPage from './pages/MapPage';
 import BookingPage from './pages/BookingPage';
 import AboutPage from './pages/AboutPage';
-import ServicePage from './pages/ServicePage';
-import ServiceHistoryPage from './pages/ServiceHistoryPage';
-import ServiceRequestPage from './pages/ServiceRequestPage';
 
 export default function App() {
   return (
@@ -22,9 +19,6 @@ export default function App() {
         <Route path="/map" element={<MapPage />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/service" element={<ServicePage />} />
-        <Route path="/service/history" element={<ServiceHistoryPage />} />
-        <Route path="/service/requests/:id" element={<ServiceRequestPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
