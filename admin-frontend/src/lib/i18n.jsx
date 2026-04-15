@@ -528,6 +528,35 @@ const translations = {
       UNAVAILABLE: 'Недоступно',
       FREE: 'Свободно',
       UNKNOWN: 'Неизвестно'
+    },
+    settings: {
+      title: 'Настройки',
+      description: 'Управление основными параметрами заведения, SEO и контактными данными.',
+      eyebrow: 'Конфигурация сайта',
+      save: 'Сохранить настройки',
+      saving: 'Сохраняем...',
+      saveSuccess: 'Настройки успешно сохранены.',
+      errors: {
+        load: 'Не удалось загрузить настройки.',
+        save: 'Не удалось сохранить настройки.'
+      },
+      sections: {
+        general: 'Общие настройки',
+        seo: 'SEO параметры',
+        contacts: 'Контактная информация'
+      },
+      fields: {
+        title: 'Заголовок сайта',
+        description: 'Описание (Meta Description)',
+        keywords: 'Ключевые слова',
+        logoUrl: 'URL логотипа',
+        faviconUrl: 'URL фавикона',
+        phone: 'Телефон',
+        email: 'Email',
+        address: 'Адрес',
+        workingHours: 'Часы работы (JSON)',
+        socialMedia: 'Социальные сети (JSON)'
+      }
     }
   },
   en: {
@@ -1055,6 +1084,35 @@ const translations = {
       UNAVAILABLE: 'Unavailable',
       FREE: 'Free',
       UNKNOWN: 'Unknown'
+    },
+    settings: {
+      title: 'Settings',
+      description: 'Manage core venue parameters, SEO settings, and contact information.',
+      eyebrow: 'Site Configuration',
+      save: 'Save settings',
+      saving: 'Saving...',
+      saveSuccess: 'Settings saved successfully.',
+      errors: {
+        load: 'Failed to load settings.',
+        save: 'Failed to save settings.'
+      },
+      sections: {
+        general: 'General Settings',
+        seo: 'SEO Parameters',
+        contacts: 'Contact Information'
+      },
+      fields: {
+        title: 'Site Title',
+        description: 'Meta Description',
+        keywords: 'Keywords',
+        logoUrl: 'Logo URL',
+        faviconUrl: 'Favicon URL',
+        phone: 'Phone',
+        email: 'Email',
+        address: 'Address',
+        workingHours: 'Working Hours (JSON)',
+        socialMedia: 'Social Media (JSON)'
+      }
     }
   }
 };

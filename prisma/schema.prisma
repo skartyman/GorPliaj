@@ -258,6 +258,22 @@ model News {
   updatedAt DateTime @updatedAt
 }
 
+model FrontendSettings {
+  id           Int      @id @default(autoincrement())
+  title        String?
+  description  String?
+  keywords     String?
+  logoUrl      String?
+  faviconUrl   String?
+  phone        String?
+  email        String?
+  address      String?
+  workingHours Json?
+  socialMedia  Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model ReservationLog {
   id            Int                @id @default(autoincrement())
   reservationId Int
