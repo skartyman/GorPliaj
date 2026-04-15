@@ -24,11 +24,15 @@ RUN npm ci
 COPY public-frontend/package-lock.json public-frontend/package.json ./public-frontend/
 RUN npm --prefix public-frontend ci
 
+COPY admin-frontend/package-lock.json admin-frontend/package.json ./admin-frontend/
+RUN npm --prefix admin-frontend ci
+
 # Copy application code
 COPY . .
 
-# Build React public client as primary static frontend
+# Build React clients
 RUN npm run public:build
+RUN npm run admin:build
 
 # Generate Prisma client after schema is available in image
 RUN npx prisma generate
