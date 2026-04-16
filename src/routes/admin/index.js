@@ -34,7 +34,8 @@ const {
 } = require('../../controllers/adminEventController');
 const {
   getSettings,
-  updateSettings
+  updateSettings,
+  patchSettings
 } = require('../../controllers/adminSettingsController');
 const {
   upload,
@@ -78,6 +79,7 @@ router.delete('/events/:id', requireAdminAuth, deleteAdminEvent);
 
 router.get('/settings', requireAdminAuth, getSettings);
 router.put('/settings', requireAdminAuth, updateSettings);
+router.patch('/settings', requireAdminAuth, patchSettings);
 
 router.post('/uploads/image', requireAdminAuth, upload.single('image'), handleMulterError, uploadAdminImage);
 

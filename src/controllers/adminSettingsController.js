@@ -39,4 +39,18 @@ async function updateSettings(req, res) {
   }
 }
 
-module.exports = { getSettings, updateSettings };
+// Обновить настройки частично
+async function patchSettings(req, res) {
+  try {
+    const settings = await prisma.frontendSettings.update({
+      where: { id: 1 },
+      data: req.body,
+    });
+    res.json(settings);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+module.exports = { getSettings, updateSettings, patchSettings };
