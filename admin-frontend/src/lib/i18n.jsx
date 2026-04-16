@@ -295,9 +295,9 @@ const translations = {
         },
         settings: {
           title: 'Настройки',
-          description: 'Раздел подготовлен для настроек площадки, пользователей, ролей и интеграций.',
+          description: 'Управление настройками площадки, контактной информацией и контентом главной страницы.',
           eyebrow: 'Настройка системы',
-          cta: 'Дальше: матрица ролей, профиль площадки и секреты интеграций.',
+          cta: 'Редактирование профиля заведения и данных для клиентов.',
           stats: {
             roles: 'Ролей доступа',
             blocks: 'Блоков площадки',
@@ -311,6 +311,42 @@ const translations = {
           items4: 'Проверка изменений перед публикацией команде.',
           items5: 'Сохранение критичных контролов видимыми на узких экранах.',
           items6: 'Разделение чувствительных настроек и ежедневных инструментов.'
+        },
+        sections: {
+          general: 'Основная информация',
+          contacts: 'Контактная информация',
+          workingHours: 'Время работы',
+          hero: 'Главный экран',
+          social: 'Социальные сети'
+        },
+        fields: {
+          name: 'Название заведения',
+          tagline: 'Подзаголовок',
+          description: 'Описание',
+          address: 'Адрес',
+          phone: 'Телефон',
+          email: 'Email',
+          heroEyebrow: 'Надзаголовок',
+          heroTitle: 'Заголовок',
+          heroSubtitle: 'Подзаголовок',
+          heroDescription: 'Описание'
+        },
+        days: {
+          monday: 'Понедельник',
+          tuesday: 'Вторник',
+          wednesday: 'Среда',
+          thursday: 'Четверг',
+          friday: 'Пятница',
+          saturday: 'Суббота',
+          sunday: 'Воскресенье'
+        },
+        addSocial: 'Добавить соцсеть',
+        save: 'Сохранить изменения',
+        saving: 'Сохранение...',
+        saveSuccess: 'Настройки успешно сохранены',
+        errors: {
+          load: 'Не удалось загрузить настройки',
+          save: 'Не удалось сохранить настройки'
         }
       }
     },
@@ -620,9 +656,9 @@ const translations = {
         },
         settings: {
           title: 'Settings',
-          description: 'Prepared for venue settings, users, roles, and integrations.',
+          description: 'Manage venue settings, contact information, and homepage content.',
           eyebrow: 'System setup',
-          cta: 'Next: role matrix, venue profile, and integration secrets.',
+          cta: 'Edit venue profile and customer-facing data.',
           stats: {
             roles: 'Access roles',
             blocks: 'Venue blocks',
@@ -636,6 +672,42 @@ const translations = {
           items4: 'Review changes before publishing to staff.',
           items5: 'Keep critical controls visible on narrow screens.',
           items6: 'Separate sensitive settings from daily tools.'
+        },
+        sections: {
+          general: 'General Information',
+          contacts: 'Contact Information',
+          workingHours: 'Working Hours',
+          hero: 'Hero Section',
+          social: 'Social Media'
+        },
+        fields: {
+          name: 'Venue Name',
+          tagline: 'Tagline',
+          description: 'Description',
+          address: 'Address',
+          phone: 'Phone',
+          email: 'Email',
+          heroEyebrow: 'Eyebrow',
+          heroTitle: 'Title',
+          heroSubtitle: 'Subtitle',
+          heroDescription: 'Description'
+        },
+        days: {
+          monday: 'Monday',
+          tuesday: 'Tuesday',
+          wednesday: 'Wednesday',
+          thursday: 'Thursday',
+          friday: 'Friday',
+          saturday: 'Saturday',
+          sunday: 'Sunday'
+        },
+        addSocial: 'Add Social Network',
+        save: 'Save Changes',
+        saving: 'Saving...',
+        saveSuccess: 'Settings saved successfully',
+        errors: {
+          load: 'Failed to load settings',
+          save: 'Failed to save settings'
         }
       }
     },

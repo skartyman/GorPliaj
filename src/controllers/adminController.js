@@ -1,5 +1,6 @@
 const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
+const venueSettingsService = require('../services/venueSettingsService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
 
@@ -171,6 +172,36 @@ async function updateAdminReservationStatus(req, res) {
   }
 }
 
+async function getVenueSettings(req, res) {
+  try {
+    const settings = await venueSettingsService.getAllSettings();
+    return res.json({ settings });
+  } catch (error) {
+    console.error('[adminController.getVenueSettings] Failed to get venue settings.', error);
+    return res.status(500).json({ message: 'Unable to load venue settings.' });
+  }
+}
+
+async function updateVenueSettings(req, res) {
+  try {
+    const settings = req.body.settings;
+    
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ message: 'Settings object is required.' });
+    }
+
+    const results = await venueSettingsService.updateMultipleSettings(settings);
+    
+    return res.json({
+      success: true,
+      count: results.length
+    });
+  } catch (error) {
+    console.error('[adminController.updateVenueSettings] Failed to update venue settings.', error);
+    return res.status(500).json({ message: 'Unable to update venue settings.' });
+  }
+}
+
 module.exports = {
   getAdminStatus,
   loginAdmin,
@@ -178,5 +209,7 @@ module.exports = {
   logoutAdmin,
   getAdminReservations,
   getAdminReservationById,
-  updateAdminReservationStatus
+  updateAdminReservationStatus,
+  getVenueSettings,
+  updateVenueSettings
 };

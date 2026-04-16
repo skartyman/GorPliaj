@@ -6,6 +6,7 @@ import MapPage from './pages/MapPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ReservationDetailPage from './pages/ReservationDetailPage';
 import ReservationsPage from './pages/ReservationsPage';
+import SettingsPage from './pages/SettingsPage';
 import { useAdminI18n } from './lib/i18n';
 
 function ProtectedPage({ children }) {
@@ -177,7 +178,7 @@ export default function App() {
       <Route path="/admin/events" element={<ProtectedPage><PlaceholderPage {...placeholderPages.events} /></ProtectedPage>} />
       <Route path="/admin/news" element={<ProtectedPage><PlaceholderPage {...placeholderPages.news} /></ProtectedPage>} />
       <Route path="/admin/payments" element={<ProtectedPage><PlaceholderPage {...placeholderPages.payments} /></ProtectedPage>} />
-      <Route path="/admin/settings" element={<ProtectedPage><PlaceholderPage {...placeholderPages.settings} /></ProtectedPage>} />
+      <Route path="/admin/settings" element={<ProtectedPage><SettingsPage /></ProtectedPage>} />
       <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
     </Routes>
   );
