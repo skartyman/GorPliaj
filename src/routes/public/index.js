@@ -6,7 +6,6 @@ const mapController = require('../../controllers/mapController');
 const router = express.Router();
 
 router.get('/health', publicController.getHealth);
-router.get('/settings', publicController.getSettings);
 
 router.get('/menu', publicController.getMenu);
 router.post('/menu/items/:id/like', publicController.setMenuItemLike);
