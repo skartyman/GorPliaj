@@ -1,10 +1,22 @@
 const menuService = require('../services/menuService');
 const contentService = require('../services/contentService');
 const eventService = require('../services/eventService');
+const prisma = require('../lib/prisma');
 
 function getHealth(req, res) {
   res.json({ status: 'ok' });
 }
+
+async function getSettings(req, res) {
+  try {
+    const settings = await prisma.frontendSettings.findFirst();
+    return res.json(settings || {});
+  } catch (error) {
+    console.error('[publicController.getSettings] Failed to load settings.', error);
+    return res.status(500).json({ message: 'Unable to load settings.' });
+  }
+}
+// ... rest of the code
 
 async function getMenu(req, res) {
   try {
@@ -80,6 +92,7 @@ function getNews(req, res) {
 
 module.exports = {
   getHealth,
+  getSettings,
   getMenu,
   setMenuItemLike,
   getEvents,

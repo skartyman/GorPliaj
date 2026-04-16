@@ -55,3 +55,7 @@ export const bookingsApi = {
       body: JSON.stringify(payload)
     })
 };
+
+export const settingsApi = {
+  getPublic: () => request('/settings'),
+};
