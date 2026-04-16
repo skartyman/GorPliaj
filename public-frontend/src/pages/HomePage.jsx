@@ -131,7 +131,13 @@ export default function HomePage() {
           <div className="info-block">
             <h3>{isEn ? 'Location' : 'Локация'}</h3>
             <p>{settings?.address || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
-            <p>{(isEn ? settings?.workingHours?.mon?.open + ' – ' + settings?.workingHours?.mon?.close : 'Ежедневно ' + settings?.workingHours?.mon?.open + ' – ' + settings?.workingHours?.mon?.close) || (isEn ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00')}</p>
+            <p>{
+                settings?.workingHours?.mon?.open 
+                  ? (settings?.workingHours?.mon.close === settings?.workingHours?.fri.close 
+                    ? (isEn ? `Daily ${settings.workingHours.mon.open} – ${settings.workingHours.mon.close}` : `Ежедневно ${settings.workingHours.mon.open} – ${settings.workingHours.mon.close}`)
+                    : (isEn ? `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}` : `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`))
+                  : (isEn ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00')
+              }</p>
           </div>
           <div className="info-block">
             <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
