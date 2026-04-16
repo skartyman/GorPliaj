@@ -5,6 +5,11 @@ import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const SOCIAL_MEDIA_ICONS = {
+  facebook: 'https://example.com/facebook-icon.png',
+  instagram: 'https://example.com/instagram-icon.png',
+  twitter: 'https://example.com/twitter-icon.png',
+};
 
 export default function SettingsPage() {
   const { t } = useAdminI18n();
@@ -185,6 +190,7 @@ export default function SettingsPage() {
               <div key={index} className="form-row">
                 <input type="text" placeholder="Platform" value={social.platform} onChange={(e) => handleSocialChange(index, 'platform', e.target.value)} />
                 <input type="text" placeholder="URL" value={social.url} onChange={(e) => handleSocialChange(index, 'url', e.target.value)} />
+                <img src={SOCIAL_MEDIA_ICONS[social.platform]} alt={social.platform} />
                 <button type="button" className="btn btn-secondary" onClick={() => removeSocial(index)}>Remove</button>
               </div>
             ))}

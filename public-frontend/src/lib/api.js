@@ -58,4 +58,8 @@ export const bookingsApi = {
 
 export const settingsApi = {
   getPublic: () => request('/settings'),
+  updatePublic: (data) => request('/settings', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
 };
