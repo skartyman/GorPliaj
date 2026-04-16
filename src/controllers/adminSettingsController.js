@@ -13,12 +13,24 @@ async function getSettings(req, res) {
 
 // Обновить настройки
 async function updateSettings(req, res) {
-  const {title, description, keywords, logoUrl, faviconUrl, phone, email, address, workingHours, socialMedia} = req.body;
+  const {
+    title, description, keywords, logoUrl, faviconUrl,
+    phone, email, address, workingHours, socialMedia,
+    heroTitle, heroSubtitle, footerText
+  } = req.body;
   try {
     const settings = await prisma.frontendSettings.upsert({
       where: {id: 1},
-      create: {title, description, keywords, logoUrl, faviconUrl, phone, email, address, workingHours, socialMedia},
-      update: {title, description, keywords, logoUrl, faviconUrl, phone, email, address, workingHours, socialMedia},
+      create: {
+        title, description, keywords, logoUrl, faviconUrl,
+        phone, email, address, workingHours, socialMedia,
+        heroTitle, heroSubtitle, footerText
+      },
+      update: {
+        title, description, keywords, logoUrl, faviconUrl,
+        phone, email, address, workingHours, socialMedia,
+        heroTitle, heroSubtitle, footerText
+      },
     });
     res.json(settings);
   } catch (err) {

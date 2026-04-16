@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { LocaleProvider } from './state/locale';
 import { CartProvider } from './state/cart';
+import { SettingsProvider } from './state/settings';
 import './styles.css';
 
 // Sync theme before React mounts
@@ -60,11 +61,13 @@ cleanupLegacyServiceWorkers();
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <LocaleProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </LocaleProvider>
+      <SettingsProvider>
+        <LocaleProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </LocaleProvider>
+      </SettingsProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

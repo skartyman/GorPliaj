@@ -542,8 +542,12 @@ const translations = {
       },
       sections: {
         general: 'Общие настройки',
+        hero: 'Главный блок (Hero)',
         seo: 'SEO параметры',
-        contacts: 'Контактная информация'
+        contacts: 'Контактная информация',
+        workingHours: 'Часы работы',
+        socialMedia: 'Социальные сети',
+        footer: 'Подвал сайта (Footer)'
       },
       fields: {
         title: 'Заголовок сайта',
@@ -551,11 +555,17 @@ const translations = {
         keywords: 'Ключевые слова',
         logoUrl: 'URL логотипа',
         faviconUrl: 'URL фавикона',
+        heroTitleRu: 'Заголовок Hero (RU)',
+        heroTitleEn: 'Заголовок Hero (EN)',
+        heroSubtitleRu: 'Подзаголовок Hero (RU)',
+        heroSubtitleEn: 'Подзаголовок Hero (EN)',
+        footerTextRu: 'Текст в подвале (RU)',
+        footerTextEn: 'Текст в подвале (EN)',
         phone: 'Телефон',
         email: 'Email',
         address: 'Адрес',
-        workingHours: 'Часы работы (JSON)',
-        socialMedia: 'Социальные сети (JSON)'
+        workingHours: 'Часы работы',
+        socialMedia: 'Социальные сети'
       }
     }
   },
@@ -1098,8 +1108,12 @@ const translations = {
       },
       sections: {
         general: 'General Settings',
+        hero: 'Hero Section',
         seo: 'SEO Parameters',
-        contacts: 'Contact Information'
+        contacts: 'Contact Information',
+        workingHours: 'Working Hours',
+        socialMedia: 'Social Media',
+        footer: 'Site Footer'
       },
       fields: {
         title: 'Site Title',
@@ -1107,11 +1121,17 @@ const translations = {
         keywords: 'Keywords',
         logoUrl: 'Logo URL',
         faviconUrl: 'Favicon URL',
+        heroTitleRu: 'Hero Title (RU)',
+        heroTitleEn: 'Hero Title (EN)',
+        heroSubtitleRu: 'Hero Subtitle (RU)',
+        heroSubtitleEn: 'Hero Subtitle (EN)',
+        footerTextRu: 'Footer Text (RU)',
+        footerTextEn: 'Footer Text (EN)',
         phone: 'Phone',
         email: 'Email',
         address: 'Address',
-        workingHours: 'Working Hours (JSON)',
-        socialMedia: 'Social Media (JSON)'
+        workingHours: 'Working Hours',
+        socialMedia: 'Social Media'
       }
     }
   }

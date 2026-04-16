@@ -4,3 +4,4 @@ npm-debug.log*
 .env
 public/public-app/
 public-frontend/node_modules/
+.aider*

@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useLocale } from '../state/locale';
+import { useSettings } from '../state/settings';
 
 const navItems = [
   { to: '/', labelKey: 'navHome', icon: (
@@ -23,6 +24,17 @@ const navItems = [
   )}
 ];
 
+const SOCIAL_ICONS = {
+  instagram: 'fa-instagram',
+  facebook: 'fa-facebook-f',
+  twitter: 'fa-twitter',
+  tiktok: 'fa-tiktok',
+  youtube: 'fa-youtube',
+  telegram: 'fa-telegram-plane',
+  whatsapp: 'fa-whatsapp',
+  default: 'fa-share-alt'
+};
+
 function BottomNavIcon({ path }) {
   const item = navItems.find(n => n.to === path);
   return item?.icon || null;
@@ -31,6 +43,7 @@ function BottomNavIcon({ path }) {
 export default function Layout() {
   const location = useLocation();
   const { locale, setLocale, t } = useLocale();
+  const { settings } = useSettings();
   const isMenuRoute = location.pathname === '/menu';
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
@@ -39,13 +52,18 @@ export default function Layout() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  const brandName = settings?.title || 'GorPliaj';
+  const logoUrl = settings?.logoUrl || '/icons/Logo.png';
+  const isEn = locale === 'en';
+  const footerDescription = (isEn ? settings?.footerText?.en : settings?.footerText?.ru) || (isEn ? 'A modern beach restaurant with live music, cuisine and evening events.' : 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.');
+
   return (
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
       {/* Sidebar (desktop) */}
       <aside className="sidebar">
         <NavLink to="/" className="sidebar-logo">
-          <img src="/icons/Logo.png" alt="GorPliaj" />
-          <span className="sidebar-logo-text">GorPliaj</span>
+          <img src={logoUrl} alt={brandName} />
+          <span className="sidebar-logo-text">{brandName}</span>
         </NavLink>
 
         <nav className="sidebar-nav">
@@ -80,8 +98,8 @@ export default function Layout() {
       {/* Top bar (mobile) */}
       <header className={`top-bar${isMenuRoute ? ' menu-top-bar' : ''}`}>
         <NavLink to="/" className="top-bar-brand">
-          <img className="top-bar-logo" src="/icons/Logo.png" alt="GorPliaj" />
-          <span>GorPliaj</span>
+          <img className="top-bar-logo" src={logoUrl} alt={brandName} />
+          <span>{brandName}</span>
         </NavLink>
         <div style={{ display: 'flex', gap: 6 }}>
           <button type="button" className="locale-btn" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
@@ -120,25 +138,35 @@ export default function Layout() {
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
-              <p>{t('footerText')}</p>
+              <p style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--brand)' }}>{brandName}</p>
               <p style={{ marginTop: 8 }}>
-                {locale === 'en'
-                  ? 'A modern beach restaurant with live music, cuisine and evening events.'
-                  : 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.'}
+                {footerDescription}
               </p>
+              {settings?.socialMedia?.length > 0 && (
+                <div className="footer-socials" style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                  {settings.socialMedia.map((social, idx) => {
+                    const iconClass = SOCIAL_ICONS[social.platform.toLowerCase()] || SOCIAL_ICONS.default;
+                    return (
+                      <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" className="social-link" style={{ color: 'var(--text-muted)', fontSize: '1.4rem' }}>
+                        <i className={`fab ${iconClass}`}></i>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="footer-contacts">
-              <h3>{locale === 'en' ? 'Contacts' : 'Контакты'}</h3>
-              <p>📞 <a href="tel:+380000000000">+38 (000) 000-00-00</a></p>
-              <p>✉️ <a href="mailto:hello@gorpliaj.com">hello@gorpliaj.com</a></p>
-              <p>📍 {locale === 'en' ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса'}</p>
-              <p>🕐 {locale === 'en' ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00'}</p>
+              <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
+              <p>📞 <a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
+              <p>✉️ <a href={`mailto:${settings?.email || 'hello@gorpliaj.com'}`}>{settings?.email || 'hello@gorpliaj.com'}</a></p>
+              <p>📍 {settings?.address || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
+              <p>🕐 {(isEn ? settings?.workingHours?.mon?.open + ' – ' + settings?.workingHours?.mon?.close : 'Ежедневно ' + settings?.workingHours?.mon?.open + ' – ' + settings?.workingHours?.mon?.close) || (isEn ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00')}</p>
             </div>
           </div>
 
           <div>
             <h3 style={{ color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16, marginTop: 0 }}>
-              {locale === 'en' ? 'How to find us' : 'Как найти заведение'}
+              {isEn ? 'How to find us' : 'Как найти заведение'}
             </h3>
             <div className="footer-bottom-map">
               <iframe
@@ -152,8 +180,8 @@ export default function Layout() {
           </div>
 
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} GorPliaj</span>
-            <span>{locale === 'en' ? 'All rights reserved' : 'Все права защищены'}</span>
+            <span>© {new Date().getFullYear()} {brandName}</span>
+            <span>{isEn ? 'All rights reserved' : 'Все права защищены'}</span>
           </div>
         </div>
       </footer>

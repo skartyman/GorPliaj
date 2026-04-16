@@ -4,11 +4,13 @@ import { contentApi, eventsApi } from '../lib/api';
 import { formatEventDateRange } from '../lib/events';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
+import { useSettings } from '../state/settings';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
 export default function HomePage() {
   const { t, locale } = useLocale();
+  const { settings } = useSettings();
   const [state, setState] = useState({ events: [], menuPreviewImages: [], news: [] });
   useMeta(t('homeMetaTitle'), t('homeMetaDescription'));
 
@@ -39,14 +41,16 @@ export default function HomePage() {
       ];
 
   const isEn = locale === 'en';
+  const heroTitle = (isEn ? settings?.heroTitle?.en : settings?.heroTitle?.ru) || 'GorPliaj';
+  const heroSubtitle = (isEn ? settings?.heroSubtitle?.en : settings?.heroSubtitle?.ru) || (isEn ? 'Beach restaurant with live music, cuisine and evening events at Otrada Beach, Odesa' : 'Пляжно-ресторанное пространство с живой музыкой, кухней и вечерними событиями на пляже Отрада, Одесса');
 
   return (
     <>
       {/* Hero */}
       <section className="hero">
         <div className="hero-content">
-          <h1>GorPliaj</h1>
-          <p>{isEn ? 'Beach restaurant with live music, cuisine and evening events at Otrada Beach, Odesa' : 'Пляжно-ресторанное пространство с живой музыкой, кухней и вечерними событиями на пляже Отрада, Одесса'}</p>
+          <h1>{heroTitle}</h1>
+          <p>{heroSubtitle}</p>
           <div className="btn-group">
             <Link to="/booking" className="btn btn-primary">{isEn ? 'Book a table' : 'Забронировать стол'}</Link>
             <Link to="/menu" className="btn btn-secondary">{isEn ? 'View menu' : 'Открыть меню'}</Link>
@@ -126,13 +130,13 @@ export default function HomePage() {
         <div className="info-grid">
           <div className="info-block">
             <h3>{isEn ? 'Location' : 'Локация'}</h3>
-            <p>{isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса'}</p>
-            <p>{isEn ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00'}</p>
+            <p>{settings?.address || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
+            <p>{(isEn ? settings?.workingHours?.mon?.open + ' – ' + settings?.workingHours?.mon?.close : 'Ежедневно ' + settings?.workingHours?.mon?.open + ' – ' + settings?.workingHours?.mon?.close) || (isEn ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00')}</p>
           </div>
           <div className="info-block">
             <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
-            <p><a href="tel:+380000000000">+38 (000) 000-00-00</a></p>
-            <p><a href="mailto:hello@gorpliaj.com">hello@gorpliaj.com</a></p>
+            <p><a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
+            <p><a href={`mailto:${settings?.email || 'hello@gorpliaj.com'}`}>{settings?.email || 'hello@gorpliaj.com'}</a></p>
           </div>
           <div className="info-block">
             <h3>{isEn ? 'Online' : 'Онлайн'}</h3>

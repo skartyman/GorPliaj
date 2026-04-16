@@ -270,6 +270,9 @@ model FrontendSettings {
   address      String?
   workingHours Json?
   socialMedia  Json?
+  heroTitle    Json?
+  heroSubtitle Json?
+  footerText   Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
