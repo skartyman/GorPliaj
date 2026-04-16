@@ -4,6 +4,8 @@ import PageCard from '../components/PageCard';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
 export default function SettingsPage() {
   const { t } = useAdminI18n();
   const [state, setState] = useState({
@@ -20,8 +22,8 @@ export default function SettingsPage() {
       phone: '',
       email: '',
       address: '',
-      workingHours: '',
-      socialMedia: ''
+      workingHours: {},
+      socialMedia: []
     }
   });
 
@@ -46,8 +48,8 @@ export default function SettingsPage() {
             phone: data.phone || '',
             email: data.email || '',
             address: data.address || '',
-            workingHours: data.workingHours ? JSON.stringify(data.workingHours, null, 2) : '',
-            socialMedia: data.socialMedia ? JSON.stringify(data.socialMedia, null, 2) : ''
+            workingHours: data.workingHours || {},
+            socialMedia: Array.isArray(data.socialMedia) ? data.socialMedia : []
           }
         }));
       })
@@ -62,30 +64,40 @@ export default function SettingsPage() {
     }));
   };
 
+  const handleSocialChange = (index, key, value) => {
+    const updated = [...state.form.socialMedia];
+    updated[index][key] = value;
+    setState((prev) => ({ ...prev, form: { ...prev.form, socialMedia: updated } }));
+  };
+
+  const addSocial = () => {
+    setState((prev) => ({ ...prev, form: { ...prev.form, socialMedia: [...prev.form.socialMedia, { platform: '', url: '' }] } }));
+  };
+
+  const removeSocial = (index) => {
+    setState((prev) => ({ ...prev, form: { ...prev.form, socialMedia: prev.form.socialMedia.filter((_, i) => i !== index) } }));
+  };
+
+  const handleWorkingHoursChange = (day, key, value) => {
+    setState((prev) => ({
+      ...prev,
+      form: {
+        ...prev.form,
+        workingHours: {
+          ...prev.form.workingHours,
+          [day]: { ...prev.form.workingHours[day], [key]: value }
+        }
+      }
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setState((prev) => ({ ...prev, saving: true, error: '', success: '' }));
 
-    let workingHours = null;
-    let socialMedia = null;
-
-    try {
-      if (state.form.workingHours) workingHours = JSON.parse(state.form.workingHours);
-      if (state.form.socialMedia) socialMedia = JSON.parse(state.form.socialMedia);
-    } catch (err) {
-      setState((prev) => ({ ...prev, saving: false, error: 'Invalid JSON format in working hours or social media' }));
-      return;
-    }
-
-    const payload = {
-      ...state.form,
-      workingHours,
-      socialMedia
-    };
-
     apiRequest('/api/admin/settings', {
       method: 'PUT',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(state.form)
     })
       .then((result) => {
         if (!result.response.ok) {
@@ -158,15 +170,25 @@ export default function SettingsPage() {
             </div>
           </PageCard>
 
-          <PageCard title="JSON Configuration">
-            <div className="form-group">
-              <label>{t('settings.fields.workingHours')}</label>
-              <textarea name="workingHours" value={state.form.workingHours} onChange={handleChange} rows="5" className="code-font" />
-            </div>
-            <div className="form-group">
-              <label>{t('settings.fields.socialMedia')}</label>
-              <textarea name="socialMedia" value={state.form.socialMedia} onChange={handleChange} rows="5" className="code-font" />
-            </div>
+          <PageCard title="Working Hours">
+            {DAYS.map((day) => (
+              <div key={day} className="form-row">
+                <label className="day-label">{day.toUpperCase()}</label>
+                <input type="text" placeholder="Open" value={state.form.workingHours[day]?.open || ''} onChange={(e) => handleWorkingHoursChange(day, 'open', e.target.value)} />
+                <input type="text" placeholder="Close" value={state.form.workingHours[day]?.close || ''} onChange={(e) => handleWorkingHoursChange(day, 'close', e.target.value)} />
+              </div>
+            ))}
+          </PageCard>
+
+          <PageCard title="Social Media">
+            {state.form.socialMedia.map((social, index) => (
+              <div key={index} className="form-row">
+                <input type="text" placeholder="Platform" value={social.platform} onChange={(e) => handleSocialChange(index, 'platform', e.target.value)} />
+                <input type="text" placeholder="URL" value={social.url} onChange={(e) => handleSocialChange(index, 'url', e.target.value)} />
+                <button type="button" className="btn btn-secondary" onClick={() => removeSocial(index)}>Remove</button>
+              </div>
+            ))}
+            <button type="button" className="btn btn-secondary" onClick={addSocial}>Add Link</button>
           </PageCard>
         </div>
 
