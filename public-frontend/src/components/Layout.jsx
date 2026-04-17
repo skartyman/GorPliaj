@@ -143,12 +143,16 @@ export default function Layout() {
                 {footerDescription}
               </p>
               {settings?.socialMedia?.length > 0 && (
-                <div className="footer-socials" style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                <div className="footer-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
                   {settings.socialMedia.map((social, idx) => {
+                    const isInstagram = social.platform === 'instagram';
+                    const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;
                     const iconClass = SOCIAL_ICONS[social.platform.toLowerCase()] || SOCIAL_ICONS.default;
+                    
                     return (
-                      <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" className="social-link" style={{ color: 'var(--text-muted)', fontSize: '1.4rem' }}>
-                        <i className={`fab ${iconClass}`}></i>
+                      <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" className="social-link" style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <i className={`fab ${iconClass}`} style={{ fontSize: '1.2rem' }}></i>
+                        {isInstagram && <span style={{ fontSize: '0.9rem' }}>@{handle}</span>}
                       </a>
                     );
                   })}

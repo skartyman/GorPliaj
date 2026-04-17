@@ -143,12 +143,19 @@ export default function HomePage() {
             <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
             <p><a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
             {settings?.socialMedia?.length > 0 && (
-              <div className="info-socials" style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                {settings.socialMedia.map((social, idx) => (
-                  <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontSize: '1.2rem' }}>
-                    <i className={`fab fa-${social.platform === 'telegram' ? 'telegram-plane' : social.platform}`}></i>
-                  </a>
-                ))}
+              <div className="info-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                {settings.socialMedia.map((social, idx) => {
+                  const isInstagram = social.platform === 'instagram';
+                  // Извлекаем логин из ссылки инстаграма
+                  const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;
+                  
+                  return (
+                    <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <i className={`fab fa-${social.platform === 'telegram' ? 'telegram-plane' : social.platform}`} style={{ fontSize: '1.2rem' }}></i>
+                      {isInstagram && <span style={{ fontSize: '1rem', fontWeight: 500 }}>@{handle}</span>}
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>
