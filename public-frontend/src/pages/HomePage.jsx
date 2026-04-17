@@ -133,16 +133,24 @@ export default function HomePage() {
             <p>{settings?.address || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
             <p>{
                 settings?.workingHours?.mon?.open 
-                  ? (settings?.workingHours?.mon.close === settings?.workingHours?.fri.close 
-                    ? (isEn ? `Daily ${settings.workingHours.mon.open} – ${settings.workingHours.mon.close}` : `Ежедневно ${settings.workingHours.mon.open} – ${settings.workingHours.mon.close}`)
-                    : (isEn ? `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}` : `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`))
-                  : (isEn ? 'Daily 10:00 – 23:00' : 'Ежедневно 10:00 – 23:00')
+                  ? (isEn 
+                      ? `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`
+                      : `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`)
+                  : (isEn ? 'Daily 09:00 – 21:00' : 'Ежедневно 09:00 – 21:00')
               }</p>
           </div>
           <div className="info-block">
             <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
             <p><a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
-            <p><a href={`mailto:${settings?.email || 'hello@gorpliaj.com'}`}>{settings?.email || 'hello@gorpliaj.com'}</a></p>
+            {settings?.socialMedia?.length > 0 && (
+              <div className="info-socials" style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                {settings.socialMedia.map((social, idx) => (
+                  <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', fontSize: '1.2rem' }}>
+                    <i className={`fab fa-${social.platform === 'telegram' ? 'telegram-plane' : social.platform}`}></i>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           <div className="info-block">
             <h3>{isEn ? 'Online' : 'Онлайн'}</h3>
