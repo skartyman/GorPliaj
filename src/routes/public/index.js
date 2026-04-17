@@ -12,6 +12,7 @@ router.post('/menu/items/:id/like', publicController.setMenuItemLike);
 router.get('/events', publicController.getEvents);
 router.get('/events/:slug', publicController.getEventBySlug);
 router.get('/news', publicController.getNews);
+router.get('/settings', publicController.getSettings);
 router.get('/maps/default', mapController.getDefaultMap);
 router.get('/maps/:mapId/availability', mapController.getMapAvailability);
 
