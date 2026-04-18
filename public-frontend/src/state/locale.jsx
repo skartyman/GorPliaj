@@ -6,19 +6,23 @@ const LocaleContext = createContext(null);
 
 function detectLocale() {
   const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (saved === 'ru' || saved === 'en') {
+  if (saved === 'ru' || saved === 'en' || saved === 'ua') {
     return saved;
   }
-  return navigator.language.toLowerCase().startsWith('en') ? 'en' : 'ru';
+  
+  const browserLang = navigator.language.toLowerCase();
+  if (browserLang.startsWith('en')) return 'en';
+  if (browserLang.startsWith('ru')) return 'ru';
+  return 'ua'; // Default for all others, including uk/ua
 }
 
 export function LocaleProvider({ children }) {
-  const [locale, setLocaleState] = useState('ru');
+  const [locale, setLocaleState] = useState('ua');
 
   useEffect(() => {
     const nextLocale = detectLocale();
     setLocaleState(nextLocale);
-    document.documentElement.lang = nextLocale;
+    document.documentElement.lang = nextLocale === 'ua' ? 'uk' : nextLocale;
   }, []);
 
   const value = useMemo(
@@ -26,7 +30,7 @@ export function LocaleProvider({ children }) {
       locale,
       setLocale: (nextLocale) => {
         setLocaleState(nextLocale);
-        document.documentElement.lang = nextLocale;
+        document.documentElement.lang = nextLocale === 'ua' ? 'uk' : nextLocale;
         window.localStorage.setItem(STORAGE_KEY, nextLocale);
       },
       t: (key) => dictionary[locale]?.[key] || key

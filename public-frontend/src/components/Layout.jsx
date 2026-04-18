@@ -81,8 +81,12 @@ export default function Layout() {
         </nav>
 
         <div className="sidebar-footer">
-          <button type="button" className="locale-btn" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
-            {t('localeSwitch')}
+          <button type="button" className="locale-btn" onClick={() => {
+            const order = ['ua', 'ru', 'en'];
+            const next = order[(order.indexOf(locale) + 1) % order.length];
+            setLocale(next);
+          }}>
+            {locale.toUpperCase()}
           </button>
           <button
             type="button"
@@ -102,8 +106,12 @@ export default function Layout() {
           <span>{brandName}</span>
         </NavLink>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button type="button" className="locale-btn" onClick={() => setLocale(locale === 'ru' ? 'en' : 'ru')}>
-            {t('localeSwitch')}
+          <button type="button" className="locale-btn" onClick={() => {
+            const order = ['ua', 'ru', 'en'];
+            const next = order[(order.indexOf(locale) + 1) % order.length];
+            setLocale(next);
+          }}>
+            {locale.toUpperCase()}
           </button>
           <button type="button" className="locale-btn" onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}>
             {theme === 'light' ? '🌙' : '☀️'}
@@ -189,7 +197,10 @@ export default function Layout() {
           </div>
 
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} {brandName}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span>© {new Date().getFullYear()} {brandName}</span>
+              <NavLink to="/privacy" style={{ color: 'inherit', fontSize: '0.8rem', opacity: 0.8 }}>{t('privacyTitle')}</NavLink>
+            </div>
             <span>{isEn ? 'All rights reserved' : 'Все права защищены'}</span>
           </div>
         </div>
