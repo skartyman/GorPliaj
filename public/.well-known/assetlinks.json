@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "dev.fly.gorpliaj.twa",
+    "sha256_cert_fingerprints": ["CF:3B:59:3D:44:DE:7A:43:AC:F7:A3:0D:40:77:19:86:E9:FA:02:1F:C1:6F:12:14:AF:5D:14:C2:AB:7D:BF:B0"]
+  }
+}]
