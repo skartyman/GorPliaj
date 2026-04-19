@@ -37,6 +37,7 @@ const {
   updateSettings,
   patchSettings
 } = require('../../controllers/adminSettingsController');
+const { handleTranslate } = require('../../controllers/adminTranslationController');
 const {
   upload,
   handleMulterError,
@@ -80,6 +81,7 @@ router.delete('/events/:id', requireAdminAuth, deleteAdminEvent);
 router.get('/settings', requireAdminAuth, getSettings);
 router.put('/settings', requireAdminAuth, updateSettings);
 router.patch('/settings', requireAdminAuth, patchSettings);
+router.post('/translate', requireAdminAuth, handleTranslate);
 
 router.post('/uploads/image', requireAdminAuth, upload.single('image'), handleMulterError, uploadAdminImage);
 
