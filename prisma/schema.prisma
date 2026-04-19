@@ -267,7 +267,8 @@ model FrontendSettings {
   faviconUrl   String?
   phone        String?
   email        String?
-  address      String?
+  address      Json?
+  mapEmbedUrl  String?
   workingHours Json?
   socialMedia  Json?
   heroTitle    Json?

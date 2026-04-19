@@ -130,7 +130,7 @@ export default function HomePage() {
         <div className="info-grid">
           <div className="info-block">
             <h3>{isEn ? 'Location' : 'Локация'}</h3>
-            <p>{settings?.address || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
+            <p>{ (isEn ? settings?.address?.en : (locale === 'ru' ? settings?.address?.ru : settings?.address?.ua)) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
             <p>{
                 settings?.workingHours?.mon?.open 
                   ? (isEn 

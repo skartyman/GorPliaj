@@ -15,7 +15,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     apiRequest('/api/admin/settings').then(res => {
-      setForm(res.body || {});
+      const data = res.body || {};
+      // Инициализируем JSON поля, если они пустые
+      if (!data.heroTitle) data.heroTitle = { ua: '', ru: '', en: '' };
+      if (!data.heroSubtitle) data.heroSubtitle = { ua: '', ru: '', en: '' };
+      if (!data.address) data.address = { ua: '', ru: '', en: '' };
+      
+      setForm(data);
       setLoading(false);
     });
   }, []);
@@ -83,13 +89,7 @@ export default function SettingsPage() {
                 <input value={form.heroTitle?.ru || ''} onChange={e => setForm({...form, heroTitle: {...form.heroTitle, ru: e.target.value}})} placeholder="Заголовок RU" />
                 <input value={form.heroTitle?.en || ''} onChange={e => setForm({...form, heroTitle: {...form.heroTitle, en: e.target.value}})} placeholder="Заголовок EN" />
               </div>
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-small" 
-                onClick={() => autoTranslate('heroTitle')}
-                disabled={translating.heroTitle}
-                style={{ marginTop: 8 }}
-              >
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslate('heroTitle')} disabled={translating.heroTitle} style={{ marginTop: 8 }}>
                 {translating.heroTitle ? 'Перекладаємо...' : '✨ Автопереклад (з UA)'}
               </button>
             </div>
@@ -99,13 +99,7 @@ export default function SettingsPage() {
               <textarea value={form.heroSubtitle?.ua || ''} onChange={e => setForm({...form, heroSubtitle: {...form.heroSubtitle, ua: e.target.value}})} placeholder="Підзаголовок UA" rows="2" />
               <textarea value={form.heroSubtitle?.ru || ''} onChange={e => setForm({...form, heroSubtitle: {...form.heroSubtitle, ru: e.target.value}})} placeholder="Підзаголовок RU" rows="2" />
               <textarea value={form.heroSubtitle?.en || ''} onChange={e => setForm({...form, heroSubtitle: {...form.heroSubtitle, en: e.target.value}})} placeholder="Підзаголовок EN" rows="2" />
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-small" 
-                onClick={() => autoTranslate('heroSubtitle')}
-                disabled={translating.heroSubtitle}
-                style={{ marginTop: 8 }}
-              >
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslate('heroSubtitle')} disabled={translating.heroSubtitle} style={{ marginTop: 8 }}>
                 {translating.heroSubtitle ? 'Перекладаємо...' : '✨ Автопереклад (з UA)'}
               </button>
             </div>
@@ -116,19 +110,34 @@ export default function SettingsPage() {
           </div>
         </PageCard>
 
-        {/* Contacts */}
+        {/* Contacts & Map */}
         <PageCard title={t('settings.sections.contacts')}>
           <div style={{ display: 'grid', gap: 16 }}>
             <div className="form-group">
               <label>Телефон</label>
               <input value={form.phone || ''} onChange={e => setForm({...form, phone: e.target.value})} />
             </div>
+            
             <div className="form-group">
-              <label>Адреса</label>
-              <input value={form.address || ''} onChange={e => setForm({...form, address: e.target.value})} />
+              <label>Адреса (UA/RU/EN)</label>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <input value={form.address?.ua || ''} onChange={e => setForm({...form, address: {...form.address, ua: e.target.value}})} placeholder="Адреса UA" />
+                <input value={form.address?.ru || ''} onChange={e => setForm({...form, address: {...form.address, ru: e.target.value}})} placeholder="Адреса RU" />
+                <input value={form.address?.en || ''} onChange={e => setForm({...form, address: {...form.address, en: e.target.value}})} placeholder="Адреса EN (Транслітерація)" />
+              </div>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslate('address')} disabled={translating.address} style={{ marginTop: 8 }}>
+                {translating.address ? 'Перекладаємо...' : '✨ Автопереклад (з UA)'}
+              </button>
             </div>
-            <button className="btn btn-primary" onClick={() => updateField('contacts', { phone: form.phone, address: form.address })}>
-              {savingStatus.contacts ? 'Зберігаємо...' : 'Зберегти контакти'}
+
+            <div className="form-group" style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+              <label>Google Maps Embed URL</label>
+              <p className="muted" style={{ fontSize: '0.8rem' }}>Скопіюйте 'src' з коду Google Maps (Поділитися -> Карта на сайт)</p>
+              <input value={form.mapEmbedUrl || ''} onChange={e => setForm({...form, mapEmbedUrl: e.target.value})} placeholder="https://www.google.com/maps/embed?pb=..." />
+            </div>
+
+            <button className="btn btn-primary" onClick={() => updateField('contacts', { phone: form.phone, address: form.address, mapEmbedUrl: form.mapEmbedUrl })}>
+              {savingStatus.contacts ? 'Зберігаємо...' : 'Зберегти контакти та карту'}
             </button>
           </div>
         </PageCard>
