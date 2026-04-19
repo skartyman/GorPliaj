@@ -132,7 +132,7 @@ export default function SettingsPage() {
 
             <div className="form-group" style={{ marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
               <label>Google Maps Embed URL</label>
-              <p className="muted" style={{ fontSize: '0.8rem' }}>Скопіюйте 'src' з коду Google Maps (Поділитися -> Карта на сайт)</p>
+              <p className="muted" style={{ fontSize: '0.8rem' }}>Скопіюйте 'src' з коду Google Maps (Поділитися → Карта на сайт)</p>
               <input value={form.mapEmbedUrl || ''} onChange={e => setForm({...form, mapEmbedUrl: e.target.value})} placeholder="https://www.google.com/maps/embed?pb=..." />
             </div>
 
