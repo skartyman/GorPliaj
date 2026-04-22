@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { menuApi } from '../lib/api';
-import { localizeField } from '../lib/i18n';
+import { localizedCopy, localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useCart } from '../state/cart';
 import { useMeta } from '../hooks/useMeta';
@@ -138,7 +138,7 @@ export default function MenuPage() {
   const cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
 
   function formatPrice(value) {
-    return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'ru-RU', {
+    return new Intl.NumberFormat(locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU'), {
       minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
       maximumFractionDigits: 2
     }).format(value);
@@ -194,6 +194,7 @@ export default function MenuPage() {
   }
 
   const isEn = locale === 'en';
+  const c = (values) => localizedCopy(values, locale);
 
   return (
     <>
@@ -211,7 +212,7 @@ export default function MenuPage() {
                 if (firstCategory) scrollToCategory(firstCategory, section);
               }}
             >
-              {section === 'kitchen' ? (isEn ? 'Kitchen' : 'Кухня') : (isEn ? 'Bar' : 'Бар')}
+              {section === 'kitchen' ? c({ ua: 'Кухня', ru: 'Кухня', en: 'Kitchen' }) : c({ ua: 'Бар', ru: 'Бар', en: 'Bar' })}
             </button>
           ))}
         </div>
@@ -335,7 +336,7 @@ export default function MenuPage() {
       {/* Item Detail Modal (bottom sheet) */}
       {selectedItem && (
         <div className="modal-overlay modal-item" role="dialog" aria-modal="true">
-          <button className="modal-backdrop" onClick={() => setSelectedItem(null)} aria-label={isEn ? 'Close' : 'Закрыть'} />
+          <button className="modal-backdrop" onClick={() => setSelectedItem(null)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })} />
           <div className="modal-sheet">
             <div className="modal-sheet-handle" />
             {selectedItem.imageUrl && (
@@ -347,7 +348,7 @@ export default function MenuPage() {
                   <p className="modal-sheet-category">{selectedItem.category}</p>
                   <h2 style={{ margin: '4px 0 0' }}>{selectedItem.name}</h2>
                 </div>
-                <button className="modal-close-btn" onClick={() => setSelectedItem(null)} aria-label={isEn ? 'Close' : 'Закрыть'}>✕</button>
+                <button className="modal-close-btn" onClick={() => setSelectedItem(null)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>✕</button>
               </div>
               <p className="modal-sheet-desc">{localizeField(selectedItem.description, locale)}</p>
               <div className="modal-sheet-footer">
@@ -359,7 +360,7 @@ export default function MenuPage() {
                     <button type="button" onClick={() => updateQuantity(selectedItem.id, 1)}>+</button>
                   </div>
                   <button className="btn btn-primary" onClick={() => { updateQuantity(selectedItem.id, 1); setSelectedItem(null); }}>
-                    {isEn ? 'Add to order' : 'В заказ'}
+                    {c({ ua: 'До замовлення', ru: 'В заказ', en: 'Add to order' })}
                   </button>
                 </div>
               </div>

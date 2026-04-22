@@ -5,7 +5,7 @@ import { formatEventDateRange } from '../lib/events';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
-import { localizeField } from '../lib/i18n';
+import { localizedCopy, localizeField } from '../lib/i18n';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
@@ -33,19 +33,31 @@ export default function HomePage() {
   }, []);
 
   const menuPhotos = state.menuPreviewImages.length ? state.menuPreviewImages : fallbackMenuPhotos;
+  const c = (values) => localizedCopy(values, locale);
   const newsCards = state.news.length
     ? state.news
     : [
-        { id: 1, title: locale === 'en' ? 'New evening sets' : 'Новые вечерние сеты', summary: locale === 'en' ? 'Updated music program for the upcoming weekend.' : 'Обновили музыкальную программу на ближайшие выходные.' },
-        { id: 2, title: locale === 'en' ? 'Seasonal menu' : 'Сезонное меню', summary: locale === 'en' ? 'Added light dishes and signature cocktails.' : 'Добавили лёгкие блюда и авторские коктейли.' },
-        { id: 3, title: locale === 'en' ? 'Summer bookings' : 'Летние бронирования', summary: locale === 'en' ? 'Opened advance booking for evening dates.' : 'Открыли предварительную бронь на вечерние даты.' }
+        { id: 1, title: c({ ua: 'Нові вечірні сети', ru: 'Новые вечерние сеты', en: 'New evening sets' }), summary: c({ ua: 'Оновили музичну програму на найближчі вихідні.', ru: 'Обновили музыкальную программу на ближайшие выходные.', en: 'Updated music program for the upcoming weekend.' }) },
+        { id: 2, title: c({ ua: 'Сезонне меню', ru: 'Сезонное меню', en: 'Seasonal menu' }), summary: c({ ua: 'Додали легкі страви та авторські коктейлі.', ru: 'Добавили лёгкие блюда и авторские коктейли.', en: 'Added light dishes and signature cocktails.' }) },
+        { id: 3, title: c({ ua: 'Літні бронювання', ru: 'Летние бронирования', en: 'Summer bookings' }), summary: c({ ua: 'Відкрили попереднє бронювання на вечірні дати.', ru: 'Открыли предварительную бронь на вечерние даты.', en: 'Opened advance booking for evening dates.' }) }
       ];
 
   const isEn = locale === 'en';
   const heroTitle = localizeField(settings?.heroTitle, locale) || 'GorPliaj';
-  const heroSubtitle = localizeField(settings?.heroSubtitle, locale) || (isEn ? 'Beach restaurant with live music, cuisine and evening events at Otrada Beach, Odesa' : 'Пляжно-ресторанное пространство с живой музыкой, кухней и вечерними событиями на пляже Отрада, Одесса');
-  const addressText = localizeField(settings?.address, locale) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса');
+  const heroSubtitle = localizeField(settings?.heroSubtitle, locale) || c({
+    ua: 'Пляжно-ресторанний простір із живою музикою, кухнею та вечірніми подіями на пляжі Відрада, Одеса',
+    ru: 'Пляжно-ресторанное пространство с живой музыкой, кухней и вечерними событиями на пляже Отрада, Одесса',
+    en: 'Beach restaurant with live music, cuisine and evening events at Otrada Beach, Odesa'
+  });
+  const addressText = localizeField(settings?.address, locale) || c({ ua: 'пляж Відрада, Одеса', ru: 'пляж Отрада, Одесса', en: 'Otrada Beach, Odesa' });
   const socialLinks = (settings?.socialMedia || []).filter((social) => social?.url && social?.platform);
+  const workingHoursText = settings?.workingHours?.mon?.open
+    ? c({
+        ua: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Нд ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
+        ru: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
+        en: `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`
+      })
+    : c({ ua: 'Щодня 09:00-21:00', ru: 'Ежедневно 09:00-21:00', en: 'Daily 09:00-21:00' });
 
   return (
     <>
@@ -55,8 +67,8 @@ export default function HomePage() {
           <h1>{heroTitle}</h1>
           <p>{heroSubtitle}</p>
           <div className="btn-group">
-            <Link to="/booking" className="btn btn-primary">{isEn ? 'Book a table' : 'Забронировать стол'}</Link>
-            <Link to="/menu" className="btn btn-secondary">{isEn ? 'View menu' : 'Открыть меню'}</Link>
+            <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
+            <Link to="/menu" className="btn btn-secondary">{c({ ua: 'Переглянути меню', ru: 'Открыть меню', en: 'View menu' })}</Link>
           </div>
         </div>
       </section>
@@ -64,8 +76,8 @@ export default function HomePage() {
       {/* Events */}
       <section className="content-section">
         <div className="section-header">
-          <h2>{isEn ? 'Events' : 'Афиша'}</h2>
-          <Link to="/events" className="text-link">{isEn ? 'All events' : 'Все события'} →</Link>
+          <h2>{c({ ua: 'Афіша', ru: 'Афиша', en: 'Events' })}</h2>
+          <Link to="/events" className="text-link">{c({ ua: 'Усі події', ru: 'Все события', en: 'All events' })} →</Link>
         </div>
         <div className="events-grid">
           {state.events.length ? (
@@ -84,7 +96,7 @@ export default function HomePage() {
               );
             })
           ) : (
-            <div className="state-msg">{isEn ? 'New events coming soon' : 'Новые события скоро появятся'}</div>
+            <div className="state-msg">{c({ ua: 'Нові події скоро зʼявляться', ru: 'Новые события скоро появятся', en: 'New events coming soon' })}</div>
           )}
         </div>
       </section>
@@ -93,9 +105,9 @@ export default function HomePage() {
       <section className="content-section">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32 }}>
-            <h2 style={{ marginBottom: 8 }}>{isEn ? 'Book a table' : 'Бронирование'}</h2>
-            <p className="muted" style={{ marginBottom: 20 }}>{isEn ? 'Choose a date and table on the interactive venue map.' : 'Выберите дату и стол на интерактивной карте заведения.'}</p>
-            <Link to="/map" className="btn btn-primary">{isEn ? 'Open map' : 'Открыть карту'}</Link>
+            <h2 style={{ marginBottom: 8 }}>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Book a table' })}</h2>
+            <p className="muted" style={{ marginBottom: 20 }}>{c({ ua: 'Оберіть дату і стіл на інтерактивній карті закладу.', ru: 'Выберите дату и стол на интерактивной карте заведения.', en: 'Choose a date and table on the interactive venue map.' })}</p>
+            <Link to="/map" className="btn btn-primary">{c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}</Link>
           </div>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32, display: 'grid', placeItems: 'center' }}>
             <img src="/icons/moonpirs.jpg" alt="" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} loading="lazy" />
@@ -106,13 +118,13 @@ export default function HomePage() {
       {/* Menu Preview */}
       <section className="content-section">
         <div className="section-header">
-          <h2>{isEn ? 'Menu' : 'Меню'}</h2>
-          <Link to="/menu" className="text-link">{isEn ? 'Full menu' : 'Открыть меню'} →</Link>
+          <h2>{c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}</h2>
+          <Link to="/menu" className="text-link">{c({ ua: 'Повне меню', ru: 'Открыть меню', en: 'Full menu' })} →</Link>
         </div>
         <div className="gallery-scroll">
           {menuPhotos.map((photo) => (
             <div key={photo} className="gallery-item">
-              <img src={photo} alt={isEn ? 'Menu item' : 'Позиция меню'} loading="lazy" />
+              <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" />
             </div>
           ))}
         </div>
@@ -120,7 +132,7 @@ export default function HomePage() {
 
       {/* News */}
       <section className="content-section">
-        <h2>{isEn ? 'News' : 'Новости'}</h2>
+        <h2>{c({ ua: 'Новини', ru: 'Новости', en: 'News' })}</h2>
         <div className="news-list">
           {newsCards.map((item) => {
             const title = localizeField(item.title, locale);
@@ -139,18 +151,12 @@ export default function HomePage() {
       <section className="content-section">
         <div className="info-grid">
           <div className="info-block">
-            <h3>{isEn ? 'Location' : 'Локация'}</h3>
+            <h3>{c({ ua: 'Локація', ru: 'Локация', en: 'Location' })}</h3>
             <p>{addressText}</p>
-            <p>{
-                settings?.workingHours?.mon?.open 
-                  ? (isEn 
-                      ? `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`
-                      : `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`)
-                  : (isEn ? 'Daily 09:00 – 21:00' : 'Ежедневно 09:00 – 21:00')
-              }</p>
+            <p>{workingHoursText}</p>
           </div>
           <div className="info-block">
-            <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
+            <h3>{c({ ua: 'Контакти', ru: 'Контакты', en: 'Contacts' })}</h3>
             <p><a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
             {socialLinks.length > 0 && (
               <div className="info-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
@@ -170,10 +176,10 @@ export default function HomePage() {
             )}
           </div>
           <div className="info-block">
-            <h3>{isEn ? 'Online' : 'Онлайн'}</h3>
-            <p><Link to="/events">{isEn ? 'Events schedule' : 'Афиша событий'}</Link></p>
-            <p><Link to="/menu">{isEn ? 'Public menu' : 'Публичное меню'}</Link></p>
-            <p><Link to="/map">{isEn ? 'Interactive map' : 'Интерактивная карта'}</Link></p>
+            <h3>{c({ ua: 'Онлайн', ru: 'Онлайн', en: 'Online' })}</h3>
+            <p><Link to="/events">{c({ ua: 'Афіша подій', ru: 'Афиша событий', en: 'Events schedule' })}</Link></p>
+            <p><Link to="/menu">{c({ ua: 'Публічне меню', ru: 'Публичное меню', en: 'Public menu' })}</Link></p>
+            <p><Link to="/map">{c({ ua: 'Інтерактивна карта', ru: 'Интерактивная карта', en: 'Interactive map' })}</Link></p>
           </div>
         </div>
       </section>

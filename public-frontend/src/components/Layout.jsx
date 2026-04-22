@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
-import { localizeField } from '../lib/i18n';
+import { localizedCopy, localizeField } from '../lib/i18n';
 
 const navItems = [
   { to: '/', labelKey: 'navHome', icon: (
@@ -56,9 +56,27 @@ export default function Layout() {
   const brandName = localizeField(settings?.title, locale) || 'GorPliaj';
   const logoUrl = settings?.logoUrl || '/icons/Logo.png';
   const isEn = locale === 'en';
-  const footerDescription = localizeField(settings?.footerText, locale) || (isEn ? 'A modern beach restaurant with live music, cuisine and evening events.' : 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.');
-  const addressText = localizeField(settings?.address, locale) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса');
+  const footerDescription = localizeField(settings?.footerText, locale) || localizedCopy({
+    ua: 'Сучасний ресторан біля моря з живою музикою, кухнею та вечірніми подіями.',
+    ru: 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.',
+    en: 'A modern beach restaurant with live music, cuisine and evening events.'
+  }, locale);
+  const addressText = localizeField(settings?.address, locale) || localizedCopy({
+    ua: 'пляж Відрада, Одеса',
+    ru: 'пляж Отрада, Одесса',
+    en: 'Otrada Beach, Odesa'
+  }, locale);
   const socialLinks = (settings?.socialMedia || []).filter((social) => social?.url && social?.platform);
+  const contactsTitle = localizedCopy({ ua: 'Контакти', ru: 'Контакты', en: 'Contacts' }, locale);
+  const findUsTitle = localizedCopy({ ua: 'Як знайти заклад', ru: 'Как найти заведение', en: 'How to find us' }, locale);
+  const rightsText = localizedCopy({ ua: 'Усі права захищені', ru: 'Все права защищены', en: 'All rights reserved' }, locale);
+  const workingHoursText = settings?.workingHours?.mon?.open
+    ? localizedCopy({
+        ua: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Нд ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
+        ru: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
+        en: `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`
+      }, locale)
+    : localizedCopy({ ua: 'Щодня 09:00-21:00', ru: 'Ежедневно 09:00-21:00', en: 'Daily 09:00-21:00' }, locale);
 
   return (
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
@@ -171,22 +189,16 @@ export default function Layout() {
               )}
             </div>
             <div className="footer-contacts">
-              <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
+              <h3>{contactsTitle}</h3>
               <p>📞 <a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
               <p>📍 {addressText}</p>
-              <p>🕐 {
-                settings?.workingHours?.mon?.open 
-                  ? (isEn 
-                      ? `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`
-                      : `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Вс ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`)
-                  : (isEn ? 'Daily 09:00 – 21:00' : 'Ежедневно 09:00 – 21:00')
-              }</p>
+              <p>🕐 {workingHoursText}</p>
             </div>
           </div>
 
           <div>
             <h3 style={{ color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16, marginTop: 0 }}>
-              {isEn ? 'How to find us' : 'Как найти заведение'}
+              {findUsTitle}
             </h3>
             <div className="footer-bottom-map">
               <iframe
@@ -204,7 +216,7 @@ export default function Layout() {
               <span>© {new Date().getFullYear()} {brandName}</span>
               <NavLink to="/privacy" style={{ color: 'inherit', fontSize: '0.8rem', opacity: 0.8 }}>{t('privacyTitle')}</NavLink>
             </div>
-            <span>{isEn ? 'All rights reserved' : 'Все права защищены'}</span>
+            <span>{rightsText}</span>
           </div>
         </div>
       </footer>

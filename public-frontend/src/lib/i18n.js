@@ -228,3 +228,7 @@ export function localizeField(value, locale = 'ua') {
   const normalized = normalizeLocalizedField(value);
   return normalized[locale] || normalized.ua || normalized.ru || normalized.en || '';
 }
+
+export function localizedCopy(values, locale = 'ua') {
+  return values?.[locale] || values?.ua || values?.ru || values?.en || '';
+}
