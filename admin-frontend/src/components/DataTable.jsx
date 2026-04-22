@@ -1,7 +1,8 @@
 import { useAdminI18n } from '../lib/i18n';
+import { localizeField } from '../lib/api';
 
 export default function DataTable({ columns, rows, emptyText }) {
-  const { t } = useAdminI18n();
+  const { t, language } = useAdminI18n();
 
   if (!rows.length) {
     return <p className="muted">{emptyText || t('common.loading')}</p>;
@@ -22,7 +23,7 @@ export default function DataTable({ columns, rows, emptyText }) {
             <tr key={row.id || index}>
               {columns.map((column) => (
                 <td key={`${row.id || index}-${column.key}`}>
-                  {column.render ? column.render(row) : row[column.key] || '—'}
+                  {column.render ? column.render(row) : localizeField(row[column.key], language) || '—'}
                 </td>
               ))}
             </tr>

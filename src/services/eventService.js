@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { autoTranslateObject } = require('./translationService');
 
 const EVENT_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
 const EVENT_CTA_TYPES = new Set(['BOOKING', 'TICKETS', 'BOTH']);
@@ -13,7 +14,9 @@ function normalizeOptionalText(value) {
 }
 
 function slugify(value) {
-  return normalizeText(value)
+  // Для слагификации берем UA версию, если это объект
+  const text = (value && typeof value === 'object') ? (value.ua || value.en || '') : value;
+  return normalizeText(text)
     .toLowerCase()
     .replace(/[^a-z0-9а-яіїєґ]+/giu, '-')
     .replace(/^-+|-+$/g, '')
@@ -38,10 +41,10 @@ function normalizeBoolean(value, fallback = false) {
 function toAdminEvent(event) {
   return {
     id: event.id,
-    title: event.title,
+    title: event.title, // {ua, ru, en}
     slug: event.slug,
-    shortDescription: event.shortDescription || '',
-    fullDescription: event.fullDescription || '',
+    shortDescription: event.shortDescription || { ua: '', ru: '', en: '' },
+    fullDescription: event.fullDescription || { ua: '', ru: '', en: '' },
     posterImage: event.posterImage || '',
     startAt: event.startAt,
     endAt: event.endAt,
@@ -59,8 +62,8 @@ function toPublicEvent(event) {
     id: event.id,
     title: event.title,
     slug: event.slug,
-    shortDescription: event.shortDescription || '',
-    fullDescription: event.fullDescription || '',
+    shortDescription: event.shortDescription || { ua: '', ru: '', en: '' },
+    fullDescription: event.fullDescription || { ua: '', ru: '', en: '' },
     posterImage: event.posterImage || '',
     startAt: event.startAt,
     endAt: event.endAt,
@@ -129,8 +132,11 @@ async function getAdminEventById(id) {
 }
 
 async function createAdminEvent(input) {
-  const title = normalizeText(input.title);
-  if (!title) return { type: 'INVALID', message: 'Event title is required.' };
+  const titleObj = await autoTranslateObject(input.title);
+  if (!titleObj.ua) return { type: 'INVALID', message: 'Event title is required.' };
+
+  const shortDescriptionObj = input.shortDescription ? await autoTranslateObject(input.shortDescription) : null;
+  const fullDescriptionObj = input.fullDescription ? await autoTranslateObject(input.fullDescription) : null;
 
   const status = resolveStatus(input.status, 'DRAFT');
   if (!status) return { type: 'INVALID', message: 'Event status is invalid.' };
@@ -143,13 +149,13 @@ async function createAdminEvent(input) {
   const timeError = validateTimeRange(startAt, endAt);
   if (timeError) return { type: 'INVALID', message: timeError };
 
-  const slug = await ensureUniqueSlug(slugify(input.slug || title));
+  const slug = await ensureUniqueSlug(slugify(input.slug || titleObj.ua));
   const event = await prisma.event.create({
     data: {
-      title,
+      title: titleObj,
       slug,
-      shortDescription: normalizeOptionalText(input.shortDescription),
-      fullDescription: normalizeOptionalText(input.fullDescription),
+      shortDescription: shortDescriptionObj,
+      fullDescription: fullDescriptionObj,
       posterImage: normalizeOptionalText(input.posterImage),
       startAt,
       endAt,
@@ -167,8 +173,21 @@ async function updateAdminEvent(id, input) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) return { type: 'NOT_FOUND' };
 
-  const title = Object.prototype.hasOwnProperty.call(input, 'title') ? normalizeText(input.title) : existing.title;
-  if (!title) return { type: 'INVALID', message: 'Event title is required.' };
+  let titleObj = existing.title;
+  if (Object.prototype.hasOwnProperty.call(input, 'title')) {
+    titleObj = await autoTranslateObject(input.title);
+  }
+  if (!titleObj || (typeof titleObj === 'object' && !titleObj.ua)) return { type: 'INVALID', message: 'Event title is required.' };
+
+  let shortDescriptionObj = existing.shortDescription;
+  if (Object.prototype.hasOwnProperty.call(input, 'shortDescription')) {
+    shortDescriptionObj = input.shortDescription ? await autoTranslateObject(input.shortDescription) : null;
+  }
+
+  let fullDescriptionObj = existing.fullDescription;
+  if (Object.prototype.hasOwnProperty.call(input, 'fullDescription')) {
+    fullDescriptionObj = input.fullDescription ? await autoTranslateObject(input.fullDescription) : null;
+  }
 
   const status = Object.prototype.hasOwnProperty.call(input, 'status')
     ? resolveStatus(input.status, existing.status)
@@ -191,19 +210,15 @@ async function updateAdminEvent(id, input) {
   if (timeError) return { type: 'INVALID', message: timeError };
 
   const slugSeed = Object.prototype.hasOwnProperty.call(input, 'slug') ? input.slug : existing.slug;
-  const slug = await ensureUniqueSlug(slugify(slugSeed || title), id);
+  const slug = await ensureUniqueSlug(slugify(slugSeed || titleObj.ua), id);
 
   const event = await prisma.event.update({
     where: { id },
     data: {
-      title,
+      title: titleObj,
       slug,
-      shortDescription: Object.prototype.hasOwnProperty.call(input, 'shortDescription')
-        ? normalizeOptionalText(input.shortDescription)
-        : existing.shortDescription,
-      fullDescription: Object.prototype.hasOwnProperty.call(input, 'fullDescription')
-        ? normalizeOptionalText(input.fullDescription)
-        : existing.fullDescription,
+      shortDescription: shortDescriptionObj,
+      fullDescription: fullDescriptionObj,
       posterImage: Object.prototype.hasOwnProperty.call(input, 'posterImage')
         ? normalizeOptionalText(input.posterImage)
         : existing.posterImage,

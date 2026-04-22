@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { autoTranslateObject } = require('./translationService');
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -41,7 +42,9 @@ function normalizeMenuSection(value, fallbackValue = 'KITCHEN') {
 }
 
 function slugify(value) {
-  return normalizeText(value)
+  // Для слагификации берем UA версию, если это объект
+  const text = (value && typeof value === 'object') ? (value.ua || value.en || '') : value;
+  return normalizeText(text)
     .toLowerCase()
     .replace(/[^a-z0-9а-яіїєґ]+/giu, '-')
     .replace(/^-+|-+$/g, '')
@@ -51,7 +54,7 @@ function slugify(value) {
 function toAdminCategory(category) {
   return {
     id: category.id,
-    name: category.name,
+    name: category.name, // Теперь это объект {ua, ru, en}
     slug: category.slug,
     section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
@@ -67,8 +70,8 @@ function toAdminItem(item) {
   return {
     id: item.id,
     categoryId: item.categoryId,
-    name: item.name,
-    description: item.description || '',
+    name: item.name, // Теперь это объект {ua, ru, en}
+    description: item.description || { ua: '', ru: '', en: '' },
     price: Number(item.price),
     imageUrl: item.imageUrl || '',
     likesCount: Number(item.likesCount || 0),
@@ -131,17 +134,17 @@ async function listCategories() {
 }
 
 async function createCategory(input) {
-  const name = normalizeText(input.name);
-  const slugBase = buildUniqueSlugCandidate(name, input.slug);
+  const nameObj = await autoTranslateObject(input.name);
+  const slugBase = buildUniqueSlugCandidate(nameObj, input.slug);
 
-  if (!name) {
+  if (!nameObj.ua) {
     return { type: 'INVALID', message: 'Category name is required.' };
   }
 
   const slug = await ensureUniqueCategorySlug(slugBase);
   const category = await prisma.menuCategory.create({
     data: {
-      name,
+      name: nameObj,
       slug,
       section: normalizeMenuSection(input.section, 'KITCHEN'),
       sortOrder: normalizeInteger(input.sortOrder, 0),
@@ -159,18 +162,18 @@ async function updateCategory(id, input) {
     return { type: 'NOT_FOUND' };
   }
 
-  const name = Object.prototype.hasOwnProperty.call(input, 'name') ? normalizeText(input.name) : existing.name;
-  if (!name) {
-    return { type: 'INVALID', message: 'Category name is required.' };
+  let nameObj = existing.name;
+  if (Object.prototype.hasOwnProperty.call(input, 'name')) {
+    nameObj = await autoTranslateObject(input.name);
   }
 
   const slugSeed = Object.prototype.hasOwnProperty.call(input, 'slug') ? input.slug : existing.slug;
-  const slug = await ensureUniqueCategorySlug(buildUniqueSlugCandidate(name, slugSeed), id);
+  const slug = await ensureUniqueCategorySlug(buildUniqueSlugCandidate(nameObj, slugSeed), id);
 
   const category = await prisma.menuCategory.update({
     where: { id },
     data: {
-      name,
+      name: nameObj,
       slug,
       section: Object.prototype.hasOwnProperty.call(input, 'section')
         ? normalizeMenuSection(input.section, existing.section || 'KITCHEN')
@@ -210,14 +213,15 @@ async function listItems() {
 
 async function createItem(input) {
   const categoryId = Number(input.categoryId);
-  const name = normalizeText(input.name);
+  const nameObj = await autoTranslateObject(input.name);
+  const descriptionObj = input.description ? await autoTranslateObject(input.description) : null;
   const priceNumber = Number(input.price);
 
   if (!Number.isInteger(categoryId) || categoryId <= 0) {
     return { type: 'INVALID', message: 'A valid category is required.' };
   }
 
-  if (!name) {
+  if (!nameObj.ua) {
     return { type: 'INVALID', message: 'Item name is required.' };
   }
 
@@ -233,8 +237,8 @@ async function createItem(input) {
   const item = await prisma.menuItem.create({
     data: {
       categoryId,
-      name,
-      description: normalizeOptionalText(input.description),
+      name: nameObj,
+      description: descriptionObj,
       price: priceNumber,
       imageUrl: normalizeOptionalText(input.imageUrl),
       isActive: normalizeBoolean(input.isActive, true),
@@ -262,14 +266,24 @@ async function updateItem(id, input) {
   const categoryId = Object.prototype.hasOwnProperty.call(input, 'categoryId')
     ? Number(input.categoryId)
     : existing.categoryId;
-  const name = Object.prototype.hasOwnProperty.call(input, 'name') ? normalizeText(input.name) : existing.name;
+
+  let nameObj = existing.name;
+  if (Object.prototype.hasOwnProperty.call(input, 'name')) {
+    nameObj = await autoTranslateObject(input.name);
+  }
+
+  let descriptionObj = existing.description;
+  if (Object.prototype.hasOwnProperty.call(input, 'description')) {
+    descriptionObj = input.description ? await autoTranslateObject(input.description) : null;
+  }
+
   const priceNumber = Object.prototype.hasOwnProperty.call(input, 'price') ? Number(input.price) : Number(existing.price);
 
   if (!Number.isInteger(categoryId) || categoryId <= 0) {
     return { type: 'INVALID', message: 'A valid category is required.' };
   }
 
-  if (!name) {
+  if (!nameObj || (typeof nameObj === 'object' && !nameObj.ua)) {
     return { type: 'INVALID', message: 'Item name is required.' };
   }
 
@@ -286,10 +300,8 @@ async function updateItem(id, input) {
     where: { id },
     data: {
       categoryId,
-      name,
-      description: Object.prototype.hasOwnProperty.call(input, 'description')
-        ? normalizeOptionalText(input.description)
-        : existing.description,
+      name: nameObj,
+      description: descriptionObj,
       price: priceNumber,
       imageUrl: Object.prototype.hasOwnProperty.call(input, 'imageUrl')
         ? normalizeOptionalText(input.imageUrl)
@@ -354,7 +366,7 @@ async function getInsights() {
     id: item.id,
     name: item.name,
     likesCount: Number(item.likesCount || 0),
-    categoryName: item.category?.name || ''
+    categoryName: (item.category?.name?.ua || item.category?.name || '')
   }));
 
   return {

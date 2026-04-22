@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PanelCard from '../components/PanelCard';
 import StatusPill from '../components/StatusPill';
-import { apiRequest, formatDate, formatTime } from '../lib/api';
+import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { parseReservationMeta } from '../lib/reservationMeta';
 
@@ -31,7 +31,7 @@ function getActionTone(status) {
 export default function ReservationDetailPage() {
   const { id } = useParams();
   const [state, setState] = useState({ loading: true, error: '', data: null, updating: false });
-  const { t, locale } = useAdminI18n();
+  const { t, language } = useAdminI18n();
 
   async function loadReservation() {
     setState((prev) => ({ ...prev, loading: true, error: '' }));
@@ -69,6 +69,7 @@ export default function ReservationDetailPage() {
   const reservation = state.data?.reservation;
   const allowedNextStatuses = state.data?.allowedNextStatuses || [];
   const reservationMeta = parseReservationMeta(reservation?.commentCustomer);
+  const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
 
   return (
     <AdminLayout>
@@ -105,10 +106,10 @@ export default function ReservationDetailPage() {
 
             <PanelCard title={t('reservationDetail.slotInfo')} className="surface-muted full-height">
               <div className="details-grid compact">
-                <DetailRow label={t('reservationDetail.fields.date')} value={formatDate(reservation.reservationDate, locale)} />
-                <DetailRow label={t('reservationDetail.fields.startTime')} value={formatTime(reservation.timeFrom, locale)} />
-                <DetailRow label={t('reservationDetail.fields.table')} value={reservation.table?.code || reservation.table?.name || '—'} />
-                <DetailRow label={t('reservationDetail.fields.zone')} value={reservation.zone?.name || '—'} />
+                <DetailRow label={t('reservationDetail.fields.date')} value={formatDate(reservation.reservationDate, dateLocale)} />
+                <DetailRow label={t('reservationDetail.fields.startTime')} value={formatTime(reservation.timeFrom, dateLocale)} />
+                <DetailRow label={t('reservationDetail.fields.table')} value={reservation.table?.code || localizeField(reservation.table?.name, language) || '—'} />
+                <DetailRow label={t('reservationDetail.fields.zone')} value={localizeField(reservation.zone?.name, language) || '—'} />
                 <DetailRow label={t('reservationDetail.fields.status')} value={<StatusPill status={reservation.status} />} />
               </div>
             </PanelCard>

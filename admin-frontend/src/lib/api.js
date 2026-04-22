@@ -44,3 +44,9 @@ export function formatTime(value, locale = 'ru-RU') {
     ? '—'
     : date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
+
+export function localizeField(value, locale = 'ua') {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value[locale] || value.ua || value.ru || value.en || '';
+}

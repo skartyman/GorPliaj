@@ -35,4 +35,44 @@ async function translateText(text, targetLang) {
   }
 }
 
-module.exports = { translateText };
+/**
+ * Автоматически переводит объект локализации.
+ * Если на входе строка, она считается украинским текстом.
+ * Если на входе объект, недостающие языки заполняются переводом из 'ua'.
+ */
+async function autoTranslateObject(input) {
+  let ua = '';
+  let ru = '';
+  let en = '';
+
+  if (typeof input === 'string') {
+    ua = input.trim();
+  } else if (input && typeof input === 'object') {
+    ua = input.ua || '';
+    ru = input.ru || '';
+    en = input.en || '';
+  }
+
+  if (!ua) return { ua: '', ru: '', en: '' };
+
+  // Если русского или английского нет, переводим
+  if (!ru) {
+    try {
+      ru = await translateText(ua, 'Russian');
+    } catch (e) {
+      ru = ua; // fallback
+    }
+  }
+
+  if (!en) {
+    try {
+      en = await translateText(ua, 'English');
+    } catch (e) {
+      en = ua; // fallback
+    }
+  }
+
+  return { ua, ru, en };
+}
+
+module.exports = { translateText, autoTranslateObject };

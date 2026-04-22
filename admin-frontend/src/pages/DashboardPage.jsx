@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageCard from '../components/PageCard';
 import StatusPill from '../components/StatusPill';
-import { apiRequest, formatDate, formatTime } from '../lib/api';
+import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 export default function DashboardPage() {
@@ -23,7 +23,7 @@ export default function DashboardPage() {
       topLikedItems: []
     }
   });
-  const { t, locale } = useAdminI18n();
+  const { t, language } = useAdminI18n();
 
   useEffect(() => {
     Promise.all([apiRequest('/api/admin/reservations'), apiRequest('/api/admin/menu/insights')])
@@ -75,6 +75,8 @@ export default function DashboardPage() {
         .filter(Boolean)
     );
 
+    const safeVal = (val) => (typeof val === 'object' ? localizeField(val, language) : val);
+
     return [
       { label: t('dashboard.summary.today'), value: todayReservations.length },
       { label: t('dashboard.summary.pending'), value: pending },
@@ -85,7 +87,7 @@ export default function DashboardPage() {
       { label: t('dashboard.summary.likedItems'), value: state.insights.summary.likedItemsCount || 0 },
       { label: t('dashboard.summary.menuItems'), value: state.insights.summary.activeItemsCount || 0 }
     ];
-  }, [state.rows, state.insights.summary, t]);
+  }, [state.rows, state.insights.summary, t, language]);
 
   const upcoming = useMemo(
     () => [...state.rows].sort((a, b) => new Date(a.timeFrom) - new Date(b.timeFrom)).slice(0, 6),
@@ -96,6 +98,8 @@ export default function DashboardPage() {
     () => [...state.rows].sort((a, b) => new Date(b.createdAt || b.timeFrom) - new Date(a.createdAt || a.timeFrom)).slice(0, 4),
     [state.rows]
   );
+
+  const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
 
   return (
     <AdminLayout>
@@ -163,8 +167,8 @@ export default function DashboardPage() {
               {state.insights.topLikedItems.map((item) => (
                 <li key={`like-${item.id}`}>
                   <div>
-                    <strong>{item.name}</strong>
-                    <div className="muted small">{item.categoryName || t('dashboard.noCategory')}</div>
+                    <strong>{localizeField(item.name, language)}</strong>
+                    <div className="muted small">{localizeField(item.categoryName, language) || t('dashboard.noCategory')}</div>
                   </div>
                   <strong>{item.likesCount} ♥</strong>
                 </li>
@@ -184,7 +188,7 @@ export default function DashboardPage() {
                 <li key={item.id}>
                   <div>
                     <strong>#{item.id}</strong> • {item.customerName || t('common.guest')}
-                    <div className="muted small">{formatDate(item.reservationDate, locale)} • {formatTime(item.timeFrom, locale)}</div>
+                    <div className="muted small">{formatDate(item.reservationDate, dateLocale)} • {formatTime(item.timeFrom, dateLocale)}</div>
                   </div>
                   <StatusPill status={item.status} />
                 </li>

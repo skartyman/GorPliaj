@@ -3,13 +3,14 @@ import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import PanelCard from '../components/PanelCard';
 import DataTable from '../components/DataTable';
-import { apiRequest, formatDateTime } from '../lib/api';
+import { apiRequest, formatDateTime, localizeField } from '../lib/api';
+import { useAdminI18n } from '../lib/i18n';
 
 const DEFAULT_FORM = {
-  title: '',
+  title: { ua: '', ru: '', en: '' },
   slug: '',
-  shortDescription: '',
-  fullDescription: '',
+  shortDescription: { ua: '', ru: '', en: '' },
+  fullDescription: { ua: '', ru: '', en: '' },
   posterImage: '',
   startAt: '',
   endAt: '',
@@ -34,6 +35,7 @@ function fromDateTimeLocal(value) {
 }
 
 export default function EventsPage() {
+  const { language } = useAdminI18n();
   const [state, setState] = useState({ loading: true, error: '', events: [] });
   const [form, setForm] = useState(DEFAULT_FORM);
   const [editId, setEditId] = useState(null);
@@ -76,10 +78,10 @@ export default function EventsPage() {
   function startEdit(event) {
     setEditId(event.id);
     setForm({
-      title: event.title || '',
+      title: typeof event.title === 'object' ? { ...event.title } : { ua: event.title, ru: '', en: '' },
       slug: event.slug || '',
-      shortDescription: event.shortDescription || '',
-      fullDescription: event.fullDescription || '',
+      shortDescription: typeof event.shortDescription === 'object' ? { ...event.shortDescription } : { ua: event.shortDescription, ru: '', en: '' },
+      fullDescription: typeof event.fullDescription === 'object' ? { ...event.fullDescription } : { ua: event.fullDescription, ru: '', en: '' },
       posterImage: event.posterImage || '',
       startAt: toDateTimeLocal(event.startAt),
       endAt: toDateTimeLocal(event.endAt),
@@ -117,11 +119,11 @@ export default function EventsPage() {
     await loadEvents();
     resetForm();
     setSavingKey('');
-    setFeedback({ tone: 'success', message: editId ? 'Event updated.' : 'Event created.' });
+    setFeedback({ tone: 'success', message: editId ? 'Event updated. Auto-translation applied.' : 'Event created. Auto-translation applied.' });
   }
 
   async function removeEvent(eventRow) {
-    if (!window.confirm(`Delete event “${eventRow.title}”?`)) return;
+    if (!window.confirm(`Delete event “${localizeField(eventRow.title, language)}”?`)) return;
 
     setSavingKey(`delete-${eventRow.id}`);
     const { response, body } = await apiRequest(`/api/admin/events/${eventRow.id}`, { method: 'DELETE' });
@@ -139,75 +141,27 @@ export default function EventsPage() {
 
   async function handlePosterUpload(file) {
     if (!file) return;
-
-    if (!file.type || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setPosterUploadState({ status: 'error', details: 'Only JPG, PNG, and WEBP files are supported.' });
-      setFeedback({ tone: 'error', message: 'Unsupported image format.' });
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setPosterUploadState({ status: 'error', details: 'File exceeds the 5MB limit.' });
-      setFeedback({ tone: 'error', message: 'File is too large (max 5MB).' });
-      return;
-    }
-
     setUploadingImage(true);
-    setFeedback({ tone: '', message: '' });
-    setPosterUploadState({ status: 'uploading', details: `Uploading ${file.name} (${Math.round(file.size / 1024)} KB)…` });
-
     const payload = new FormData();
     payload.append('image', file);
-    payload.append('folder', 'events');
-
-    const { response, body } = await apiRequest('/api/admin/uploads/image', {
-      method: 'POST',
-      body: payload
-    });
-
+    const { response, body } = await apiRequest('/api/admin/uploads/image', { method: 'POST', body: payload });
     setUploadingImage(false);
-
-    if (!response.ok) {
-      setPosterUploadState({
-        status: 'error',
-        details: `Upload failed (${response.status || 'network'}): ${body.message || 'unknown error'}`
-      });
-      setFeedback({ tone: 'error', message: body.message || 'Failed to upload image.' });
-      return;
+    if (response.ok && body.url) {
+      setForm((current) => ({ ...current, posterImage: body.url }));
     }
-
-    if (!body.url) {
-      setPosterUploadState({ status: 'error', details: 'Server response did not include uploaded URL.' });
-      setFeedback({ tone: 'error', message: 'Upload finished, but no image URL was returned.' });
-      return;
-    }
-
-    setForm((current) => ({ ...current, posterImage: body.url }));
-    setPosterUploadState({ status: 'success', details: `Uploaded successfully: ${body.url}` });
-    setFeedback({ tone: 'success', message: 'Poster image uploaded.' });
   }
 
   const columns = [
-    { key: 'title', label: 'Event', render: (row) => <strong>{row.title}</strong> },
-    { key: 'startAt', label: 'Start', render: (row) => formatDateTime(row.startAt, 'uk-UA') },
+    { key: 'title', label: 'Event', render: (row) => <strong>{localizeField(row.title, language)}</strong> },
+    { key: 'startAt', label: 'Start', render: (row) => formatDateTime(row.startAt, language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US')) },
     { key: 'status', label: 'Status' },
-    { key: 'ctaType', label: 'CTA' },
     {
       key: 'actions',
       label: 'Actions',
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>
-            Edit
-          </button>
-          <button
-            type="button"
-            className="btn btn-small btn-danger"
-            disabled={savingKey === `delete-${row.id}`}
-            onClick={() => removeEvent(row)}
-          >
-            Delete
-          </button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>Edit</button>
+          <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>Delete</button>
         </div>
       )
     }
@@ -215,82 +169,38 @@ export default function EventsPage() {
 
   return (
     <AdminLayout>
-      <section className="grid-summary">
-        <article className="metric-compact-card">
-          <div className="metric-compact-grid">
-            <div className="metric-compact-item"><strong>{stats.total}</strong><span className="muted">All events</span></div>
-            <div className="metric-compact-item"><strong>{stats.published}</strong><span className="muted">Published</span></div>
-            <div className="metric-compact-item"><strong>{stats.featured}</strong><span className="muted">Featured</span></div>
-            <div className="metric-compact-item"><strong>{state.events.filter((item) => item.status === 'DRAFT').length}</strong><span className="muted">Drafts</span></div>
-          </div>
-        </article>
-      </section>
-
-      <PageContainer title="Events" description="Manage posters, publication status, and CTA buttons.">
+      <PageContainer title="Events" description="Manage posters and schedules. Automatic AI translation is active.">
         {state.loading ? <p>Loading events…</p> : null}
-        {state.error ? <p className="error">{state.error}</p> : null}
-        {!state.loading && !state.error ? <DataTable columns={columns} rows={state.events} emptyText="No events yet." /> : null}
+        {!state.loading && <DataTable columns={columns} rows={state.events} emptyText="No events yet." />}
       </PageContainer>
 
-      <PanelCard title={editId ? 'Edit event' : 'Create event'} subtitle="Set publishing state, schedule, and booking/ticket CTAs.">
+      <PanelCard title={editId ? 'Edit event' : 'Create event'}>
         <form onSubmit={submitForm} className="event-admin-form">
           <div className="grid-two-col">
-            <label>Title <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required /></label>
-            <label>Slug <input value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))} placeholder="auto-from-title" /></label>
-            <label>Start at <input type="datetime-local" value={form.startAt} onChange={(event) => setForm((current) => ({ ...current, startAt: event.target.value }))} required /></label>
-            <label>End at <input type="datetime-local" value={form.endAt} onChange={(event) => setForm((current) => ({ ...current, endAt: event.target.value }))} /></label>
-            <label>Status
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>
-                <option value="DRAFT">DRAFT</option>
-                <option value="PUBLISHED">PUBLISHED</option>
-                <option value="ARCHIVED">ARCHIVED</option>
-              </select>
-            </label>
-            <label>CTA type
-              <select value={form.ctaType} onChange={(event) => setForm((current) => ({ ...current, ctaType: event.target.value }))}>
-                <option value="BOOKING">BOOKING</option>
-                <option value="TICKETS">TICKETS</option>
-                <option value="BOTH">BOTH</option>
-              </select>
-            </label>
-            <label>Poster image URL <input value={form.posterImage} onChange={(event) => setForm((current) => ({ ...current, posterImage: event.target.value }))} placeholder="https://cdn.../events/..." /></label>
-            <label>Upload poster image
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={uploadingImage}
-                onChange={(event) => {
-                  const [file] = event.target.files || [];
-                  handlePosterUpload(file);
-                  event.target.value = '';
-                }}
-              />
-            </label>
-            <div className={`upload-status-card is-${posterUploadState.status}`}>
-              <strong>R2 upload status</strong>
-              <p>
-                {posterUploadState.status === 'idle'
-                  ? 'Select an image to upload poster into cloud storage.'
-                  : posterUploadState.details}
-              </p>
-            </div>
-            <label>Ticket URL <input value={form.ticketUrl} onChange={(event) => setForm((current) => ({ ...current, ticketUrl: event.target.value }))} /></label>
+            <label>Title (UA) <input value={form.title.ua} onChange={(e) => setForm({ ...form, title: { ...form.title, ua: e.target.value } })} required /></label>
+            <label>Title (RU) <input value={form.title.ru} onChange={(e) => setForm({ ...form, title: { ...form.title, ru: e.target.value } })} placeholder="Auto-translated" /></label>
+            <label>Title (EN) <input value={form.title.en} onChange={(e) => setForm({ ...form, title: { ...form.title, en: e.target.value } })} placeholder="Auto-translated" /></label>
+            <label>Slug <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
           </div>
-          {form.posterImage ? (
-            <div className="event-poster-preview-block">
-              <p className="small muted">Poster preview</p>
-              <img src={form.posterImage} alt="Event poster preview" className="event-poster-preview" />
-            </div>
-          ) : null}
-          <label>Short description <textarea rows="3" value={form.shortDescription} onChange={(event) => setForm((current) => ({ ...current, shortDescription: event.target.value }))} /></label>
-          <label>Full description <textarea rows="6" value={form.fullDescription} onChange={(event) => setForm((current) => ({ ...current, fullDescription: event.target.value }))} /></label>
-          <label className="checkbox-label"><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm((current) => ({ ...current, isFeatured: event.target.checked }))} /> Feature this event on homepage</label>
-          <div className="actions">
-            <button type="submit" className="btn" disabled={savingKey === 'event-form'}>{savingKey === 'event-form' ? 'Saving…' : editId ? 'Save changes' : 'Create event'}</button>
-            {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel edit</button> : null}
+
+          <div className="grid-two-col">
+            <label>Start <input type="datetime-local" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} required /></label>
+            <label>End <input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
           </div>
-          {uploadingImage ? <p className="muted">Uploading image…</p> : null}
-          {feedback.message ? <p className={feedback.tone === 'error' ? 'error' : 'muted'}>{feedback.message}</p> : null}
+
+          <div style={{ marginTop: '1rem' }}>
+            <label>Short Description (UA) <textarea value={form.shortDescription.ua} onChange={(e) => setForm({ ...form, shortDescription: { ...form.shortDescription, ua: e.target.value } })} /></label>
+            <label>Short Description (RU) <textarea value={form.shortDescription.ru} onChange={(e) => setForm({ ...form, shortDescription: { ...form.shortDescription, ru: e.target.value } })} placeholder="Auto-translated" /></label>
+            <label>Short Description (EN) <textarea value={form.shortDescription.en} onChange={(e) => setForm({ ...form, shortDescription: { ...form.shortDescription, en: e.target.value } })} placeholder="Auto-translated" /></label>
+          </div>
+
+          <div className="actions" style={{ marginTop: '1rem' }}>
+            <button type="submit" className="btn" disabled={!!savingKey}>
+              {savingKey === 'event-form' ? 'Saving…' : (editId ? 'Save changes' : 'Create event')}
+            </button>
+            {editId && <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>}
+          </div>
+          {feedback.message && <p className={feedback.tone === 'error' ? 'error' : 'success'}>{feedback.message}</p>}
         </form>
       </PanelCard>
     </AdminLayout>

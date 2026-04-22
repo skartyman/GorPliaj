@@ -5,7 +5,7 @@ import DataTable from '../components/DataTable';
 import FilterBar from '../components/FilterBar';
 import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
-import { apiRequest, formatDate, formatTime } from '../lib/api';
+import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { parseReservationMeta } from '../lib/reservationMeta';
 
@@ -15,7 +15,7 @@ export default function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState('');
-  const { t, locale } = useAdminI18n();
+  const { t, language } = useAdminI18n();
 
   const quickActions = useMemo(
     () => ({
@@ -68,8 +68,8 @@ export default function ReservationsPage() {
         reservation.customerName,
         reservation.customerPhone,
         reservation.table?.code,
-        reservation.table?.name,
-        reservation.zone?.name,
+        localizeField(reservation.table?.name, language),
+        localizeField(reservation.zone?.name, language),
         parseReservationMeta(reservation.commentCustomer).mode,
         parseReservationMeta(reservation.commentCustomer).place
       ]
@@ -79,7 +79,7 @@ export default function ReservationsPage() {
 
       return matchesStatus && matchesDate && searchable.includes(query);
     });
-  }, [search, state.rows, statusFilter, dateFilter]);
+  }, [search, state.rows, statusFilter, dateFilter, language]);
 
   const summary = useMemo(() => {
     const pending = filteredRows.filter((row) => row.status === 'PENDING').length;
@@ -120,6 +120,8 @@ export default function ReservationsPage() {
     }
   }
 
+  const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
+
   const columns = [
     {
       key: 'id',
@@ -136,8 +138,8 @@ export default function ReservationsPage() {
       label: t('reservations.columns.dateTime'),
       render: (reservation) => (
         <div>
-          <div>{formatDate(reservation.reservationDate, locale)}</div>
-          <div className="muted small">{formatTime(reservation.timeFrom, locale)}</div>
+          <div>{formatDate(reservation.reservationDate, dateLocale)}</div>
+          <div className="muted small">{formatTime(reservation.timeFrom, dateLocale)}</div>
         </div>
       )
     },
@@ -145,7 +147,7 @@ export default function ReservationsPage() {
     {
       key: 'table',
       label: t('reservations.columns.tableZone'),
-      render: (reservation) => `${reservation.table?.code || reservation.table?.name || '—'} / ${reservation.zone?.name || '—'}`
+      render: (reservation) => `${reservation.table?.code || localizeField(reservation.table?.name, language) || '—'} / ${localizeField(reservation.zone?.name, language) || '—'}`
     },
     {
       key: 'guests',

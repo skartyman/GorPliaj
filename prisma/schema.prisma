@@ -19,9 +19,9 @@ model AdminUser {
 
 model Map {
   id              Int           @id @default(autoincrement())
-  name            String
+  name            Json
   slug            String        @unique
-  description     String?
+  description     Json?
   status          MapStatus     @default(DRAFT)
   isDefault       Boolean       @default(false)
   width           Int
@@ -42,7 +42,7 @@ model Map {
 model Zone {
   id           Int           @id @default(autoincrement())
   mapId        Int
-  name         String
+  name         Json
   color        String
   sortOrder    Int           @default(0)
   createdAt    DateTime      @default(now())
@@ -58,7 +58,7 @@ model VenueTable {
   id           Int           @id @default(autoincrement())
   mapId        Int
   zoneId       Int
-  name         String
+  name         Json
   code         String?
   photoUrl     String?
   seatsMin     Int
@@ -83,7 +83,7 @@ model MapObject {
   mapId     Int
   tableId   Int?
   type      MapObjectType
-  label     String?
+  label     Json?
   x         Float
   y         Float
   width     Float
@@ -190,10 +190,10 @@ model Payment {
 
 model Event {
   id               Int           @id @default(autoincrement())
-  title            String
+  title            Json
   slug             String        @unique
-  shortDescription String?
-  fullDescription  String?
+  shortDescription Json?
+  fullDescription  Json?
   posterImage      String?
   startAt          DateTime
   endAt            DateTime?
@@ -214,7 +214,7 @@ model Event {
 
 model MenuCategory {
   id        Int        @id @default(autoincrement())
-  name      String
+  name      Json
   slug      String     @unique
   section   MenuSection @default(KITCHEN)
   sortOrder Int        @default(0)
@@ -231,8 +231,8 @@ model MenuCategory {
 model MenuItem {
   id          Int          @id @default(autoincrement())
   categoryId  Int
-  name        String
-  description String?
+  name        Json
+  description Json?
   price       Decimal      @db.Decimal(10, 2)
   imageUrl    String?
   likesCount  Int          @default(0)
@@ -252,17 +252,17 @@ model MenuItem {
 
 model News {
   id        Int      @id @default(autoincrement())
-  title     String
-  body      String
+  title     Json
+  body      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model FrontendSettings {
   id           Int      @id @default(autoincrement())
-  title        String?
-  description  String?
-  keywords     String?
+  title        Json?
+  description  Json?
+  keywords     Json?
   logoUrl      String?
   faviconUrl   String?
   phone        String?

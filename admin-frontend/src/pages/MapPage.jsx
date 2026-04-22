@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
-import { apiRequest, formatDate, formatTime } from '../lib/api';
+import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { useInteractiveMap } from '../hooks/useInteractiveMap';
 
@@ -63,9 +63,10 @@ function parseStyleJson(styleJson) {
   }
 }
 
-function mapObjectLabel(object, t) {
-  if (object.label) {
-    return object.label;
+function mapObjectLabel(object, t, language) {
+  const labelStr = localizeField(object.label, language);
+  if (labelStr) {
+    return labelStr;
   }
 
   const fallback = t(`mapEditor.objectType.${object.type}`);
@@ -81,7 +82,7 @@ export default function MapPage() {
     availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
   });
   const [selectedTableId, setSelectedTableId] = useState(null);
-  const { t, locale } = useAdminI18n();
+  const { t, language } = useAdminI18n();
 
   useEffect(() => {
     async function loadMapData() {
@@ -194,6 +195,8 @@ export default function MapPage() {
     ? getTableDisplayStatus(selectedTable, reservationsByTable, heldTableIds, busyTableIds)
     : null;
 
+  const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
+
   const onBookTable = (table) => {
     // future booking flow callback
     console.info('booking hook', table);
@@ -230,7 +233,7 @@ export default function MapPage() {
           <>
             <div className="map-meta muted">
               {t('map.meta', {
-                map: state.mapData.map?.name || '—',
+                map: localizeField(state.mapData.map?.name, language) || '—',
                 zones: state.mapData.zones?.length || 0,
                 tables: state.mapData.tables?.length || 0
               })}
@@ -279,9 +282,9 @@ export default function MapPage() {
                           key={object.id}
                           className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()}`}
                           style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
-                          title={mapObjectLabel(object, t)}
+                          title={mapObjectLabel(object, t, language)}
                         >
-                          <span>{mapObjectLabel(object, t)}</span>
+                          <span>{mapObjectLabel(object, t, language)}</span>
                         </div>
                       );
                     }
@@ -298,10 +301,10 @@ export default function MapPage() {
                           ...baseStyle,
                           borderRadius: tableShape === 'ROUND' ? 999 : 12
                         }}
-                        title={object.table?.name || object.table?.code || t('map.fields.table')}
+                        title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
                         onClick={() => setSelectedTableId(object.tableId)}
                       >
-                        <span>{object.table?.code || object.table?.name || 'T'}</span>
+                        <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                       </button>
                     );
                   })}
@@ -320,7 +323,7 @@ export default function MapPage() {
             {selectedTable ? (
               <div className="table-bottom-sheet" role="dialog" aria-live="polite">
                 <div className="table-sheet-head">
-                  <h4>{selectedTable.name || selectedTable.code || t('map.fields.table')}</h4>
+                  <h4>{localizeField(selectedTable.name, language) || selectedTable.code || t('map.fields.table')}</h4>
                   <button type="button" className="btn btn-secondary" onClick={() => setSelectedTableId(null)}>Close</button>
                 </div>
 
@@ -328,7 +331,7 @@ export default function MapPage() {
                   <div className="detail-row"><span className="muted">Code</span><strong>{selectedTable.code || '—'}</strong></div>
                   <div className="detail-row"><span className="muted">Capacity</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
                   <div className="detail-row"><span className="muted">Deposit</span><strong>{selectedTable.deposit || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">Zone</span><strong>{zoneMap.get(selectedTable.zoneId)?.name || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">Zone</span><strong>{localizeField(zoneMap.get(selectedTable.zoneId)?.name, language) || '—'}</strong></div>
                   <div className="detail-row"><span className="muted">Bookable</span><strong>{selectedTable.isBookable ? 'Yes' : 'No'}</strong></div>
                   <div className="detail-row"><span className="muted">Status</span><strong><StatusPill status={selectedStatus} /></strong></div>
                 </div>
@@ -339,7 +342,7 @@ export default function MapPage() {
                     {selectedReservations.slice(0, 3).map((reservation) => (
                       <li key={reservation.id}>
                         <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
-                        {formatDate(reservation.reservationDate, locale)} {formatTime(reservation.timeFrom, locale)} • <StatusPill status={reservation.status} />
+                        {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)} • <StatusPill status={reservation.status} />
                       </li>
                     ))}
                   </ul>
