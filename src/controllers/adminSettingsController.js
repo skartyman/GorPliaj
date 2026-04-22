@@ -1,11 +1,25 @@
 const prisma = require('../lib/prisma.js');
 const { autoTranslateObject } = require('../services/translationService');
+const { normalizeLocalizedField } = require('../utils/localization');
+
+const LOCALIZED_SETTINGS_FIELDS = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'footerText', 'address'];
+
+function normalizeSettings(settings) {
+  if (!settings) return {};
+
+  const normalized = { ...settings };
+  for (const field of LOCALIZED_SETTINGS_FIELDS) {
+    normalized[field] = normalizeLocalizedField(settings[field]);
+  }
+
+  return normalized;
+}
 
 // Получить настройки
 async function getSettings(req, res) {
   try {
     const settings = await prisma.frontendSettings.findFirst();
-    res.json(settings || {});
+    res.json(normalizeSettings(settings));
   } catch (err) {
     console.error(err);
     res.status(500).json({error: 'Server error'});
@@ -59,7 +73,7 @@ async function updateSettings(req, res) {
         mapEmbedUrl
       },
     });
-    res.json(settings);
+    res.json(normalizeSettings(settings));
   } catch (err) {
     console.error(err);
     res.status(500).json({error: 'Server error'});
@@ -72,8 +86,7 @@ async function patchSettings(req, res) {
     const data = { ...req.body };
     
     // Если в патче есть текстовые поля, переводим их
-    const translateFields = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'footerText', 'address'];
-    for (const field of translateFields) {
+    for (const field of LOCALIZED_SETTINGS_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(data, field) && data[field]) {
         data[field] = await autoTranslateObject(data[field]);
       }
@@ -83,7 +96,7 @@ async function patchSettings(req, res) {
       where: { id: 1 },
       data,
     });
-    res.json(settings);
+    res.json(normalizeSettings(settings));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

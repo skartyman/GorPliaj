@@ -1,12 +1,10 @@
 const prisma = require('../lib/prisma');
+const { normalizeLocalizedField } = require('../utils/localization');
 
 function toPublicCategory(category) {
   return {
     id: category.id,
-    name: {
-      uk: category.name,
-      en: category.name
-    },
+    name: normalizeLocalizedField(category.name),
     slug: category.slug,
     section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
@@ -15,14 +13,8 @@ function toPublicCategory(category) {
       .map((item) => ({
         id: item.id,
         categoryId: item.categoryId,
-        name: {
-          uk: item.name,
-          en: item.name
-        },
-        description: {
-          uk: item.description || '',
-          en: item.description || ''
-        },
+        name: normalizeLocalizedField(item.name),
+        description: normalizeLocalizedField(item.description),
         price: Number(item.price),
         imageUrl: item.imageUrl || '',
         likesCount: Number(item.likesCount || 0),
@@ -101,7 +93,7 @@ async function setMenuItemLike(itemId, liked) {
     type: 'SUCCESS',
     item: {
       id: updatedItem.id,
-      name: updatedItem.name,
+      name: normalizeLocalizedField(updatedItem.name),
       likesCount: Number(updatedItem.likesCount || 0)
     }
   };

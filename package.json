@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js",
+    "localization:repair": "node scripts/repair-localization.js",
     "admin:dev": "npm --prefix admin-frontend run dev",
     "admin:build": "npm --prefix admin-frontend run build",
     "public:dev": "npm --prefix public-frontend run dev",

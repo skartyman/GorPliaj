@@ -9,8 +9,17 @@ async function handleTranslate(req, res) {
 
   try {
     const results = {};
+    const targets = {
+      ua: 'Ukrainian',
+      ru: 'Russian',
+      en: 'English'
+    };
     for (const lang of targetLangs) {
-      results[lang] = await translationService.translateText(text, lang === 'en' ? 'English' : 'Russian');
+      const target = targets[lang];
+      if (!target) {
+        return res.status(400).json({ error: `Unsupported target language: ${lang}` });
+      }
+      results[lang] = await translationService.translateText(text, target);
     }
     res.json(results);
   } catch (error) {

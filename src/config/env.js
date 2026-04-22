@@ -49,6 +49,7 @@ module.exports = {
   PORT: Number(getOptionalEnv('PORT', 8080)),
   DATABASE_URL: getOptionalEnv('DATABASE_URL', ''),
   ADMIN_AUTH_SECRET: getOptionalEnv('ADMIN_AUTH_SECRET', ''),
+  GROQ_API_KEY: getOptionalEnv('GROQ_API_KEY', ''),
   APP_BASE_URL: getOptionalEnv('APP_BASE_URL', 'http://localhost:8080'),
   VENUE_CLOSING_TIME: getOptionalEnv('VENUE_CLOSING_TIME', '23:59'),
   R2_CONFIG,

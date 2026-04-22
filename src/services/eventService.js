@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { autoTranslateObject } = require('./translationService');
+const { normalizeLocalizedField } = require('../utils/localization');
 
 const EVENT_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
 const EVENT_CTA_TYPES = new Set(['BOOKING', 'TICKETS', 'BOTH']);
@@ -41,10 +42,10 @@ function normalizeBoolean(value, fallback = false) {
 function toAdminEvent(event) {
   return {
     id: event.id,
-    title: event.title, // {ua, ru, en}
+    title: normalizeLocalizedField(event.title),
     slug: event.slug,
-    shortDescription: event.shortDescription || { ua: '', ru: '', en: '' },
-    fullDescription: event.fullDescription || { ua: '', ru: '', en: '' },
+    shortDescription: normalizeLocalizedField(event.shortDescription),
+    fullDescription: normalizeLocalizedField(event.fullDescription),
     posterImage: event.posterImage || '',
     startAt: event.startAt,
     endAt: event.endAt,
@@ -60,10 +61,10 @@ function toAdminEvent(event) {
 function toPublicEvent(event) {
   return {
     id: event.id,
-    title: event.title,
+    title: normalizeLocalizedField(event.title),
     slug: event.slug,
-    shortDescription: event.shortDescription || { ua: '', ru: '', en: '' },
-    fullDescription: event.fullDescription || { ua: '', ru: '', en: '' },
+    shortDescription: normalizeLocalizedField(event.shortDescription),
+    fullDescription: normalizeLocalizedField(event.fullDescription),
     posterImage: event.posterImage || '',
     startAt: event.startAt,
     endAt: event.endAt,

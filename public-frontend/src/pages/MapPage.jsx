@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { mapApi } from '../lib/api';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint } from '../lib/map';
+import { localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
@@ -25,7 +26,7 @@ function parseStyleJson(styleJson) {
 }
 
 export default function MapPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [searchParams] = useSearchParams();
   const [state, setState] = useState({ loading: true, error: '', result: null });
   const [selectedTableId, setSelectedTableId] = useState(null);
@@ -266,6 +267,7 @@ export default function MapPage() {
 
                 {state.result.map.objects.map((object) => {
                   const table = object.tableId ? tableById.get(object.tableId) : null;
+                  const objectLabel = localizeField(object.label, locale) || object.type;
                   if (table) {
                     const disabled = table.status !== 'free' || !tableFitsGuests(table);
                     return (
@@ -303,9 +305,9 @@ export default function MapPage() {
                         zIndex: object.zIndex,
                         ...parseStyleJson(object.styleJson)
                       }}
-                      title={object.label || object.type}
+                      title={objectLabel}
                     >
-                      <span>{object.label || object.type}</span>
+                      <span>{objectLabel}</span>
                     </div>
                   );
                 })}
@@ -341,7 +343,7 @@ export default function MapPage() {
           {selectedTable ? (
             <>
               <p>
-                <strong>{selectedTable.name}</strong>
+                <strong>{localizeField(selectedTable.name, locale) || selectedTable.code}</strong>
               </p>
               <p className="muted">
                 {t('mapSeats')}: {selectedTable.seatsMin}-{selectedTable.seatsMax}

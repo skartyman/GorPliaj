@@ -2,6 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { bookingsApi, mapApi } from '../lib/api';
 import { getPublicMapData } from '../lib/map';
+import { localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
@@ -42,7 +43,7 @@ export default function BookingPage() {
             .map((table) => ({ ...table, zoneId: zone.id }))
         );
 
-        setMapName(result.map.name);
+        setMapName(localizeField(result.map.name, locale));
         setTableOptions(options);
         setSelected((current) => {
           const selectedTable = options.find((table) => table.id === current.tableId) || options[0];
@@ -145,7 +146,7 @@ export default function BookingPage() {
             {!tableOptions.length ? <option value="">{isEn ? 'No free tables for these parameters' : 'Нет свободных столов под эти параметры'}</option> : null}
             {tableOptions.map((table) => (
               <option key={table.id} value={table.id}>
-                {table.name} ({table.seatsMin}-{table.seatsMax} {isEn ? 'seats' : 'мест'})
+                {localizeField(table.name, locale) || table.code} ({table.seatsMin}-{table.seatsMax} {isEn ? 'seats' : 'мест'})
               </option>
             ))}
           </select>

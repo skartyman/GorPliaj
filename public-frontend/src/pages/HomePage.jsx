@@ -5,6 +5,7 @@ import { formatEventDateRange } from '../lib/events';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
+import { localizeField } from '../lib/i18n';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
@@ -41,8 +42,10 @@ export default function HomePage() {
       ];
 
   const isEn = locale === 'en';
-  const heroTitle = (isEn ? settings?.heroTitle?.en : settings?.heroTitle?.ru) || 'GorPliaj';
-  const heroSubtitle = (isEn ? settings?.heroSubtitle?.en : settings?.heroSubtitle?.ru) || (isEn ? 'Beach restaurant with live music, cuisine and evening events at Otrada Beach, Odesa' : 'Пляжно-ресторанное пространство с живой музыкой, кухней и вечерними событиями на пляже Отрада, Одесса');
+  const heroTitle = localizeField(settings?.heroTitle, locale) || 'GorPliaj';
+  const heroSubtitle = localizeField(settings?.heroSubtitle, locale) || (isEn ? 'Beach restaurant with live music, cuisine and evening events at Otrada Beach, Odesa' : 'Пляжно-ресторанное пространство с живой музыкой, кухней и вечерними событиями на пляже Отрада, Одесса');
+  const addressText = localizeField(settings?.address, locale) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса');
+  const socialLinks = (settings?.socialMedia || []).filter((social) => social?.url && social?.platform);
 
   return (
     <>
@@ -66,17 +69,20 @@ export default function HomePage() {
         </div>
         <div className="events-grid">
           {state.events.length ? (
-            state.events.map((event) => (
-              <article key={event.id} className="event-card">
-                <Link to={`/events/${event.slug}`} className="media-link">
-                  <img src={event.posterImage || '/icons/moonpirs.jpg'} alt={event.title} loading="lazy" />
-                  <div className="event-overlay">
-                    <p className="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
-                    <h3>{event.title}</h3>
-                  </div>
-                </Link>
-              </article>
-            ))
+            state.events.map((event) => {
+              const eventTitle = localizeField(event.title, locale);
+              return (
+                <article key={event.id} className="event-card">
+                  <Link to={`/events/${event.slug}`} className="media-link">
+                    <img src={event.posterImage || '/icons/moonpirs.jpg'} alt={eventTitle} loading="lazy" />
+                    <div className="event-overlay">
+                      <p className="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
+                      <h3>{eventTitle}</h3>
+                    </div>
+                  </Link>
+                </article>
+              );
+            })
           ) : (
             <div className="state-msg">{isEn ? 'New events coming soon' : 'Новые события скоро появятся'}</div>
           )}
@@ -116,12 +122,16 @@ export default function HomePage() {
       <section className="content-section">
         <h2>{isEn ? 'News' : 'Новости'}</h2>
         <div className="news-list">
-          {newsCards.map((item) => (
-            <article key={item.id} className="news-item">
-              <h3>{item.title}</h3>
-              <p>{item.summary}</p>
-            </article>
-          ))}
+          {newsCards.map((item) => {
+            const title = localizeField(item.title, locale);
+            const summary = localizeField(item.summary, locale);
+            return (
+              <article key={item.id} className="news-item">
+                <h3>{title}</h3>
+                <p>{summary}</p>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -130,7 +140,7 @@ export default function HomePage() {
         <div className="info-grid">
           <div className="info-block">
             <h3>{isEn ? 'Location' : 'Локация'}</h3>
-            <p>{ (isEn ? settings?.address?.en : (locale === 'ru' ? settings?.address?.ru : settings?.address?.ua)) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
+            <p>{addressText}</p>
             <p>{
                 settings?.workingHours?.mon?.open 
                   ? (isEn 
@@ -142,9 +152,9 @@ export default function HomePage() {
           <div className="info-block">
             <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
             <p><a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
-            {settings?.socialMedia?.length > 0 && (
+            {socialLinks.length > 0 && (
               <div className="info-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-                {settings.socialMedia.map((social, idx) => {
+                {socialLinks.map((social, idx) => {
                   const isInstagram = social.platform === 'instagram';
                   // Извлекаем логин из ссылки инстаграма
                   const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;

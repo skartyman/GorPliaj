@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
+import { localizeField } from '../lib/i18n';
 
 const navItems = [
   { to: '/', labelKey: 'navHome', icon: (
@@ -52,10 +53,12 @@ export default function Layout() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const brandName = settings?.title || 'GorPliaj';
+  const brandName = localizeField(settings?.title, locale) || 'GorPliaj';
   const logoUrl = settings?.logoUrl || '/icons/Logo.png';
   const isEn = locale === 'en';
-  const footerDescription = (isEn ? settings?.footerText?.en : settings?.footerText?.ru) || (isEn ? 'A modern beach restaurant with live music, cuisine and evening events.' : 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.');
+  const footerDescription = localizeField(settings?.footerText, locale) || (isEn ? 'A modern beach restaurant with live music, cuisine and evening events.' : 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.');
+  const addressText = localizeField(settings?.address, locale) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса');
+  const socialLinks = (settings?.socialMedia || []).filter((social) => social?.url && social?.platform);
 
   return (
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
@@ -150,9 +153,9 @@ export default function Layout() {
               <p style={{ marginTop: 8 }}>
                 {footerDescription}
               </p>
-              {settings?.socialMedia?.length > 0 && (
+              {socialLinks.length > 0 && (
                 <div className="footer-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-                  {settings.socialMedia.map((social, idx) => {
+                  {socialLinks.map((social, idx) => {
                     const isInstagram = social.platform === 'instagram';
                     const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;
                     const iconClass = SOCIAL_ICONS[social.platform.toLowerCase()] || SOCIAL_ICONS.default;
@@ -170,7 +173,7 @@ export default function Layout() {
             <div className="footer-contacts">
               <h3>{isEn ? 'Contacts' : 'Контакты'}</h3>
               <p>📞 <a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
-              <p>📍 { (isEn ? settings?.address?.en : (locale === 'ru' ? settings?.address?.ru : settings?.address?.ua)) || (isEn ? 'Otrada Beach, Odesa' : 'пляж Отрада, Одесса')}</p>
+              <p>📍 {addressText}</p>
               <p>🕐 {
                 settings?.workingHours?.mon?.open 
                   ? (isEn 

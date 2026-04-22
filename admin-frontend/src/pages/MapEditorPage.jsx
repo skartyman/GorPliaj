@@ -1048,7 +1048,7 @@ export default function MapEditorPage() {
   );
 }
 
-export default function MapEditorPage() {
+function LegacyMapEditorPage() {
   const { t } = useAdminI18n();
   const objectIdRef = useRef(0);
   const [editorState, setEditorState] = useState({

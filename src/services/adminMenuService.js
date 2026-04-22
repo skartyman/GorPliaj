@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { autoTranslateObject } = require('./translationService');
+const { localizeField, normalizeLocalizedField } = require('../utils/localization');
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -43,7 +44,7 @@ function normalizeMenuSection(value, fallbackValue = 'KITCHEN') {
 
 function slugify(value) {
   // Для слагификации берем UA версию, если это объект
-  const text = (value && typeof value === 'object') ? (value.ua || value.en || '') : value;
+  const text = (value && typeof value === 'object') ? localizeField(value, 'ua') : value;
   return normalizeText(text)
     .toLowerCase()
     .replace(/[^a-z0-9а-яіїєґ]+/giu, '-')
@@ -54,7 +55,7 @@ function slugify(value) {
 function toAdminCategory(category) {
   return {
     id: category.id,
-    name: category.name, // Теперь это объект {ua, ru, en}
+    name: normalizeLocalizedField(category.name),
     slug: category.slug,
     section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
@@ -70,8 +71,8 @@ function toAdminItem(item) {
   return {
     id: item.id,
     categoryId: item.categoryId,
-    name: item.name, // Теперь это объект {ua, ru, en}
-    description: item.description || { ua: '', ru: '', en: '' },
+    name: normalizeLocalizedField(item.name),
+    description: normalizeLocalizedField(item.description),
     price: Number(item.price),
     imageUrl: item.imageUrl || '',
     likesCount: Number(item.likesCount || 0),
@@ -83,7 +84,7 @@ function toAdminItem(item) {
     category: item.category
       ? {
           id: item.category.id,
-          name: item.category.name,
+          name: normalizeLocalizedField(item.category.name),
           slug: item.category.slug,
           section: item.category.section || 'KITCHEN',
           isActive: item.category.isActive,
@@ -364,9 +365,9 @@ async function getInsights() {
   const likedItemsCount = items.filter((item) => Number(item.likesCount || 0) > 0).length;
   const topLikedItems = items.slice(0, 5).map((item) => ({
     id: item.id,
-    name: item.name,
+    name: normalizeLocalizedField(item.name),
     likesCount: Number(item.likesCount || 0),
-    categoryName: (item.category?.name?.ua || item.category?.name || '')
+    categoryName: normalizeLocalizedField(item.category?.name)
   }));
 
   return {

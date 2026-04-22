@@ -2,6 +2,20 @@ const prisma = require('../lib/prisma');
 const menuService = require('../services/menuService');
 const contentService = require('../services/contentService');
 const eventService = require('../services/eventService');
+const { normalizeLocalizedField } = require('../utils/localization');
+
+const LOCALIZED_SETTINGS_FIELDS = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'footerText', 'address'];
+
+function normalizeSettings(settings) {
+  if (!settings) return {};
+
+  const normalized = { ...settings };
+  for (const field of LOCALIZED_SETTINGS_FIELDS) {
+    normalized[field] = normalizeLocalizedField(settings[field]);
+  }
+
+  return normalized;
+}
 
 function getHealth(req, res) {
   res.json({ status: 'ok' });
@@ -82,7 +96,7 @@ function getNews(req, res) {
 async function getSettings(req, res) {
   try {
     const settings = await prisma.frontendSettings.findFirst();
-    return res.json(settings || {});
+    return res.json(normalizeSettings(settings));
   } catch (error) {
     console.error('[publicController.getSettings] Failed to load settings.', error);
     return res.status(500).json({ message: 'Unable to load settings.' });
