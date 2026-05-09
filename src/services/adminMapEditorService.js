@@ -221,6 +221,46 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
   };
 }
 
+async function deleteAdminMapVariant(mapId) {
+  const id = Number(mapId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { type: 'INVALID', message: 'Map id is invalid.' };
+  }
+
+  const map = await prisma.map.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      isDefault: true,
+      _count: {
+        select: {
+          reservations: true
+        }
+      }
+    }
+  });
+
+  if (!map) {
+    return { type: 'NOT_FOUND', message: 'Map not found.' };
+  }
+
+  if (map.isDefault) {
+    return { type: 'INVALID', message: 'Default map cannot be deleted.' };
+  }
+
+  if (map._count.reservations > 0) {
+    return { type: 'INVALID', message: 'Map with reservations cannot be deleted.' };
+  }
+
+  const mapCount = await prisma.map.count();
+  if (mapCount <= 1) {
+    return { type: 'INVALID', message: 'At least one map must remain.' };
+  }
+
+  await prisma.map.delete({ where: { id } });
+  return { type: 'DELETED' };
+}
+
 function normalizeMapInput(mapInput) {
   const normalized = {};
 
@@ -569,6 +609,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 module.exports = {
   listAdminMaps,
   createAdminMapVariant,
+  deleteAdminMapVariant,
   getAdminMapEditor,
   getDefaultAdminMapEditor,
   updateAdminMapEditor

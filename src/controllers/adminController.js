@@ -251,6 +251,26 @@ async function createAdminMapVariant(req, res) {
   }
 }
 
+async function deleteAdminMapVariant(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const result = await adminMapEditorService.deleteAdminMapVariant(id);
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[adminController.deleteAdminMapVariant] Failed to delete map variant.', error);
+    return res.status(500).json({ message: 'Unable to delete map variant.' });
+  }
+}
+
 async function updateAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -294,6 +314,7 @@ module.exports = {
   updateAdminReservationStatus,
   listAdminMaps,
   createAdminMapVariant,
+  deleteAdminMapVariant,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor

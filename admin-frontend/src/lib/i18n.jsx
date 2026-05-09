@@ -204,12 +204,18 @@ const translations = {
       mapVariant: 'Варіант карти',
       defaultMapBadge: 'дефолт',
       newMapPreset: 'Тип нової карти',
+      newMapName: 'Назва карти',
+      newMapDescription: 'Опис карти',
       newMapNamePlaceholder: 'Назва нової карти (наприклад, Нічна посадка)',
       newMapDescriptionPlaceholder: 'Опис (наприклад, Концертна розсадка)',
       makeDefault: 'Зробити дефолтною',
       createMap: 'Створити варіант карти',
       creatingMap: 'Створюємо...',
       mapCreatedSuccess: 'Новий варіант карти створено.',
+      deleteMap: 'Видалити карту',
+      deleteMapConfirm: 'Видалити карту «{name}»?',
+      mapDeletedSuccess: 'Карту видалено.',
+      addObjects: 'Додати об’єкти',
       loading: 'Завантажуємо редактор карти...',
       save: 'Зберегти карту',
       saving: 'Зберігаємо...',
@@ -310,7 +316,8 @@ const translations = {
       errors: {
         load: 'Не вдалося завантажити редактор карти.',
         save: 'Не вдалося зберегти зміни карти.',
-        createMap: 'Не вдалося створити варіант карти.'
+        createMap: 'Не вдалося створити варіант карти.',
+        deleteMap: 'Не вдалося видалити карту.'
       }
     },
     menuAdmin: {

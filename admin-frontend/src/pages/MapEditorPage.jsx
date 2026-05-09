@@ -1659,6 +1659,36 @@ export default function MapEditorPage() {
     }));
   }
 
+  async function deleteCurrentMap() {
+    if (!editorState.selectedMapId) {
+      return;
+    }
+
+    const selectedMap = editorState.maps.find((item) => Number(item.id) === Number(editorState.selectedMapId));
+    const name = localizeField(selectedMap?.name, language) || selectedMap?.slug || editorState.selectedMapId;
+    if (!window.confirm(t('mapEditor.deleteMapConfirm', { name }))) {
+      return;
+    }
+
+    setEditorState((prev) => ({ ...prev, saving: true, error: '', saveMessage: '' }));
+    const result = await apiRequest(`/api/admin/maps/${editorState.selectedMapId}`, { method: 'DELETE' });
+    if (!result.response.ok) {
+      setEditorState((prev) => ({
+        ...prev,
+        saving: false,
+        error: result.body?.message || t('mapEditor.errors.deleteMap')
+      }));
+      return;
+    }
+
+    await loadInitialMapEditor();
+    setEditorState((prev) => ({
+      ...prev,
+      saving: false,
+      saveMessage: t('mapEditor.mapDeletedSuccess')
+    }));
+  }
+
   return (
     <AdminLayout>
       <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')} className="map-editor-page">
@@ -1678,6 +1708,14 @@ export default function MapEditorPage() {
             </button>
             <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
               {t('mapEditor.reset')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setEditorState((prev) => ({ ...prev, activeTab: 'ASSETS' }))}
+              disabled={editorState.loading}
+            >
+              {t('mapEditor.addObjects')}
             </button>
             <div className="separator" style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 12px' }} />
             <select
@@ -1725,6 +1763,63 @@ export default function MapEditorPage() {
             )}
           </div>
         </div>
+
+        <section className="map-management-panel">
+          <div className="map-management-grid">
+            <label>
+              {t('mapEditor.newMapPreset')}
+              <select
+                value={editorState.newMapPreset}
+                onChange={(event) => setEditorState((prev) => ({ ...prev, newMapPreset: event.target.value }))}
+                disabled={editorState.creatingMap || editorState.loading}
+              >
+                {MAP_VARIANT_PRESETS.map((preset) => (
+                  <option key={preset.key} value={preset.key}>{preset.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t('mapEditor.newMapName')}
+              <input
+                value={editorState.newMapName}
+                onChange={(event) => setEditorState((prev) => ({ ...prev, newMapName: event.target.value }))}
+                placeholder={t('mapEditor.newMapNamePlaceholder')}
+                disabled={editorState.creatingMap || editorState.loading}
+              />
+            </label>
+            <label>
+              {t('mapEditor.newMapDescription')}
+              <input
+                value={editorState.newMapDescription}
+                onChange={(event) => setEditorState((prev) => ({ ...prev, newMapDescription: event.target.value }))}
+                placeholder={t('mapEditor.newMapDescriptionPlaceholder')}
+                disabled={editorState.creatingMap || editorState.loading}
+              />
+            </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={editorState.makeNewMapDefault}
+                onChange={(event) => setEditorState((prev) => ({ ...prev, makeNewMapDefault: event.target.checked }))}
+                disabled={editorState.creatingMap || editorState.loading}
+              />
+              {t('mapEditor.makeDefault')}
+            </label>
+          </div>
+          <div className="map-management-actions">
+            <button type="button" className="btn btn-secondary btn-small" onClick={createMapVariant} disabled={editorState.creatingMap || editorState.loading || editorState.saving}>
+              {editorState.creatingMap ? t('mapEditor.creatingMap') : t('mapEditor.createMap')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-small"
+              onClick={deleteCurrentMap}
+              disabled={editorState.loading || editorState.saving || editorState.mapsLoading || editorState.maps.length <= 1 || editorState.maps.find((item) => Number(item.id) === Number(editorState.selectedMapId))?.isDefault}
+            >
+              {t('mapEditor.deleteMap')}
+            </button>
+          </div>
+        </section>
 
         {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
         {editorState.error ? <p className="error">{editorState.error}</p> : null}

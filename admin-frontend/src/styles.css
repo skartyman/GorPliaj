@@ -2021,7 +2021,7 @@ textarea {
   gap: 0;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  overflow: visible;
+  overflow: hidden;
   background: #f8fafc;
   margin-top: 16px;
   min-height: 0;
@@ -2082,9 +2082,11 @@ textarea {
   border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 10;
   min-height: 0;
+  scrollbar-gutter: stable;
 }
 
 .tool-button {
@@ -2145,8 +2147,33 @@ textarea {
 
 .inspector-content {
   padding: 14px;
+  padding-bottom: 120px;
   min-height: 0;
   background: #fff;
+}
+
+.map-management-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.map-management-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 1fr) minmax(180px, 1.2fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.map-management-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .map-size-actions {
