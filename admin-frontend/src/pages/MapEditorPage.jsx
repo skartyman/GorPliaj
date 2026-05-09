@@ -1291,7 +1291,7 @@ export default function MapEditorPage() {
             <h3>{t('mapEditor.heroTitle')}</h3>
             <p className="muted">{t('mapEditor.heroDescription')}</p>
           </div>
-          <div className="hero-inline-note">{t('mapEditor.note')}</div>
+          <div className="hero-inline-note">{t('mapEditor.editorNote')}</div>
         </section>
 
         <div className="map-editor-toolbar" style={{ marginBottom: '16px' }}>
