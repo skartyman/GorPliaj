@@ -1,5 +1,5 @@
 const { GROQ_API_KEY } = require('../config/env');
-const { cleanText, normalizeLocalizedField } = require('../utils/localization');
+const { cleanText } = require('../utils/localization');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,9 +72,29 @@ async function translateText(text, targetLang) {
  * Если на входе строка, она считается украинским текстом.
  * Если на входе объект, недостающие языки заполняются переводом из 'ua'.
  */
+function extractLocalizedInput(input) {
+  if (input == null) {
+    return { ua: '', ru: '', en: '' };
+  }
+
+  if (typeof input === 'string') {
+    return { ua: cleanText(input), ru: '', en: '' };
+  }
+
+  if (typeof input !== 'object') {
+    return { ua: cleanText(input), ru: '', en: '' };
+  }
+
+  return {
+    ua: cleanText(input.ua ?? input.uk ?? input.ru ?? input.en),
+    ru: cleanText(input.ru),
+    en: cleanText(input.en)
+  };
+}
+
 async function autoTranslateObject(input) {
-  const normalized = normalizeLocalizedField(input);
-  let { ua, ru, en } = normalized;
+  const localized = extractLocalizedInput(input);
+  let { ua, ru, en } = localized;
 
   if (!ua) return { ua: '', ru: '', en: '' };
 
@@ -83,7 +103,7 @@ async function autoTranslateObject(input) {
     try {
       ru = await translateText(ua, 'Russian');
     } catch (e) {
-      ru = ua; // fallback
+      ru = localized.ru || '';
     }
   }
 
@@ -91,7 +111,7 @@ async function autoTranslateObject(input) {
     try {
       en = await translateText(ua, 'English');
     } catch (e) {
-      en = ua; // fallback
+      en = localized.en || '';
     }
   }
 

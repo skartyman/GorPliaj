@@ -32,6 +32,13 @@ const MAP_VARIANT_PRESETS = [
 ];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', step: null },
+  { key: 'texture', type: 'select', options: [
+    { value: '', label: 'None' },
+    { value: 'grass', label: 'Grass' },
+    { value: 'sand', label: 'Sand' },
+    { value: 'water', label: 'Water' },
+    { value: 'wood', label: 'Wood' }
+  ]},
   { key: 'x', type: 'number', step: 1 },
   { key: 'y', type: 'number', step: 1 },
   { key: 'width', type: 'number', step: 1 },
@@ -49,6 +56,38 @@ const CREATION_PRESETS = {
   PATH: { width: 220, height: 44 },
   DECOR: { width: 120, height: 88 },
   LABEL: { width: 180, height: 60 }
+};
+
+const ASSET_CATEGORIES = {
+  FURNITURE: {
+    label: 'Furniture',
+    items: [
+      { type: 'TABLE', label: 'Table 4x', width: 100, height: 70 },
+      { type: 'TABLE', label: 'Table 2x', width: 60, height: 60 },
+      { type: 'TABLE', label: 'Table 6x', width: 160, height: 70 },
+      { type: 'CUSTOM', label: 'Sunbed', width: 80, height: 160, subType: 'SUNBED' },
+      { type: 'CUSTOM', label: 'Umbrella', width: 120, height: 120, subType: 'UMBRELLA' },
+      { type: 'CUSTOM', label: 'Bed', width: 160, height: 200, subType: 'BED' }
+    ]
+  },
+  NATURE: {
+    label: 'Nature',
+    items: [
+      { type: 'DECOR', label: 'Tree', width: 120, height: 120, subType: 'TREE' },
+      { type: 'DECOR', label: 'Bush', width: 80, height: 80, subType: 'BUSH' },
+      { type: 'DECOR', label: 'Flower', width: 40, height: 40, subType: 'FLOWER' }
+    ]
+  },
+  INFRASTRUCTURE: {
+    label: 'Infrastructure',
+    items: [
+      { type: 'ENTRANCE', label: 'Entrance', width: 110, height: 50 },
+      { type: 'WC', label: 'WC', width: 90, height: 70 },
+      { type: 'STAIRS', label: 'Stairs', width: 120, height: 80 },
+      { type: 'CUSTOM', label: 'Kitchen', width: 200, height: 150, subType: 'KITCHEN' },
+      { type: 'CUSTOM', label: 'Cash Desk', width: 100, height: 60, subType: 'CASHIER' }
+    ]
+  }
 };
 
 function clamp(value, min, max) {
@@ -230,12 +269,21 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
         {PROPERTY_FIELDS.map((field) => (
           <label key={field.key}>
             {t(`mapEditor.fields.${field.key}`)}
-            <input
-              type={field.type}
-              step={field.step ?? undefined}
-              value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : selectedObject[field.key]}
-              onChange={(event) => onFieldChange(field.key, event.target.value)}
-            />
+            {field.type === 'select' ? (
+              <select 
+                value={selectedObject.metaJson?.[field.key] || ''} 
+                onChange={(event) => onFieldChange(field.key, event.target.value)}
+              >
+                {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            ) : (
+              <input
+                type={field.type}
+                step={field.step ?? undefined}
+                value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : selectedObject[field.key]}
+                onChange={(event) => onFieldChange(field.key, event.target.value)}
+              />
+            )}
           </label>
         ))}
 
@@ -281,6 +329,223 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
   );
 }
 
+const SVG_TEMPLATES = {
+  TREE: (
+    <g fill="#22c55e">
+      <circle cx="50" cy="50" r="40" opacity="0.6" />
+      <circle cx="40" cy="40" r="20" />
+      <circle cx="60" cy="45" r="25" />
+      <circle cx="50" cy="65" r="20" />
+    </g>
+  ),
+  BUSH: (
+    <g fill="#4ade80">
+      <circle cx="30" cy="30" r="20" />
+      <circle cx="50" cy="35" r="20" />
+      <circle cx="40" cy="50" r="20" />
+    </g>
+  ),
+  UMBRELLA: (
+    <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2">
+      <circle cx="50" cy="50" r="45" fill="#fff" />
+      <path d="M50,5 L50,95 M5,50 L95,50 M18,18 L82,82 M18,82 L82,18" stroke="#e2e8f0" />
+      <circle cx="50" cy="50" r="4" fill="#94a3b8" />
+    </g>
+  ),
+  SUNBED: (
+    <rect x="10" y="5" width="80" height="90" rx="4" fill="#fff" stroke="#cbd5e1" strokeWidth="2" />
+  ),
+  STAIRS: (
+    <g fill="none" stroke="#94a3b8" strokeWidth="2">
+      <rect x="5" y="5" width="90" height="90" />
+      <line x1="5" y1="25" x2="95" y2="25" />
+      <line x1="5" y1="50" x2="95" y2="50" />
+      <line x1="5" y1="75" x2="95" y2="75" />
+    </g>
+  )
+};
+
+function SVGDefinitions() {
+  return (
+    <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+      <defs>
+        {/* Grass Pattern */}
+        <pattern id="pattern-grass" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="#dcfce7" />
+          <path d="M10,20 Q15,10 20,20 T30,20" stroke="#86efac" fill="none" strokeWidth="1" />
+          <path d="M5,35 Q10,25 15,35 T25,35" stroke="#86efac" fill="none" strokeWidth="1" />
+        </pattern>
+
+        {/* Sand Pattern */}
+        <pattern id="pattern-sand" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+          <rect width="50" height="50" fill="#fef9c3" />
+          <circle cx="10" cy="10" r="0.5" fill="#fde047" />
+          <circle cx="30" cy="25" r="0.8" fill="#fde047" />
+          <circle cx="15" cy="40" r="0.6" fill="#fde047" />
+        </pattern>
+
+        {/* Water Pattern */}
+        <pattern id="pattern-water" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+          <rect width="60" height="60" fill="#e0f2fe" />
+          <path d="M0,20 Q15,10 30,20 T60,20" stroke="#bae6fd" fill="none" strokeWidth="2" opacity="0.5" />
+          <path d="M0,45 Q15,35 30,45 T60,45" stroke="#bae6fd" fill="none" strokeWidth="2" opacity="0.5" />
+        </pattern>
+
+        {/* Wood Pattern */}
+        <pattern id="pattern-wood" x="0" y="0" width="100" height="20" patternUnits="userSpaceOnUse">
+          <rect width="100" height="20" fill="#fef3c7" />
+          <line x1="0" y1="19" x2="100" y2="19" stroke="#fcd34d" strokeWidth="1" />
+          <path d="M20,10 Q50,5 80,10" stroke="#f59e0b" fill="none" strokeWidth="0.5" opacity="0.2" />
+        </pattern>
+      </defs>
+    </svg>
+  );
+}
+
+function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected }) {
+  const table = object.tableId ? tableMap.get(object.tableId) : null;
+  const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
+  const accent = getObjectAccent(object, language);
+
+  // Custom styles for specific types/subtypes
+  const subType = object.metaJson?.subType;
+
+  const renderObjectContent = () => {
+    if (subType && SVG_TEMPLATES[subType]) {
+      return (
+        <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+          {SVG_TEMPLATES[subType]}
+        </svg>
+      );
+    }
+
+    switch (object.type) {
+      case 'TABLE':
+        return (
+          <div className="table-content" style={{ 
+            width: '100%', 
+            height: '100%', 
+            background: '#fff', 
+            border: `2px solid ${isSelected ? '#2563eb' : '#cbd5e1'}`,
+            borderRadius: object.width === object.height ? '50%' : '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            padding: '4px'
+          }}>
+            <strong style={{ fontSize: '12px' }}>{table?.code || localizeField(table?.name, language) || 'T'}</strong>
+            <span style={{ fontSize: '9px', color: '#64748b' }}>{object.width > 80 ? t('map.fields.table') : ''}</span>
+          </div>
+        );
+      case 'PATH':
+        const pathData = object.metaJson?.pathData || `M 0 0 L ${object.width} 0`;
+        return (
+          <svg style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+            <path 
+              d={pathData} 
+              stroke="#64748b" 
+              strokeWidth="4" 
+              fill="none" 
+              strokeLinecap="round"
+              strokeDasharray={object.isActive ? 'none' : '8,8'}
+            />
+          </svg>
+        );
+      case 'CUSTOM':
+        const texture = object.metaJson?.texture;
+        if (texture === 'sand' || accent === 'sand') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-sand)', borderRadius: '4px' }} />;
+        if (texture === 'water' || accent === 'sea') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-water)', borderRadius: '4px' }} />;
+        if (texture === 'wood' || accent === 'deck') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-wood)', borderRadius: '4px' }} />;
+        if (texture === 'grass') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-grass)', borderRadius: '4px' }} />;
+
+        return (
+          <div style={{ 
+            width: '100%', 
+            height: '100%', 
+            background: '#f1f5f9', 
+            border: '2px dashed #cbd5e1',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <span className="muted small">{localizeField(object.label, language)}</span>
+          </div>
+        );
+      default:
+        return (
+          <div className={`map-editor-object-v2 ${accent} ${isSelected ? 'selected' : ''}`} style={{ width: '100%', height: '100%' }}>
+            <span className="map-editor-object-type">{t(`mapEditor.objectType.${object.type}`)}</span>
+            <strong>{getObjectDisplayName(object, tableMap, t, language)}</strong>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div 
+      style={{ 
+        width: '100%', 
+        height: '100%', 
+        position: 'relative',
+        transform: `rotate(${object.rotation || 0}deg)`,
+        transition: 'transform 0.2s'
+      }}
+    >
+      {renderObjectContent()}
+      {isSelected && (
+        <div style={{ 
+          position: 'absolute', 
+          top: -4, left: -4, right: -4, bottom: -4, 
+          border: '2px solid #3b82f6', 
+          borderRadius: '10px',
+          pointerEvents: 'none'
+        }} />
+      )}
+    </div>
+  );
+}
+
+function LayerManager
+({ objects, selectedObjectId, onSelect, tableMap, t, language }) {
+  const sortedObjects = useMemo(() => [...objects].sort((a, b) => b.zIndex - a.zIndex), [objects]);
+
+  return (
+    <div className="editor-properties-stack">
+      <div className="layer-list">
+        {sortedObjects.map((object) => (
+          <div
+            key={object.id}
+            className={`layer-item ${selectedObjectId === object.id ? 'selected' : ''}`}
+            style={{
+              padding: '10px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              marginBottom: '6px',
+              cursor: 'pointer',
+              background: selectedObjectId === object.id ? '#eff6ff' : '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}
+            onClick={() => onSelect(object.id)}
+          >
+            <span className={`editor-object-badge ${getObjectAccent(object, language)}`} style={{ padding: '2px 6px', fontSize: '10px' }}>
+              {object.zIndex}
+            </span>
+            <div style={{ display: 'grid' }}>
+              <strong style={{ fontSize: '12px' }}>{getObjectDisplayName(object, tableMap, t, language)}</strong>
+              <span className="muted small" style={{ fontSize: '10px' }}>{t(`mapEditor.objectType.${object.type}`)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function MapEditorPage() {
   const { t, language } = useAdminI18n();
   const objectIdRef = useRef(0);
@@ -300,8 +565,75 @@ export default function MapEditorPage() {
     makeNewMapDefault: false,
     original: null,
     current: null,
-    selectedObjectId: null
+    selectedObjectId: null,
+    // V2 State
+    activeTab: 'PROPERTIES', // 'PROPERTIES' | 'LAYERS' | 'ASSETS'
+    activeTool: 'SELECT', // 'SELECT' | 'PAN' | 'LINE'
+    activeCategory: 'FURNITURE',
+    drawingPath: null // { points: [{x, y}], id: string }
   });
+
+  const handleCanvasMouseDown = (e) => {
+    if (editorState.activeTool !== 'LINE') return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
+    setEditorState(prev => ({
+      ...prev,
+      drawingPath: {
+        id: `tmp-path-${Date.now()}`,
+        points: [{ x, y }, { x, y }]
+      }
+    }));
+  };
+
+  const handleCanvasMouseMove = (e) => {
+    if (!editorState.drawingPath) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
+    setEditorState(prev => ({
+      ...prev,
+      drawingPath: {
+        ...prev.drawingPath,
+        points: [prev.drawingPath.points[0], { x, y }]
+      }
+    }));
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (!editorState.drawingPath) return;
+
+    const p1 = editorState.drawingPath.points[0];
+    const p2 = editorState.drawingPath.points[1];
+    
+    // Create a new PATH object
+    const width = Math.abs(p2.x - p1.x) || 10;
+    const height = Math.abs(p2.y - p1.y) || 10;
+    const x = Math.min(p1.x, p2.x);
+    const y = Math.min(p1.y, p2.y);
+    
+    const relP1 = { x: p1.x - x, y: p1.y - y };
+    const relP2 = { x: p2.x - x, y: p2.y - y };
+    
+    const pathData = `M ${relP1.x} ${relP1.y} L ${relP2.x} ${relP2.y}`;
+
+    createObject('PATH', {
+      width,
+      height,
+      x,
+      y,
+      label: 'Line',
+      subType: null,
+      pathData // I'll make sure buildNewObject handles this
+    });
+
+    setEditorState(prev => ({ ...prev, drawingPath: null }));
+  };
 
   useEffect(() => {
     loadInitialMapEditor().catch(() => {
@@ -501,6 +833,10 @@ export default function MapEditorPage() {
         return { ...object, label: { ...wrapLabel(object.label), ua: String(value) } };
       }
 
+      if (field === 'texture') {
+        return { ...object, metaJson: { ...object.metaJson, texture: String(value) } };
+      }
+
       if (field === 'isActive') {
         return { ...object, isActive: Boolean(value) };
       }
@@ -567,11 +903,11 @@ export default function MapEditorPage() {
     }));
   }
 
-  function buildNewObject(type, currentMap, currentObjects) {
+  function buildNewObject(type, currentMap, currentObjects, meta = {}) {
     const preset = CREATION_PRESETS[type] || CREATION_PRESETS.DECOR;
     const maxZIndex = currentObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0);
-    const width = preset.width;
-    const height = preset.height;
+    const width = meta.width || preset.width;
+    const height = meta.height || preset.height;
     const centeredX = Math.round((currentMap.width - width) / 2);
     const centeredY = Math.round((currentMap.height - height) / 2);
 
@@ -581,7 +917,7 @@ export default function MapEditorPage() {
       {
         id: `tmp-${Date.now()}-${objectIdRef.current}`,
         type,
-        label: { ua: type === 'LABEL' ? t('mapEditor.newLabelDefault') : '', ru: '', en: '' },
+        label: { ua: meta.label || (type === 'LABEL' ? t('mapEditor.newLabelDefault') : ''), ru: '', en: '' },
         tableId: null,
         x: centeredX,
         y: centeredY,
@@ -589,15 +925,16 @@ export default function MapEditorPage() {
         height,
         rotation: 0,
         zIndex: maxZIndex + 1,
-        isActive: true
+        isActive: true,
+        metaJson: { subType: meta.subType }
       },
       currentMap
     );
   }
 
-  function createObject(type) {
+  function createObject(type, meta = {}) {
     updateCurrent((prev) => {
-      const newObject = buildNewObject(type, prev.current.map, prev.current.objects);
+      const newObject = buildNewObject(type, prev.current.map, prev.current.objects, meta);
       return {
         current: {
           ...prev.current,
@@ -833,14 +1170,20 @@ export default function MapEditorPage() {
           <div className="hero-inline-note">{t('mapEditor.note')}</div>
         </section>
 
-        <div className="map-editor-toolbar">
+        <div className="map-editor-toolbar" style={{ marginBottom: '16px' }}>
           <div className="map-editor-toolbar-group">
-            <label>
-              {t('mapEditor.mapVariant')}
-              <select
+            <button type="button" className="btn" onClick={saveChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
+              {editorState.saving ? t('mapEditor.saving') : t('mapEditor.save')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
+              {t('mapEditor.reset')}
+            </button>
+            <div className="separator" style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 12px' }} />
+            <select
                 value={editorState.selectedMapId || ''}
                 onChange={(event) => handleMapSelectionChange(event.target.value)}
                 disabled={editorState.loading || editorState.mapsLoading || editorState.saving}
+                style={{ minWidth: '200px' }}
               >
                 {(editorState.maps || []).map((item) => (
                   <option key={item.id} value={item.id}>
@@ -848,124 +1191,80 @@ export default function MapEditorPage() {
                   </option>
                 ))}
               </select>
-            </label>
-          </div>
-          <div className="map-editor-toolbar-group compact-actions">
-            <label>
-              {t('mapEditor.newMapPreset')}
-              <select
-                value={editorState.newMapPreset}
-                onChange={(event) => setEditorState((prev) => ({ ...prev, newMapPreset: event.target.value }))}
-                disabled={editorState.creatingMap}
-              >
-                {MAP_VARIANT_PRESETS.map((preset) => (
-                  <option key={preset.key} value={preset.key}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <input
-              type="text"
-              value={editorState.newMapName}
-              placeholder={t('mapEditor.newMapNamePlaceholder')}
-              onChange={(event) => setEditorState((prev) => ({ ...prev, newMapName: event.target.value }))}
-              disabled={editorState.creatingMap}
-            />
-            <input
-              type="text"
-              value={editorState.newMapDescription}
-              placeholder={t('mapEditor.newMapDescriptionPlaceholder')}
-              onChange={(event) => setEditorState((prev) => ({ ...prev, newMapDescription: event.target.value }))}
-              disabled={editorState.creatingMap}
-            />
-            <label className="editor-toggle-field">
-              <span>{t('mapEditor.makeDefault')}</span>
-              <input
-                type="checkbox"
-                checked={editorState.makeNewMapDefault}
-                onChange={(event) => setEditorState((prev) => ({ ...prev, makeNewMapDefault: event.target.checked }))}
-                disabled={editorState.creatingMap}
-              />
-            </label>
-            <button type="button" className="btn btn-secondary btn-small" onClick={createMapVariant} disabled={editorState.creatingMap || editorState.loading}>
-              {editorState.creatingMap ? t('mapEditor.creatingMap') : t('mapEditor.createMap')}
-            </button>
-          </div>
-        </div>
-
-        <div className="map-editor-toolbar">
-          <div className="map-editor-toolbar-group">
-            <button type="button" className="btn" onClick={saveChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
-              {editorState.saving ? t('mapEditor.saving') : t('mapEditor.save')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
-              {t('mapEditor.reset')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: null }))}
-              disabled={!selectedObject}
-            >
-              {t('mapEditor.clearSelection')}
-            </button>
-          </div>
-
-          <div className="map-editor-toolbar-group compact-actions">
-            {CREATION_ACTIONS.map((type) => (
-              <button key={type} type="button" className="btn btn-secondary btn-small" onClick={() => createObject(type)} disabled={!map}>
-                {t('mapEditor.addObject', { type: t(`mapEditor.objectType.${type}`) })}
-              </button>
-            ))}
-            {SURFACE_PRESETS.map((preset) => (
-              <button key={preset.key} type="button" className="btn btn-secondary btn-small" onClick={() => createSurfacePreset(preset)} disabled={!map}>
-                + {preset.label}
-              </button>
-            ))}
           </div>
 
           <div className="map-editor-toolbar-group">
-            <button type="button" className="btn btn-secondary btn-small" onClick={duplicateSelected} disabled={!selectedObject}>
-              {t('mapEditor.duplicateSelected')}
-            </button>
-            <button type="button" className="btn btn-danger btn-small" onClick={handleDeleteSelected} disabled={!selectedObject}>
-              {t('mapEditor.deleteSelected')}
-            </button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(-15)} disabled={!selectedObject}>
-              {t('mapEditor.rotateLeft')}
-            </button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(15)} disabled={!selectedObject}>
-              {t('mapEditor.rotateRight')}
-            </button>
+            {map && (
+               <div className="map-meta muted" style={{ margin: 0 }}>
+               {t('mapEditor.meta', {
+                 map: localizeField(map.name, language) || '—',
+                 size: `${map.width}×${map.height}`,
+                 objects: objects.length,
+                 tables: editorState.current?.tables?.length || 0
+               })}
+             </div>
+            )}
           </div>
         </div>
-
-        {map ? (
-          <div className="map-meta muted">
-            {t('mapEditor.meta', {
-              map: localizeField(map.name, language) || '—',
-              size: `${map.width}×${map.height}`,
-              objects: objects.length,
-              tables: editorState.current?.tables?.length || 0
-            })}
-          </div>
-        ) : null}
 
         {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
         {editorState.error ? <p className="error">{editorState.error}</p> : null}
         {editorState.saveMessage ? <p className="success-text">{editorState.saveMessage}</p> : null}
 
         {!editorState.loading && editorState.current ? (
-          <div className="map-editor-layout">
-            <PanelCard title={t('mapEditor.canvasTitle')} subtitle={t('mapEditor.canvasDescription')} className="full-height">
-              <div className="map-editor-canvas-shell">
+          <div className="map-editor-v2">
+            <aside className="map-editor-tools">
+              <button 
+                className={`tool-button ${editorState.activeTool === 'SELECT' ? 'active' : ''}`}
+                onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'SELECT' }))}
+                title="Select (V)"
+              >
+                <i className="icon-select">S</i>
+                <span>Select</span>
+              </button>
+              <button 
+                className={`tool-button ${editorState.activeTool === 'PAN' ? 'active' : ''}`}
+                onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'PAN' }))}
+                title="Pan (H)"
+              >
+                <i className="icon-pan">P</i>
+                <span>Pan</span>
+              </button>
+              <button 
+                className={`tool-button ${editorState.activeTool === 'LINE' ? 'active' : ''}`}
+                onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'LINE' }))}
+                title="Line (L)"
+              >
+                <i className="icon-line">L</i>
+                <span>Line</span>
+              </button>
+
+              <div className="separator" style={{ width: '40px', height: '1px', background: '#e2e8f0', margin: '12px 0' }} />
+              
+              <button 
+                className={`tool-button ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
+                onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
+              >
+                <i className="icon-assets">A</i>
+                <span>Assets</span>
+              </button>
+            </aside>
+
+            <main className="map-editor-viewport">
+              <SVGDefinitions />
+              <div className="map-editor-canvas-container">
                 <div
                   className="map-editor-canvas"
                   style={{
                     width: `${map.width}px`,
-                    height: `${map.height}px`
+                    height: `${map.height}px`,
+                    boxShadow: '0 0 40px rgba(0,0,0,0.1)',
+                    position: 'relative',
+                    cursor: editorState.activeTool === 'LINE' ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
                   }}
+                  onMouseDown={handleCanvasMouseDown}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
                 >
                   {map.backgroundImage ? (
                     <div
@@ -981,771 +1280,21 @@ export default function MapEditorPage() {
                   )}
                   <div className="map-editor-canvas-grid" aria-hidden="true" />
 
-                  {objects.map((object) => {
-                    const table = object.tableId ? tableMap.get(object.tableId) : null;
-                    const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
-
-                    return (
-                      <Rnd
-                        key={object.id}
-                        bounds="parent"
-                        size={{ width: object.width, height: object.height }}
-                        position={{ x: object.x, y: object.y }}
-                        onDragStop={(_, data) => handleDragStop(object.id, data)}
-                        onResizeStop={(_, __, ref, ___, position) =>
-                          handleResizeStop(object.id, position, {
-                            width: ref.offsetWidth,
-                            height: ref.offsetHeight
-                          })
-                        }
-                        onMouseDown={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id }))}
-                        enableResizing
-                        dragGrid={[1, 1]}
-                        resizeGrid={[1, 1]}
-                        className="map-editor-rnd"
-                        style={{ zIndex: object.zIndex }}
-                      >
-                        <button
-                          type="button"
-                          className={`map-editor-object ${getObjectAccent(object, language)} ${editorState.selectedObjectId === object.id ? 'selected' : ''} ${object.isActive ? '' : 'inactive'}`.trim()}
-                          onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id }))}
-                          title={zone ? `${getObjectDisplayName(object, tableMap, t, language)} • ${localizeField(zone.name, language)}` : getObjectDisplayName(object, tableMap, t, language)}
-                        >
-                          <span className="map-editor-object-type">{t(`mapEditor.objectType.${object.type}`)}</span>
-                          <strong>{getObjectDisplayName(object, tableMap, t, language)}</strong>
-                          {zone ? <span className="map-editor-object-meta">{localizeField(zone.name, language)}</span> : null}
-                        </button>
-                      </Rnd>
-                    );
-                  })}
-                </div>
-              </div>
-            </PanelCard>
-
-            <div className="editor-sidebar-stack">
-              <PanelCard title={t('mapEditor.mapSettingsTitle')} subtitle={t('mapEditor.mapSettingsDescription')} className="surface-muted">
-                <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
-              </PanelCard>
-
-              <PanelCard title={t('mapEditor.propertiesTitle')} subtitle={t('mapEditor.propertiesDescription')} className="full-height surface-muted">
-                <MapObjectProperties
-                  selectedObject={selectedObject}
-                  tableMap={tableMap}
-                  zoneMap={zoneMap}
-                  tables={editorState.current.tables}
-                  onFieldChange={handleFieldChange}
-                  onDuplicate={duplicateSelected}
-                  onDelete={handleDeleteSelected}
-                  t={t}
-                  language={language}
-                />
-              </PanelCard>
-            </div>
-          </div>
-        ) : null}
-      </PageContainer>
-    </AdminLayout>
-  );
-}
-
-function LegacyMapEditorPage() {
-  const { t } = useAdminI18n();
-  const objectIdRef = useRef(0);
-  const [editorState, setEditorState] = useState({
-    loading: true,
-    saving: false,
-    mapsLoading: true,
-    creatingMap: false,
-    error: '',
-    saveMessage: '',
-    maps: [],
-    selectedMapId: null,
-    defaultMapId: null,
-    newMapPreset: MAP_VARIANT_PRESETS[0].key,
-    newMapName: '',
-    newMapDescription: '',
-    makeNewMapDefault: false,
-    original: null,
-    current: null,
-    selectedObjectId: null
-  });
-
-  useEffect(() => {
-    loadInitialMapEditor().catch(() => {
-      setEditorState((prev) => ({
-        ...prev,
-        mapsLoading: false,
-        loading: false,
-        error: t('mapEditor.errors.load')
-      }));
-    });
-  }, [t]);
-
-  useEffect(() => {
-    function handleKeyDown(event) {
-      const tagName = event.target?.tagName;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
-
-      if (isEditableTarget || !editorState.selectedObjectId || !['Delete', 'Backspace'].includes(event.key)) {
-        return;
-      }
-
-      event.preventDefault();
-      handleDeleteSelected();
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorState.selectedObjectId, editorState.current, t]);
-
-  async function loadInitialMapEditor() {
-    setEditorState((prev) => ({
-      ...prev,
-      mapsLoading: true,
-      loading: true,
-      error: '',
-      saveMessage: ''
-    }));
-
-    const mapsResult = await apiRequest('/api/admin/maps');
-    if (!mapsResult.response.ok) {
-      setEditorState((prev) => ({
-        ...prev,
-        mapsLoading: false,
-        loading: false,
-        error: mapsResult.body?.message || t('mapEditor.errors.load')
-      }));
-      return;
-    }
-
-    const maps = Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : [];
-    const defaultMap = maps.find((item) => item.isDefault) || maps[0];
-
-    if (!defaultMap?.id) {
-      setEditorState((prev) => ({
-        ...prev,
-        mapsLoading: false,
-        loading: false,
-        maps: [],
-        error: t('mapEditor.errors.load')
-      }));
-      return;
-    }
-
-    setEditorState((prev) => ({
-      ...prev,
-      mapsLoading: false,
-      maps,
-      selectedMapId: defaultMap.id,
-      defaultMapId: defaultMap.id
-    }));
-
-    await loadMapEditor(defaultMap.id);
-  }
-
-  async function loadMapEditor(mapId) {
-    setEditorState((prev) => ({
-      ...prev,
-      loading: true,
-      error: '',
-      saveMessage: ''
-    }));
-
-    const editorResult = await apiRequest(`/api/admin/maps/${mapId}/editor`);
-
-    if (!editorResult.response.ok || !editorResult.body?.map?.id) {
-      setEditorState((prev) => ({
-        ...prev,
-        loading: false,
-        error: editorResult.body?.message || t('mapEditor.errors.load')
-      }));
-      return;
-    }
-
-    const currentMapId = Number(editorResult.body.map.id);
-    const nextData = buildEditorState(editorResult.body);
-
-    setEditorState((prev) => ({
-      ...prev,
-      loading: false,
-      saving: false,
-      error: '',
-      saveMessage: '',
-      defaultMapId: currentMapId,
-      selectedMapId: currentMapId,
-      original: nextData,
-      current: nextData,
-      selectedObjectId: nextData.objects[0]?.id || null
-    }));
-  }
-
-  const map = editorState.current?.map;
-  const objects = editorState.current?.objects || [];
-  const tableMap = useMemo(
-    () => new Map((editorState.current?.tables || []).map((table) => [table.id, table])),
-    [editorState.current?.tables]
-  );
-  const zoneMap = useMemo(
-    () => new Map((editorState.current?.zones || []).map((zone) => [zone.id, zone])),
-    [editorState.current?.zones]
-  );
-  const selectedObject = useMemo(
-    () => objects.find((object) => object.id === editorState.selectedObjectId) || null,
-    [objects, editorState.selectedObjectId]
-  );
-  const hasChanges = useMemo(() => {
-    if (!editorState.original || !editorState.current) {
-      return false;
-    }
-
-    return JSON.stringify(editorState.original) !== JSON.stringify(editorState.current);
-  }, [editorState.current, editorState.original]);
-
-  function updateCurrent(updater) {
-    setEditorState((prev) => {
-      if (!prev.current?.map) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        ...updater(prev),
-        saveMessage: '',
-        error: ''
-      };
-    });
-  }
-
-  function updateObject(objectId, updater) {
-    updateCurrent((prev) => {
-      const nextObjects = prev.current.objects.map((object) => {
-        if (object.id !== objectId) {
-          return object;
-        }
-
-        return normalizeObject(updater(object), prev.current.map);
-      });
-
-      return {
-        current: {
-          ...prev.current,
-          objects: nextObjects
-        }
-      };
-    });
-  }
-
-  function handleFieldChange(field, value) {
-    if (!selectedObject) {
-      return;
-    }
-
-    if (field === 'tablePhotoUrl') {
-      if (!selectedObject.tableId) {
-        return;
-      }
-
-      updateCurrent((prev) => ({
-        current: {
-          ...prev.current,
-          tables: prev.current.tables.map((table) =>
-            table.id === selectedObject.tableId
-              ? {
-                  ...table,
-                  photoUrl: String(value)
-                }
-              : table
-          )
-        }
-      }));
-
-      return;
-    }
-
-    updateObject(selectedObject.id, (object) => {
-      if (field === 'label') {
-        return { ...object, label: String(value) };
-      }
-
-      if (field === 'isActive') {
-        return { ...object, isActive: Boolean(value) };
-      }
-
-      if (field === 'tableId') {
-        return {
-          ...object,
-          tableId: value === '' ? null : Number(value)
-        };
-      }
-
-
-      const numericValue = Number(value);
-      return {
-        ...object,
-        [field]: Number.isFinite(numericValue) ? numericValue : object[field]
-      };
-    });
-  }
-
-  function handleMapFieldChange(field, value) {
-    updateCurrent((prev) => ({
-      current: {
-        ...prev.current,
-        map: {
-          ...prev.current.map,
-          [field]: String(value)
-        }
-      }
-    }));
-  }
-
-  function handleDragStop(objectId, position) {
-    updateObject(objectId, (object) => ({
-      ...object,
-      x: roundCoordinate(position.x),
-      y: roundCoordinate(position.y)
-    }));
-  }
-
-  function handleResizeStop(objectId, position, size) {
-    updateObject(objectId, (object) => ({
-      ...object,
-      x: roundCoordinate(position.x),
-      y: roundCoordinate(position.y),
-      width: roundCoordinate(size.width),
-      height: roundCoordinate(size.height)
-    }));
-  }
-
-  function rotateSelected(delta) {
-    if (!selectedObject) {
-      return;
-    }
-
-    updateObject(selectedObject.id, (object) => ({
-      ...object,
-      rotation: object.rotation + delta
-    }));
-  }
-
-  function buildNewObject(type, currentMap, currentObjects) {
-    const preset = CREATION_PRESETS[type] || CREATION_PRESETS.DECOR;
-    const maxZIndex = currentObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0);
-    const width = preset.width;
-    const height = preset.height;
-    const centeredX = Math.round((currentMap.width - width) / 2);
-    const centeredY = Math.round((currentMap.height - height) / 2);
-
-    objectIdRef.current += 1;
-
-    return normalizeObject(
-      {
-        id: `tmp-${Date.now()}-${objectIdRef.current}`,
-        type,
-        label: type === 'LABEL' ? t('mapEditor.newLabelDefault') : '',
-        tableId: null,
-        x: centeredX,
-        y: centeredY,
-        width,
-        height,
-        rotation: 0,
-        zIndex: maxZIndex + 1,
-        isActive: true
-      },
-      currentMap
-    );
-  }
-
-  function createObject(type) {
-    updateCurrent((prev) => {
-      const newObject = buildNewObject(type, prev.current.map, prev.current.objects);
-      return {
-        current: {
-          ...prev.current,
-          objects: [...prev.current.objects, newObject]
-        },
-        selectedObjectId: newObject.id
-      };
-    });
-  }
-
-  function createSurfacePreset(preset) {
-    updateCurrent((prev) => {
-      const newObject = buildNewObject(preset.objectType, prev.current.map, prev.current.objects);
-      newObject.label = preset.objectLabel;
-      newObject.width = preset.width;
-      newObject.height = preset.height;
-
-      const normalizedObject = normalizeObject(newObject, prev.current.map);
-      return {
-        current: {
-          ...prev.current,
-          objects: [...prev.current.objects, normalizedObject]
-        },
-        selectedObjectId: normalizedObject.id
-      };
-    });
-  }
-
-  function duplicateSelected() {
-    if (!selectedObject || !editorState.current?.map) {
-      return;
-    }
-
-    updateCurrent((prev) => {
-      const duplicate = normalizeObject(
-        {
-          ...selectedObject,
-          id: `tmp-${Date.now()}-${objectIdRef.current + 1}`,
-          x: selectedObject.x + 24,
-          y: selectedObject.y + 24,
-          zIndex: Math.max(selectedObject.zIndex + 1, prev.current.objects.reduce((max, object) => Math.max(max, object.zIndex), 0) + 1)
-        },
-        prev.current.map
-      );
-
-      objectIdRef.current += 1;
-
-      return {
-        current: {
-          ...prev.current,
-          objects: [...prev.current.objects, duplicate]
-        },
-        selectedObjectId: duplicate.id
-      };
-    });
-  }
-
-  function handleDeleteSelected() {
-    if (!selectedObject) {
-      return;
-    }
-
-    const confirmed = window.confirm(t('mapEditor.deleteConfirm', { name: getObjectDisplayName(selectedObject, tableMap, t) }));
-    if (!confirmed) {
-      return;
-    }
-
-    updateCurrent((prev) => {
-      const nextObjects = prev.current.objects.filter((object) => object.id !== prev.selectedObjectId);
-      return {
-        current: {
-          ...prev.current,
-          objects: nextObjects
-        },
-        selectedObjectId: getNextSelectionId(nextObjects)
-      };
-    });
-  }
-
-  async function saveChanges() {
-    if (!editorState.current || !editorState.defaultMapId) {
-      return;
-    }
-
-    setEditorState((prev) => ({
-      ...prev,
-      saving: true,
-      error: '',
-      saveMessage: ''
-    }));
-
-    const payload = {
-      map: {
-        backgroundImage: editorState.current.map.backgroundImage || null,
-        backgroundColor: editorState.current.map.backgroundColor || null
-      },
-      tables: editorState.current.tables.map((table) => ({
-        id: table.id,
-        photoUrl: table.photoUrl || null
-      })),
-      objects: editorState.current.objects.map((object) => ({
-        id: object.id,
-        type: object.type,
-        tableId: object.type === 'TABLE' ? object.tableId : null,
-        label: object.label || null,
-        x: object.x,
-        y: object.y,
-        width: object.width,
-        height: object.height,
-        rotation: object.rotation,
-        zIndex: object.zIndex,
-        isActive: object.isActive
-      }))
-    };
-
-    const result = await apiRequest(`/api/admin/maps/${editorState.defaultMapId}/editor`, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
-    });
-
-    if (!result.response.ok) {
-      setEditorState((prev) => ({
-        ...prev,
-        saving: false,
-        error: result.body?.message || t('mapEditor.errors.save')
-      }));
-      return;
-    }
-
-    const nextData = buildEditorState(result.body);
-    setEditorState((prev) => ({
-      ...prev,
-      saving: false,
-      error: '',
-      saveMessage: t('mapEditor.saveSuccess'),
-      original: nextData,
-      current: nextData,
-      selectedObjectId: resolveSavedSelection(prev, nextData)
-    }));
-  }
-
-  function resetChanges() {
-    setEditorState((prev) => {
-      if (!prev.original) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        current: prev.original,
-        error: '',
-        saveMessage: '',
-        selectedObjectId: prev.original.objects.some((object) => object.id === prev.selectedObjectId)
-          ? prev.selectedObjectId
-          : prev.original.objects[0]?.id || null
-      };
-    });
-  }
-
-  async function handleMapSelectionChange(nextMapId) {
-    if (!nextMapId || Number(nextMapId) === Number(editorState.selectedMapId)) {
-      return;
-    }
-
-    await loadMapEditor(Number(nextMapId));
-  }
-
-  function buildNewMapPayload() {
-    const preset = MAP_VARIANT_PRESETS.find((item) => item.key === editorState.newMapPreset) || MAP_VARIANT_PRESETS[0];
-    const baseName = String(editorState.newMapName || '').trim() || preset.name;
-    const baseSlug = `${preset.slugPrefix}-${Date.now()}`;
-
-    return {
-      name: baseName,
-      slug: baseSlug,
-      description: String(editorState.newMapDescription || '').trim() || preset.description,
-      sourceMapId: editorState.selectedMapId,
-      makeDefault: Boolean(editorState.makeNewMapDefault)
-    };
-  }
-
-  async function createMapVariant() {
-    setEditorState((prev) => ({
-      ...prev,
-      creatingMap: true,
-      error: '',
-      saveMessage: ''
-    }));
-
-    const result = await apiRequest('/api/admin/maps', {
-      method: 'POST',
-      body: JSON.stringify(buildNewMapPayload())
-    });
-
-    if (!result.response.ok || !result.body?.map?.id) {
-      setEditorState((prev) => ({
-        ...prev,
-        creatingMap: false,
-        error: result.body?.message || t('mapEditor.errors.createMap')
-      }));
-      return;
-    }
-
-    const mapsResult = await apiRequest('/api/admin/maps');
-    const maps = mapsResult.response.ok && Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : editorState.maps;
-    const nextData = buildEditorState(result.body);
-
-    setEditorState((prev) => ({
-      ...prev,
-      creatingMap: false,
-      maps,
-      defaultMapId: Number(result.body.map.id),
-      selectedMapId: Number(result.body.map.id),
-      original: nextData,
-      current: nextData,
-      selectedObjectId: nextData.objects[0]?.id || null,
-      newMapName: '',
-      newMapDescription: '',
-      makeNewMapDefault: false,
-      saveMessage: t('mapEditor.mapCreatedSuccess')
-    }));
-  }
-
-  return (
-    <AdminLayout>
-      <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')}>
-        <section className="page-hero compact map-editor-hero">
-          <div className="page-hero-copy">
-            <span className="eyebrow">{t('mapEditor.eyebrow')}</span>
-            <h3>{t('mapEditor.heroTitle')}</h3>
-            <p className="muted">{t('mapEditor.heroDescription')}</p>
-          </div>
-          <div className="hero-inline-note">{t('mapEditor.note')}</div>
-        </section>
-
-        <div className="map-editor-toolbar">
-          <div className="map-editor-toolbar-group">
-            <label>
-              {t('mapEditor.mapVariant')}
-              <select
-                value={editorState.selectedMapId || ''}
-                onChange={(event) => handleMapSelectionChange(event.target.value)}
-                disabled={editorState.loading || editorState.mapsLoading || editorState.saving}
-              >
-                {(editorState.maps || []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} ({item.slug}){item.isDefault ? ` • ${t('mapEditor.defaultMapBadge')}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="map-editor-toolbar-group compact-actions">
-            <label>
-              {t('mapEditor.newMapPreset')}
-              <select
-                value={editorState.newMapPreset}
-                onChange={(event) => setEditorState((prev) => ({ ...prev, newMapPreset: event.target.value }))}
-                disabled={editorState.creatingMap}
-              >
-                {MAP_VARIANT_PRESETS.map((preset) => (
-                  <option key={preset.key} value={preset.key}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <input
-              type="text"
-              value={editorState.newMapName}
-              placeholder={t('mapEditor.newMapNamePlaceholder')}
-              onChange={(event) => setEditorState((prev) => ({ ...prev, newMapName: event.target.value }))}
-              disabled={editorState.creatingMap}
-            />
-            <input
-              type="text"
-              value={editorState.newMapDescription}
-              placeholder={t('mapEditor.newMapDescriptionPlaceholder')}
-              onChange={(event) => setEditorState((prev) => ({ ...prev, newMapDescription: event.target.value }))}
-              disabled={editorState.creatingMap}
-            />
-            <label className="editor-toggle-field">
-              <span>{t('mapEditor.makeDefault')}</span>
-              <input
-                type="checkbox"
-                checked={editorState.makeNewMapDefault}
-                onChange={(event) => setEditorState((prev) => ({ ...prev, makeNewMapDefault: event.target.checked }))}
-                disabled={editorState.creatingMap}
-              />
-            </label>
-            <button type="button" className="btn btn-secondary btn-small" onClick={createMapVariant} disabled={editorState.creatingMap || editorState.loading}>
-              {editorState.creatingMap ? t('mapEditor.creatingMap') : t('mapEditor.createMap')}
-            </button>
-          </div>
-        </div>
-
-        <div className="map-editor-toolbar">
-          <div className="map-editor-toolbar-group">
-            <button type="button" className="btn" onClick={saveChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
-              {editorState.saving ? t('mapEditor.saving') : t('mapEditor.save')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
-              {t('mapEditor.reset')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: null }))}
-              disabled={!selectedObject}
-            >
-              {t('mapEditor.clearSelection')}
-            </button>
-          </div>
-
-          <div className="map-editor-toolbar-group compact-actions">
-            {CREATION_ACTIONS.map((type) => (
-              <button key={type} type="button" className="btn btn-secondary btn-small" onClick={() => createObject(type)} disabled={!map}>
-                {t('mapEditor.addObject', { type: t(`mapEditor.objectType.${type}`) })}
-              </button>
-            ))}
-            {SURFACE_PRESETS.map((preset) => (
-              <button key={preset.key} type="button" className="btn btn-secondary btn-small" onClick={() => createSurfacePreset(preset)} disabled={!map}>
-                + {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="map-editor-toolbar-group">
-            <button type="button" className="btn btn-secondary btn-small" onClick={duplicateSelected} disabled={!selectedObject}>
-              {t('mapEditor.duplicateSelected')}
-            </button>
-            <button type="button" className="btn btn-danger btn-small" onClick={handleDeleteSelected} disabled={!selectedObject}>
-              {t('mapEditor.deleteSelected')}
-            </button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(-15)} disabled={!selectedObject}>
-              {t('mapEditor.rotateLeft')}
-            </button>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => rotateSelected(15)} disabled={!selectedObject}>
-              {t('mapEditor.rotateRight')}
-            </button>
-          </div>
-        </div>
-
-        {map ? (
-          <div className="map-meta muted">
-            {t('mapEditor.meta', {
-              map: map.name || '—',
-              size: `${map.width}×${map.height}`,
-              objects: objects.length,
-              tables: editorState.current?.tables?.length || 0
-            })}
-          </div>
-        ) : null}
-
-        {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
-        {editorState.error ? <p className="error">{editorState.error}</p> : null}
-        {editorState.saveMessage ? <p className="success-text">{editorState.saveMessage}</p> : null}
-
-        {!editorState.loading && editorState.current ? (
-          <div className="map-editor-layout">
-            <PanelCard title={t('mapEditor.canvasTitle')} subtitle={t('mapEditor.canvasDescription')} className="full-height">
-              <div className="map-editor-canvas-shell">
-                <div
-                  className="map-editor-canvas"
-                  style={{
-                    width: `${map.width}px`,
-                    height: `${map.height}px`
-                  }}
-                >
-                  {map.backgroundImage ? (
-                    <div
-                      className="map-editor-canvas-background"
-                      style={{
-                        backgroundColor: map.backgroundColor || '#f8fafc',
-                        backgroundImage: map.backgroundImage ? `url(${map.backgroundImage})` : 'none'
-                      }}
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <div className="map-editor-canvas-background" style={{ backgroundColor: map.backgroundColor || '#f8fafc' }} aria-hidden="true" />
+                  {editorState.drawingPath && (
+                    <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 9999 }}>
+                      <line 
+                        x1={editorState.drawingPath.points[0].x} 
+                        y1={editorState.drawingPath.points[0].y} 
+                        x2={editorState.drawingPath.points[1].x} 
+                        y2={editorState.drawingPath.points[1].y} 
+                        stroke="#3b82f6" 
+                        strokeWidth="3" 
+                        strokeDasharray="4,4"
+                      />
+                    </svg>
                   )}
-                  <div className="map-editor-canvas-grid" aria-hidden="true" />
 
                   {objects.map((object) => {
-                    const table = object.tableId ? tableMap.get(object.tableId) : null;
-                    const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
-
                     return (
                       <Rnd
                         key={object.id}
@@ -1759,48 +1308,116 @@ function LegacyMapEditorPage() {
                             height: ref.offsetHeight
                           })
                         }
-                        onMouseDown={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id }))}
-                        enableResizing
+                        onMouseDown={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id, activeTab: 'PROPERTIES' }))}
+                        enableResizing={editorState.activeTool === 'SELECT'}
+                        disableDragging={editorState.activeTool !== 'SELECT'}
                         dragGrid={[1, 1]}
                         resizeGrid={[1, 1]}
-                        className="map-editor-rnd"
+                        className={`map-editor-rnd ${editorState.selectedObjectId === object.id ? 'selected' : ''}`}
                         style={{ zIndex: object.zIndex }}
                       >
-                        <button
-                          type="button"
-                          className={`map-editor-object ${getObjectAccent(object)} ${editorState.selectedObjectId === object.id ? 'selected' : ''} ${object.isActive ? '' : 'inactive'}`.trim()}
-                          onClick={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id }))}
-                          title={zone ? `${getObjectDisplayName(object, tableMap, t)} • ${zone.name}` : getObjectDisplayName(object, tableMap, t)}
-                        >
-                          <span className="map-editor-object-type">{t(`mapEditor.objectType.${object.type}`)}</span>
-                          <strong>{getObjectDisplayName(object, tableMap, t)}</strong>
-                          {zone ? <span className="map-editor-object-meta">{zone.name}</span> : null}
-                        </button>
+                        <MapObjectRenderer
+                          object={object}
+                          isSelected={editorState.selectedObjectId === object.id}
+                          tableMap={tableMap}
+                          zoneMap={zoneMap}
+                          t={t}
+                          language={language}
+                        />
                       </Rnd>
                     );
                   })}
                 </div>
               </div>
-            </PanelCard>
+            </main>
 
-            <div className="editor-sidebar-stack">
-              <PanelCard title={t('mapEditor.mapSettingsTitle')} subtitle={t('mapEditor.mapSettingsDescription')} className="surface-muted">
-                <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
-              </PanelCard>
+            <aside className="map-editor-inspector">
+              <div className="inspector-tabs">
+                <div 
+                  className={`inspector-tab ${editorState.activeTab === 'PROPERTIES' ? 'active' : ''}`}
+                  onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'PROPERTIES' }))}
+                >
+                  Properties
+                </div>
+                <div 
+                  className={`inspector-tab ${editorState.activeTab === 'LAYERS' ? 'active' : ''}`}
+                  onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'LAYERS' }))}
+                >
+                  Layers
+                </div>
+                <div 
+                  className={`inspector-tab ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
+                  onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
+                >
+                  Assets
+                </div>
+              </div>
 
-              <PanelCard title={t('mapEditor.propertiesTitle')} subtitle={t('mapEditor.propertiesDescription')} className="full-height surface-muted">
-                <MapObjectProperties
-                  selectedObject={selectedObject}
-                  tableMap={tableMap}
-                  zoneMap={zoneMap}
-                  tables={editorState.current.tables}
-                  onFieldChange={handleFieldChange}
-                  onDuplicate={duplicateSelected}
-                  onDelete={handleDeleteSelected}
-                  t={t}
-                />
-              </PanelCard>
-            </div>
+              <div className="inspector-content">
+                {editorState.activeTab === 'PROPERTIES' && (
+                  <>
+                    <MapObjectProperties
+                      selectedObject={selectedObject}
+                      tableMap={tableMap}
+                      zoneMap={zoneMap}
+                      tables={editorState.current.tables}
+                      onFieldChange={handleFieldChange}
+                      onDuplicate={duplicateSelected}
+                      onDelete={handleDeleteSelected}
+                      t={t}
+                      language={language}
+                    />
+                    <div style={{ marginTop: '24px' }}>
+                      <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
+                    </div>
+                  </>
+                )}
+
+                {editorState.activeTab === 'LAYERS' && (
+                  <LayerManager 
+                    objects={objects}
+                    selectedObjectId={editorState.selectedObjectId}
+                    onSelect={(id) => setEditorState(prev => ({ ...prev, selectedObjectId: id, activeTab: 'PROPERTIES' }))}
+                    tableMap={tableMap}
+                    t={t}
+                    language={language}
+                  />
+                )}
+
+                {editorState.activeTab === 'ASSETS' && (
+                  <div className="asset-browser">
+                    <div className="category-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+                      {Object.keys(ASSET_CATEGORIES).map(catKey => (
+                        <button
+                          key={catKey}
+                          className={`btn btn-small ${editorState.activeCategory === catKey ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setEditorState(prev => ({ ...prev, activeCategory: catKey }))}
+                        >
+                          {ASSET_CATEGORIES[catKey].label}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="asset-library">
+                      {ASSET_CATEGORIES[editorState.activeCategory].items.map((item, idx) => (
+                        <div key={idx} className="asset-item" onClick={() => createObject(item.type, item)}>
+                          <div className="asset-preview">
+                            {item.subType && SVG_TEMPLATES[item.subType] ? (
+                              <svg viewBox="0 0 100 100" style={{ width: '30px', height: '30px' }}>
+                                {SVG_TEMPLATES[item.subType]}
+                              </svg>
+                            ) : (
+                              <div className={`editor-object-badge ${item.type.toLowerCase()}`} style={{ width: '30px', height: '20px' }} />
+                            )}
+                          </div>
+                          <span className="asset-label">{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
         ) : null}
       </PageContainer>

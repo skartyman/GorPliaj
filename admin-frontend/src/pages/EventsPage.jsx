@@ -6,11 +6,13 @@ import DataTable from '../components/DataTable';
 import { apiRequest, formatDateTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
+const EMPTY_LOCALIZED = { ua: '', ru: '', en: '' };
+
 const DEFAULT_FORM = {
-  title: { ua: '', ru: '', en: '' },
+  title: { ...EMPTY_LOCALIZED },
   slug: '',
-  shortDescription: { ua: '', ru: '', en: '' },
-  fullDescription: { ua: '', ru: '', en: '' },
+  shortDescription: { ...EMPTY_LOCALIZED },
+  fullDescription: { ...EMPTY_LOCALIZED },
   posterImage: '',
   startAt: '',
   endAt: '',
@@ -19,6 +21,18 @@ const DEFAULT_FORM = {
   ctaType: 'BOOKING',
   ticketUrl: ''
 };
+
+function normalizeLocalized(value) {
+  if (!value || typeof value !== 'object') {
+    return { ...EMPTY_LOCALIZED, ua: value || '' };
+  }
+
+  return {
+    ua: value.ua || value.uk || value.ru || value.en || '',
+    ru: value.ru || '',
+    en: value.en || ''
+  };
+}
 
 function toDateTimeLocal(value) {
   if (!value) return '';
@@ -42,6 +56,7 @@ export default function EventsPage() {
   const [savingKey, setSavingKey] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [posterUploadState, setPosterUploadState] = useState({ status: 'idle', details: '' });
+  const [translating, setTranslating] = useState({});
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
 
   const stats = useMemo(() => {
@@ -50,6 +65,11 @@ export default function EventsPage() {
     const featured = state.events.filter((event) => event.isFeatured).length;
     return { total, published, featured };
   }, [state.events]);
+
+  const publicPreviewHref = useMemo(() => {
+    if (!editId || !form.slug) return '';
+    return `/events/${form.slug}`;
+  }, [editId, form.slug]);
 
   async function loadEvents() {
     setState((current) => ({ ...current, loading: true, error: '' }));
@@ -70,18 +90,24 @@ export default function EventsPage() {
   }, []);
 
   function resetForm() {
-    setForm(DEFAULT_FORM);
+    setForm({
+      ...DEFAULT_FORM,
+      title: { ...EMPTY_LOCALIZED },
+      shortDescription: { ...EMPTY_LOCALIZED },
+      fullDescription: { ...EMPTY_LOCALIZED }
+    });
     setEditId(null);
     setUploadingImage(false);
+    setPosterUploadState({ status: 'idle', details: '' });
   }
 
   function startEdit(event) {
     setEditId(event.id);
     setForm({
-      title: typeof event.title === 'object' ? { ...event.title } : { ua: event.title, ru: '', en: '' },
+      title: normalizeLocalized(event.title),
       slug: event.slug || '',
-      shortDescription: typeof event.shortDescription === 'object' ? { ...event.shortDescription } : { ua: event.shortDescription, ru: '', en: '' },
-      fullDescription: typeof event.fullDescription === 'object' ? { ...event.fullDescription } : { ua: event.fullDescription, ru: '', en: '' },
+      shortDescription: normalizeLocalized(event.shortDescription),
+      fullDescription: normalizeLocalized(event.fullDescription),
       posterImage: event.posterImage || '',
       startAt: toDateTimeLocal(event.startAt),
       endAt: toDateTimeLocal(event.endAt),
@@ -90,6 +116,50 @@ export default function EventsPage() {
       ctaType: event.ctaType || 'BOOKING',
       ticketUrl: event.ticketUrl || ''
     });
+    setPosterUploadState({ status: 'idle', details: '' });
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    });
+  }
+
+  function setLocalizedField(field, locale, value) {
+    setForm((current) => ({
+      ...current,
+      [field]: {
+        ...current[field],
+        [locale]: value
+      }
+    }));
+  }
+
+  async function autoTranslateField(field) {
+    const sourceText = form[field]?.ua;
+    if (!sourceText?.trim()) {
+      setFeedback({ tone: 'error', message: 'Спочатку заповніть поле UA для перекладу.' });
+      return;
+    }
+
+    setTranslating((current) => ({ ...current, [field]: true }));
+    const { response, body } = await apiRequest('/api/admin/translate', {
+      method: 'POST',
+      body: JSON.stringify({ text: sourceText, targetLangs: ['ru', 'en'] })
+    });
+    setTranslating((current) => ({ ...current, [field]: false }));
+
+    if (!response.ok) {
+      setFeedback({ tone: 'error', message: body.error || body.message || 'Translation failed.' });
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      [field]: {
+        ...current[field],
+        ru: body.ru || current[field].ru || '',
+        en: body.en || current[field].en || ''
+      }
+    }));
+    setFeedback({ tone: 'success', message: 'Переклад оновлено.' });
   }
 
   async function submitForm(event) {
@@ -119,11 +189,11 @@ export default function EventsPage() {
     await loadEvents();
     resetForm();
     setSavingKey('');
-    setFeedback({ tone: 'success', message: editId ? 'Event updated. Auto-translation applied.' : 'Event created. Auto-translation applied.' });
+    setFeedback({ tone: 'success', message: editId ? 'Event updated.' : 'Event created.' });
   }
 
   async function removeEvent(eventRow) {
-    if (!window.confirm(`Delete event “${localizeField(eventRow.title, language)}”?`)) return;
+    if (!window.confirm(`Delete event "${localizeField(eventRow.title, language)}"?`)) return;
 
     setSavingKey(`delete-${eventRow.id}`);
     const { response, body } = await apiRequest(`/api/admin/events/${eventRow.id}`, { method: 'DELETE' });
@@ -141,14 +211,24 @@ export default function EventsPage() {
 
   async function handlePosterUpload(file) {
     if (!file) return;
+
     setUploadingImage(true);
+    setPosterUploadState({ status: 'uploading', details: file.name });
     const payload = new FormData();
+    payload.append('folder', 'events');
     payload.append('image', file);
     const { response, body } = await apiRequest('/api/admin/uploads/image', { method: 'POST', body: payload });
     setUploadingImage(false);
-    if (response.ok && body.url) {
-      setForm((current) => ({ ...current, posterImage: body.url }));
+
+    if (!response.ok || !body.url) {
+      setPosterUploadState({ status: 'error', details: body.message || 'Failed to upload poster.' });
+      setFeedback({ tone: 'error', message: body.message || 'Failed to upload poster.' });
+      return;
     }
+
+    setForm((current) => ({ ...current, posterImage: body.url }));
+    setPosterUploadState({ status: 'success', details: body.url });
+    setFeedback({ tone: 'success', message: 'Постер завантажено.' });
   }
 
   const columns = [
@@ -169,40 +249,157 @@ export default function EventsPage() {
 
   return (
     <AdminLayout>
-      <PageContainer title="Events" description="Manage posters and schedules. Automatic AI translation is active.">
-        {state.loading ? <p>Loading events…</p> : null}
+      <PageContainer title="Events" description="Manage posters, translations, and public event pages.">
+        <div className="metric-compact-grid">
+          <div className="metric-compact-item">
+            <strong>{stats.total}</strong>
+            <span className="muted">Total events</span>
+          </div>
+          <div className="metric-compact-item">
+            <strong>{stats.published}</strong>
+            <span className="muted">Published</span>
+          </div>
+          <div className="metric-compact-item">
+            <strong>{stats.featured}</strong>
+            <span className="muted">Featured</span>
+          </div>
+        </div>
+        {state.loading ? <p>Loading events...</p> : null}
+        {state.error ? <p className="error">{state.error}</p> : null}
         {!state.loading && <DataTable columns={columns} rows={state.events} emptyText="No events yet." />}
       </PageContainer>
 
-      <PanelCard title={editId ? 'Edit event' : 'Create event'}>
-        <form onSubmit={submitForm} className="event-admin-form">
-          <div className="grid-two-col">
-            <label>Title (UA) <input value={form.title.ua} onChange={(e) => setForm({ ...form, title: { ...form.title, ua: e.target.value } })} required /></label>
-            <label>Title (RU) <input value={form.title.ru} onChange={(e) => setForm({ ...form, title: { ...form.title, ru: e.target.value } })} placeholder="Auto-translated" /></label>
-            <label>Title (EN) <input value={form.title.en} onChange={(e) => setForm({ ...form, title: { ...form.title, en: e.target.value } })} placeholder="Auto-translated" /></label>
-            <label>Slug <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
+      <div className="grid-two-col" style={{ alignItems: 'start' }}>
+        <PanelCard title={editId ? 'Edit event' : 'Create event'} subtitle="Poster, schedule, translations, and CTA settings.">
+          <form onSubmit={submitForm} className="event-admin-form">
+            <div className="grid-two-col">
+              <label>Title (UA) <input value={form.title.ua} onChange={(e) => setLocalizedField('title', 'ua', e.target.value)} required /></label>
+              <label>Title (RU) <input value={form.title.ru} onChange={(e) => setLocalizedField('title', 'ru', e.target.value)} placeholder="Auto-translated" /></label>
+              <label>Title (EN) <input value={form.title.en} onChange={(e) => setLocalizedField('title', 'en', e.target.value)} placeholder="Auto-translated" /></label>
+              <label>Slug <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
+            </div>
+
+            <div className="actions compact" style={{ marginTop: '0.5rem' }}>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslateField('title')} disabled={!!translating.title}>
+                {translating.title ? 'Перекладаємо...' : '✦✦ Перекласти title RU/EN з UA'}
+              </button>
+            </div>
+
+            <div className="grid-two-col" style={{ marginTop: '1rem' }}>
+              <label>Start <input type="datetime-local" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} required /></label>
+              <label>End <input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
+              <label>
+                Status
+                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="PUBLISHED">PUBLISHED</option>
+                  <option value="ARCHIVED">ARCHIVED</option>
+                </select>
+              </label>
+              <label>
+                CTA
+                <select value={form.ctaType} onChange={(e) => setForm({ ...form, ctaType: e.target.value })}>
+                  <option value="BOOKING">BOOKING</option>
+                  <option value="TICKETS">TICKETS</option>
+                  <option value="BOTH">BOTH</option>
+                </select>
+              </label>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <label>Short Description (UA) <textarea value={form.shortDescription.ua} onChange={(e) => setLocalizedField('shortDescription', 'ua', e.target.value)} rows="3" /></label>
+              <label>Short Description (RU) <textarea value={form.shortDescription.ru} onChange={(e) => setLocalizedField('shortDescription', 'ru', e.target.value)} placeholder="Auto-translated" rows="3" /></label>
+              <label>Short Description (EN) <textarea value={form.shortDescription.en} onChange={(e) => setLocalizedField('shortDescription', 'en', e.target.value)} placeholder="Auto-translated" rows="3" /></label>
+            </div>
+
+            <div className="actions compact" style={{ marginTop: '0.5rem' }}>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslateField('shortDescription')} disabled={!!translating.shortDescription}>
+                {translating.shortDescription ? 'Перекладаємо...' : '✦✦ Перекласти short description RU/EN з UA'}
+              </button>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <label>Full Description (UA) <textarea value={form.fullDescription.ua} onChange={(e) => setLocalizedField('fullDescription', 'ua', e.target.value)} rows="5" /></label>
+              <label>Full Description (RU) <textarea value={form.fullDescription.ru} onChange={(e) => setLocalizedField('fullDescription', 'ru', e.target.value)} placeholder="Auto-translated" rows="5" /></label>
+              <label>Full Description (EN) <textarea value={form.fullDescription.en} onChange={(e) => setLocalizedField('fullDescription', 'en', e.target.value)} placeholder="Auto-translated" rows="5" /></label>
+            </div>
+
+            <div className="actions compact" style={{ marginTop: '0.5rem' }}>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslateField('fullDescription')} disabled={!!translating.fullDescription}>
+                {translating.fullDescription ? 'Перекладаємо...' : '✦✦ Перекласти full description RU/EN з UA'}
+              </button>
+            </div>
+
+            <div className="grid-two-col" style={{ marginTop: '1rem' }}>
+              <label>Poster URL <input value={form.posterImage} onChange={(e) => setForm({ ...form, posterImage: e.target.value })} placeholder="https://..." /></label>
+              <label>Upload poster <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => handlePosterUpload(e.target.files?.[0])} disabled={uploadingImage} /></label>
+            </div>
+
+            {posterUploadState.status !== 'idle' ? (
+              <div className={`upload-status-card ${posterUploadState.status === 'error' ? 'is-error' : posterUploadState.status === 'success' ? 'is-success' : 'is-uploading'}`}>
+                <strong>Poster upload</strong>
+                <p>{posterUploadState.details}</p>
+              </div>
+            ) : null}
+
+            <div className="grid-two-col" style={{ marginTop: '1rem' }}>
+              <label>
+                Ticket URL
+                <input value={form.ticketUrl} onChange={(e) => setForm({ ...form, ticketUrl: e.target.value })} placeholder="https://tickets.example.com" />
+              </label>
+              <label className="menu-admin-checkbox" style={{ marginTop: 28 }}>
+                <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} />
+                <span>Featured event</span>
+              </label>
+            </div>
+
+            <div className="actions" style={{ marginTop: '1rem' }}>
+              <button type="submit" className="btn" disabled={!!savingKey}>
+                {savingKey === 'event-form' ? 'Saving...' : (editId ? 'Save changes' : 'Create event')}
+              </button>
+              {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button> : null}
+              {publicPreviewHref ? (
+                <a className="btn btn-secondary" href={publicPreviewHref} target="_blank" rel="noreferrer">
+                  Open public page
+                </a>
+              ) : null}
+            </div>
+
+            {feedback.message ? <p className={feedback.tone === 'error' ? 'error' : 'success'}>{feedback.message}</p> : null}
+          </form>
+        </PanelCard>
+
+        <PanelCard title="Preview" subtitle="Current form preview in the public style.">
+          <div className="menu-admin-image-preview" style={{ width: '100%', maxWidth: 360 }}>
+            <img src={form.posterImage || '/icons/lebedi.jpg'} alt={localizeField(form.title, language) || 'Poster preview'} />
           </div>
 
-          <div className="grid-two-col">
-            <label>Start <input type="datetime-local" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} required /></label>
-            <label>End <input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
+          <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+            <div className="menu-admin-badges">
+              <span className="status-pill neutral">{form.status}</span>
+              <span className="status-pill neutral">{form.ctaType}</span>
+              {form.isFeatured ? <span className="status-pill success">FEATURED</span> : null}
+            </div>
+            <h3>{localizeField(form.title, language) || 'Event title preview'}</h3>
+            {form.startAt ? (
+              <p className="muted">
+                {formatDateTime(fromDateTimeLocal(form.startAt), language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}
+                {form.endAt ? ` - ${formatDateTime(fromDateTimeLocal(form.endAt), language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}` : ''}
+              </p>
+            ) : null}
+            <p className="muted">{localizeField(form.shortDescription, language) || 'Short description preview'}</p>
+            {localizeField(form.fullDescription, language) ? <p>{localizeField(form.fullDescription, language)}</p> : null}
+            {form.ticketUrl ? <p><strong>Ticket URL:</strong> {form.ticketUrl}</p> : null}
+            {publicPreviewHref ? (
+              <a href={publicPreviewHref} target="_blank" rel="noreferrer" className="text-link">
+                /events/{form.slug}
+              </a>
+            ) : (
+              <p className="muted">Save the event to open its public page.</p>
+            )}
           </div>
-
-          <div style={{ marginTop: '1rem' }}>
-            <label>Short Description (UA) <textarea value={form.shortDescription.ua} onChange={(e) => setForm({ ...form, shortDescription: { ...form.shortDescription, ua: e.target.value } })} /></label>
-            <label>Short Description (RU) <textarea value={form.shortDescription.ru} onChange={(e) => setForm({ ...form, shortDescription: { ...form.shortDescription, ru: e.target.value } })} placeholder="Auto-translated" /></label>
-            <label>Short Description (EN) <textarea value={form.shortDescription.en} onChange={(e) => setForm({ ...form, shortDescription: { ...form.shortDescription, en: e.target.value } })} placeholder="Auto-translated" /></label>
-          </div>
-
-          <div className="actions" style={{ marginTop: '1rem' }}>
-            <button type="submit" className="btn" disabled={!!savingKey}>
-              {savingKey === 'event-form' ? 'Saving…' : (editId ? 'Save changes' : 'Create event')}
-            </button>
-            {editId && <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button>}
-          </div>
-          {feedback.message && <p className={feedback.tone === 'error' ? 'error' : 'success'}>{feedback.message}</p>}
-        </form>
-      </PanelCard>
+        </PanelCard>
+      </div>
     </AdminLayout>
   );
 }

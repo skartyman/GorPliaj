@@ -328,37 +328,71 @@ h3 {
   display: grid;
   align-items: end;
   padding: 40px;
-  background: linear-gradient(135deg, rgba(14, 14, 16, 0.2), rgba(14, 14, 16, 0.6)),
+  isolation: isolate;
+  background: linear-gradient(140deg, rgba(8, 8, 10, 0.08), rgba(8, 8, 10, 0.42)),
               url('/icons/moonpirs.jpg') center / cover no-repeat;
 }
 
 [data-theme="light"] .hero {
-  background: linear-gradient(135deg, rgba(250, 250, 248, 0.2), rgba(250, 250, 248, 0.7)),
+  background: linear-gradient(140deg, rgba(250, 250, 248, 0.04), rgba(250, 250, 248, 0.28)),
               url('/icons/moonpirs.jpg') center / cover no-repeat;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 8, 10, 0.84) 0%, rgba(8, 8, 10, 0.54) 34%, rgba(8, 8, 10, 0.14) 62%, rgba(8, 8, 10, 0.08) 100%),
+    linear-gradient(to top, rgba(8, 8, 10, 0.58) 0%, rgba(8, 8, 10, 0.08) 52%, rgba(8, 8, 10, 0) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+[data-theme="light"] .hero::before {
+  background:
+    linear-gradient(90deg, rgba(15, 16, 18, 0.62) 0%, rgba(15, 16, 18, 0.28) 34%, rgba(15, 16, 18, 0.08) 62%, rgba(15, 16, 18, 0.04) 100%),
+    linear-gradient(to top, rgba(15, 16, 18, 0.18) 0%, rgba(15, 16, 18, 0.05) 52%, rgba(15, 16, 18, 0) 100%);
 }
 
 .hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, var(--bg) 0%, transparent 60%);
+  background: linear-gradient(to top, rgba(10, 10, 12, 0.82) 0%, rgba(10, 10, 12, 0.18) 30%, transparent 62%);
+  z-index: 1;
   pointer-events: none;
 }
 
 .hero-content {
   position: relative;
   z-index: 2;
-  max-width: 560px;
+  max-width: 600px;
+  padding: 8px 0;
 }
 
 .hero h1 {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  max-width: 12ch;
+  color: #fff7e6;
+  text-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
 }
 
 .hero p {
-  color: var(--muted);
-  font-size: 1rem;
-  margin-bottom: 24px;
+  max-width: 46ch;
+  color: rgba(255, 244, 221, 0.9);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  text-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  margin-bottom: 26px;
+}
+
+[data-theme="light"] .hero h1 {
+  color: #fffaf0;
+}
+
+[data-theme="light"] .hero p {
+  color: rgba(255, 250, 240, 0.92);
 }
 
 /* ===== Buttons ===== */

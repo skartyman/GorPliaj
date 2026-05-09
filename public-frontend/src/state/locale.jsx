@@ -9,11 +9,8 @@ function detectLocale() {
   if (saved === 'ru' || saved === 'en' || saved === 'ua') {
     return saved;
   }
-  
-  const browserLang = navigator.language.toLowerCase();
-  if (browserLang.startsWith('en')) return 'en';
-  if (browserLang.startsWith('ru')) return 'ru';
-  return 'ua'; // Default for all others, including uk/ua
+
+  return 'ua';
 }
 
 export function LocaleProvider({ children }) {

@@ -190,12 +190,22 @@ export const dictionary = {
 };
 
 const invalidTextValues = new Set(['[object Object]', 'object Object', '[object object]', 'undefined', 'null']);
+const invalidTextPatterns = [
+  /ви не надіслали жодного тексту для перекладу/i,
+  /будь ласка,\s*надішліть текст/i,
+  /you did not send any text for translation/i,
+  /please,\s*send the text/i,
+  /вы не отправили текст для перевода/i,
+  /пожалуйста,\s*отправьте текст/i
+];
 
 export function cleanText(value) {
   if (value == null) return '';
   if (typeof value === 'object') return localizeField(value, 'ua');
   const text = String(value).trim();
-  return invalidTextValues.has(text) ? '' : text;
+  if (invalidTextValues.has(text)) return '';
+  if (invalidTextPatterns.some((pattern) => pattern.test(text))) return '';
+  return text;
 }
 
 export function normalizeLocalizedField(value) {

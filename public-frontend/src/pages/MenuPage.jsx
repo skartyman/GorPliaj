@@ -30,6 +30,7 @@ export default function MenuPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [activeSection, setActiveSection] = useState('kitchen');
   const [activeCategory, setActiveCategory] = useState('');
+  const [failedImages, setFailedImages] = useState({});
   const categoryNavRef = useRef(null);
   const categoryButtonsRef = useRef(new Map());
   const sectionNodesRef = useRef(new Map());
@@ -180,6 +181,18 @@ export default function MenuPage() {
     await navigator.clipboard.writeText(lines.join('\n'));
   }
 
+  function hasImageError(itemId) {
+    return Boolean(failedImages[String(itemId)]);
+  }
+
+  function handleImageError(itemId) {
+    setFailedImages((current) => {
+      const key = String(itemId);
+      if (current[key]) return current;
+      return { ...current, [key]: true };
+    });
+  }
+
   function scrollToCategory(categoryKey, sectionKey = activeSection) {
     if (sectionKey !== activeSection) {
       setActiveSection(sectionKey);
@@ -255,19 +268,21 @@ export default function MenuPage() {
                 {category.items.map((item) => {
                   const quantity = Number(items[String(item.id)]?.quantity || 0);
                   const name = localizeField(item.name, locale);
+                  const description = localizeField(item.description, locale);
+                  const showImage = item.imageUrl && !hasImageError(item.id);
 
                   return (
                     <article key={item.id} className="menu-card" onClick={() => setSelectedItem({ ...item, name, category: localizeField(category.categoryLabel, locale) })}>
                       <div className="menu-card-image">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={name} loading="lazy" />
+                        {showImage ? (
+                          <img src={item.imageUrl} alt={name} loading="lazy" onError={() => handleImageError(item.id)} />
                         ) : (
                           <div className="menu-card-fallback">GP</div>
                         )}
                       </div>
                       <div className="menu-card-body">
                         <h3>{name}</h3>
-                        <p className="muted">{localizeField(item.description, locale)}</p>
+                        {description ? <p className="muted">{description}</p> : null}
                         <div className="menu-card-bottom">
                           <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
                           <div className="menu-card-actions">
@@ -339,8 +354,8 @@ export default function MenuPage() {
           <button className="modal-backdrop" onClick={() => setSelectedItem(null)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })} />
           <div className="modal-sheet">
             <div className="modal-sheet-handle" />
-            {selectedItem.imageUrl && (
-              <img className="modal-sheet-image" src={selectedItem.imageUrl} alt={selectedItem.name} />
+            {selectedItem.imageUrl && !hasImageError(selectedItem.id) && (
+              <img className="modal-sheet-image" src={selectedItem.imageUrl} alt={selectedItem.name} onError={() => handleImageError(selectedItem.id)} />
             )}
             <div className="modal-sheet-body">
               <div className="modal-sheet-header">
@@ -350,7 +365,7 @@ export default function MenuPage() {
                 </div>
                 <button className="modal-close-btn" onClick={() => setSelectedItem(null)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>✕</button>
               </div>
-              <p className="modal-sheet-desc">{localizeField(selectedItem.description, locale)}</p>
+              {localizeField(selectedItem.description, locale) ? <p className="modal-sheet-desc">{localizeField(selectedItem.description, locale)}</p> : null}
               <div className="modal-sheet-footer">
                 <div className="modal-sheet-price">{formatPrice(Number(selectedItem.price || 0))} грн</div>
                 <div className="modal-sheet-actions">
