@@ -215,6 +215,7 @@ const translations = {
       deleteMap: 'Видалити карту',
       deleteMapConfirm: 'Видалити карту «{name}»?',
       mapDeletedSuccess: 'Карту видалено.',
+      manageMaps: 'Карти',
       addObjects: 'Додати об’єкти',
       loading: 'Завантажуємо редактор карти...',
       save: 'Зберегти карту',

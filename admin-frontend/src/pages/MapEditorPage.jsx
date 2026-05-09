@@ -865,6 +865,7 @@ export default function MapEditorPage() {
     activeTab: 'PROPERTIES',
     activeTool: 'SELECT',
     activeCategory: 'SURFACES',
+    mapManagementOpen: false,
     drawingPath: null,
     polygonDraft: null
   });
@@ -1712,6 +1713,14 @@ export default function MapEditorPage() {
             <button
               type="button"
               className="btn btn-secondary"
+              onClick={() => setEditorState((prev) => ({ ...prev, mapManagementOpen: !prev.mapManagementOpen }))}
+              disabled={editorState.loading}
+            >
+              {t('mapEditor.manageMaps')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
               onClick={() => setEditorState((prev) => ({ ...prev, activeTab: 'ASSETS' }))}
               disabled={editorState.loading}
             >
@@ -1764,6 +1773,7 @@ export default function MapEditorPage() {
           </div>
         </div>
 
+        {editorState.mapManagementOpen ? (
         <section className="map-management-panel">
           <div className="map-management-grid">
             <label>
@@ -1820,6 +1830,7 @@ export default function MapEditorPage() {
             </button>
           </div>
         </section>
+        ) : null}
 
         {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
         {editorState.error ? <p className="error">{editorState.error}</p> : null}
