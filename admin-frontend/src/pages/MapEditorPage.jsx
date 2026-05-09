@@ -59,6 +59,7 @@ const MIN_MAP_SCALE = 0.25;
 const MAX_MAP_SCALE = 1.75;
 const MAP_SCALE_STEP = 0.1;
 const MAP_VIEWPORT_PADDING = 48;
+const SURFACE_Z_INDEX = 0;
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
   Graphics: 'mapEditor.sections.graphics',
@@ -80,11 +81,11 @@ const ASSET_CATEGORIES = {
   SURFACES: {
     label: 'Поверхні',
     items: [
-      { type: 'CUSTOM', label: 'Полігон', width: 240, height: 160, subType: 'POLYGON', texture: 'sand' },
-      { type: 'CUSTOM', label: 'Пісок', width: 280, height: 160, subType: 'POLYGON', texture: 'sand' },
-      { type: 'CUSTOM', label: 'Дерево', width: 260, height: 120, subType: 'POLYGON', texture: 'wood' },
-      { type: 'CUSTOM', label: 'Вода', width: 320, height: 160, subType: 'POLYGON', texture: 'water' },
-      { type: 'CUSTOM', label: 'Зелена зона', width: 220, height: 140, subType: 'POLYGON', texture: 'grass' }
+      { type: 'CUSTOM', label: 'Полігон', width: 240, height: 160, subType: 'POLYGON', texture: 'sand', zIndex: SURFACE_Z_INDEX },
+      { type: 'CUSTOM', label: 'Пісок', width: 280, height: 160, subType: 'POLYGON', texture: 'sand', zIndex: SURFACE_Z_INDEX },
+      { type: 'CUSTOM', label: 'Дерево', width: 260, height: 120, subType: 'POLYGON', texture: 'wood', zIndex: SURFACE_Z_INDEX },
+      { type: 'CUSTOM', label: 'Вода', width: 320, height: 160, subType: 'POLYGON', texture: 'water', zIndex: SURFACE_Z_INDEX },
+      { type: 'CUSTOM', label: 'Зелена зона', width: 220, height: 140, subType: 'POLYGON', texture: 'grass', zIndex: SURFACE_Z_INDEX }
     ]
   },
   FURNITURE: {
@@ -189,6 +190,8 @@ function normalizeMap(map) {
 
   return {
     ...map,
+    width: Math.max(roundCoordinate(map.width), 100),
+    height: Math.max(roundCoordinate(map.height), 100),
     backgroundImage: String(map.backgroundImage || '').trim(),
     backgroundColor: String(map.backgroundColor || '').trim() || '#f8fafc'
   };
@@ -302,6 +305,37 @@ function MapSettings({ map, onMapFieldChange, t }) {
       </div>
 
       <label>
+        {t('mapEditor.fields.mapWidth')}
+        <input
+          type="number"
+          min="100"
+          step="50"
+          value={map.width}
+          onChange={(event) => onMapFieldChange('width', event.target.value)}
+        />
+      </label>
+
+      <label>
+        {t('mapEditor.fields.mapHeight')}
+        <input
+          type="number"
+          min="100"
+          step="50"
+          value={map.height}
+          onChange={(event) => onMapFieldChange('height', event.target.value)}
+        />
+      </label>
+
+      <div className="map-size-actions">
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('width', Number(map.width) + 500)}>
+          {t('mapEditor.expandWidth')}
+        </button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('height', Number(map.height) + 500)}>
+          {t('mapEditor.expandHeight')}
+        </button>
+      </div>
+
+      <label>
         {t('mapEditor.fields.backgroundImage')}
         <input
           type="url"
@@ -319,7 +353,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, onLayerAction, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -365,6 +399,18 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
       </div>
 
       <div className="actions compact">
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('bottom')}>
+          {t('mapEditor.sendToBottom')}
+        </button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('back')}>
+          {t('mapEditor.sendBackward')}
+        </button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('front')}>
+          {t('mapEditor.bringForward')}
+        </button>
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('top')}>
+          {t('mapEditor.bringToTop')}
+        </button>
         <button type="button" className="btn btn-secondary btn-small" onClick={onDuplicate}>
           {t('mapEditor.duplicateSelected')}
         </button>
@@ -949,6 +995,7 @@ export default function MapEditorPage() {
       y: bounds.y,
       subType: 'POLYGON',
       texture: 'sand',
+      zIndex: SURFACE_Z_INDEX,
       points: normalizePolygonPoints(points, bounds)
     });
 
@@ -1268,7 +1315,9 @@ export default function MapEditorPage() {
         ...prev.current,
         map: {
           ...prev.current.map,
-          [field]: String(value)
+          [field]: field === 'width' || field === 'height'
+            ? Math.max(roundCoordinate(value), 100)
+            : String(value)
         }
       }
     }));
@@ -1303,11 +1352,46 @@ export default function MapEditorPage() {
     }));
   }
 
+  function moveSelectedLayer(action) {
+    if (!selectedObject) {
+      return;
+    }
+
+    updateCurrent((prev) => {
+      const zIndexes = prev.current.objects.map((object) => Number(object.zIndex) || 0);
+      const maxZIndex = Math.max(...zIndexes, 0);
+
+      const nextObjects = prev.current.objects.map((object) => {
+        if (object.id !== selectedObject.id) {
+          return object;
+        }
+
+        const currentZIndex = Number(object.zIndex) || 0;
+        let zIndex = currentZIndex;
+
+        if (action === 'bottom') zIndex = 0;
+        if (action === 'back') zIndex = Math.max(currentZIndex - 1, 0);
+        if (action === 'front') zIndex = currentZIndex + 1;
+        if (action === 'top') zIndex = maxZIndex + 1;
+
+        return normalizeObject({ ...object, zIndex }, prev.current.map);
+      });
+
+      return {
+        current: {
+          ...prev.current,
+          objects: nextObjects
+        }
+      };
+    });
+  }
+
   function buildNewObject(type, currentMap, currentObjects, meta = {}) {
     const preset = CREATION_PRESETS[type] || CREATION_PRESETS.DECOR;
     const maxZIndex = currentObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0);
     const width = meta.width || preset.width;
     const height = meta.height || preset.height;
+    const zIndex = meta.zIndex !== undefined ? Number(meta.zIndex) : maxZIndex + 1;
     
     // Use provided coordinates or center on map
     const x = meta.x !== undefined ? meta.x : Math.round((currentMap.width - width) / 2);
@@ -1326,7 +1410,7 @@ export default function MapEditorPage() {
         width,
         height,
         rotation: 0,
-        zIndex: maxZIndex + 1,
+        zIndex,
         isActive: true,
         metaJson: { 
           subType: meta.subType,
@@ -1441,6 +1525,8 @@ export default function MapEditorPage() {
 
     const payload = {
       map: {
+        width: editorState.current.map.width,
+        height: editorState.current.map.height,
         backgroundImage: editorState.current.map.backgroundImage || null,
         backgroundColor: editorState.current.map.backgroundColor || null
       },
@@ -1860,6 +1946,7 @@ export default function MapEditorPage() {
                       onFieldChange={handleFieldChange}
                       onDuplicate={duplicateSelected}
                       onDelete={handleDeleteSelected}
+                      onLayerAction={moveSelectedLayer}
                       t={t}
                       language={language}
                     />

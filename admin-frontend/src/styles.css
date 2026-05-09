@@ -125,7 +125,8 @@ p {
 }
 
 .map-editor-shell .content-area {
-  padding: 10px;
+  padding: 8px;
+  min-height: 100vh;
 }
 
 .topbar {
@@ -1248,8 +1249,9 @@ textarea {
 }
 
 .map-editor-page {
-  padding: 12px;
-  margin-inline: -8px;
+  padding: 10px;
+  margin-inline: -10px;
+  border-radius: 10px;
 }
 
 .map-editor-draft-bar {
@@ -1308,7 +1310,7 @@ textarea {
 .map-editor-canvas-background {
   background-position: center;
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: 100% 100%;
   opacity: 0.72;
 }
 
@@ -2014,8 +2016,8 @@ textarea {
 /* Map Editor V2 Layout */
 .map-editor-v2 {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) minmax(280px, 300px);
-  grid-template-rows: minmax(620px, calc(100vh - 210px));
+  grid-template-columns: 56px minmax(0, 1fr) minmax(250px, 280px);
+  grid-template-rows: minmax(760px, calc(100vh - 150px));
   gap: 0;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -2030,8 +2032,8 @@ textarea {
   border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  padding: 12px 0;
-  gap: 12px;
+  padding: 10px 0;
+  gap: 8px;
   align-items: center;
   z-index: 10;
 }
@@ -2049,7 +2051,7 @@ textarea {
   overflow: auto;
   width: 100%;
   height: 100%;
-  padding: 32px;
+  padding: 18px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
@@ -2142,8 +2144,14 @@ textarea {
 }
 
 .inspector-content {
-  padding: 20px;
+  padding: 14px;
   min-height: 0;
+}
+
+.map-size-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .texture-library {

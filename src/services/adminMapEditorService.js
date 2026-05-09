@@ -3,7 +3,7 @@ const { PrismaClient, MapObjectType } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
-const MAP_EDITABLE_FIELDS = ['backgroundImage', 'backgroundColor'];
+const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];
 const TABLE_EDITABLE_FIELDS = ['photoUrl'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 const MAP_EDITOR_INCLUDE = {
@@ -225,6 +225,14 @@ function normalizeMapInput(mapInput) {
   const normalized = {};
 
   for (const field of MAP_EDITABLE_FIELDS) {
+    if (field === 'width' || field === 'height') {
+      const value = Number(mapInput?.[field]);
+      if (Number.isFinite(value) && value >= 100) {
+        normalized[field] = Math.round(value);
+      }
+      continue;
+    }
+
     if (field === 'backgroundImage' || field === 'backgroundColor') {
       normalized[field] = String(mapInput?.[field] ?? '').trim() || null;
     }
@@ -471,6 +479,10 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   }
 
   const mapUpdateData = normalizeMapInput(mapInput);
+  const effectiveMap = {
+    ...map,
+    ...mapUpdateData
+  };
   const operations = [];
 
   if (Object.keys(mapUpdateData).length) {
@@ -519,7 +531,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
       return { type: 'INVALID', message: 'Objects payload references an unknown table id.' };
     }
 
-    if (normalizedObject.x < 0 || normalizedObject.y < 0 || normalizedObject.x > map.width || normalizedObject.y > map.height) {
+    if (normalizedObject.x < 0 || normalizedObject.y < 0 || normalizedObject.x > effectiveMap.width || normalizedObject.y > effectiveMap.height) {
       return { type: 'INVALID', message: `Object ${object.id} contains coordinates outside the map bounds.` };
     }
 
