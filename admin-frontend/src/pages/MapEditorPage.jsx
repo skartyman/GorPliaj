@@ -652,6 +652,7 @@ export default function MapEditorPage() {
   const canvasContainerRef = useRef(null);
   const panStateRef = useRef(null);
   const [mapScale, setMapScale] = useState(1);
+  const [mapAutoFit, setMapAutoFit] = useState(true);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -900,23 +901,38 @@ export default function MapEditorPage() {
   }, [editorState.current, editorState.original]);
 
   function fitMapToViewport() {
+    setMapAutoFit(true);
     setMapScale(calculateFitScale(canvasContainerRef.current, map));
   }
 
   function changeMapScale(delta) {
+    setMapAutoFit(false);
     setMapScale((current) => clampScale(current + delta));
   }
 
   useEffect(() => {
-    if (!map || editorState.loading) {
+    if (!map || editorState.loading || !mapAutoFit) {
       return undefined;
     }
 
-    const frameId = window.requestAnimationFrame(() => {
-      fitMapToViewport();
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, [map?.id, map?.width, map?.height, editorState.loading]);
+    const container = canvasContainerRef.current;
+    if (!container) {
+      return undefined;
+    }
+
+    const updateScale = () => {
+      setMapScale(calculateFitScale(container, map));
+    };
+
+    const frameId = window.requestAnimationFrame(updateScale);
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(container);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
+  }, [map?.id, map?.width, map?.height, editorState.loading, mapAutoFit]);
 
   function updateCurrent(updater) {
     setEditorState((prev) => {
@@ -1360,7 +1376,10 @@ export default function MapEditorPage() {
               <button type="button" className="btn btn-secondary btn-small" onClick={fitMapToViewport}>
                 {t('mapEditor.zoomFit')}
               </button>
-              <button type="button" className="btn btn-secondary btn-small" onClick={() => setMapScale(1)}>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => {
+                setMapAutoFit(false);
+                setMapScale(1);
+              }}>
                 {t('mapEditor.zoomActual')}
               </button>
               <button type="button" className="btn btn-secondary btn-small" onClick={() => changeMapScale(MAP_SCALE_STEP)}>
