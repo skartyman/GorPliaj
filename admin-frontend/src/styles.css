@@ -2021,7 +2021,7 @@ textarea {
   gap: 0;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  overflow: hidden;
+  overflow: visible;
   background: #f8fafc;
   margin-top: 16px;
   min-height: 0;
@@ -2082,7 +2082,7 @@ textarea {
   border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: visible;
   z-index: 10;
   min-height: 0;
 }
@@ -2146,6 +2146,7 @@ textarea {
 .inspector-content {
   padding: 14px;
   min-height: 0;
+  background: #fff;
 }
 
 .map-size-actions {
