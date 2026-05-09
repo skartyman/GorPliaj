@@ -130,7 +130,8 @@ function normalizeObject(object, map) {
     height,
     rotation: roundCoordinate(object.rotation),
     zIndex: roundCoordinate(object.zIndex),
-    isActive: Boolean(object.isActive)
+    isActive: Boolean(object.isActive),
+    metaJson: object.metaJson || {}
   };
 }
 
