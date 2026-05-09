@@ -2021,24 +2021,27 @@ export default function MapEditorPage() {
 
             <aside className="map-editor-inspector">
               <div className="inspector-tabs">
-                <div 
+                <button
+                  type="button"
                   className={`inspector-tab ${editorState.activeTab === 'PROPERTIES' ? 'active' : ''}`}
                   onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'PROPERTIES' }))}
                 >
                   {t('mapEditor.tabs.properties')}
-                </div>
-                <div 
+                </button>
+                <button
+                  type="button"
                   className={`inspector-tab ${editorState.activeTab === 'LAYERS' ? 'active' : ''}`}
                   onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'LAYERS' }))}
                 >
                   {t('mapEditor.tabs.layers')}
-                </div>
-                <div 
+                </button>
+                <button
+                  type="button"
                   className={`inspector-tab ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
                   onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
                 >
                   {t('mapEditor.tabs.assets')}
-                </div>
+                </button>
               </div>
 
               <div className="inspector-content">
@@ -2087,6 +2090,7 @@ export default function MapEditorPage() {
                     <div className="category-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
                       {Object.keys(ASSET_CATEGORIES).map(catKey => (
                         <button
+                          type="button"
                           key={catKey}
                           className={`btn btn-small ${editorState.activeCategory === catKey ? 'btn-primary' : 'btn-secondary'}`}
                           onClick={() => setEditorState(prev => ({ ...prev, activeCategory: catKey }))}
@@ -2098,7 +2102,7 @@ export default function MapEditorPage() {
                     
                     <div className="asset-library">
                       {ASSET_CATEGORIES[editorState.activeCategory].items.map((item, idx) => (
-                        <div key={idx} className="asset-item" onClick={() => createObject(item.type, item)}>
+                        <button key={idx} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
                           <div className="asset-preview">
                             {item.subType && SVG_TEMPLATES[item.subType] ? (
                               <svg viewBox="0 0 100 100" style={{ width: '30px', height: '30px' }}>
@@ -2109,7 +2113,7 @@ export default function MapEditorPage() {
                             )}
                           </div>
                           <span className="asset-label">{item.label}</span>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>

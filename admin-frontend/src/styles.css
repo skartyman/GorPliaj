@@ -2102,12 +2102,11 @@ textarea {
   border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
   z-index: 10;
   min-height: 0;
   scrollbar-gutter: stable;
-  padding-bottom: 96px;
 }
 
 .tool-button {
@@ -2146,6 +2145,7 @@ textarea {
   display: flex;
   border-bottom: 1px solid #e2e8f0;
   background: #f8fafc;
+  flex: 0 0 auto;
 }
 
 .inspector-tab {
@@ -2157,7 +2157,11 @@ textarea {
   cursor: pointer;
   color: #64748b;
   border-bottom: 2px solid transparent;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
   transition: all 0.2s;
+  font-family: inherit;
 }
 
 .inspector-tab.active {
@@ -2168,8 +2172,11 @@ textarea {
 
 .inspector-content {
   padding: 14px;
-  padding-bottom: 180px;
+  padding-bottom: 96px;
   min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #fff;
   min-width: 0;
 }
@@ -2308,6 +2315,9 @@ textarea {
   cursor: pointer;
   background: #fff;
   transition: all 0.2s;
+  color: inherit;
+  font: inherit;
+  text-align: center;
 }
 
 .asset-item:hover {
