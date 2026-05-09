@@ -51,6 +51,10 @@ const PROPERTY_FIELDS = [
   { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
 ];
 const META_PROPERTY_FIELDS = new Set(['texture', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
+const MIN_MAP_SCALE = 0.25;
+const MAX_MAP_SCALE = 1.75;
+const MAP_SCALE_STEP = 0.1;
+const MAP_VIEWPORT_PADDING = 48;
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
   Graphics: 'mapEditor.sections.graphics',
@@ -106,6 +110,20 @@ function clamp(value, min, max) {
 
 function roundCoordinate(value) {
   return Math.round(Number(value) || 0);
+}
+
+function clampScale(value) {
+  return Math.min(Math.max(Number(value) || 1, MIN_MAP_SCALE), MAX_MAP_SCALE);
+}
+
+function calculateFitScale(container, map) {
+  if (!container || !map?.width || !map?.height) {
+    return 1;
+  }
+
+  const availableWidth = Math.max(container.clientWidth - MAP_VIEWPORT_PADDING * 2, 320);
+  const availableHeight = Math.max(container.clientHeight - MAP_VIEWPORT_PADDING * 2, 240);
+  return clampScale(Math.min(availableWidth / map.width, availableHeight / map.height, 1));
 }
 
 function normalizeMap(map) {
@@ -633,6 +651,7 @@ export default function MapEditorPage() {
   const objectIdRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const panStateRef = useRef(null);
+  const [mapScale, setMapScale] = useState(1);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -661,8 +680,8 @@ export default function MapEditorPage() {
     if (editorState.activeTool !== 'LINE') return;
     
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = Math.round((e.clientX - rect.left) / mapScale);
+    const y = Math.round((e.clientY - rect.top) / mapScale);
 
     setEditorState(prev => ({
       ...prev,
@@ -707,8 +726,8 @@ export default function MapEditorPage() {
     if (!editorState.drawingPath) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = Math.round((e.clientX - rect.left) / mapScale);
+    const y = Math.round((e.clientY - rect.top) / mapScale);
 
     setEditorState(prev => ({
       ...prev,
@@ -879,6 +898,25 @@ export default function MapEditorPage() {
 
     return JSON.stringify(editorState.original) !== JSON.stringify(editorState.current);
   }, [editorState.current, editorState.original]);
+
+  function fitMapToViewport() {
+    setMapScale(calculateFitScale(canvasContainerRef.current, map));
+  }
+
+  function changeMapScale(delta) {
+    setMapScale((current) => clampScale(current + delta));
+  }
+
+  useEffect(() => {
+    if (!map || editorState.loading) {
+      return undefined;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      fitMapToViewport();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [map?.id, map?.width, map?.height, editorState.loading]);
 
   function updateCurrent(updater) {
     setEditorState((prev) => {
@@ -1284,7 +1322,7 @@ export default function MapEditorPage() {
 
   return (
     <AdminLayout>
-      <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')}>
+      <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')} className="map-editor-page">
         <section className="page-hero compact map-editor-hero">
           <div className="page-hero-copy">
             <span className="eyebrow">{t('mapEditor.eyebrow')}</span>
@@ -1315,6 +1353,21 @@ export default function MapEditorPage() {
                   </option>
                 ))}
               </select>
+            <div className="map-editor-zoom-controls" aria-label="Map zoom controls">
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => changeMapScale(-MAP_SCALE_STEP)}>
+                -
+              </button>
+              <button type="button" className="btn btn-secondary btn-small" onClick={fitMapToViewport}>
+                {t('mapEditor.zoomFit')}
+              </button>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => setMapScale(1)}>
+                {t('mapEditor.zoomActual')}
+              </button>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => changeMapScale(MAP_SCALE_STEP)}>
+                +
+              </button>
+              <span className="map-editor-zoom-value">{Math.round(mapScale * 100)}%</span>
+            </div>
           </div>
 
           <div className="map-editor-toolbar-group">
@@ -1385,10 +1438,19 @@ export default function MapEditorPage() {
                 onMouseLeave={handlePanMouseUp}
               >
                 <div
+                  className="map-editor-canvas-scale-layer"
+                  style={{
+                    width: `${map.width * mapScale}px`,
+                    height: `${map.height * mapScale}px`
+                  }}
+                >
+                <div
                   className="map-editor-canvas"
                   style={{
                     width: `${map.width}px`,
                     height: `${map.height}px`,
+                    transform: `scale(${mapScale})`,
+                    transformOrigin: 'top left',
                     boxShadow: '0 0 40px rgba(0,0,0,0.1)',
                     position: 'relative',
                     cursor: editorState.activeTool === 'LINE' ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
@@ -1448,6 +1510,7 @@ export default function MapEditorPage() {
                         disableDragging={editorState.activeTool !== 'SELECT'}
                         dragGrid={[1, 1]}
                         resizeGrid={[1, 1]}
+                        scale={mapScale}
                         className={`map-editor-rnd ${editorState.selectedObjectId === object.id ? 'selected' : ''}`}
                         style={{ zIndex: object.zIndex }}
                       >
@@ -1462,6 +1525,7 @@ export default function MapEditorPage() {
                       </Rnd>
                     );
                   })}
+                </div>
                 </div>
               </div>
             </main>

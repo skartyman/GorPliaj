@@ -24,8 +24,10 @@ export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSidebar, setOpenSidebar] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { t, toggleLanguage } = useAdminI18n();
   const title = useMemo(() => pageTitle(location.pathname, t), [location.pathname, t]);
+  const isMapEditor = location.pathname.startsWith('/admin/map-editor');
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
@@ -37,7 +39,7 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isMapEditor ? 'map-editor-shell' : ''}`}>
       <aside className={`sidebar ${openSidebar ? 'open' : ''}`}>
         <div className="sidebar-header">
           <Link to="/admin/dashboard" className="brand" onClick={onNavSelect}>
@@ -72,6 +74,15 @@ export default function AdminLayout({ children }) {
           <div className="topbar-left">
             <button type="button" className="icon-btn mobile-only" onClick={() => setOpenSidebar((prev) => !prev)}>
               ☰
+            </button>
+            <button
+              type="button"
+              className="icon-btn desktop-sidebar-toggle"
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              aria-label={sidebarCollapsed ? t('common.showSidebar') : t('common.hideSidebar')}
+              title={sidebarCollapsed ? t('common.showSidebar') : t('common.hideSidebar')}
+            >
+              {sidebarCollapsed ? '→' : '←'}
             </button>
             <h1>{title}</h1>
           </div>

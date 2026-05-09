@@ -38,6 +38,11 @@ p {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
+  transition: grid-template-columns 0.2s ease;
+}
+
+.admin-shell.sidebar-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 
 .sidebar {
@@ -51,6 +56,15 @@ p {
   transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+@media (min-width: 961px) {
+  .sidebar-collapsed .sidebar {
+    padding-left: 0;
+    padding-right: 0;
+    border-right: 0;
+  }
 }
 
 .sidebar-header {
@@ -108,6 +122,10 @@ p {
 .content-area {
   min-width: 0;
   padding: 16px;
+}
+
+.map-editor-shell .content-area {
+  padding: 10px;
 }
 
 .topbar {
@@ -321,6 +339,11 @@ textarea {
 
 .mobile-only {
   display: none;
+}
+
+.desktop-sidebar-toggle {
+  display: inline-grid;
+  place-items: center;
 }
 
 .error {
@@ -1206,6 +1229,28 @@ textarea {
   align-items: center;
 }
 
+.map-editor-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.map-editor-zoom-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.map-editor-page {
+  padding: 12px;
+}
+
 .map-editor-toolbar-group.compact-actions {
   gap: 6px;
 }
@@ -1796,6 +1841,10 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .admin-shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .sidebar {
     position: fixed;
     left: 0;
@@ -1815,6 +1864,10 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .desktop-sidebar-toggle {
+    display: none;
   }
 
   .page-hero {
@@ -1947,8 +2000,8 @@ textarea {
 /* Map Editor V2 Layout */
 .map-editor-v2 {
   display: grid;
-  grid-template-columns: 80px 1fr 340px;
-  grid-template-rows: 800px;
+  grid-template-columns: 68px minmax(0, 1fr) minmax(300px, 320px);
+  grid-template-rows: minmax(760px, calc(100vh - 240px));
   gap: 0;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -1981,11 +2034,16 @@ textarea {
   overflow: auto;
   width: 100%;
   height: 100%;
-  padding: 60px;
+  padding: 48px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   cursor: grab;
+}
+
+.map-editor-canvas-scale-layer {
+  flex: 0 0 auto;
+  position: relative;
 }
 
 .map-editor-canvas-container:active {

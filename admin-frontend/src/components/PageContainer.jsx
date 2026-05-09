@@ -1,10 +1,10 @@
 import { localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
-export default function PageContainer({ title, description, actions, children }) {
+export default function PageContainer({ title, description, actions, children, className = '' }) {
   const { language } = useAdminI18n();
   return (
-    <section className="page-container">
+    <section className={`page-container ${className}`.trim()}>
       <div className="page-container-head">
         <div>
           <h2>{typeof title === 'object' ? localizeField(title, language) : title}</h2>
