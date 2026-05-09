@@ -131,7 +131,7 @@ p {
 
 .map-editor-shell .page-container-head,
 .map-editor-shell .map-editor-hero,
-.map-editor-shell .admin-install-prompt {
+body:has(.map-editor-page) .admin-install-prompt {
   display: none;
 }
 
@@ -1237,6 +1237,17 @@ textarea {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.map-editor-toolbar select {
+  width: auto;
+  min-width: 240px;
+  max-width: 360px;
+  margin-top: 0;
+}
+
+.map-editor-toolbar .btn {
+  white-space: nowrap;
 }
 
 .map-editor-zoom-controls {
