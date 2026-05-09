@@ -50,6 +50,7 @@ const PROPERTY_FIELDS = [
   { key: 'rotation', type: 'number', section: 'Transform', step: 1 },
   { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
 ];
+const META_PROPERTY_FIELDS = new Set(['texture', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
 const CREATION_PRESETS = {
   TABLE: { width: 108, height: 72 },
   BAR: { width: 160, height: 64 },
@@ -335,7 +336,6 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
           </div>
         ))}
         <input id="asset-upload" type="file" accept=".svg,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleFileUpload} />
-      </div>
 
         {selectedObject.type === 'TABLE' ? (
           <>
@@ -908,8 +908,8 @@ export default function MapEditorPage() {
         return { ...object, label: { ...wrapLabel(object.label), ua: String(value) } };
       }
 
-      if (field === 'texture') {
-        return { ...object, metaJson: { ...object.metaJson, texture: String(value) } };
+      if (META_PROPERTY_FIELDS.has(field)) {
+        return { ...object, metaJson: { ...object.metaJson, [field]: String(value) } };
       }
 
       if (field === 'isActive') {
@@ -1129,6 +1129,8 @@ export default function MapEditorPage() {
         height: object.height,
         rotation: object.rotation,
         zIndex: object.zIndex,
+        styleJson: object.styleJson || null,
+        metaJson: object.metaJson || null,
         isActive: object.isActive
       }))
     };

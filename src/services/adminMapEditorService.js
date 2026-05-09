@@ -2,7 +2,7 @@ const { PrismaClient, MapObjectType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type'];
+const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
 const MAP_EDITABLE_FIELDS = ['backgroundImage', 'backgroundColor'];
 const TABLE_EDITABLE_FIELDS = ['photoUrl'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
@@ -250,7 +250,14 @@ function normalizeEditableObject(object, existingObject = null) {
 
   for (const field of EDITABLE_FIELDS) {
     if (field === 'label') {
-      normalized.label = object.label === null ? null : String(object.label ?? existingObject?.label ?? '').trim() || null;
+      const nextLabel = object.label === undefined ? existingObject?.label : object.label;
+      normalized.label = normalizeJsonValue(nextLabel);
+      continue;
+    }
+
+    if (field === 'styleJson' || field === 'metaJson') {
+      const nextValue = object[field] === undefined ? existingObject?.[field] : object[field];
+      normalized[field] = normalizeJsonValue(nextValue);
       continue;
     }
 
@@ -283,6 +290,22 @@ function normalizeEditableObject(object, existingObject = null) {
   }
 
   return normalized;
+}
+
+function normalizeJsonValue(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim() || null;
+  }
+
+  if (typeof value === 'object') {
+    return value;
+  }
+
+  return String(value).trim() || null;
 }
 
 function validateEditorObjects(objects) {
@@ -514,9 +537,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
       prisma.mapObject.create({
         data: {
           mapId,
-          ...normalizedObject,
-          styleJson: object.styleJson ?? null,
-          metaJson: object.metaJson ?? null
+          ...normalizedObject
         }
       })
     );
