@@ -6,6 +6,8 @@ import PanelCard from '../components/PanelCard';
 import { apiRequest, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
+const TEXTURE_ASSETS_STORAGE_KEY = 'map-editor-texture-assets';
+
 const STATIC_TYPE_ACCENTS = {
   BAR: 'bar',
   STAGE: 'stage',
@@ -39,6 +41,8 @@ const PROPERTY_FIELDS = [
     { value: 'water', label: 'Вода' },
     { value: 'wood', label: 'Дерево' }
   ]},
+  { key: 'textureUrl', type: 'text', section: 'Graphics', placeholder: 'Texture image URL' },
+  { key: 'opacity', type: 'number', section: 'Graphics', step: 0.05 },
   { key: 'svgUrl', type: 'text', section: 'Graphics', placeholder: 'R2 URL or external SVG' },
   { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>' },
   { key: 'strokeWidth', type: 'number', section: 'Graphics', step: 1 },
@@ -50,7 +54,7 @@ const PROPERTY_FIELDS = [
   { key: 'rotation', type: 'number', section: 'Transform', step: 1 },
   { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
 ];
-const META_PROPERTY_FIELDS = new Set(['texture', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
+const META_PROPERTY_FIELDS = new Set(['texture', 'textureUrl', 'opacity', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
 const MIN_MAP_SCALE = 0.25;
 const MAX_MAP_SCALE = 1.75;
 const MAP_SCALE_STEP = 0.1;
@@ -73,6 +77,16 @@ const CREATION_PRESETS = {
 };
 
 const ASSET_CATEGORIES = {
+  SURFACES: {
+    label: 'Поверхні',
+    items: [
+      { type: 'CUSTOM', label: 'Полігон', width: 240, height: 160, subType: 'POLYGON', texture: 'sand' },
+      { type: 'CUSTOM', label: 'Пісок', width: 280, height: 160, subType: 'POLYGON', texture: 'sand' },
+      { type: 'CUSTOM', label: 'Дерево', width: 260, height: 120, subType: 'POLYGON', texture: 'wood' },
+      { type: 'CUSTOM', label: 'Вода', width: 320, height: 160, subType: 'POLYGON', texture: 'water' },
+      { type: 'CUSTOM', label: 'Зелена зона', width: 220, height: 140, subType: 'POLYGON', texture: 'grass' }
+    ]
+  },
   FURNITURE: {
     label: 'Меблі',
     items: [
@@ -124,6 +138,48 @@ function calculateFitScale(container, map) {
   const availableWidth = Math.max(container.clientWidth - MAP_VIEWPORT_PADDING * 2, 320);
   const availableHeight = Math.max(container.clientHeight - MAP_VIEWPORT_PADDING * 2, 240);
   return clampScale(Math.min(availableWidth / map.width, availableHeight / map.height, 1));
+}
+
+function getCanvasPoint(event, scale) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  return {
+    x: Math.round((event.clientX - rect.left) / scale),
+    y: Math.round((event.clientY - rect.top) / scale)
+  };
+}
+
+function getPolygonBounds(points) {
+  const minX = Math.min(...points.map((point) => point.x));
+  const minY = Math.min(...points.map((point) => point.y));
+  const maxX = Math.max(...points.map((point) => point.x));
+  const maxY = Math.max(...points.map((point) => point.y));
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(maxX - minX, 24),
+    height: Math.max(maxY - minY, 24)
+  };
+}
+
+function normalizePolygonPoints(points, bounds) {
+  return points.map((point) => ({
+    x: Math.round(point.x - bounds.x),
+    y: Math.round(point.y - bounds.y)
+  }));
+}
+
+function pointsToSvg(points) {
+  return (points || []).map((point) => `${point.x},${point.y}`).join(' ');
+}
+
+function loadTextureAssets() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TEXTURE_ASSETS_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 function normalizeMap(map) {
@@ -271,7 +327,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
   const table = selectedObject.tableId ? tableMap.get(selectedObject.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
 
-  const handleFileUpload = async (event) => {
+  const uploadFileToField = async (event, field) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -284,10 +340,12 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
     });
 
     if (result.response.ok && result.body?.url) {
-      onFieldChange('svgUrl', result.body.url);
+      onFieldChange(field, result.body.url);
     } else {
       alert('Upload failed');
     }
+
+    event.target.value = '';
   };
 
   const sections = [...new Set(PROPERTY_FIELDS.map(f => f.section))];
@@ -348,8 +406,8 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                         value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
                         onChange={(event) => onFieldChange(field.key, event.target.value)}
                       />
-                      {field.key === 'svgUrl' && (
-                        <button className="btn btn-secondary btn-small" type="button" onClick={() => document.getElementById('asset-upload').click()}>
+                      {['svgUrl', 'textureUrl'].includes(field.key) && (
+                        <button className="btn btn-secondary btn-small" type="button" onClick={() => document.getElementById(`${field.key}-upload`).click()}>
                           {t('mapEditor.uploadAsset')}
                         </button>
                       )}
@@ -360,7 +418,8 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
             </div>
           </div>
         ))}
-        <input id="asset-upload" type="file" accept=".svg,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleFileUpload} />
+        <input id="svgUrl-upload" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'svgUrl')} />
+        <input id="textureUrl-upload" type="file" accept=".png,.jpg,.jpeg,.webp,.svg" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'textureUrl')} />
 
         {selectedObject.type === 'TABLE' ? (
           <>
@@ -477,12 +536,21 @@ function SVGDefinitions() {
   );
 }
 
+function getTextureFill({ texture, textureUrl, fallback = '#f1f5f9' }) {
+  if (textureUrl) return `url(${textureUrl})`;
+  if (texture === 'sand') return 'url(#pattern-sand)';
+  if (texture === 'water') return 'url(#pattern-water)';
+  if (texture === 'wood') return 'url(#pattern-wood)';
+  if (texture === 'grass') return 'url(#pattern-grass)';
+  return fallback;
+}
+
 function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected }) {
   const table = object.tableId ? tableMap.get(object.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const accent = getObjectAccent(object, language);
 
-  const { subType, svgUrl, svgCode, texture, strokeWidth, strokeColor } = object.metaJson || {};
+  const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor } = object.metaJson || {};
 
   const renderObjectContent = () => {
     // 1. External SVG URL
@@ -516,6 +584,40 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
       return (
         <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit' }}>
           {SVG_TEMPLATES[subType]}
+        </svg>
+      );
+    }
+
+    if (subType === 'POLYGON') {
+      const points = object.metaJson?.points?.length
+        ? object.metaJson.points
+        : [
+            { x: 0, y: 0 },
+            { x: object.width, y: 0 },
+            { x: object.width, y: object.height },
+            { x: 0, y: object.height }
+          ];
+
+      const texturePatternId = `texture-${String(object.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      const fill = textureUrl ? `url(#${texturePatternId})` : getTextureFill({ texture, textureUrl, fallback: '#e2e8f0' });
+
+      return (
+        <svg width="100%" height="100%" viewBox={`0 0 ${object.width} ${object.height}`} preserveAspectRatio="none">
+          {textureUrl ? (
+            <defs>
+              <pattern id={texturePatternId} x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox">
+                <image href={textureUrl} x="0" y="0" width={object.width} height={object.height} preserveAspectRatio="xMidYMid slice" />
+              </pattern>
+            </defs>
+          ) : null}
+          <polygon
+            points={pointsToSvg(points)}
+            fill={fill}
+            opacity={opacity || 1}
+            stroke={strokeColor || '#64748b'}
+            strokeWidth={strokeWidth || 2}
+            vectorEffect="non-scaling-stroke"
+          />
         </svg>
       );
     }
@@ -555,10 +657,10 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           </svg>
         );
       case 'CUSTOM':
-        if (texture === 'sand' || accent === 'sand') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-sand)', borderRadius: '4px' }} />;
-        if (texture === 'water' || accent === 'sea') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-water)', borderRadius: '4px' }} />;
-        if (texture === 'wood' || accent === 'deck') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-wood)', borderRadius: '4px' }} />;
-        if (texture === 'grass') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-grass)', borderRadius: '4px' }} />;
+        if (texture || textureUrl || ['sand', 'sea', 'deck'].includes(accent)) {
+          const accentTexture = texture || (accent === 'sand' ? 'sand' : accent === 'sea' ? 'water' : accent === 'deck' ? 'wood' : '');
+          return <div style={{ width: '100%', height: '100%', background: getTextureFill({ texture: accentTexture, textureUrl }), borderRadius: '4px', opacity: opacity || 1 }} />;
+        }
 
         return (
           <div style={{ 
@@ -646,6 +748,48 @@ function LayerManager
   );
 }
 
+function TextureLibrary({ textureAssets, selectedObject, onUpload, onApply, onDelete, t }) {
+  return (
+    <div className="texture-library">
+      <div className="texture-library-head">
+        <div>
+          <strong>{t('mapEditor.texturesTitle')}</strong>
+          <p className="muted small">{t('mapEditor.texturesDescription')}</p>
+        </div>
+        <label className="btn btn-secondary btn-small texture-upload-button">
+          {t('mapEditor.uploadTexture')}
+          <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={onUpload} />
+        </label>
+      </div>
+
+      {textureAssets.length ? (
+        <div className="texture-grid">
+          {textureAssets.map((asset) => (
+            <div key={asset.id} className="texture-item">
+              <button
+                type="button"
+                className="texture-preview"
+                style={{ backgroundImage: `url(${asset.url})` }}
+                onClick={() => onApply(asset.url)}
+                disabled={!selectedObject}
+                title={selectedObject ? t('mapEditor.applyTexture') : t('mapEditor.noSelection')}
+              />
+              <div className="texture-item-meta">
+                <span>{asset.name}</span>
+                <button type="button" className="btn btn-secondary btn-small" onClick={() => onDelete(asset.id)}>
+                  {t('mapEditor.deleteTexture')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="muted small">{t('mapEditor.noTextures')}</p>
+      )}
+    </div>
+  );
+}
+
 export default function MapEditorPage() {
   const { t, language } = useAdminI18n();
   const objectIdRef = useRef(0);
@@ -653,6 +797,7 @@ export default function MapEditorPage() {
   const panStateRef = useRef(null);
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
+  const [textureAssets, setTextureAssets] = useState(loadTextureAssets);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -671,18 +816,29 @@ export default function MapEditorPage() {
     current: null,
     selectedObjectId: null,
     // V2 State
-    activeTab: 'PROPERTIES', // 'PROPERTIES' | 'LAYERS' | 'ASSETS'
-    activeTool: 'SELECT', // 'SELECT' | 'PAN' | 'LINE'
-    activeCategory: 'FURNITURE',
-    drawingPath: null // { points: [{x, y}], id: string }
+    activeTab: 'PROPERTIES',
+    activeTool: 'SELECT',
+    activeCategory: 'SURFACES',
+    drawingPath: null,
+    polygonDraft: null
   });
 
   const handleCanvasMouseDown = (e) => {
+    if (editorState.activeTool === 'POLYGON') {
+      const point = getCanvasPoint(e, mapScale);
+      setEditorState((prev) => ({
+        ...prev,
+        polygonDraft: {
+          points: [...(prev.polygonDraft?.points || []), point],
+          cursor: point
+        }
+      }));
+      return;
+    }
+
     if (editorState.activeTool !== 'LINE') return;
     
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left) / mapScale);
-    const y = Math.round((e.clientY - rect.top) / mapScale);
+    const { x, y } = getCanvasPoint(e, mapScale);
 
     setEditorState(prev => ({
       ...prev,
@@ -724,11 +880,18 @@ export default function MapEditorPage() {
   };
 
   const handleCanvasMouseMove = (e) => {
+    if (editorState.activeTool === 'POLYGON' && editorState.polygonDraft?.points?.length) {
+      const point = getCanvasPoint(e, mapScale);
+      setEditorState((prev) => ({
+        ...prev,
+        polygonDraft: prev.polygonDraft ? { ...prev.polygonDraft, cursor: point } : null
+      }));
+      return;
+    }
+
     if (!editorState.drawingPath) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left) / mapScale);
-    const y = Math.round((e.clientY - rect.top) / mapScale);
+    const { x, y } = getCanvasPoint(e, mapScale);
 
     setEditorState(prev => ({
       ...prev,
@@ -740,6 +903,7 @@ export default function MapEditorPage() {
   };
 
   const handleCanvasMouseUp = () => {
+    if (editorState.activeTool === 'POLYGON') return;
     if (!editorState.drawingPath) return;
 
     const p1 = editorState.drawingPath.points[0];
@@ -769,6 +933,70 @@ export default function MapEditorPage() {
     setEditorState(prev => ({ ...prev, drawingPath: null }));
   };
 
+  function finishPolygonDraft() {
+    const points = editorState.polygonDraft?.points || [];
+    if (points.length < 3) {
+      setEditorState((prev) => ({ ...prev, polygonDraft: null }));
+      return;
+    }
+
+    const bounds = getPolygonBounds(points);
+    createObject('CUSTOM', {
+      label: t('mapEditor.polygonDefault'),
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
+      subType: 'POLYGON',
+      texture: 'sand',
+      points: normalizePolygonPoints(points, bounds)
+    });
+
+    setEditorState((prev) => ({ ...prev, polygonDraft: null, activeTool: 'SELECT' }));
+  }
+
+  function cancelPolygonDraft() {
+    setEditorState((prev) => ({ ...prev, polygonDraft: null }));
+  }
+
+  async function handleTextureUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const result = await apiRequest('/api/admin/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (result.response.ok && result.body?.url) {
+      setTextureAssets((prev) => [
+        {
+          id: `texture-${Date.now()}`,
+          name: file.name,
+          url: result.body.url
+        },
+        ...prev
+      ]);
+    } else {
+      alert(result.body?.message || 'Upload failed');
+    }
+
+    event.target.value = '';
+  }
+
+  function applyTextureToSelected(textureUrl) {
+    if (!selectedObject) return;
+    handleFieldChange('textureUrl', textureUrl);
+    handleFieldChange('texture', '');
+  }
+
+  function deleteTextureAsset(assetId) {
+    setTextureAssets((prev) => prev.filter((asset) => asset.id !== assetId));
+  }
+
   useEffect(() => {
     loadInitialMapEditor().catch(() => {
       setEditorState((prev) => ({
@@ -779,6 +1007,10 @@ export default function MapEditorPage() {
       }));
     });
   }, [t]);
+
+  useEffect(() => {
+    localStorage.setItem(TEXTURE_ASSETS_STORAGE_KEY, JSON.stringify(textureAssets));
+  }, [textureAssets]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -1099,7 +1331,12 @@ export default function MapEditorPage() {
         metaJson: { 
           subType: meta.subType,
           pathData: meta.pathData,
+          points: meta.points,
           texture: meta.texture,
+          textureUrl: meta.textureUrl,
+          opacity: meta.opacity,
+          strokeColor: meta.strokeColor,
+          strokeWidth: meta.strokeWidth,
           svgUrl: meta.svgUrl,
           svgCode: meta.svgCode
         }
@@ -1406,6 +1643,17 @@ export default function MapEditorPage() {
         {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
         {editorState.error ? <p className="error">{editorState.error}</p> : null}
         {editorState.saveMessage ? <p className="success-text">{editorState.saveMessage}</p> : null}
+        {editorState.activeTool === 'POLYGON' ? (
+          <div className="map-editor-draft-bar">
+            <span>{t('mapEditor.polygonHint', { count: editorState.polygonDraft?.points?.length || 0 })}</span>
+            <button type="button" className="btn btn-small" onClick={finishPolygonDraft} disabled={(editorState.polygonDraft?.points?.length || 0) < 3}>
+              {t('mapEditor.finishPolygon')}
+            </button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={cancelPolygonDraft}>
+              {t('mapEditor.cancelPolygon')}
+            </button>
+          </div>
+        ) : null}
 
         {!editorState.loading && editorState.current ? (
           <div className="map-editor-v2">
@@ -1433,6 +1681,14 @@ export default function MapEditorPage() {
               >
                 <i className="icon-line">L</i>
                 <span>{t('mapEditor.tools.line')}</span>
+              </button>
+              <button
+                className={`tool-button ${editorState.activeTool === 'POLYGON' ? 'active' : ''}`}
+                onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'POLYGON', polygonDraft: null }))}
+                title={t('mapEditor.tools.polygon')}
+              >
+                <i className="icon-polygon">G</i>
+                <span>{t('mapEditor.tools.polygon')}</span>
               </button>
 
               <div className="separator" style={{ width: '40px', height: '1px', background: '#e2e8f0', margin: '12px 0' }} />
@@ -1472,7 +1728,7 @@ export default function MapEditorPage() {
                     transformOrigin: 'top left',
                     boxShadow: '0 0 40px rgba(0,0,0,0.1)',
                     position: 'relative',
-                    cursor: editorState.activeTool === 'LINE' ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
+                    cursor: ['LINE', 'POLYGON'].includes(editorState.activeTool) ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
                   }}
                   onMouseDown={handleCanvasMouseDown}
                   onMouseMove={handleCanvasMouseMove}
@@ -1505,6 +1761,28 @@ export default function MapEditorPage() {
                       />
                     </svg>
                   )}
+
+                  {editorState.polygonDraft?.points?.length ? (
+                    <svg className="map-editor-draft-overlay">
+                      <polyline
+                        points={pointsToSvg([...(editorState.polygonDraft.points || []), editorState.polygonDraft.cursor].filter(Boolean))}
+                        fill="none"
+                        stroke="#2563eb"
+                        strokeWidth="3"
+                        strokeDasharray="6,6"
+                      />
+                      {editorState.polygonDraft.points.length >= 3 ? (
+                        <polygon
+                          points={pointsToSvg(editorState.polygonDraft.points)}
+                          fill="rgba(37, 99, 235, 0.14)"
+                          stroke="none"
+                        />
+                      ) : null}
+                      {editorState.polygonDraft.points.map((point, index) => (
+                        <circle key={`${point.x}-${point.y}-${index}`} cx={point.x} cy={point.y} r="5" fill="#2563eb" />
+                      ))}
+                    </svg>
+                  ) : null}
 
                   {objects.map((object) => {
                     return (
@@ -1604,6 +1882,15 @@ export default function MapEditorPage() {
 
                 {editorState.activeTab === 'ASSETS' && (
                   <div className="asset-browser">
+                    <TextureLibrary
+                      textureAssets={textureAssets}
+                      selectedObject={selectedObject}
+                      onUpload={handleTextureUpload}
+                      onApply={applyTextureToSelected}
+                      onDelete={deleteTextureAsset}
+                      t={t}
+                    />
+
                     <div className="category-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
                       {Object.keys(ASSET_CATEGORIES).map(catKey => (
                         <button

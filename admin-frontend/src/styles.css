@@ -1249,6 +1249,20 @@ textarea {
 
 .map-editor-page {
   padding: 12px;
+  margin-inline: -8px;
+}
+
+.map-editor-draft-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 700;
 }
 
 .map-editor-toolbar-group.compact-actions {
@@ -2000,14 +2014,15 @@ textarea {
 /* Map Editor V2 Layout */
 .map-editor-v2 {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) minmax(300px, 320px);
-  grid-template-rows: minmax(760px, calc(100vh - 240px));
+  grid-template-columns: 64px minmax(0, 1fr) minmax(280px, 300px);
+  grid-template-rows: minmax(620px, calc(100vh - 210px));
   gap: 0;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   overflow: hidden;
   background: #f8fafc;
   margin-top: 16px;
+  min-height: 0;
 }
 
 .map-editor-tools {
@@ -2034,11 +2049,21 @@ textarea {
   overflow: auto;
   width: 100%;
   height: 100%;
-  padding: 48px;
+  padding: 32px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   cursor: grab;
+}
+
+.map-editor-draft-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 9999;
 }
 
 .map-editor-canvas-scale-layer {
@@ -2057,6 +2082,7 @@ textarea {
   flex-direction: column;
   overflow-y: auto;
   z-index: 10;
+  min-height: 0;
 }
 
 .tool-button {
@@ -2117,6 +2143,79 @@ textarea {
 
 .inspector-content {
   padding: 20px;
+  min-height: 0;
+}
+
+.texture-library {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  margin-bottom: 16px;
+}
+
+.texture-library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.texture-upload-button {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.texture-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.texture-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.texture-item {
+  display: grid;
+  gap: 6px;
+}
+
+.texture-preview {
+  width: 100%;
+  aspect-ratio: 1.6;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #e2e8f0;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+}
+
+.texture-preview:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.texture-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.texture-item-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .asset-library {

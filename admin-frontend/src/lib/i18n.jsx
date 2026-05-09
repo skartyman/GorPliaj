@@ -222,6 +222,16 @@ const translations = {
       duplicateSelected: 'Дублювати обране',
       deleteSelected: 'Видалити обране',
       deleteConfirm: 'Видалити об’єкт «{name}»?',
+      polygonDefault: 'Полігон',
+      polygonHint: 'Клікніть по карті, щоб додати точки полігону. Точок: {count}',
+      finishPolygon: 'Завершити полігон',
+      cancelPolygon: 'Скасувати',
+      texturesTitle: 'Текстури',
+      texturesDescription: 'Завантажуйте текстури і застосовуйте їх до вибраного об’єкта або полігону.',
+      uploadTexture: 'Завантажити текстуру',
+      applyTexture: 'Застосувати текстуру',
+      deleteTexture: 'Прибрати',
+      noTextures: 'Завантажених текстур поки немає.',
       addObject: '+ {type}',
       rotateLeft: '↺ -15°',
       rotateRight: '↻ +15°',
@@ -246,7 +256,8 @@ const translations = {
       tools: {
         select: 'Вибір',
         pan: 'Огляд',
-        line: 'Лінія'
+        line: 'Лінія',
+        polygon: 'Полігон'
       },
       tabs: {
         properties: 'Властивості',
@@ -267,6 +278,8 @@ const translations = {
         backgroundImage: 'URL фонової схеми',
         backgroundColor: 'Колір фону',
         texture: 'Текстура',
+        textureUrl: 'URL текстури',
+        opacity: 'Прозорість',
         svgUrl: 'SVG / зображення',
         svgCode: 'SVG-код',
         strokeWidth: 'Товщина лінії',
