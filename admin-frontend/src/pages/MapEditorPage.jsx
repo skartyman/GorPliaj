@@ -33,11 +33,11 @@ const MAP_VARIANT_PRESETS = [
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', section: 'General' },
   { key: 'texture', type: 'select', section: 'Graphics', options: [
-    { value: '', label: 'None' },
-    { value: 'grass', label: 'Grass' },
-    { value: 'sand', label: 'Sand' },
-    { value: 'water', label: 'Water' },
-    { value: 'wood', label: 'Wood' }
+    { value: '', label: 'Без текстури' },
+    { value: 'grass', label: 'Трава' },
+    { value: 'sand', label: 'Пісок' },
+    { value: 'water', label: 'Вода' },
+    { value: 'wood', label: 'Дерево' }
   ]},
   { key: 'svgUrl', type: 'text', section: 'Graphics', placeholder: 'R2 URL or external SVG' },
   { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>' },
@@ -51,6 +51,11 @@ const PROPERTY_FIELDS = [
   { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
 ];
 const META_PROPERTY_FIELDS = new Set(['texture', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
+const SECTION_LABEL_KEYS = {
+  General: 'mapEditor.sections.general',
+  Graphics: 'mapEditor.sections.graphics',
+  Transform: 'mapEditor.sections.transform'
+};
 const CREATION_PRESETS = {
   TABLE: { width: 108, height: 72 },
   BAR: { width: 160, height: 64 },
@@ -65,32 +70,32 @@ const CREATION_PRESETS = {
 
 const ASSET_CATEGORIES = {
   FURNITURE: {
-    label: 'Furniture',
+    label: 'Меблі',
     items: [
-      { type: 'TABLE', label: 'Table 4x', width: 100, height: 70 },
-      { type: 'TABLE', label: 'Table 2x', width: 60, height: 60 },
-      { type: 'TABLE', label: 'Table 6x', width: 160, height: 70 },
-      { type: 'CUSTOM', label: 'Sunbed', width: 80, height: 160, subType: 'SUNBED' },
-      { type: 'CUSTOM', label: 'Umbrella', width: 120, height: 120, subType: 'UMBRELLA' },
-      { type: 'CUSTOM', label: 'Bed', width: 160, height: 200, subType: 'BED' }
+      { type: 'TABLE', label: 'Стіл 4', width: 100, height: 70 },
+      { type: 'TABLE', label: 'Стіл 2', width: 60, height: 60 },
+      { type: 'TABLE', label: 'Стіл 6', width: 160, height: 70 },
+      { type: 'CUSTOM', label: 'Шезлонг', width: 80, height: 160, subType: 'SUNBED' },
+      { type: 'CUSTOM', label: 'Парасоля', width: 120, height: 120, subType: 'UMBRELLA' },
+      { type: 'CUSTOM', label: 'Ліжко', width: 160, height: 200, subType: 'BED' }
     ]
   },
   NATURE: {
-    label: 'Nature',
+    label: 'Озеленення',
     items: [
-      { type: 'DECOR', label: 'Tree', width: 120, height: 120, subType: 'TREE' },
-      { type: 'DECOR', label: 'Bush', width: 80, height: 80, subType: 'BUSH' },
-      { type: 'DECOR', label: 'Flower', width: 40, height: 40, subType: 'FLOWER' }
+      { type: 'DECOR', label: 'Дерево', width: 120, height: 120, subType: 'TREE' },
+      { type: 'DECOR', label: 'Кущ', width: 80, height: 80, subType: 'BUSH' },
+      { type: 'DECOR', label: 'Квіти', width: 40, height: 40, subType: 'FLOWER' }
     ]
   },
   INFRASTRUCTURE: {
-    label: 'Infrastructure',
+    label: 'Інфраструктура',
     items: [
-      { type: 'ENTRANCE', label: 'Entrance', width: 110, height: 50 },
+      { type: 'ENTRANCE', label: 'Вхід', width: 110, height: 50 },
       { type: 'WC', label: 'WC', width: 90, height: 70 },
-      { type: 'STAIRS', label: 'Stairs', width: 120, height: 80 },
-      { type: 'CUSTOM', label: 'Kitchen', width: 200, height: 150, subType: 'KITCHEN' },
-      { type: 'CUSTOM', label: 'Cash Desk', width: 100, height: 60, subType: 'CASHIER' }
+      { type: 'STAIRS', label: 'Сходи', width: 120, height: 80 },
+      { type: 'CUSTOM', label: 'Кухня', width: 200, height: 150, subType: 'KITCHEN' },
+      { type: 'CUSTOM', label: 'Каса', width: 100, height: 60, subType: 'CASHIER' }
     ]
   }
 };
@@ -295,7 +300,9 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
       <div className="editor-inspector-sections">
         {sections.map(section => (
           <div key={section} className="inspector-section" style={{ marginBottom: '16px' }}>
-            <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>{section}</h5>
+            <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+              {t(SECTION_LABEL_KEYS[section] || section)}
+            </h5>
             <div className="editor-form-grid">
               {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
                 <label key={field.key}>
@@ -324,8 +331,8 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                         onChange={(event) => onFieldChange(field.key, event.target.value)}
                       />
                       {field.key === 'svgUrl' && (
-                        <button className="btn btn-secondary btn-small" onClick={() => document.getElementById('asset-upload').click()}>
-                          в†С
+                        <button className="btn btn-secondary btn-small" type="button" onClick={() => document.getElementById('asset-upload').click()}>
+                          {t('mapEditor.uploadAsset')}
                         </button>
                       )}
                     </div>
@@ -624,6 +631,8 @@ function LayerManager
 export default function MapEditorPage() {
   const { t, language } = useAdminI18n();
   const objectIdRef = useRef(0);
+  const canvasContainerRef = useRef(null);
+  const panStateRef = useRef(null);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -662,6 +671,36 @@ export default function MapEditorPage() {
         points: [{ x, y }, { x, y }]
       }
     }));
+  };
+
+  const handlePanMouseDown = (event) => {
+    if (editorState.activeTool !== 'PAN' || !canvasContainerRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    panStateRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      scrollLeft: canvasContainerRef.current.scrollLeft,
+      scrollTop: canvasContainerRef.current.scrollTop
+    };
+  };
+
+  const handlePanMouseMove = (event) => {
+    if (!panStateRef.current || !canvasContainerRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    const deltaX = event.clientX - panStateRef.current.x;
+    const deltaY = event.clientY - panStateRef.current.y;
+    canvasContainerRef.current.scrollLeft = panStateRef.current.scrollLeft - deltaX;
+    canvasContainerRef.current.scrollTop = panStateRef.current.scrollTop - deltaY;
+  };
+
+  const handlePanMouseUp = () => {
+    panStateRef.current = null;
   };
 
   const handleCanvasMouseMove = (e) => {
@@ -703,7 +742,7 @@ export default function MapEditorPage() {
       height,
       x,
       y,
-      label: 'Line',
+      label: t('mapEditor.lineDefault'),
       pathData
     });
 
@@ -1302,26 +1341,26 @@ export default function MapEditorPage() {
               <button 
                 className={`tool-button ${editorState.activeTool === 'SELECT' ? 'active' : ''}`}
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'SELECT' }))}
-                title="Select (V)"
+                title={t('mapEditor.tools.select')}
               >
                 <i className="icon-select">S</i>
-                <span>Select</span>
+                <span>{t('mapEditor.tools.select')}</span>
               </button>
               <button 
                 className={`tool-button ${editorState.activeTool === 'PAN' ? 'active' : ''}`}
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'PAN' }))}
-                title="Pan (H)"
+                title={t('mapEditor.tools.pan')}
               >
                 <i className="icon-pan">P</i>
-                <span>Pan</span>
+                <span>{t('mapEditor.tools.pan')}</span>
               </button>
               <button 
                 className={`tool-button ${editorState.activeTool === 'LINE' ? 'active' : ''}`}
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'LINE' }))}
-                title="Line (L)"
+                title={t('mapEditor.tools.line')}
               >
                 <i className="icon-line">L</i>
-                <span>Line</span>
+                <span>{t('mapEditor.tools.line')}</span>
               </button>
 
               <div className="separator" style={{ width: '40px', height: '1px', background: '#e2e8f0', margin: '12px 0' }} />
@@ -1331,13 +1370,20 @@ export default function MapEditorPage() {
                 onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
               >
                 <i className="icon-assets">A</i>
-                <span>Assets</span>
+                <span>{t('mapEditor.tabs.assets')}</span>
               </button>
             </aside>
 
             <main className="map-editor-viewport">
               <SVGDefinitions />
-              <div className="map-editor-canvas-container">
+              <div
+                className="map-editor-canvas-container"
+                ref={canvasContainerRef}
+                onMouseDown={handlePanMouseDown}
+                onMouseMove={handlePanMouseMove}
+                onMouseUp={handlePanMouseUp}
+                onMouseLeave={handlePanMouseUp}
+              >
                 <div
                   className="map-editor-canvas"
                   style={{
@@ -1393,7 +1439,11 @@ export default function MapEditorPage() {
                             height: ref.offsetHeight
                           })
                         }
-                        onMouseDown={() => setEditorState((prev) => ({ ...prev, selectedObjectId: object.id, activeTab: 'PROPERTIES' }))}
+                        onMouseDown={() => {
+                          if (editorState.activeTool === 'SELECT') {
+                            setEditorState((prev) => ({ ...prev, selectedObjectId: object.id, activeTab: 'PROPERTIES' }));
+                          }
+                        }}
                         enableResizing={editorState.activeTool === 'SELECT'}
                         disableDragging={editorState.activeTool !== 'SELECT'}
                         dragGrid={[1, 1]}
@@ -1422,19 +1472,19 @@ export default function MapEditorPage() {
                   className={`inspector-tab ${editorState.activeTab === 'PROPERTIES' ? 'active' : ''}`}
                   onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'PROPERTIES' }))}
                 >
-                  Properties
+                  {t('mapEditor.tabs.properties')}
                 </div>
                 <div 
                   className={`inspector-tab ${editorState.activeTab === 'LAYERS' ? 'active' : ''}`}
                   onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'LAYERS' }))}
                 >
-                  Layers
+                  {t('mapEditor.tabs.layers')}
                 </div>
                 <div 
                   className={`inspector-tab ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
                   onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
                 >
-                  Assets
+                  {t('mapEditor.tabs.assets')}
                 </div>
               </div>
 

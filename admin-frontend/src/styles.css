@@ -1232,6 +1232,7 @@ textarea {
 
 .map-editor-canvas {
   position: relative;
+  flex: 0 0 auto;
   border-radius: 12px;
   border: 1px solid #bfdbfe;
   background-color: #f8fafc;
@@ -1984,6 +1985,11 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
+  cursor: grab;
+}
+
+.map-editor-canvas-container:active {
+  cursor: grabbing;
 }
 
 .map-editor-inspector {

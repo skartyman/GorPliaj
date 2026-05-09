@@ -229,6 +229,23 @@ const translations = {
       noSelection: 'Оберіть об’єкт на схемі, щоб редагувати його властивості.',
       unassignedTable: 'Без прив’язки до столу',
       newLabelDefault: 'Новий текст',
+      lineDefault: 'Лінія',
+      uploadAsset: 'Завантажити',
+      sections: {
+        general: 'Основне',
+        graphics: 'Графіка',
+        transform: 'Позиція'
+      },
+      tools: {
+        select: 'Вибір',
+        pan: 'Огляд',
+        line: 'Лінія'
+      },
+      tabs: {
+        properties: 'Властивості',
+        layers: 'Шари',
+        assets: 'Об’єкти'
+      },
       fields: {
         label: 'Текст',
         x: 'X',
@@ -241,7 +258,12 @@ const translations = {
         tableId: 'Пов’язаний стіл',
         tablePhotoUrl: 'Фото столу',
         backgroundImage: 'URL фонової схеми',
-        backgroundColor: 'Колір фону'
+        backgroundColor: 'Колір фону',
+        texture: 'Текстура',
+        svgUrl: 'SVG / зображення',
+        svgCode: 'SVG-код',
+        strokeWidth: 'Товщина лінії',
+        strokeColor: 'Колір лінії'
       },
       objectType: {
         TABLE: 'Стіл',
