@@ -2036,7 +2036,7 @@ textarea {
 /* Map Editor V2 Layout */
 .map-editor-v2 {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) minmax(250px, 280px);
+  grid-template-columns: 56px minmax(0, 1fr) minmax(340px, 360px);
   grid-template-rows: clamp(540px, calc(100dvh - 210px), 720px);
   gap: 0;
   border: 1px solid #e2e8f0;
@@ -2171,6 +2171,7 @@ textarea {
   padding-bottom: 180px;
   min-height: 0;
   background: #fff;
+  min-width: 0;
 }
 
 .map-management-panel {
@@ -2211,19 +2212,22 @@ textarea {
   border-radius: 12px;
   background: #f8fafc;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .texture-library-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .texture-upload-button {
   position: relative;
   overflow: hidden;
-  white-space: nowrap;
+  white-space: normal;
+  width: 100%;
+  justify-content: center;
+  text-align: center;
 }
 
 .texture-upload-button input {
@@ -2280,6 +2284,17 @@ textarea {
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   padding: 10px;
+  min-width: 0;
+}
+
+.asset-browser,
+.category-tabs {
+  min-width: 0;
+}
+
+.category-tabs {
+  flex-wrap: wrap !important;
+  overflow-x: visible !important;
 }
 
 .asset-item {
