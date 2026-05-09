@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
@@ -24,10 +24,16 @@ export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSidebar, setOpenSidebar] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.location.pathname.startsWith('/admin/map-editor'));
   const { t, toggleLanguage } = useAdminI18n();
   const title = useMemo(() => pageTitle(location.pathname, t), [location.pathname, t]);
   const isMapEditor = location.pathname.startsWith('/admin/map-editor');
+
+  useEffect(() => {
+    if (isMapEditor) {
+      setSidebarCollapsed(true);
+    }
+  }, [isMapEditor]);
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);

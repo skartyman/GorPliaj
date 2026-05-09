@@ -2053,8 +2053,8 @@ textarea {
   height: 100%;
   padding: 18px;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: safe center;
+  justify-content: safe center;
   cursor: grab;
 }
 

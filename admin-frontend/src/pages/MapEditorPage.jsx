@@ -58,7 +58,7 @@ const META_PROPERTY_FIELDS = new Set(['texture', 'textureUrl', 'opacity', 'svgUr
 const MIN_MAP_SCALE = 0.25;
 const MAX_MAP_SCALE = 1.75;
 const MAP_SCALE_STEP = 0.1;
-const MAP_VIEWPORT_PADDING = 48;
+const MAP_VIEWPORT_PADDING = 18;
 const SURFACE_Z_INDEX = 0;
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
