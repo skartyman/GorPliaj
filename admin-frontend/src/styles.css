@@ -129,6 +129,12 @@ p {
   min-height: 100vh;
 }
 
+.map-editor-shell .page-container-head,
+.map-editor-shell .map-editor-hero,
+.map-editor-shell .admin-install-prompt {
+  display: none;
+}
+
 .topbar {
   background: #fff;
   border-radius: 14px;
@@ -1218,9 +1224,12 @@ textarea {
 }
 
 .map-editor-toolbar {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
 .map-editor-toolbar-group {
