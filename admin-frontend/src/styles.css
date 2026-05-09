@@ -2017,7 +2017,7 @@ textarea {
 .map-editor-v2 {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) minmax(250px, 280px);
-  grid-template-rows: minmax(760px, calc(100vh - 150px));
+  grid-template-rows: clamp(540px, calc(100dvh - 210px), 720px);
   gap: 0;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -2087,6 +2087,7 @@ textarea {
   z-index: 10;
   min-height: 0;
   scrollbar-gutter: stable;
+  padding-bottom: 96px;
 }
 
 .tool-button {
@@ -2147,7 +2148,7 @@ textarea {
 
 .inspector-content {
   padding: 14px;
-  padding-bottom: 120px;
+  padding-bottom: 180px;
   min-height: 0;
   background: #fff;
 }
