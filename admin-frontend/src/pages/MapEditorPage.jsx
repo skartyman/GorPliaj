@@ -31,20 +31,24 @@ const MAP_VARIANT_PRESETS = [
   { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones' }
 ];
 const PROPERTY_FIELDS = [
-  { key: 'label', type: 'text', step: null },
-  { key: 'texture', type: 'select', options: [
+  { key: 'label', type: 'text', section: 'General' },
+  { key: 'texture', type: 'select', section: 'Graphics', options: [
     { value: '', label: 'None' },
     { value: 'grass', label: 'Grass' },
     { value: 'sand', label: 'Sand' },
     { value: 'water', label: 'Water' },
     { value: 'wood', label: 'Wood' }
   ]},
-  { key: 'x', type: 'number', step: 1 },
-  { key: 'y', type: 'number', step: 1 },
-  { key: 'width', type: 'number', step: 1 },
-  { key: 'height', type: 'number', step: 1 },
-  { key: 'rotation', type: 'number', step: 1 },
-  { key: 'zIndex', type: 'number', step: 1 }
+  { key: 'svgUrl', type: 'text', section: 'Graphics', placeholder: 'R2 URL or external SVG' },
+  { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>' },
+  { key: 'strokeWidth', type: 'number', section: 'Graphics', step: 1 },
+  { key: 'strokeColor', type: 'color', section: 'Graphics' },
+  { key: 'x', type: 'number', section: 'Transform', step: 1 },
+  { key: 'y', type: 'number', section: 'Transform', step: 1 },
+  { key: 'width', type: 'number', section: 'Transform', step: 1 },
+  { key: 'height', type: 'number', section: 'Transform', step: 1 },
+  { key: 'rotation', type: 'number', section: 'Transform', step: 1 },
+  { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
 ];
 const CREATION_PRESETS = {
   TABLE: { width: 108, height: 72 },
@@ -242,6 +246,27 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
   const table = selectedObject.tableId ? tableMap.get(selectedObject.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
 
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const result = await apiRequest('/api/admin/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (result.response.ok && result.body?.url) {
+      onFieldChange('svgUrl', result.body.url);
+    } else {
+      alert('Upload failed');
+    }
+  };
+
+  const sections = [...new Set(PROPERTY_FIELDS.map(f => f.section))];
+
   return (
     <div className="editor-properties-stack">
       <div className="editor-object-summary">
@@ -265,27 +290,51 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
         </button>
       </div>
 
-      <div className="editor-form-grid">
-        {PROPERTY_FIELDS.map((field) => (
-          <label key={field.key}>
-            {t(`mapEditor.fields.${field.key}`)}
-            {field.type === 'select' ? (
-              <select 
-                value={selectedObject.metaJson?.[field.key] || ''} 
-                onChange={(event) => onFieldChange(field.key, event.target.value)}
-              >
-                {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            ) : (
-              <input
-                type={field.type}
-                step={field.step ?? undefined}
-                value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : selectedObject[field.key]}
-                onChange={(event) => onFieldChange(field.key, event.target.value)}
-              />
-            )}
-          </label>
+      <div className="editor-inspector-sections">
+        {sections.map(section => (
+          <div key={section} className="inspector-section" style={{ marginBottom: '16px' }}>
+            <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>{section}</h5>
+            <div className="editor-form-grid">
+              {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
+                <label key={field.key}>
+                  <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
+                  {field.type === 'select' ? (
+                    <select 
+                      value={selectedObject.metaJson?.[field.key] || ''} 
+                      onChange={(event) => onFieldChange(field.key, event.target.value)}
+                    >
+                      {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                  ) : field.type === 'textarea' ? (
+                    <textarea
+                      value={selectedObject.metaJson?.[field.key] || ''}
+                      placeholder={field.placeholder}
+                      onChange={(event) => onFieldChange(field.key, event.target.value)}
+                      style={{ height: '60px', fontFamily: 'monospace', fontSize: '10px' }}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <input
+                        type={field.type}
+                        step={field.step ?? undefined}
+                        placeholder={field.placeholder}
+                        value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
+                        onChange={(event) => onFieldChange(field.key, event.target.value)}
+                      />
+                      {field.key === 'svgUrl' && (
+                        <button className="btn btn-secondary btn-small" onClick={() => document.getElementById('asset-upload').click()}>
+                          в†С
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
         ))}
+        <input id="asset-upload" type="file" accept=".svg,.png,.jpg,.jpeg" style={{ display: 'none' }} onChange={handleFileUpload} />
+      </div>
 
         {selectedObject.type === 'TABLE' ? (
           <>
@@ -407,13 +456,39 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const accent = getObjectAccent(object, language);
 
-  // Custom styles for specific types/subtypes
-  const subType = object.metaJson?.subType;
+  const { subType, svgUrl, svgCode, texture, strokeWidth, strokeColor } = object.metaJson || {};
 
   const renderObjectContent = () => {
+    // 1. External SVG URL
+    if (svgUrl) {
+      return (
+        <img 
+          src={svgUrl} 
+          alt="" 
+          style={{ 
+            width: '100%', height: '100%', 
+            objectFit: 'contain', 
+            pointerEvents: 'none',
+            filter: strokeColor ? `drop-shadow(0 0 2px ${strokeColor})` : 'none'
+          }} 
+        />
+      );
+    }
+
+    // 2. Raw SVG Code
+    if (svgCode) {
+      return (
+        <div 
+          style={{ width: '100%', height: '100%', color: strokeColor || 'inherit' }} 
+          dangerouslySetInnerHTML={{ __html: svgCode }} 
+        />
+      );
+    }
+
+    // 3. Built-in SVG Template
     if (subType && SVG_TEMPLATES[subType]) {
       return (
-        <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+        <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit' }}>
           {SVG_TEMPLATES[subType]}
         </svg>
       );
@@ -426,7 +501,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
             width: '100%', 
             height: '100%', 
             background: '#fff', 
-            border: `2px solid ${isSelected ? '#2563eb' : '#cbd5e1'}`,
+            border: `${strokeWidth || 2}px solid ${isSelected ? '#2563eb' : (strokeColor || '#cbd5e1')}`,
             borderRadius: object.width === object.height ? '50%' : '8px',
             display: 'flex',
             flexDirection: 'column',
@@ -445,8 +520,8 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           <svg style={{ width: '100%', height: '100%', overflow: 'visible' }}>
             <path 
               d={pathData} 
-              stroke="#64748b" 
-              strokeWidth="4" 
+              stroke={strokeColor || "#64748b"} 
+              strokeWidth={strokeWidth || "4"} 
               fill="none" 
               strokeLinecap="round"
               strokeDasharray={object.isActive ? 'none' : '8,8'}
@@ -454,7 +529,6 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           </svg>
         );
       case 'CUSTOM':
-        const texture = object.metaJson?.texture;
         if (texture === 'sand' || accent === 'sand') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-sand)', borderRadius: '4px' }} />;
         if (texture === 'water' || accent === 'sea') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-water)', borderRadius: '4px' }} />;
         if (texture === 'wood' || accent === 'deck') return <div style={{ width: '100%', height: '100%', background: 'url(#pattern-wood)', borderRadius: '4px' }} />;
@@ -611,12 +685,13 @@ export default function MapEditorPage() {
     const p1 = editorState.drawingPath.points[0];
     const p2 = editorState.drawingPath.points[1];
     
-    // Create a new PATH object
-    const width = Math.abs(p2.x - p1.x) || 10;
-    const height = Math.abs(p2.y - p1.y) || 10;
+    // Calculate bounding box
     const x = Math.min(p1.x, p2.x);
     const y = Math.min(p1.y, p2.y);
+    const width = Math.max(Math.abs(p2.x - p1.x), 20);
+    const height = Math.max(Math.abs(p2.y - p1.y), 20);
     
+    // Coordinates relative to the container
     const relP1 = { x: p1.x - x, y: p1.y - y };
     const relP2 = { x: p2.x - x, y: p2.y - y };
     
@@ -628,8 +703,7 @@ export default function MapEditorPage() {
       x,
       y,
       label: 'Line',
-      subType: null,
-      pathData // I'll make sure buildNewObject handles this
+      pathData
     });
 
     setEditorState(prev => ({ ...prev, drawingPath: null }));
@@ -908,8 +982,10 @@ export default function MapEditorPage() {
     const maxZIndex = currentObjects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0);
     const width = meta.width || preset.width;
     const height = meta.height || preset.height;
-    const centeredX = Math.round((currentMap.width - width) / 2);
-    const centeredY = Math.round((currentMap.height - height) / 2);
+    
+    // Use provided coordinates or center on map
+    const x = meta.x !== undefined ? meta.x : Math.round((currentMap.width - width) / 2);
+    const y = meta.y !== undefined ? meta.y : Math.round((currentMap.height - height) / 2);
 
     objectIdRef.current += 1;
 
@@ -919,14 +995,20 @@ export default function MapEditorPage() {
         type,
         label: { ua: meta.label || (type === 'LABEL' ? t('mapEditor.newLabelDefault') : ''), ru: '', en: '' },
         tableId: null,
-        x: centeredX,
-        y: centeredY,
+        x,
+        y,
         width,
         height,
         rotation: 0,
         zIndex: maxZIndex + 1,
         isActive: true,
-        metaJson: { subType: meta.subType }
+        metaJson: { 
+          subType: meta.subType,
+          pathData: meta.pathData,
+          texture: meta.texture,
+          svgUrl: meta.svgUrl,
+          svgCode: meta.svgCode
+        }
       },
       currentMap
     );
