@@ -1198,7 +1198,7 @@ function TextureLibrary({ textureAssets, selectedObject, onUpload, onApply, onDe
   );
 }
 
-function CustomObjectCreator({ onCreate, t }) {
+function CustomObjectCreator({ onCreate, onCreateAndSave, t }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState({
     label: '',
@@ -1323,13 +1323,11 @@ function CustomObjectCreator({ onCreate, t }) {
 
           <label className="btn btn-secondary btn-small texture-upload-button">
             {t('mapEditor.uploadAsset')}
-            <input type="file" accept=".svg" onChange={uploadSvg} />
+            <input type="file" accept=".svg,.png,.jpg,.jpeg,.webp" onChange={uploadSvg} />
           </label>
 
-          <button
-            type="button"
-            className="btn btn-primary btn-small"
-            onClick={() => onCreate({
+          {(() => {
+            const payload = {
               label: draft.label || t('mapEditor.newObjectDefault'),
               width: draft.width,
               height: draft.height,
@@ -1338,10 +1336,28 @@ function CustomObjectCreator({ onCreate, t }) {
               svgUrl: draft.svgUrl.trim(),
               svgCode: draft.svgCode.trim(),
               isLocked: false
-            })}
-          >
-            {t('mapEditor.createObjectButton')}
-          </button>
+            };
+
+            return (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-small"
+                  onClick={() => onCreate(payload)}
+                >
+                  {t('mapEditor.createObjectButton')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => onCreateAndSave(payload)}
+                >
+                  {t('mapEditor.createObjectButton')} + {t('mapEditor.save')}
+                </button>
+              </>
+            );
+          })()}
+
         </div>
       ) : null}
     </div>
@@ -1356,6 +1372,7 @@ export default function MapEditorPage() {
   const historyRef = useRef({ past: [], future: [] });
   const clipboardRef = useRef([]);
   const dragStateRef = useRef(null);
+  const pendingSaveRef = useRef(null);
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
   const [textureAssets, setTextureAssets] = useState(loadTextureAssets);
@@ -2186,10 +2203,10 @@ export default function MapEditorPage() {
     );
   }
 
-  function createObject(type, meta = {}) {
+  function createObject(type, meta = {}, options = {}) {
     updateCurrent((prev) => {
       const newObject = buildNewObject(type, prev.current.map, prev.current.objects, meta);
-      return {
+      const next = {
         current: {
           ...prev.current,
           objects: [...prev.current.objects, newObject]
@@ -2198,6 +2215,15 @@ export default function MapEditorPage() {
         selectedObjectIds: [newObject.id],
         activeTab: 'PROPERTIES'
       };
+
+      if (options.saveAfterCreate) {
+        pendingSaveRef.current = {
+          ...prev,
+          ...next
+        };
+      }
+
+      return next;
     });
   }
 
@@ -2282,8 +2308,10 @@ export default function MapEditorPage() {
     });
   }
 
-  async function saveChanges() {
-    if (!editorState.current || !editorState.defaultMapId) {
+  async function saveChanges(stateOverride = null) {
+    const stateToSave = stateOverride?.current ? stateOverride : editorState;
+
+    if (!stateToSave.current || !stateToSave.defaultMapId) {
       return;
     }
 
@@ -2296,16 +2324,16 @@ export default function MapEditorPage() {
 
     const payload = {
       map: {
-        width: editorState.current.map.width,
-        height: editorState.current.map.height,
-        backgroundImage: editorState.current.map.backgroundImage || null,
-        backgroundColor: editorState.current.map.backgroundColor || null
+        width: stateToSave.current.map.width,
+        height: stateToSave.current.map.height,
+        backgroundImage: stateToSave.current.map.backgroundImage || null,
+        backgroundColor: stateToSave.current.map.backgroundColor || null
       },
-      tables: editorState.current.tables.map((table) => ({
+      tables: stateToSave.current.tables.map((table) => ({
         id: table.id,
         photoUrl: table.photoUrl || null
       })),
-      objects: editorState.current.objects.map((object) => ({
+      objects: stateToSave.current.objects.map((object) => ({
         id: object.id,
         type: object.type,
         tableId: object.type === 'TABLE' ? object.tableId : null,
@@ -2322,7 +2350,7 @@ export default function MapEditorPage() {
       }))
     };
 
-    const result = await apiRequest(`/api/admin/maps/${editorState.defaultMapId}/editor`, {
+    const result = await apiRequest(`/api/admin/maps/${stateToSave.defaultMapId}/editor`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     });
@@ -2344,9 +2372,20 @@ export default function MapEditorPage() {
       saveMessage: t('mapEditor.saveSuccess'),
       original: nextData,
       current: nextData,
-      selectedObjectId: resolveSavedSelection(prev, nextData)
+      selectedObjectId: resolveSavedSelection(stateToSave, nextData),
+      selectedObjectIds: normalizeSelectionToObjects([resolveSavedSelection(stateToSave, nextData)], nextData.objects)
     }));
   }
+
+  useEffect(() => {
+    if (!pendingSaveRef.current || editorState.saving || editorState.loading) {
+      return;
+    }
+
+    const stateToSave = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    saveChanges(stateToSave);
+  }, [editorState.current, editorState.saving, editorState.loading]);
 
   function resetChanges() {
     setEditorState((prev) => {
@@ -2926,6 +2965,12 @@ export default function MapEditorPage() {
                         texture: '',
                         opacity: 1
                       })}
+                      onCreateAndSave={(meta) => createObject('CUSTOM', {
+                        ...meta,
+                        subType: meta.svgCode || meta.svgUrl ? 'SVG' : meta.subType,
+                        texture: '',
+                        opacity: 1
+                      }, { saveAfterCreate: true })}
                       t={t}
                     />
                   </div>

@@ -2549,18 +2549,23 @@ textarea {
 
 .texture-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .texture-item {
   display: grid;
-  gap: 6px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
 }
 
 .texture-preview {
   width: 100%;
-  aspect-ratio: 1.6;
+  height: 48px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background-color: #e2e8f0;
@@ -2575,9 +2580,9 @@ textarea {
 }
 
 .texture-item-meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 6px;
   font-size: 11px;
 }
