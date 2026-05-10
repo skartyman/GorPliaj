@@ -766,7 +766,14 @@ const SVG_TEMPLATES = {
     </g>
   ),
   SUNBED: (
-    <rect x="10" y="5" width="80" height="90" rx="4" fill="#fff" stroke="#cbd5e1" strokeWidth="2" />
+    <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 60L72 18" />
+      <path d="M26 68L80 26" opacity="0.9" />
+      <path d="M20 62h52c6 0 10 4 10 10v6H28c-6 0-10-4-10-10v-6z" />
+      <path d="M30 70l-6 16M72 30l-7 17" />
+      <path d="M20 62l-4 8M82 40l4 8" />
+      <path d="M32 58h28" stroke="#93c5fd" strokeWidth="4" />
+    </g>
   ),
   BED: (
     <g>
