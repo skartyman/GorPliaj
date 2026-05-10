@@ -38,8 +38,8 @@ const R2_CONFIG = {
 const isR2Configured = Object.values(R2_CONFIG).every((value) => Boolean(value));
 
 if (NODE_ENV === 'production' && !isR2Configured) {
-  throw new Error(
-    'R2 image uploads are enabled in production, but one or more required env vars are missing: '
+  console.warn(
+    'R2 image uploads are disabled in production because one or more env vars are missing: '
     + 'R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_BASE_URL, R2_ENDPOINT.'
   );
 }
