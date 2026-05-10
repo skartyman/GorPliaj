@@ -25,6 +25,25 @@ function parseStyleJson(styleJson) {
   }
 }
 
+function parseMetaJson(metaJson) {
+  if (!metaJson) return {};
+  try {
+    const meta = typeof metaJson === 'string' ? JSON.parse(metaJson) : metaJson;
+    return {
+      svgUrl: typeof meta?.svgUrl === 'string' ? meta.svgUrl : '',
+      svgCode: typeof meta?.svgCode === 'string' ? meta.svgCode : '',
+      textureUrl: typeof meta?.textureUrl === 'string' ? meta.textureUrl : '',
+      texture: typeof meta?.texture === 'string' ? meta.texture : '',
+      opacity: Number.isFinite(meta?.opacity) ? Math.max(0.2, Math.min(1, meta.opacity)) : undefined,
+      strokeColor: typeof meta?.strokeColor === 'string' ? meta.strokeColor : undefined,
+      strokeWidth: Number.isFinite(meta?.strokeWidth) ? meta.strokeWidth : undefined,
+      subType: typeof meta?.subType === 'string' ? meta.subType : ''
+    };
+  } catch {
+    return {};
+  }
+}
+
 export default function MapPage() {
   const { t, locale } = useLocale();
   const [searchParams] = useSearchParams();
@@ -268,6 +287,7 @@ export default function MapPage() {
                 {state.result.map.objects.map((object) => {
                   const table = object.tableId ? tableById.get(object.tableId) : null;
                   const objectLabel = localizeField(object.label, locale) || object.type;
+                  const meta = parseMetaJson(object.metaJson);
                   if (table) {
                     const disabled = table.status !== 'free' || !tableFitsGuests(table);
                     return (
@@ -289,6 +309,54 @@ export default function MapPage() {
                       >
                         {table.code}
                       </button>
+                    );
+                  }
+
+                  if (meta.svgUrl || meta.svgCode) {
+                    return (
+                      <div
+                        key={object.id}
+                        className={`public-map-object object-${String(object.type).toLowerCase()}`}
+                        style={{
+                          left: object.x,
+                          top: object.y,
+                          width: object.width,
+                          height: object.height,
+                          transform: `rotate(${object.rotation}deg)`,
+                          zIndex: object.zIndex,
+                          opacity: meta.opacity ?? undefined,
+                          ...parseStyleJson(object.styleJson)
+                        }}
+                        title={objectLabel}
+                      >
+                        {meta.svgUrl ? (
+                          <img src={meta.svgUrl} alt={objectLabel} className="public-map-object-svg" />
+                        ) : (
+                          <div className="public-map-object-svg" dangerouslySetInnerHTML={{ __html: meta.svgCode }} />
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (String(meta.subType || '').toUpperCase() === 'SVG') {
+                    return (
+                      <div
+                        key={object.id}
+                        className={`public-map-object object-${String(object.type).toLowerCase()}`}
+                        style={{
+                          left: object.x,
+                          top: object.y,
+                          width: object.width,
+                          height: object.height,
+                          transform: `rotate(${object.rotation}deg)`,
+                          zIndex: object.zIndex,
+                          opacity: meta.opacity ?? undefined,
+                          ...parseStyleJson(object.styleJson)
+                        }}
+                        title={objectLabel}
+                      >
+                        <span>{objectLabel}</span>
+                      </div>
                     );
                   }
 
