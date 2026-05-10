@@ -750,7 +750,7 @@ textarea {
 
 .interactive-map-viewport {
   position: relative;
-  min-height: min(70vh, 620px);
+  min-height: min(78vh, 760px);
   width: 100%;
   overflow: hidden;
   user-select: none;
@@ -782,6 +782,10 @@ textarea {
   place-items: center;
   transform-origin: center;
   box-shadow: none;
+}
+
+.map-control.fit {
+  font-size: 17px;
 }
 
 .interactive-map-object {

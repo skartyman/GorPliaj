@@ -225,7 +225,7 @@ export default function MapPage() {
   const { containerRef, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
     worldWidth: mapDimensions.width,
     worldHeight: mapDimensions.height,
-    minScale: 0.45,
+    minScale: 0.22,
     maxScale: 3
   });
 
@@ -347,6 +347,7 @@ export default function MapPage() {
               <div className="interactive-map-controls">
                 <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
                 <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>
+                <button type="button" className="map-control fit" onClick={actions.fitToView} aria-label="Fit map">⤢</button>
                 <span className="map-zoom-indicator">
                   {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
                 </span>

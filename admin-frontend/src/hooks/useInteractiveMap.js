@@ -35,7 +35,14 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
     return viewport.width / worldWidth;
   }, [viewport.width, worldWidth]);
 
-  const minScale = useMemo(() => Math.max(minScaleProp, fitWidthScale), [fitWidthScale, minScaleProp]);
+  const fitViewScale = useMemo(() => {
+    if (!viewport.width || !viewport.height || !worldWidth || !worldHeight) {
+      return fitWidthScale;
+    }
+    return Math.min(viewport.width / worldWidth, viewport.height / worldHeight);
+  }, [fitWidthScale, viewport.height, viewport.width, worldHeight, worldWidth]);
+
+  const minScale = useMemo(() => Math.max(minScaleProp, fitViewScale * 0.65), [fitViewScale, minScaleProp]);
 
   const clampTranslate = useCallback(
     (translateX, translateY, scale) => {
@@ -80,14 +87,14 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
 
       setViewport(nextViewport);
       setTransform((current) => {
-        const seedScale = current.scale === 1 && current.translateX === 0 && current.translateY === 0 ? fitWidthScale : current.scale;
+        const seedScale = current.scale === 1 && current.translateX === 0 && current.translateY === 0 ? fitViewScale : current.scale;
         return clampTranslate(current.translateX, current.translateY, seedScale);
       });
     });
 
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [clampTranslate, fitWidthScale]);
+  }, [clampTranslate, fitViewScale]);
 
   useEffect(() => {
     setTransform((current) => clampTranslate(current.translateX, current.translateY, current.scale));
@@ -223,6 +230,10 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
     zoomAtPoint(transform.scale / ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
   }, [transform.scale, zoomAtPoint]);
 
+  const fitToView = useCallback(() => {
+    setTransform(clampTranslate(0, 0, fitViewScale));
+  }, [clampTranslate, fitViewScale]);
+
   return {
     containerRef,
     transform,
@@ -237,7 +248,8 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
     },
     actions: {
       zoomIn,
-      zoomOut
+      zoomOut,
+      fitToView
     }
   };
 }
