@@ -7,6 +7,7 @@ import { apiRequest, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 const TEXTURE_ASSETS_STORAGE_KEY = 'map-editor-texture-assets';
+const CUSTOM_OBJECT_ASSETS_STORAGE_KEY = 'map-editor-custom-object-assets';
 
 const STATIC_TYPE_ACCENTS = {
   BAR: 'bar',
@@ -131,6 +132,77 @@ const ASSET_CATEGORIES = {
   }
 };
 
+function getTemplateKey(item) {
+  return [
+    item.type || 'CUSTOM',
+    String(item.subType || '').toUpperCase(),
+    String(item.label || item.objectLabel || '').trim().toLowerCase()
+  ].join(':');
+}
+
+function normalizeObjectTemplate(template) {
+  if (!template) return null;
+
+  const label = String(template.label || template.objectLabel || '').trim();
+  const svgUrl = String(template.svgUrl || '').trim();
+  const svgCode = String(template.svgCode || '').trim();
+  const subType = String(template.subType || '').trim();
+
+  if (!label && !svgUrl && !svgCode) {
+    return null;
+  }
+
+  return {
+    id: template.id || `asset-${Date.now()}`,
+    type: template.type || 'CUSTOM',
+    label: label || 'Об’єкт',
+    width: Number(template.width) || 120,
+    height: Number(template.height) || 88,
+    zIndex: Number(template.zIndex) || 1,
+    subType: subType || (svgUrl || svgCode ? 'SVG' : undefined),
+    interactionMode: template.interactionMode || 'DECOR',
+    texture: template.texture || '',
+    textureUrl: template.textureUrl || '',
+    opacity: template.opacity ?? 1,
+    strokeColor: template.strokeColor || '',
+    strokeWidth: template.strokeWidth || '',
+    svgUrl,
+    svgCode,
+    isLocked: Boolean(template.isLocked)
+  };
+}
+
+function buildTemplateFromObject(object, tableMap = null) {
+  if (!object || object.type === 'TABLE') return null;
+
+  const meta = object.metaJson || {};
+  const label = localizeField(object.label, 'ua') || meta.label || object.type;
+  const template = normalizeObjectTemplate({
+    id: `asset-${object.id}`,
+    type: object.type,
+    label,
+    width: object.width,
+    height: object.height,
+    zIndex: object.zIndex,
+    subType: meta.subType,
+    interactionMode: meta.interactionMode,
+    texture: meta.texture,
+    textureUrl: meta.textureUrl,
+    opacity: meta.opacity,
+    strokeColor: meta.strokeColor,
+    strokeWidth: meta.strokeWidth,
+    svgUrl: meta.svgUrl,
+    svgCode: meta.svgCode,
+    isLocked: meta.isLocked
+  });
+
+  if (!template || (!template.svgUrl && !template.svgCode && !template.textureUrl && !template.subType && object.type !== 'CUSTOM')) {
+    return null;
+  }
+
+  return template;
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -190,6 +262,15 @@ function loadTextureAssets() {
   try {
     const parsed = JSON.parse(localStorage.getItem(TEXTURE_ASSETS_STORAGE_KEY) || '[]');
     return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadCustomObjectAssets() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CUSTOM_OBJECT_ASSETS_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.map(normalizeObjectTemplate).filter(Boolean) : [];
   } catch {
     return [];
   }
@@ -526,7 +607,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -550,6 +631,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
 
     if (result.response.ok && result.body?.url) {
       onFieldChange(field, result.body.url, { saveAfterChange: true });
+      onRegisterTemplate?.({ [field]: result.body.url, svgCode: field === 'svgUrl' ? '' : selectedObject.metaJson?.svgCode });
     } else {
       alert(result.body?.message || 'Upload failed');
     }
@@ -1376,6 +1458,7 @@ export default function MapEditorPage() {
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
   const [textureAssets, setTextureAssets] = useState(loadTextureAssets);
+  const [customObjectAssets, setCustomObjectAssets] = useState(loadCustomObjectAssets);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -1579,6 +1662,37 @@ export default function MapEditorPage() {
     setTextureAssets((prev) => prev.filter((asset) => asset.id !== assetId));
   }
 
+  function upsertCustomObjectAsset(template) {
+    const normalized = normalizeObjectTemplate(template);
+    if (!normalized) return;
+
+    setCustomObjectAssets((prev) => {
+      const next = [
+        {
+          ...normalized,
+          id: normalized.id || `asset-${Date.now()}`
+        },
+        ...prev.filter((item) => getTemplateKey(item) !== getTemplateKey(normalized))
+      ];
+
+      return next.slice(0, 60);
+    });
+  }
+
+  function registerSelectedObjectTemplate(metaOverrides = {}) {
+    if (!selectedObject) return;
+
+    const template = buildTemplateFromObject({
+      ...selectedObject,
+      metaJson: {
+        ...selectedObject.metaJson,
+        ...metaOverrides
+      }
+    });
+
+    upsertCustomObjectAsset(template);
+  }
+
   useEffect(() => {
     loadInitialMapEditor().catch(() => {
       setEditorState((prev) => ({
@@ -1593,6 +1707,10 @@ export default function MapEditorPage() {
   useEffect(() => {
     localStorage.setItem(TEXTURE_ASSETS_STORAGE_KEY, JSON.stringify(textureAssets));
   }, [textureAssets]);
+
+  useEffect(() => {
+    localStorage.setItem(CUSTOM_OBJECT_ASSETS_STORAGE_KEY, JSON.stringify(customObjectAssets));
+  }, [customObjectAssets]);
 
   async function loadInitialMapEditor() {
     setEditorState((prev) => ({
@@ -1695,6 +1813,52 @@ export default function MapEditorPage() {
     () => objects.filter((object) => editorState.selectedObjectIds.includes(object.id)),
     [objects, editorState.selectedObjectIds]
   );
+  const derivedObjectAssets = useMemo(() => {
+    const templates = objects
+      .map((object) => buildTemplateFromObject(object))
+      .filter(Boolean);
+    const byKey = new Map();
+
+    for (const template of templates) {
+      byKey.set(getTemplateKey(template), template);
+    }
+
+    return [...byKey.values()];
+  }, [objects]);
+  const assetCategories = useMemo(() => {
+    const byKey = new Map();
+
+    for (const template of [...customObjectAssets, ...derivedObjectAssets]) {
+      byKey.set(getTemplateKey(template), template);
+    }
+
+    const customItems = [...byKey.values()];
+
+    const categories = Object.fromEntries(
+      Object.entries(ASSET_CATEGORIES).map(([key, category]) => [
+        key,
+        {
+          ...category,
+          items: category.items.map((item) => ({
+            ...item,
+            ...(byKey.get(getTemplateKey(item)) || {})
+          }))
+        }
+      ])
+    );
+
+    if (!customItems.length) {
+      return categories;
+    }
+
+    return {
+      MY_OBJECTS: {
+        label: 'Мої об’єкти',
+        items: customItems
+      },
+      ...categories
+    };
+  }, [customObjectAssets, derivedObjectAssets]);
   const hasChanges = useMemo(() => {
     if (!editorState.original || !editorState.current) {
       return false;
@@ -2915,6 +3079,7 @@ export default function MapEditorPage() {
                       zoneMap={zoneMap}
                       tables={editorState.current.tables}
                       onFieldChange={handleFieldChange}
+                      onRegisterTemplate={registerSelectedObjectTemplate}
                       onDuplicate={duplicateSelected}
                       onDelete={handleDeleteSelected}
                       onLayerAction={moveSelectedLayer}
@@ -2957,20 +3122,20 @@ export default function MapEditorPage() {
                     />
 
                     <div className="category-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-                      {Object.keys(ASSET_CATEGORIES).map(catKey => (
+                      {Object.keys(assetCategories).map(catKey => (
                         <button
                           type="button"
                           key={catKey}
                           className={`btn btn-small ${editorState.activeCategory === catKey ? 'btn-primary' : 'btn-secondary'}`}
                           onClick={() => setEditorState(prev => ({ ...prev, activeCategory: catKey }))}
                         >
-                          {ASSET_CATEGORIES[catKey].label}
+                          {assetCategories[catKey].label}
                         </button>
                       ))}
                     </div>
                     
                     <div className="asset-library">
-                      {ASSET_CATEGORIES[editorState.activeCategory].items.map((item, idx) => (
+                      {(assetCategories[editorState.activeCategory] || assetCategories.SURFACES).items.map((item, idx) => (
                         <button key={idx} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
                           <div className="asset-preview">
                             {item.svgUrl ? (
@@ -2989,18 +3154,26 @@ export default function MapEditorPage() {
                     </div>
 
                     <CustomObjectCreator
-                      onCreate={(meta) => createObject('CUSTOM', {
-                        ...meta,
-                        subType: meta.svgCode || meta.svgUrl ? 'SVG' : meta.subType,
-                        texture: '',
-                        opacity: 1
-                      })}
-                      onCreateAndSave={(meta) => createObject('CUSTOM', {
-                        ...meta,
-                        subType: meta.svgCode || meta.svgUrl ? 'SVG' : meta.subType,
-                        texture: '',
-                        opacity: 1
-                      }, { saveAfterCreate: true })}
+                      onCreate={(meta) => {
+                        const template = {
+                          ...meta,
+                          subType: meta.svgCode || meta.svgUrl ? 'SVG' : meta.subType,
+                          texture: '',
+                          opacity: 1
+                        };
+                        upsertCustomObjectAsset(template);
+                        createObject('CUSTOM', template);
+                      }}
+                      onCreateAndSave={(meta) => {
+                        const template = {
+                          ...meta,
+                          subType: meta.svgCode || meta.svgUrl ? 'SVG' : meta.subType,
+                          texture: '',
+                          opacity: 1
+                        };
+                        upsertCustomObjectAsset(template);
+                        createObject('CUSTOM', template, { saveAfterCreate: true });
+                      }}
                       t={t}
                     />
                   </div>
