@@ -529,10 +529,6 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   }
 
   const mapUpdateData = normalizeMapInput(mapInput);
-  const effectiveMap = {
-    ...map,
-    ...mapUpdateData
-  };
   const operations = [];
 
   if (Object.keys(mapUpdateData).length) {
@@ -579,10 +575,6 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
     if (normalizedObject.tableId !== null && !tableIds.has(normalizedObject.tableId)) {
       return { type: 'INVALID', message: 'Objects payload references an unknown table id.' };
-    }
-
-    if (normalizedObject.x < 0 || normalizedObject.y < 0 || normalizedObject.x > effectiveMap.width || normalizedObject.y > effectiveMap.height) {
-      return { type: 'INVALID', message: `Object ${object.id} contains coordinates outside the map bounds.` };
     }
 
     if (isExistingObject) {
