@@ -475,9 +475,19 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
               ))}
             </div>
           </div>
-        ))}
+        ))} 
         <input id="svgUrl-upload" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'svgUrl')} />
         <input id="textureUrl-upload" type="file" accept=".png,.jpg,.jpeg,.webp,.svg" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'textureUrl')} />
+
+        {(selectedObject.metaJson?.svgUrl || selectedObject.metaJson?.svgCode) ? (
+          <div className="custom-object-preview" style={{ marginBottom: '12px', minHeight: '96px' }}>
+            {selectedObject.metaJson?.svgUrl ? (
+              <img src={selectedObject.metaJson.svgUrl} alt="" />
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: selectedObject.metaJson?.svgCode || '' }} />
+            )}
+          </div>
+        ) : null}
 
         {selectedObject.type === 'TABLE' ? (
           <>
