@@ -72,6 +72,16 @@ const MAP_SCALE_STEP = 0.1;
 const MAP_VIEWPORT_PADDING = 18;
 const MAP_OVERFLOW_GUTTER = 240;
 const SURFACE_Z_INDEX = 0;
+const RND_RESIZE_HANDLE_STYLES = {
+  top: { pointerEvents: 'auto' },
+  right: { pointerEvents: 'auto' },
+  bottom: { pointerEvents: 'auto' },
+  left: { pointerEvents: 'auto' },
+  topRight: { pointerEvents: 'auto' },
+  bottomRight: { pointerEvents: 'auto' },
+  bottomLeft: { pointerEvents: 'auto' },
+  topLeft: { pointerEvents: 'auto' }
+};
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
   Graphics: 'mapEditor.sections.graphics',
@@ -938,7 +948,22 @@ function getTextureFill({ texture, textureUrl, fallback = '#f1f5f9' }) {
   return fallback;
 }
 
-function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected, onRequestProperties, onToggleLock }) {
+function getHitboxClassName(object) {
+  const meta = object.metaJson || {};
+  const subType = String(meta.subType || '').toUpperCase();
+
+  if (subType === 'POLYGON' || object.type === 'PATH' || object.type === 'TABLE') {
+    return 'map-editor-object-hitbox full';
+  }
+
+  if (meta.svgUrl || meta.svgCode || SVG_TEMPLATES[subType]) {
+    return 'map-editor-object-hitbox compact';
+  }
+
+  return 'map-editor-object-hitbox';
+}
+
+function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected, onRequestProperties, onToggleLock, onSelectMouseDown }) {
   const table = object.tableId ? tableMap.get(object.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const accent = getObjectAccent(object, language);
@@ -1135,18 +1160,13 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected,
   };
 
   return (
-    <div 
-      onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onRequestProperties?.(event);
-      }}
+    <div
       style={{ 
         width: '100%', 
         height: '100%', 
         position: 'relative',
         transform: `rotate(${object.rotation || 0}deg)`,
-        transition: 'transform 0.2s'
+        transition: 'none'
       }}
     >
       {isLocked ? (
@@ -1186,7 +1206,18 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected,
       >
         <ActionIcon name={isLocked ? 'lock' : 'unlock'} />
       </button>
-      {renderObjectContent()}
+      <div className="map-editor-object-visual">
+        {renderObjectContent()}
+      </div>
+      <div
+        className={getHitboxClassName(object)}
+        onMouseDown={onSelectMouseDown}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onRequestProperties?.(event);
+        }}
+      />
       {isSelected && (
         <div style={{ 
           position: 'absolute', 
@@ -3013,12 +3044,9 @@ export default function MapEditorPage() {
                             height: ref.offsetHeight
                           })
                         }
-                        onMouseDown={(event) => {
-                          if (editorState.activeTool === 'SELECT') {
-                            handleObjectMouseDown(object.id, event);
-                          }
-                        }}
-                        onContextMenu={(event) => handleObjectContextMenu(object.id, event)}
+                        dragHandleClassName="map-editor-object-hitbox"
+                        cancel=".map-object-lock-toggle"
+                        resizeHandleStyles={RND_RESIZE_HANDLE_STYLES}
                         enableResizing={editorState.activeTool === 'SELECT' && !object.metaJson?.isLocked}
                         disableDragging={editorState.activeTool !== 'SELECT' || Boolean(object.metaJson?.isLocked)}
                         dragGrid={[1, 1]}
@@ -3036,6 +3064,11 @@ export default function MapEditorPage() {
                           language={language}
                           onRequestProperties={(event) => handleObjectContextMenu(object.id, event)}
                           onToggleLock={() => handleFieldChange('isLocked', !object.metaJson?.isLocked)}
+                          onSelectMouseDown={(event) => {
+                            if (editorState.activeTool === 'SELECT') {
+                              handleObjectMouseDown(object.id, event);
+                            }
+                          }}
                         />
                       </Rnd>
                     );
