@@ -1512,6 +1512,22 @@ textarea {
 .editor-form-grid {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-form-grid > label {
+  min-width: 0;
+}
+
+.editor-form-grid input,
+.editor-form-grid select,
+.editor-form-grid textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.editor-form-grid textarea {
+  resize: vertical;
 }
 
 .editor-toggle-field {
@@ -1539,6 +1555,47 @@ textarea {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
+}
+
+.map-settings-grid {
+  align-items: start;
+}
+
+.map-settings-span-2 {
+  grid-column: 1 / -1;
+}
+
+.map-size-actions--compact {
+  grid-column: 1 / -1;
+}
+
+.map-settings-accordion {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.map-settings-accordion > summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.map-settings-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.map-settings-accordion[open] > summary {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.map-settings-accordion > summary strong {
+  display: block;
 }
 
 .editor-toggle-field input {

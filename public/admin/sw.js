@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'admin-v2';
+const CACHE_VERSION = 'admin-v3';
 const STATIC_CACHE = `gorpliaj-admin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `gorpliaj-admin-pages-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
@@ -42,44 +42,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-
-  const requestUrl = new URL(event.request.url);
-  if (!isSameOrigin(requestUrl) || !isAdminPath(requestUrl.pathname) || requestUrl.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  if (isNavigationRequest(event.request)) {
-    event.respondWith(
-      fetch(event.request, { cache: 'no-store' })
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(PAGES_CACHE).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(async () => {
-          const cache = await caches.open(PAGES_CACHE);
-          return cache.match(event.request) || cache.match('/admin/dashboard');
-        })
-    );
-
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, response.clone()));
-          }
-
-          return response;
-        })
-        .catch(() => null);
-
-      return cached || network;
-    })
-  );
-});
+// Admin assets are intentionally left uncached at runtime so stale responses do
+// not interfere with uploads, editor saves, or asset hot updates.
+self.addEventListener('fetch', () => {});

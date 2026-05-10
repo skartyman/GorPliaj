@@ -299,56 +299,53 @@ function resolveSavedSelection(prevState, nextData) {
 function MapSettings({ map, onMapFieldChange, t }) {
   return (
     <div className="editor-properties-stack">
-      <div>
-        <h4 className="panel-section-title">{t('mapEditor.mapSettingsTitle')}</h4>
-        <p className="muted small">{t('mapEditor.mapSettingsDescription')}</p>
+      <div className="editor-form-grid map-settings-grid">
+        <label>
+          <span>{t('mapEditor.fields.mapWidth')}</span>
+          <input
+            type="number"
+            min="100"
+            step="50"
+            value={map.width}
+            onChange={(event) => onMapFieldChange('width', event.target.value)}
+          />
+        </label>
+
+        <label>
+          <span>{t('mapEditor.fields.mapHeight')}</span>
+          <input
+            type="number"
+            min="100"
+            step="50"
+            value={map.height}
+            onChange={(event) => onMapFieldChange('height', event.target.value)}
+          />
+        </label>
+
+        <div className="map-size-actions map-size-actions--compact">
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('width', Number(map.width) + 500)}>
+            {t('mapEditor.expandWidth')}
+          </button>
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('height', Number(map.height) + 500)}>
+            {t('mapEditor.expandHeight')}
+          </button>
+        </div>
+
+        <label className="map-settings-span-2">
+          <span>{t('mapEditor.fields.backgroundImage')}</span>
+          <input
+            type="url"
+            value={map.backgroundImage}
+            placeholder="https://example.com/floorplan.png"
+            onChange={(event) => onMapFieldChange('backgroundImage', event.target.value)}
+          />
+        </label>
+
+        <label>
+          <span>{t('mapEditor.fields.backgroundColor')}</span>
+          <input type="color" value={map.backgroundColor || '#f8fafc'} onChange={(event) => onMapFieldChange('backgroundColor', event.target.value)} />
+        </label>
       </div>
-
-      <label>
-        {t('mapEditor.fields.mapWidth')}
-        <input
-          type="number"
-          min="100"
-          step="50"
-          value={map.width}
-          onChange={(event) => onMapFieldChange('width', event.target.value)}
-        />
-      </label>
-
-      <label>
-        {t('mapEditor.fields.mapHeight')}
-        <input
-          type="number"
-          min="100"
-          step="50"
-          value={map.height}
-          onChange={(event) => onMapFieldChange('height', event.target.value)}
-        />
-      </label>
-
-      <div className="map-size-actions">
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('width', Number(map.width) + 500)}>
-          {t('mapEditor.expandWidth')}
-        </button>
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('height', Number(map.height) + 500)}>
-          {t('mapEditor.expandHeight')}
-        </button>
-      </div>
-
-      <label>
-        {t('mapEditor.fields.backgroundImage')}
-        <input
-          type="url"
-          value={map.backgroundImage}
-          placeholder="https://example.com/floorplan.png"
-          onChange={(event) => onMapFieldChange('backgroundImage', event.target.value)}
-        />
-      </label>
-
-      <label>
-        {t('mapEditor.fields.backgroundColor')}
-        <input type="color" value={map.backgroundColor || '#f8fafc'} onChange={(event) => onMapFieldChange('backgroundColor', event.target.value)} />
-      </label>
     </div>
   );
 }
@@ -439,13 +436,13 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
             </h5>
             <div className="editor-form-grid">
               {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
-                <label key={field.key}>
-                  <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
-                  {field.type === 'select' ? (
-                    <select 
-                      value={selectedObject.metaJson?.[field.key] || ''} 
-                      onChange={(event) => onFieldChange(field.key, event.target.value)}
-                    >
+                  <label key={field.key} style={field.type === 'textarea' ? { gridColumn: '1 / -1' } : undefined}>
+                    <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
+                      {field.type === 'select' ? (
+                        <select 
+                          value={selectedObject.metaJson?.[field.key] || ''} 
+                          onChange={(event) => onFieldChange(field.key, event.target.value)}
+                        >
                       {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                   ) : field.type === 'textarea' ? (
@@ -455,12 +452,12 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                       onChange={(event) => onFieldChange(field.key, event.target.value)}
                       style={{ height: '60px', fontFamily: 'monospace', fontSize: '10px' }}
                     />
-                  ) : (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <input
-                        type={field.type}
-                        step={field.step ?? undefined}
-                        placeholder={field.placeholder}
+                      ) : (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type={field.type}
+                            step={field.step ?? undefined}
+                            placeholder={field.placeholder}
                         value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
                         onChange={(event) => onFieldChange(field.key, event.target.value)}
                       />
@@ -2297,9 +2294,15 @@ export default function MapEditorPage() {
                       t={t}
                       language={language}
                     />
-                    <div style={{ marginTop: '24px' }}>
+                    <details className="map-settings-accordion">
+                      <summary>
+                        <div>
+                          <strong>{t('mapEditor.mapSettingsTitle')}</strong>
+                          <span className="muted small">{t('mapEditor.mapSettingsDescription')}</span>
+                        </div>
+                      </summary>
                       <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
-                    </div>
+                    </details>
                   </>
                 )}
 
