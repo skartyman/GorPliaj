@@ -795,6 +795,12 @@ textarea {
   pointer-events: none;
 }
 
+.interactive-map-object.has-asset {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+}
+
 .interactive-map-object.selectable {
   pointer-events: auto;
   cursor: pointer;

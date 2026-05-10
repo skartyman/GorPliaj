@@ -319,11 +319,12 @@ export default function MapPage() {
                     };
 
                     if (!object.isTable) {
+                      const hasAsset = Boolean(meta.svgUrl || meta.svgCode);
                       return (
                         <button
                           key={object.id}
                           type="button"
-                          className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
+                          className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
                           style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                           title={mapObjectLabel(object, t, language)}
                           disabled={!isSelectableObject}
