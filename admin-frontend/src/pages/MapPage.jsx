@@ -63,6 +63,31 @@ function parseStyleJson(styleJson) {
   }
 }
 
+function parseMetaJson(metaJson) {
+  if (!metaJson) {
+    return {};
+  }
+
+  try {
+    const parsed = typeof metaJson === 'string' ? JSON.parse(metaJson) : metaJson;
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+
+    return {
+      interactionMode: typeof parsed.interactionMode === 'string' ? parsed.interactionMode : '',
+      isSelectable: Boolean(parsed.isSelectable) || String(parsed.subType || '').toUpperCase() === 'BED',
+      subType: typeof parsed.subType === 'string' ? parsed.subType : '',
+      svgUrl: typeof parsed.svgUrl === 'string' ? parsed.svgUrl : '',
+      svgCode: typeof parsed.svgCode === 'string' ? parsed.svgCode : '',
+      price: parsed.price ?? parsed.objectPrice ?? '',
+      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : ''
+    };
+  } catch {
+    return {};
+  }
+}
+
 function mapObjectLabel(object, t, language) {
   const labelStr = localizeField(object.label, language);
   if (labelStr) {
@@ -82,6 +107,7 @@ export default function MapPage() {
     availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
   });
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
@@ -176,11 +202,13 @@ export default function MapPage() {
       const isTable = object.type === 'TABLE';
       const table = isTable && object.tableId ? tableMap.get(object.tableId) : null;
       const zone = table ? zoneMap.get(table.zoneId) : null;
+      const meta = parseMetaJson(object.metaJson);
       return {
         ...object,
         isTable,
         table,
         zone,
+        meta,
         width: Math.max(Number(object.width) || 44, 24),
         height: Math.max(Number(object.height) || 44, 24),
         x: Number(object.x) || 0,
@@ -190,6 +218,7 @@ export default function MapPage() {
   }, [state.mapData?.objects, tableMap, zoneMap]);
 
   const selectedTable = selectedTableId ? tableMap.get(selectedTableId) : null;
+  const selectedObject = selectedObjectId ? mapEntities.find((object) => object.id === selectedObjectId) || null : null;
   const selectedReservations = (selectedTable && reservationsByTable[selectedTable.id]) || [];
   const selectedStatus = selectedTable
     ? getTableDisplayStatus(selectedTable, reservationsByTable, heldTableIds, busyTableIds)
@@ -200,6 +229,17 @@ export default function MapPage() {
   const onBookTable = (table) => {
     // future booking flow callback
     console.info('booking hook', table);
+  };
+
+  const selectObject = (object) => {
+    const meta = object?.meta || {};
+    const isSelectable = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
+    if (!isSelectable) {
+      return;
+    }
+
+    setSelectedObjectId(object.id);
+    setSelectedTableId(null);
   };
 
   return (
@@ -267,6 +307,8 @@ export default function MapPage() {
 
                   {mapEntities.map((object) => {
                     const rotation = Number(object.rotation) || 0;
+                    const meta = object.meta || {};
+                    const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
                     const baseStyle = {
                       left: object.x,
                       top: object.y,
@@ -278,14 +320,23 @@ export default function MapPage() {
 
                     if (!object.isTable) {
                       return (
-                        <div
+                        <button
                           key={object.id}
-                          className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()}`}
+                          type="button"
+                          className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
                           style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                           title={mapObjectLabel(object, t, language)}
+                          disabled={!isSelectableObject}
+                          onClick={() => selectObject(object)}
                         >
-                          <span>{mapObjectLabel(object, t, language)}</span>
-                        </div>
+                          {(meta.svgUrl || meta.svgCode) ? (
+                            meta.svgUrl
+                              ? <img src={meta.svgUrl} alt={mapObjectLabel(object, t, language)} className="interactive-map-object-svg" />
+                              : <div className="interactive-map-object-svg" dangerouslySetInnerHTML={{ __html: meta.svgCode }} />
+                          ) : (
+                            <span>{mapObjectLabel(object, t, language)}</span>
+                          )}
+                        </button>
                       );
                     }
 
@@ -302,7 +353,10 @@ export default function MapPage() {
                           borderRadius: tableShape === 'ROUND' ? 999 : 12
                         }}
                         title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
-                        onClick={() => setSelectedTableId(object.tableId)}
+                        onClick={() => {
+                          setSelectedTableId(object.tableId);
+                          setSelectedObjectId(null);
+                        }}
                       >
                         <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                       </button>
@@ -350,6 +404,26 @@ export default function MapPage() {
 
                 <div className="actions">
                   <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Prepare booking</button>
+                </div>
+              </div>
+            ) : selectedObject ? (
+              <div className="table-bottom-sheet" role="dialog" aria-live="polite">
+                <div className="table-sheet-head">
+                  <h4>{mapObjectLabel(selectedObject, t, language)}</h4>
+                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedObjectId(null)}>Close</button>
+                </div>
+
+                <div className="details-grid compact table-sheet-grid">
+                  <div className="detail-row"><span className="muted">Type</span><strong>{selectedObject.type || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">Mode</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Working object' : 'Decor'}</strong></div>
+                  <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Attached' : 'No asset'}</strong></div>
+                  <div className="detail-row"><span className="muted">Price</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Not set'}</strong></div>
+                </div>
+
+                <div className="actions">
+                  <button type="button" className="btn" onClick={() => window.location.assign('/admin/map-editor')}>
+                    Edit in editor
+                  </button>
                 </div>
               </div>
             ) : null}
