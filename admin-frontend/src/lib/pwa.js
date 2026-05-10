@@ -37,11 +37,25 @@ export async function registerAdminServiceWorker() {
   }
 
   try {
-    return await navigator.serviceWorker.register('/admin/sw.js', {
-      scope: '/admin/'
-    });
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations
+        .filter((registration) => registration.scope.includes('/admin'))
+        .map((registration) => registration.unregister())
+    );
+
+    if ('caches' in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(
+        cacheKeys
+          .filter((key) => key.startsWith('gorpliaj-admin-'))
+          .map((key) => caches.delete(key))
+      );
+    }
+
+    return null;
   } catch (error) {
-    console.error('Admin service worker registration failed', error);
+    console.error('Admin service worker cleanup failed', error);
     return null;
   }
 }

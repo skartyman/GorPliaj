@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'admin-v3';
+const CACHE_VERSION = 'admin-v4';
 const STATIC_CACHE = `gorpliaj-admin-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `gorpliaj-admin-pages-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
