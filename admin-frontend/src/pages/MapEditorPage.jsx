@@ -1331,61 +1331,6 @@ export default function MapEditorPage() {
     localStorage.setItem(TEXTURE_ASSETS_STORAGE_KEY, JSON.stringify(textureAssets));
   }, [textureAssets]);
 
-  useEffect(() => {
-    function handleKeyDown(event) {
-      const tagName = event.target?.tagName;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
-      const ctrl = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
-
-      if (ctrl && key === 'z') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          redoChange();
-        } else {
-          undoChange();
-        }
-        return;
-      }
-
-      if (ctrl && key === 'c') {
-        if (!isEditableTarget) {
-          event.preventDefault();
-          copySelection();
-        }
-        return;
-      }
-
-      if (ctrl && key === 'v') {
-        if (!isEditableTarget) {
-          event.preventDefault();
-          pasteSelection();
-        }
-        return;
-      }
-
-      if (ctrl && key === 'a' && !isEditableTarget) {
-        event.preventDefault();
-        if (objects.length) {
-          setSelection(objects.map((object) => object.id), { activeTab: 'PROPERTIES' });
-        }
-        return;
-      }
-
-      if (isEditableTarget) {
-        return;
-      }
-
-      if (['Delete', 'Backspace'].includes(event.key) && selectedObjects.length) {
-        event.preventDefault();
-        handleDeleteSelected();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [objects, selectedObjects, selectedObject, editorState.current, t]);
-
   async function loadInitialMapEditor() {
     setEditorState((prev) => ({
       ...prev,
@@ -1494,6 +1439,61 @@ export default function MapEditorPage() {
 
     return JSON.stringify(editorState.original) !== JSON.stringify(editorState.current);
   }, [editorState.current, editorState.original]);
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const tagName = event.target?.tagName;
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
+      const ctrl = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+
+      if (ctrl && key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redoChange();
+        } else {
+          undoChange();
+        }
+        return;
+      }
+
+      if (ctrl && key === 'c') {
+        if (!isEditableTarget) {
+          event.preventDefault();
+          copySelection();
+        }
+        return;
+      }
+
+      if (ctrl && key === 'v') {
+        if (!isEditableTarget) {
+          event.preventDefault();
+          pasteSelection();
+        }
+        return;
+      }
+
+      if (ctrl && key === 'a' && !isEditableTarget) {
+        event.preventDefault();
+        if (objects.length) {
+          setSelection(objects.map((object) => object.id), { activeTab: 'PROPERTIES' });
+        }
+        return;
+      }
+
+      if (isEditableTarget) {
+        return;
+      }
+
+      if (['Delete', 'Backspace'].includes(event.key) && selectedObjects.length) {
+        event.preventDefault();
+        handleDeleteSelected();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [objects, selectedObjects, selectedObject, editorState.current, t]);
 
   function setSelection(ids, options = {}) {
     const nextIds = normalizeSelectionIds(ids);
