@@ -30,6 +30,10 @@ function parseMetaJson(metaJson) {
   try {
     const meta = typeof metaJson === 'string' ? JSON.parse(metaJson) : metaJson;
     return {
+      interactionMode: typeof meta?.interactionMode === 'string'
+        ? meta.interactionMode
+        : (String(meta?.subType || '').toUpperCase() === 'BED' ? 'SELECTABLE' : ''),
+      isSelectable: Boolean(meta?.isSelectable) || String(meta?.subType || '').toUpperCase() === 'BED',
       svgUrl: typeof meta?.svgUrl === 'string' ? meta.svgUrl : '',
       svgCode: typeof meta?.svgCode === 'string' ? meta.svgCode : '',
       textureUrl: typeof meta?.textureUrl === 'string' ? meta.textureUrl : '',
@@ -49,6 +53,7 @@ export default function MapPage() {
   const [searchParams] = useSearchParams();
   const [state, setState] = useState({ loading: true, error: '', result: null });
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -101,6 +106,11 @@ export default function MapPage() {
     setSelectedTable(selectedTableId ? tables.find((item) => item.id === selectedTableId) || null : null);
   }, [selectedTableId, state.result]);
 
+  const selectedObject = selectedObjectId
+    ? state.result?.map.objects.find((item) => item.id === selectedObjectId) || null
+    : null;
+  const selectedObjectMeta = selectedObject ? parseMetaJson(selectedObject.metaJson) : null;
+
   const tableById = useMemo(() => {
     if (!state.result) return new Map();
     return new Map(state.result.map.zones.flatMap((zone) => zone.tables).map((table) => [table.id, table]));
@@ -132,6 +142,7 @@ export default function MapPage() {
 
   function selectTable(tableId) {
     setSelectedTableId(tableId);
+    setSelectedObjectId(null);
     if (!viewportRef.current || !state.result) return;
     const selectedObject = state.result.map.objects.find((item) => item.tableId === tableId);
     if (!selectedObject) return;
@@ -140,6 +151,11 @@ export default function MapPage() {
     const targetX = rect.width / 2 - center.x * transform.scale;
     const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - center.y * transform.scale;
     applyTransform(transform.scale, targetX, targetY);
+  }
+
+  function selectObject(objectId) {
+    setSelectedObjectId(objectId);
+    setSelectedTableId(null);
   }
 
   function tableFitsGuests(table) {
@@ -288,6 +304,7 @@ export default function MapPage() {
                   const table = object.tableId ? tableById.get(object.tableId) : null;
                   const objectLabel = localizeField(object.label, locale) || object.type;
                   const meta = parseMetaJson(object.metaJson);
+                  const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
                   if (table) {
                     const disabled = table.status !== 'free' || !tableFitsGuests(table);
                     return (
@@ -313,10 +330,12 @@ export default function MapPage() {
                   }
 
                   if (meta.svgUrl || meta.svgCode) {
+                    const className = `public-map-object public-map-object-button object-${String(object.type).toLowerCase()} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim();
                     return (
-                      <div
+                      <button
                         key={object.id}
-                        className={`public-map-object object-${String(object.type).toLowerCase()}`}
+                        type="button"
+                        className={className}
                         style={{
                           left: object.x,
                           top: object.y,
@@ -328,21 +347,24 @@ export default function MapPage() {
                           ...parseStyleJson(object.styleJson)
                         }}
                         title={objectLabel}
+                        disabled={!isSelectableObject}
+                        onClick={() => isSelectableObject && selectObject(object.id)}
                       >
                         {meta.svgUrl ? (
                           <img src={meta.svgUrl} alt={objectLabel} className="public-map-object-svg" />
                         ) : (
                           <div className="public-map-object-svg" dangerouslySetInnerHTML={{ __html: meta.svgCode }} />
                         )}
-                      </div>
+                      </button>
                     );
                   }
 
-                  if (String(meta.subType || '').toUpperCase() === 'SVG') {
+                  if (isSelectableObject) {
                     return (
-                      <div
+                      <button
                         key={object.id}
-                        className={`public-map-object object-${String(object.type).toLowerCase()}`}
+                        type="button"
+                        className={`public-map-object public-map-object-button object-${String(object.type).toLowerCase()} selectable ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
                         style={{
                           left: object.x,
                           top: object.y,
@@ -354,9 +376,10 @@ export default function MapPage() {
                           ...parseStyleJson(object.styleJson)
                         }}
                         title={objectLabel}
+                        onClick={() => selectObject(object.id)}
                       >
                         <span>{objectLabel}</span>
-                      </div>
+                      </button>
                     );
                   }
 
@@ -406,7 +429,7 @@ export default function MapPage() {
           </div>
         </article>
 
-        <aside className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable ? 'is-open' : ''}`}>
+        <aside className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable || selectedObject ? 'is-open' : ''}`}>
           <h3>{t('mapSelectedTitle')}</h3>
           {selectedTable ? (
             <>
@@ -422,6 +445,18 @@ export default function MapPage() {
               >
                 {t('mapGoToBooking')}
               </Link>
+            </>
+          ) : selectedObject ? (
+            <>
+              <p>
+                <strong>{localizeField(selectedObject.label, locale) || selectedObject.type}</strong>
+              </p>
+              <p className="muted">
+                {selectedObjectMeta?.interactionMode === 'SELECTABLE' || selectedObjectMeta?.isSelectable ? 'Робочий об’єкт' : 'Декор'}
+              </p>
+              <p className="muted">
+                {selectedObjectMeta?.svgUrl || selectedObjectMeta?.svgCode ? 'SVG / зображення прикріплено' : 'Об’єкт без графіки'}
+              </p>
             </>
           ) : (
             <p className="muted">{t('mapSelectHint')}</p>

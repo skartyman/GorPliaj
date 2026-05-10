@@ -34,6 +34,10 @@ const MAP_VARIANT_PRESETS = [
 ];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', section: 'General' },
+  { key: 'interactionMode', type: 'select', section: 'General', options: [
+    { value: 'DECOR', label: 'Декор' },
+    { value: 'SELECTABLE', label: 'Вибирається гостем' }
+  ]},
   { key: 'texture', type: 'select', section: 'Graphics', options: [
     { value: '', label: 'Без текстури' },
     { value: 'grass', label: 'Трава' },
@@ -54,7 +58,7 @@ const PROPERTY_FIELDS = [
   { key: 'rotation', type: 'number', section: 'Transform', step: 1 },
   { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
 ];
-const META_PROPERTY_FIELDS = new Set(['texture', 'textureUrl', 'opacity', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
+const META_PROPERTY_FIELDS = new Set(['interactionMode', 'texture', 'textureUrl', 'opacity', 'svgUrl', 'svgCode', 'strokeWidth', 'strokeColor']);
 const MIN_MAP_SCALE = 0.25;
 const MAX_MAP_SCALE = 1.75;
 const MAP_SCALE_STEP = 0.1;
@@ -96,7 +100,7 @@ const ASSET_CATEGORIES = {
       { type: 'TABLE', label: 'Стіл 6', width: 160, height: 70 },
       { type: 'CUSTOM', label: 'Шезлонг', width: 80, height: 160, subType: 'SUNBED' },
       { type: 'CUSTOM', label: 'Парасоля', width: 120, height: 120, subType: 'UMBRELLA' },
-      { type: 'CUSTOM', label: 'Ліжко', width: 160, height: 200, subType: 'BED' }
+      { type: 'CUSTOM', label: 'Ліжко', width: 160, height: 200, subType: 'BED', interactionMode: 'SELECTABLE' }
     ]
   },
   NATURE: {
@@ -215,6 +219,10 @@ function normalizeObject(object, map) {
   const height = Math.max(roundCoordinate(object.height), 24);
   const maxX = Math.max((map?.width || 0) - width, 0);
   const maxY = Math.max((map?.height || 0) - height, 0);
+  const metaJson = object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : {};
+  const interactionMode = typeof metaJson.interactionMode === 'string'
+    ? metaJson.interactionMode
+    : (String(metaJson.subType || '').toUpperCase() === 'BED' ? 'SELECTABLE' : '');
 
   return {
     ...object,
@@ -227,7 +235,10 @@ function normalizeObject(object, map) {
     rotation: roundCoordinate(object.rotation),
     zIndex: roundCoordinate(object.zIndex),
     isActive: Boolean(object.isActive),
-    metaJson: object.metaJson || {}
+    metaJson: {
+      ...metaJson,
+      interactionMode
+    }
   };
 }
 
@@ -948,6 +959,7 @@ function CustomObjectCreator({ onCreate, t }) {
     width: 160,
     height: 120,
     zIndex: 1,
+    interactionMode: 'SELECTABLE',
     svgUrl: '',
     svgCode: ''
   });
@@ -1033,6 +1045,17 @@ function CustomObjectCreator({ onCreate, t }) {
           </div>
 
           <label>
+            <span>{t('mapEditor.fields.interactionMode')}</span>
+            <select
+              value={draft.interactionMode}
+              onChange={(event) => setDraft((prev) => ({ ...prev, interactionMode: event.target.value }))}
+            >
+              <option value="DECOR">Декор</option>
+              <option value="SELECTABLE">Вибирається гостем</option>
+            </select>
+          </label>
+
+          <label>
             <span>{t('mapEditor.fields.svgUrl')}</span>
             <input
               type="url"
@@ -1065,6 +1088,7 @@ function CustomObjectCreator({ onCreate, t }) {
               width: draft.width,
               height: draft.height,
               zIndex: draft.zIndex,
+              interactionMode: draft.interactionMode,
               svgUrl: draft.svgUrl.trim(),
               svgCode: draft.svgCode.trim(),
               isLocked: false
@@ -1896,7 +1920,8 @@ export default function MapEditorPage() {
         rotation: 0,
         zIndex,
         isActive: true,
-        metaJson: { 
+    metaJson: { 
+          interactionMode: meta.interactionMode || (meta.subType === 'BED' ? 'SELECTABLE' : 'DECOR'),
           subType: meta.subType,
           pathData: meta.pathData,
           points: meta.points,

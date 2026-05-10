@@ -288,6 +288,7 @@ const translations = {
       },
       fields: {
         label: 'Текст',
+        interactionMode: 'Режим об’єкта',
         x: 'X',
         y: 'Y',
         width: 'Ширина',
