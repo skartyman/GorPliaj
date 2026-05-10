@@ -2351,6 +2351,29 @@ textarea {
   gap: 10px;
 }
 
+.custom-object-preview {
+  min-height: 108px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.custom-object-preview img,
+.custom-object-preview > div {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.custom-object-preview-placeholder {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .custom-object-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

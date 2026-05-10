@@ -245,6 +245,8 @@ const translations = {
       sendBackward: 'Нижче',
       bringForward: 'Вище',
       bringToTop: 'Поверх усіх',
+      lockObject: 'Закріпити',
+      unlockObject: 'Відкріпити',
       addObjectButton: 'Додати об’єкт',
       createObjectButton: 'Створити об’єкт',
       newObjectDefault: 'Новий об’єкт',

@@ -353,13 +353,14 @@ function MapSettings({ map, onMapFieldChange, t }) {
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, onLayerAction, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
 
   const table = selectedObject.tableId ? tableMap.get(selectedObject.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
+  const isLocked = Boolean(selectedObject.metaJson?.isLocked);
 
   const uploadFileToField = async (event, field) => {
     const file = event.target.files?.[0];
@@ -400,6 +401,16 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
       </div>
 
       <div className="actions compact">
+        <button type="button" className="btn btn-primary btn-small" onClick={onSave}>
+          {t('mapEditor.save')}
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-small"
+          onClick={() => onFieldChange('isLocked', !isLocked)}
+        >
+          {isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
+        </button>
         <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('bottom')}>
           {t('mapEditor.sendToBottom')}
         </button>
@@ -597,7 +608,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const accent = getObjectAccent(object, language);
 
-  const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor } = object.metaJson || {};
+  const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor, isLocked } = object.metaJson || {};
 
   const renderObjectContent = () => {
     // 1. External SVG URL
@@ -623,6 +634,25 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           style={{ width: '100%', height: '100%', color: strokeColor || 'inherit' }} 
           dangerouslySetInnerHTML={{ __html: svgCode }} 
         />
+      );
+    }
+
+    if (subType === 'SVG') {
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            background: '#f8fafc',
+            border: '1px dashed #cbd5e1',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <span className="muted small">{localizeField(object.label, language)}</span>
+        </div>
       );
     }
 
@@ -704,6 +734,31 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           </svg>
         );
       case 'CUSTOM':
+        if (svgUrl) {
+          return (
+            <img
+              src={svgUrl}
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                pointerEvents: 'none',
+                opacity: opacity || 1
+              }}
+            />
+          );
+        }
+
+        if (svgCode) {
+          return (
+            <div
+              style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: opacity || 1 }}
+              dangerouslySetInnerHTML={{ __html: svgCode }}
+            />
+          );
+        }
+
         if (texture || textureUrl || ['sand', 'sea', 'deck'].includes(accent)) {
           const accentTexture = texture || (accent === 'sand' ? 'sand' : accent === 'sea' ? 'water' : accent === 'deck' ? 'wood' : '');
           return <div style={{ width: '100%', height: '100%', background: getTextureFill({ texture: accentTexture, textureUrl }), borderRadius: '4px', opacity: opacity || 1 }} />;
@@ -743,6 +798,29 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
         transition: 'transform 0.2s'
       }}
     >
+      {isLocked ? (
+        <div
+          title="Locked"
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            background: '#0f172a',
+            color: '#fff',
+            fontSize: '11px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            zIndex: 5
+          }}
+        >
+          #
+        </div>
+      ) : null}
       {renderObjectContent()}
       {isSelected && (
         <div style={{ 
@@ -878,6 +956,15 @@ function CustomObjectCreator({ onCreate, t }) {
 
       {open ? (
         <div className="custom-object-form">
+          <div className="custom-object-preview">
+            {draft.svgUrl ? (
+              <img src={draft.svgUrl} alt="" />
+            ) : draft.svgCode ? (
+              <div dangerouslySetInnerHTML={{ __html: draft.svgCode }} />
+            ) : (
+              <div className="custom-object-preview-placeholder">{t('mapEditor.newObjectDefault')}</div>
+            )}
+          </div>
           <div className="custom-object-grid">
             <label>
               <span>{t('mapEditor.fields.label')}</span>
@@ -953,7 +1040,8 @@ function CustomObjectCreator({ onCreate, t }) {
               height: draft.height,
               zIndex: draft.zIndex,
               svgUrl: draft.svgUrl.trim(),
-              svgCode: draft.svgCode.trim()
+              svgCode: draft.svgCode.trim(),
+              isLocked: false
             })}
           >
             {t('mapEditor.createObjectButton')}
@@ -1425,6 +1513,15 @@ export default function MapEditorPage() {
         };
       }
 
+      if (field === 'isLocked') {
+        return {
+          ...object,
+          metaJson: {
+            ...object.metaJson,
+            isLocked: Boolean(value)
+          }
+        };
+      }
 
       const numericValue = Number(value);
       return {
@@ -1552,7 +1649,8 @@ export default function MapEditorPage() {
           strokeColor: meta.strokeColor,
           strokeWidth: meta.strokeWidth,
           svgUrl: meta.svgUrl,
-          svgCode: meta.svgCode
+          svgCode: meta.svgCode,
+          isLocked: Boolean(meta.isLocked)
         }
       },
       currentMap
@@ -2124,8 +2222,8 @@ export default function MapEditorPage() {
                             setEditorState((prev) => ({ ...prev, selectedObjectId: object.id, activeTab: 'PROPERTIES' }));
                           }
                         }}
-                        enableResizing={editorState.activeTool === 'SELECT'}
-                        disableDragging={editorState.activeTool !== 'SELECT'}
+                        enableResizing={editorState.activeTool === 'SELECT' && !object.metaJson?.isLocked}
+                        disableDragging={editorState.activeTool !== 'SELECT' || Boolean(object.metaJson?.isLocked)}
                         dragGrid={[1, 1]}
                         resizeGrid={[1, 1]}
                         scale={mapScale}
@@ -2185,6 +2283,7 @@ export default function MapEditorPage() {
                       onDuplicate={duplicateSelected}
                       onDelete={handleDeleteSelected}
                       onLayerAction={moveSelectedLayer}
+                      onSave={saveChanges}
                       t={t}
                       language={language}
                     />
