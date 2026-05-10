@@ -321,11 +321,9 @@ function normalizeMap(map) {
   };
 }
 
-function normalizeObject(object, map) {
+function normalizeObject(object) {
   const width = Math.max(roundCoordinate(object.width), 24);
   const height = Math.max(roundCoordinate(object.height), 24);
-  const maxX = Math.max((map?.width || 0) - width, 0);
-  const maxY = Math.max((map?.height || 0) - height, 0);
   const metaJson = object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : {};
   const subType = String(metaJson.subType || '').toUpperCase();
   const interactionMode = typeof metaJson.interactionMode === 'string'
@@ -337,8 +335,8 @@ function normalizeObject(object, map) {
     ...object,
     label: object.label || '',
     tableId: Number.isInteger(Number(object.tableId)) && Number(object.tableId) > 0 ? Number(object.tableId) : null,
-    x: clamp(roundCoordinate(object.x), 0, maxX),
-    y: clamp(roundCoordinate(object.y), 0, maxY),
+    x: roundCoordinate(object.x),
+    y: roundCoordinate(object.y),
     width,
     height,
     rotation: roundCoordinate(object.rotation),
@@ -2750,7 +2748,6 @@ export default function MapEditorPage() {
                     return (
                       <Rnd
                         key={object.id}
-                        bounds="parent"
                         size={{ width: object.width, height: object.height }}
                         position={{ x: object.x, y: object.y }}
                         onDragStart={(_, data) => beginDragGroup(object.id, data)}
