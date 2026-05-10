@@ -33,6 +33,13 @@ const MAP_VARIANT_PRESETS = [
   { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones' }
 ];
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
+const TEXTURE_CHOICES = [
+  { value: '', label: 'Без' },
+  { value: 'grass', label: 'Трава' },
+  { value: 'sand', label: 'Пісок' },
+  { value: 'water', label: 'Вода' },
+  { value: 'wood', label: 'Дерево' }
+];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', section: 'General' },
   { key: 'interactionMode', type: 'select', section: 'General', options: [
@@ -46,9 +53,7 @@ const PROPERTY_FIELDS = [
     { value: 'water', label: 'Вода' },
     { value: 'wood', label: 'Дерево' }
   ]},
-  { key: 'textureUrl', type: 'text', section: 'Graphics', placeholder: 'Texture image URL' },
-  { key: 'opacity', type: 'number', section: 'Graphics', step: 0.05 },
-  { key: 'svgUrl', type: 'text', section: 'Graphics', placeholder: 'R2 URL or external SVG' },
+  { key: 'opacity', type: 'percent', section: 'Graphics', step: 1 },
   { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>' },
   { key: 'strokeWidth', type: 'number', section: 'Graphics', step: 1 },
   { key: 'strokeColor', type: 'color', section: 'Graphics' },
@@ -190,6 +195,107 @@ function loadTextureAssets() {
 
 function cloneEditorSnapshot(snapshot) {
   return JSON.parse(JSON.stringify(snapshot));
+}
+
+function getOpacityPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 100;
+  return Math.round(numeric <= 1 ? numeric * 100 : numeric);
+}
+
+function getOpacityValueFromPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 1;
+  return clamp(numeric, 0, 100) / 100;
+}
+
+function ActionIcon({ name }) {
+  switch (name) {
+    case 'save':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 4h11l3 3v13H5z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 4v6h8V4" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 18h8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+    case 'lock':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="6" y="11" width="12" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+    case 'unlock':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="6" y="11" width="12" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M10 11V8.5A4.5 4.5 0 0 1 18.5 8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+    case 'bottom':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 4v10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 19h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'back':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 6v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'front':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 18v-8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 10l4-4 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'top':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 20V10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 14l4-4 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 5h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'duplicate':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="7" y="7" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="4" y="4" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" opacity="0.55" />
+        </svg>
+      );
+    case 'delete':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 7h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M9 7V5h6v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 7l1 12h6l1-12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'texture':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M7 9h10M7 13h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'upload':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 16V6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 10l4-4 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 18h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
 }
 
 function normalizeSelectionIds(ids) {
@@ -426,33 +532,35 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
       </div>
 
       <div className="actions compact editor-actions-grid">
-        <button type="button" className="btn btn-primary btn-small" onClick={onSave}>
-          {t('mapEditor.save')}
+        <button type="button" className="icon-action-btn primary" onClick={onSave} title={t('mapEditor.save')} aria-label={t('mapEditor.save')}>
+          <ActionIcon name="save" />
         </button>
         <button
           type="button"
-          className="btn btn-secondary btn-small"
+          className="icon-action-btn"
           onClick={() => onFieldChange('isLocked', !isLocked)}
+          title={isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
+          aria-label={isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
         >
-          {isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
+          <ActionIcon name={isLocked ? 'lock' : 'unlock'} />
         </button>
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('bottom')}>
-          {t('mapEditor.sendToBottom')}
+        <button type="button" className="icon-action-btn" onClick={() => onLayerAction('bottom')} title={t('mapEditor.sendToBottom')} aria-label={t('mapEditor.sendToBottom')}>
+          <ActionIcon name="bottom" />
         </button>
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('back')}>
-          {t('mapEditor.sendBackward')}
+        <button type="button" className="icon-action-btn" onClick={() => onLayerAction('back')} title={t('mapEditor.sendBackward')} aria-label={t('mapEditor.sendBackward')}>
+          <ActionIcon name="back" />
         </button>
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('front')}>
-          {t('mapEditor.bringForward')}
+        <button type="button" className="icon-action-btn" onClick={() => onLayerAction('front')} title={t('mapEditor.bringForward')} aria-label={t('mapEditor.bringForward')}>
+          <ActionIcon name="front" />
         </button>
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => onLayerAction('top')}>
-          {t('mapEditor.bringToTop')}
+        <button type="button" className="icon-action-btn" onClick={() => onLayerAction('top')} title={t('mapEditor.bringToTop')} aria-label={t('mapEditor.bringToTop')}>
+          <ActionIcon name="top" />
         </button>
-        <button type="button" className="btn btn-secondary btn-small" onClick={onDuplicate}>
-          {t('mapEditor.duplicateSelected')}
+        <button type="button" className="icon-action-btn" onClick={onDuplicate} title={t('mapEditor.duplicateSelected')} aria-label={t('mapEditor.duplicateSelected')}>
+          <ActionIcon name="duplicate" />
         </button>
-        <button type="button" className="btn btn-danger btn-small" onClick={onDelete}>
-          {t('mapEditor.deleteSelected')}
+        <button type="button" className="icon-action-btn danger" onClick={onDelete} title={t('mapEditor.deleteSelected')} aria-label={t('mapEditor.deleteSelected')}>
+          <ActionIcon name="delete" />
         </button>
       </div>
 
@@ -464,59 +572,90 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
             </h5>
             <div className="editor-form-grid">
               {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
-                  <label
-                    key={field.key}
-                    className={[
-                      field.type === 'textarea' ? 'field-span-2' : '',
-                      ['textureUrl', 'svgUrl'].includes(field.key) ? 'field-with-action' : ''
-                    ].filter(Boolean).join(' ')}
-                  >
-                    <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
-                      {field.type === 'select' ? (
-                        <select 
-                          value={selectedObject.metaJson?.[field.key] || ''} 
-                          onChange={(event) => onFieldChange(field.key, event.target.value)}
+                <label
+                  key={field.key}
+                  className={[
+                    field.type === 'textarea' ? 'field-span-2' : '',
+                    field.key === 'opacity' ? 'field-opacity' : '',
+                    field.key === 'strokeColor' ? 'field-color' : '',
+                    field.key === 'texture' ? 'field-span-2 field-texture' : ''
+                  ].filter(Boolean).join(' ')}
+                >
+                  <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
+                  {field.key === 'texture' ? (
+                    <div className="texture-choice-grid">
+                      {TEXTURE_CHOICES.map((choice) => (
+                        <button
+                          key={choice.value || 'none'}
+                          type="button"
+                          className={`texture-choice ${String(selectedObject.metaJson?.texture || '') === choice.value ? 'active' : ''}`}
+                          onClick={() => onFieldChange('texture', choice.value)}
+                          title={choice.label}
                         >
-                      {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          <span className={`texture-choice-preview texture-${choice.value || 'none'}`} />
+                          <span>{choice.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : field.type === 'select' ? (
+                    <select
+                      value={selectedObject.metaJson?.[field.key] || ''}
+                      onChange={(event) => onFieldChange(field.key, event.target.value)}
+                    >
+                      {field.options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                   ) : field.type === 'textarea' ? (
                     <textarea
                       value={selectedObject.metaJson?.[field.key] || ''}
                       placeholder={field.placeholder}
                       onChange={(event) => onFieldChange(field.key, event.target.value)}
-                      style={{ height: '60px', fontFamily: 'monospace', fontSize: '10px' }}
+                      style={{ minHeight: '92px', fontFamily: 'monospace', fontSize: '10px' }}
                     />
-                      ) : (
-                        <div className="field-with-action-row">
-                          <input
-                            type={field.type}
-                            step={field.step ?? undefined}
-                            placeholder={field.placeholder}
-                            value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
-                            onChange={(event) => onFieldChange(field.key, event.target.value)}
-                          />
-                          {['svgUrl', 'textureUrl'].includes(field.key) && (
-                            <button className="btn btn-secondary btn-small field-upload-button" type="button" onClick={() => document.getElementById(`${field.key}-upload`).click()}>
-                              {t('mapEditor.uploadAsset')}
-                            </button>
-                          )}
-                        </div>
-                      )}
+                  ) : field.type === 'percent' ? (
+                    <div className="field-with-suffix">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={getOpacityPercent(selectedObject.metaJson?.opacity)}
+                        onChange={(event) => onFieldChange('opacity', getOpacityValueFromPercent(event.target.value))}
+                      />
+                      <span className="field-suffix">%</span>
+                    </div>
+                  ) : (
+                    <input
+                      type={field.type}
+                      step={field.step ?? undefined}
+                      placeholder={field.placeholder}
+                      value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
+                      onChange={(event) => onFieldChange(field.key, event.target.value)}
+                    />
+                  )}
                 </label>
               ))}
             </div>
           </div>
         ))} 
         <input id="svgUrl-upload" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'svgUrl')} />
-        <input id="textureUrl-upload" type="file" accept=".png,.jpg,.jpeg,.webp,.svg" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'textureUrl')} />
 
-        {(selectedObject.metaJson?.svgUrl || selectedObject.metaJson?.svgCode) ? (
-          <div className="custom-object-preview" style={{ marginBottom: '12px', minHeight: '96px' }}>
-            {selectedObject.metaJson?.svgUrl ? (
-              <img src={selectedObject.metaJson.svgUrl} alt="" />
-            ) : (
-              <div dangerouslySetInnerHTML={{ __html: selectedObject.metaJson?.svgCode || '' }} />
-            )}
+        {selectedObject.type !== 'TABLE' ? (
+          <div className="inspector-asset-card">
+            <div className="inspector-asset-head">
+              <strong>{t('mapEditor.fields.svgUrl')}</strong>
+              <button type="button" className="icon-action-btn tiny" onClick={() => document.getElementById('svgUrl-upload').click()} title={t('mapEditor.uploadAsset')} aria-label={t('mapEditor.uploadAsset')}>
+                <ActionIcon name="upload" />
+              </button>
+            </div>
+            <div className="inspector-asset-preview">
+              {selectedObject.metaJson?.svgUrl ? (
+                <img src={selectedObject.metaJson.svgUrl} alt="" />
+              ) : selectedObject.metaJson?.svgCode ? (
+                <div dangerouslySetInnerHTML={{ __html: selectedObject.metaJson?.svgCode || '' }} />
+              ) : (
+                <div className="inspector-asset-placeholder">{t('mapEditor.noSelection')}</div>
+              )}
+            </div>
           </div>
         ) : null}
 
@@ -665,6 +804,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
 
   const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor, isLocked } = object.metaJson || {};
   const effectiveSvgUrl = svgUrl || (String(subType || '').toUpperCase() === 'BED' ? DEFAULT_BED_ASSET_URL : '');
+  const objectOpacity = Number.isFinite(Number(opacity)) ? Number(opacity) : 1;
 
   const renderObjectContent = () => {
     // 1. External SVG URL
@@ -677,6 +817,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
             width: '100%', height: '100%', 
             objectFit: 'contain', 
             pointerEvents: 'none',
+            opacity: objectOpacity,
             filter: strokeColor ? `drop-shadow(0 0 2px ${strokeColor})` : 'none'
           }} 
         />
@@ -715,7 +856,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
     // 3. Built-in SVG Template
     if (subType && SVG_TEMPLATES[subType]) {
       return (
-        <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit' }}>
+        <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: objectOpacity }}>
           {SVG_TEMPLATES[subType]}
         </svg>
       );
@@ -746,7 +887,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           <polygon
             points={pointsToSvg(points)}
             fill={fill}
-            opacity={opacity || 1}
+            opacity={objectOpacity}
             stroke={strokeColor || '#64748b'}
             strokeWidth={strokeWidth || 2}
             vectorEffect="non-scaling-stroke"
@@ -808,7 +949,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
 
         if (subType && SVG_TEMPLATES[subType]) {
           return (
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: opacity || 1 }}>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: objectOpacity }}>
               {SVG_TEMPLATES[subType]}
             </svg>
           );
@@ -817,7 +958,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
         if (svgCode) {
           return (
             <div
-              style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: opacity || 1 }}
+              style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: objectOpacity }}
               dangerouslySetInnerHTML={{ __html: svgCode }}
             />
           );
@@ -825,7 +966,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
 
         if (texture || textureUrl || ['sand', 'sea', 'deck'].includes(accent)) {
           const accentTexture = texture || (accent === 'sand' ? 'sand' : accent === 'sea' ? 'water' : accent === 'deck' ? 'wood' : '');
-          return <div style={{ width: '100%', height: '100%', background: getTextureFill({ texture: accentTexture, textureUrl }), borderRadius: '4px', opacity: opacity || 1 }} />;
+        return <div style={{ width: '100%', height: '100%', background: getTextureFill({ texture: accentTexture, textureUrl }), borderRadius: '4px', opacity: objectOpacity }} />;
         }
 
         return (
