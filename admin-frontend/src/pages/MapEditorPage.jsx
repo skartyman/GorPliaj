@@ -431,6 +431,30 @@ function resolveSavedSelection(prevState, nextData) {
 }
 
 function MapSettings({ map, onMapFieldChange, t }) {
+  const backgroundUploadRef = useRef(null);
+
+  const uploadBackgroundImage = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('folder', 'menu');
+    formData.append('image', file);
+
+    const result = await apiRequest('/api/admin/uploads/image', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (result.response.ok && result.body?.url) {
+      onMapFieldChange('backgroundImage', result.body.url);
+    } else {
+      alert(result.body?.message || 'Upload failed');
+    }
+
+    event.target.value = '';
+  };
+
   return (
     <div className="editor-properties-stack">
       <div className="editor-form-grid map-settings-grid">
@@ -467,12 +491,30 @@ function MapSettings({ map, onMapFieldChange, t }) {
 
         <label className="map-settings-span-2">
           <span>{t('mapEditor.fields.backgroundImage')}</span>
-          <input
-            type="url"
-            value={map.backgroundImage}
-            placeholder="https://example.com/floorplan.png"
-            onChange={(event) => onMapFieldChange('backgroundImage', event.target.value)}
-          />
+          <div className="field-with-action-row">
+            <input
+              type="url"
+              value={map.backgroundImage}
+              placeholder="https://example.com/floorplan.png"
+              onChange={(event) => onMapFieldChange('backgroundImage', event.target.value)}
+            />
+            <button
+              type="button"
+              className="icon-action-btn tiny"
+              onClick={() => backgroundUploadRef.current?.click()}
+              title={t('mapEditor.uploadAsset')}
+              aria-label={t('mapEditor.uploadAsset')}
+            >
+              <ActionIcon name="upload" />
+            </button>
+            <input
+              ref={backgroundUploadRef}
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp,.svg"
+              style={{ display: 'none' }}
+              onChange={uploadBackgroundImage}
+            />
+          </div>
         </label>
 
         <label>
