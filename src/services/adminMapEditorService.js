@@ -503,6 +503,16 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   });
 
   const existingById = new Map(existingObjects.map((object) => [object.id, object]));
+  const hasNewObjects = objects.some((object) => {
+    const numericId = Number(object.id);
+    return !Number.isInteger(numericId) || numericId <= 0;
+  });
+
+  if (hasNewObjects) {
+    await prisma.$executeRawUnsafe(
+      'SELECT setval(pg_get_serial_sequence(\'"MapObject"\', \'id\'), COALESCE((SELECT MAX("id") FROM "MapObject"), 0) + 1, false)'
+    );
+  }
 
   const payloadExistingIds = new Set();
   for (const object of objects) {
