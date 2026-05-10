@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
@@ -105,6 +105,7 @@ const ASSET_CATEGORIES = {
       { type: 'TABLE', label: 'Стіл 4', width: 100, height: 70 },
       { type: 'TABLE', label: 'Стіл 2', width: 60, height: 60 },
       { type: 'TABLE', label: 'Стіл 6', width: 160, height: 70 },
+      { type: 'STAGE', label: 'Сцена', width: 200, height: 120 },
       { type: 'CUSTOM', label: 'Шезлонг', width: 80, height: 160, subType: 'SUNBED' },
       { type: 'CUSTOM', label: 'Парасоля', width: 120, height: 120, subType: 'UMBRELLA' },
       { type: 'CUSTOM', label: 'Ліжко', width: 160, height: 200, subType: 'BED', interactionMode: 'SELECTABLE', svgUrl: DEFAULT_BED_ASSET_URL, isLocked: true }
@@ -763,6 +764,16 @@ const SVG_TEMPLATES = {
       <circle cx="50" cy="50" r="45" fill="#fff" />
       <path d="M50,5 L50,95 M5,50 L95,50 M18,18 L82,82 M18,82 L82,18" stroke="#e2e8f0" />
       <circle cx="50" cy="50" r="4" fill="#94a3b8" />
+    </g>
+  ),
+  STAGE: (
+    <g fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="12" y="42" width="76" height="34" rx="4" fill="#f8fafc" stroke="#94a3b8" />
+      <path d="M16 70h68" />
+      <path d="M22 42V24h56v18" />
+      <path d="M26 30h48" stroke="#cbd5e1" />
+      <path d="M32 34l8-6 8 6 8-6 8 6 8-6 8 6" stroke="#60a5fa" />
+      <path d="M34 76v8M66 76v8" />
     </g>
   ),
   SUNBED: (
@@ -2927,3 +2938,4 @@ export default function MapEditorPage() {
     </AdminLayout>
   );
 }
+
