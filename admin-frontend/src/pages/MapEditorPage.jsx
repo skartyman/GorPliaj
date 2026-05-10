@@ -797,7 +797,7 @@ function getTextureFill({ texture, textureUrl, fallback = '#f1f5f9' }) {
   return fallback;
 }
 
-function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected }) {
+function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected, onRequestProperties, onToggleLock }) {
   const table = object.tableId ? tableMap.get(object.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const accent = getObjectAccent(object, language);
@@ -995,6 +995,11 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
 
   return (
     <div 
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRequestProperties?.(event);
+      }}
       style={{ 
         width: '100%', 
         height: '100%', 
@@ -1026,6 +1031,20 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           #
         </div>
       ) : null}
+      <button
+        type="button"
+        className="map-object-lock-toggle"
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggleLock?.();
+        }}
+        title={isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
+        aria-label={isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
+      >
+        <ActionIcon name={isLocked ? 'lock' : 'unlock'} />
+      </button>
       {renderObjectContent()}
       {isSelected && (
         <div style={{ 
@@ -1659,8 +1678,8 @@ export default function MapEditorPage() {
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [objects, selectedObjects, selectedObject, editorState.current, t]);
 
   function setSelection(ids, options = {}) {
@@ -2722,6 +2741,8 @@ export default function MapEditorPage() {
                           zoneMap={zoneMap}
                           t={t}
                           language={language}
+                          onRequestProperties={(event) => handleObjectContextMenu(object.id, event)}
+                          onToggleLock={() => handleFieldChange('isLocked', !object.metaJson?.isLocked)}
                         />
                       </Rnd>
                     );
