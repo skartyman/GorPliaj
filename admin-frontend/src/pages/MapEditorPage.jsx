@@ -549,7 +549,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
     });
 
     if (result.response.ok && result.body?.url) {
-      onFieldChange(field, result.body.url);
+      onFieldChange(field, result.body.url, { saveAfterChange: true });
     } else {
       alert(result.body?.message || 'Upload failed');
     }
@@ -574,7 +574,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
       </div>
 
       <div className="actions compact editor-actions-grid">
-        <button type="button" className="icon-action-btn primary" onClick={onSave} title={t('mapEditor.save')} aria-label={t('mapEditor.save')}>
+        <button type="button" className="icon-action-btn primary" onClick={() => onSave()} title={t('mapEditor.save')} aria-label={t('mapEditor.save')}>
           <ActionIcon name="save" />
         </button>
         <button
@@ -1917,7 +1917,7 @@ export default function MapEditorPage() {
     });
   }
 
-  function updateObject(objectId, updater) {
+  function updateObject(objectId, updater, options = {}) {
     updateCurrent((prev) => {
       const nextObjects = prev.current.objects.map((object) => {
         if (object.id !== objectId) {
@@ -1927,16 +1927,25 @@ export default function MapEditorPage() {
         return normalizeObject(updater(object), prev.current.map);
       });
 
-      return {
+      const next = {
         current: {
           ...prev.current,
           objects: nextObjects
         }
       };
+
+      if (options.saveAfterChange) {
+        pendingSaveRef.current = {
+          ...prev,
+          ...next
+        };
+      }
+
+      return next;
     });
   }
 
-  function handleFieldChange(field, value) {
+  function handleFieldChange(field, value, options = {}) {
     if (!selectedObject) {
       return;
     }
@@ -1946,19 +1955,30 @@ export default function MapEditorPage() {
         return;
       }
 
-      updateCurrent((prev) => ({
-        current: {
-          ...prev.current,
-          tables: prev.current.tables.map((table) =>
-            table.id === selectedObject.tableId
-              ? {
-                  ...table,
-                  photoUrl: String(value)
-                }
-              : table
-          )
+      updateCurrent((prev) => {
+        const next = {
+          current: {
+            ...prev.current,
+            tables: prev.current.tables.map((table) =>
+              table.id === selectedObject.tableId
+                ? {
+                    ...table,
+                    photoUrl: String(value)
+                  }
+                : table
+            )
+          }
+        };
+
+        if (options.saveAfterChange) {
+          pendingSaveRef.current = {
+            ...prev,
+            ...next
+          };
         }
-      }));
+
+        return next;
+      });
 
       return;
     }
@@ -1970,7 +1990,17 @@ export default function MapEditorPage() {
       }
 
       if (META_PROPERTY_FIELDS.has(field)) {
-        return { ...object, metaJson: { ...object.metaJson, [field]: String(value) } };
+        const nextMeta = { ...object.metaJson, [field]: String(value) };
+
+        if (field === 'svgUrl' && value) {
+          nextMeta.svgCode = '';
+        }
+
+        if (field === 'svgCode' && value) {
+          nextMeta.svgUrl = '';
+        }
+
+        return { ...object, metaJson: nextMeta };
       }
 
       if (field === 'isActive') {
@@ -1999,7 +2029,7 @@ export default function MapEditorPage() {
         ...object,
         [field]: Number.isFinite(numericValue) ? numericValue : object[field]
       };
-    });
+    }, options);
   }
 
   function wrapLabel(label) {
