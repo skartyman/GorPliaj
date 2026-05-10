@@ -2326,6 +2326,48 @@ textarea {
   transform: translateY(-2px);
 }
 
+.custom-object-creator {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.custom-object-toggle {
+  width: 100%;
+  justify-content: center;
+}
+
+.custom-object-toggle.active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.custom-object-form {
+  display: grid;
+  gap: 10px;
+}
+
+.custom-object-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.custom-object-form label {
+  display: grid;
+  gap: 4px;
+}
+
+.custom-object-form span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
 .asset-preview {
   width: 40px;
   height: 40px;

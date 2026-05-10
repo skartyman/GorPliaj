@@ -836,6 +836,132 @@ function TextureLibrary({ textureAssets, selectedObject, onUpload, onApply, onDe
   );
 }
 
+function CustomObjectCreator({ onCreate, t }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState({
+    label: '',
+    width: 160,
+    height: 120,
+    zIndex: 1,
+    svgUrl: '',
+    svgCode: ''
+  });
+
+  async function uploadSvg(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const result = await apiRequest('/api/admin/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (result.response.ok && result.body?.url) {
+      setDraft((prev) => ({ ...prev, svgUrl: result.body.url, svgCode: '' }));
+    } else {
+      alert(result.body?.message || 'Upload failed');
+    }
+
+    event.target.value = '';
+  }
+
+  return (
+    <div className="custom-object-creator">
+      <button type="button" className={`btn btn-secondary btn-small custom-object-toggle ${open ? 'active' : ''}`} onClick={() => setOpen((prev) => !prev)}>
+        {t('mapEditor.addObjectButton')}
+      </button>
+
+      {open ? (
+        <div className="custom-object-form">
+          <div className="custom-object-grid">
+            <label>
+              <span>{t('mapEditor.fields.label')}</span>
+              <input
+                type="text"
+                value={draft.label}
+                onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value }))}
+                placeholder={t('mapEditor.fields.label')}
+              />
+            </label>
+            <label>
+              <span>{t('mapEditor.fields.width')}</span>
+              <input
+                type="number"
+                value={draft.width}
+                min="24"
+                step="1"
+                onChange={(event) => setDraft((prev) => ({ ...prev, width: Number(event.target.value) || 24 }))}
+              />
+            </label>
+            <label>
+              <span>{t('mapEditor.fields.height')}</span>
+              <input
+                type="number"
+                value={draft.height}
+                min="24"
+                step="1"
+                onChange={(event) => setDraft((prev) => ({ ...prev, height: Number(event.target.value) || 24 }))}
+              />
+            </label>
+            <label>
+              <span>{t('mapEditor.fields.zIndex')}</span>
+              <input
+                type="number"
+                value={draft.zIndex}
+                step="1"
+                onChange={(event) => setDraft((prev) => ({ ...prev, zIndex: Number(event.target.value) || 0 }))}
+              />
+            </label>
+          </div>
+
+          <label>
+            <span>{t('mapEditor.fields.svgUrl')}</span>
+            <input
+              type="url"
+              value={draft.svgUrl}
+              onChange={(event) => setDraft((prev) => ({ ...prev, svgUrl: event.target.value }))}
+              placeholder="https://example.com/object.svg"
+            />
+          </label>
+
+          <label>
+            <span>{t('mapEditor.fields.svgCode')}</span>
+            <textarea
+              value={draft.svgCode}
+              onChange={(event) => setDraft((prev) => ({ ...prev, svgCode: event.target.value, svgUrl: '' }))}
+              placeholder="<svg>...</svg>"
+              style={{ minHeight: '88px', fontFamily: 'monospace', fontSize: '10px' }}
+            />
+          </label>
+
+          <label className="btn btn-secondary btn-small texture-upload-button">
+            {t('mapEditor.uploadAsset')}
+            <input type="file" accept=".svg" onChange={uploadSvg} />
+          </label>
+
+          <button
+            type="button"
+            className="btn btn-primary btn-small"
+            onClick={() => onCreate({
+              label: draft.label || t('mapEditor.newObjectDefault'),
+              width: draft.width,
+              height: draft.height,
+              zIndex: draft.zIndex,
+              svgUrl: draft.svgUrl.trim(),
+              svgCode: draft.svgCode.trim()
+            })}
+          >
+            {t('mapEditor.createObjectButton')}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function MapEditorPage() {
   const { t, language } = useAdminI18n();
   const objectIdRef = useRef(0);
@@ -2116,6 +2242,16 @@ export default function MapEditorPage() {
                         </button>
                       ))}
                     </div>
+
+                    <CustomObjectCreator
+                      onCreate={(meta) => createObject('CUSTOM', {
+                        ...meta,
+                        subType: meta.svgCode || meta.svgUrl ? 'SVG' : meta.subType,
+                        texture: '',
+                        opacity: 1
+                      })}
+                      t={t}
+                    />
                   </div>
                 )}
               </div>
