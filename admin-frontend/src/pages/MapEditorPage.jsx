@@ -397,7 +397,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
         </span>
       </div>
 
-      <div className="actions compact">
+      <div className="actions compact editor-actions-grid">
         <button type="button" className="btn btn-primary btn-small" onClick={onSave}>
           {t('mapEditor.save')}
         </button>
@@ -436,7 +436,13 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
             </h5>
             <div className="editor-form-grid">
               {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
-                  <label key={field.key} style={field.type === 'textarea' ? { gridColumn: '1 / -1' } : undefined}>
+                  <label
+                    key={field.key}
+                    className={[
+                      field.type === 'textarea' ? 'field-span-2' : '',
+                      ['textureUrl', 'svgUrl'].includes(field.key) ? 'field-with-action' : ''
+                    ].filter(Boolean).join(' ')}
+                  >
                     <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
                       {field.type === 'select' ? (
                         <select 
@@ -453,21 +459,21 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                       style={{ height: '60px', fontFamily: 'monospace', fontSize: '10px' }}
                     />
                       ) : (
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                        <div className="field-with-action-row">
                           <input
                             type={field.type}
                             step={field.step ?? undefined}
                             placeholder={field.placeholder}
-                        value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
-                        onChange={(event) => onFieldChange(field.key, event.target.value)}
-                      />
-                      {['svgUrl', 'textureUrl'].includes(field.key) && (
-                        <button className="btn btn-secondary btn-small" type="button" onClick={() => document.getElementById(`${field.key}-upload`).click()}>
-                          {t('mapEditor.uploadAsset')}
-                        </button>
+                            value={field.key === 'label' ? localizeField(selectedObject[field.key], 'ua') : (selectedObject[field.key] ?? selectedObject.metaJson?.[field.key] ?? '')}
+                            onChange={(event) => onFieldChange(field.key, event.target.value)}
+                          />
+                          {['svgUrl', 'textureUrl'].includes(field.key) && (
+                            <button className="btn btn-secondary btn-small field-upload-button" type="button" onClick={() => document.getElementById(`${field.key}-upload`).click()}>
+                              {t('mapEditor.uploadAsset')}
+                            </button>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
                 </label>
               ))}
             </div>

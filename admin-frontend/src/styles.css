@@ -657,6 +657,17 @@ textarea {
   gap: 6px;
 }
 
+.editor-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.editor-actions-grid .btn {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .prominent-actions .btn {
   min-width: 150px;
   min-height: 42px;
@@ -1519,6 +1530,10 @@ textarea {
   min-width: 0;
 }
 
+.editor-form-grid > label.field-span-2 {
+  grid-column: 1 / -1;
+}
+
 .editor-form-grid input,
 .editor-form-grid select,
 .editor-form-grid textarea {
@@ -1528,6 +1543,17 @@ textarea {
 
 .editor-form-grid textarea {
   resize: vertical;
+}
+
+.field-with-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: start;
+}
+
+.field-upload-button {
+  white-space: nowrap;
 }
 
 .editor-toggle-field {
