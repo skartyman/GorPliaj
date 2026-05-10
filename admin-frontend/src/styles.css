@@ -799,6 +799,7 @@ textarea {
   background: transparent;
   border-color: transparent;
   padding: 0;
+  overflow: visible;
 }
 
 .interactive-map-object.selectable {
@@ -816,6 +817,7 @@ textarea {
   display: block;
   object-fit: contain;
   pointer-events: none;
+  overflow: visible;
 }
 
 .interactive-map-object.object-bar,

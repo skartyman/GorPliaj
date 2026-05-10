@@ -25,6 +25,87 @@ function parseStyleJson(styleJson) {
   }
 }
 
+function parseMetaJson(metaJson) {
+  if (!metaJson) return {};
+
+  try {
+    const parsed = typeof metaJson === 'string' ? JSON.parse(metaJson) : metaJson;
+    if (!parsed || typeof parsed !== 'object') return {};
+
+    return {
+      subType: typeof parsed.subType === 'string' ? parsed.subType : '',
+      svgUrl: typeof parsed.svgUrl === 'string' ? parsed.svgUrl : '',
+      svgCode: typeof parsed.svgCode === 'string' ? parsed.svgCode : '',
+      texture: typeof parsed.texture === 'string' ? parsed.texture : '',
+      textureUrl: typeof parsed.textureUrl === 'string' ? parsed.textureUrl : '',
+      points: Array.isArray(parsed.points) ? parsed.points : [],
+      opacity: Number.isFinite(Number(parsed.opacity)) ? Number(parsed.opacity) : 1,
+      strokeColor: typeof parsed.strokeColor === 'string' ? parsed.strokeColor : '',
+      strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2
+    };
+  } catch {
+    return {};
+  }
+}
+
+function pointsToSvg(points) {
+  return (points || []).map((point) => `${Number(point.x) || 0},${Number(point.y) || 0}`).join(' ');
+}
+
+function getPolygonFill(meta) {
+  if (meta.texture === 'sand') return '#fef3c7';
+  if (meta.texture === 'water') return '#bfdbfe';
+  if (meta.texture === 'wood') return '#d6a766';
+  if (meta.texture === 'grass') return '#bbf7d0';
+  return '#e2e8f0';
+}
+
+function PublicMapObjectGraphic({ object, meta, label }) {
+  const subType = String(meta.subType || '').toUpperCase();
+
+  if (meta.svgUrl) {
+    return <img src={meta.svgUrl} alt={label} className="public-map-object-asset" />;
+  }
+
+  if (meta.svgCode) {
+    return <div className="public-map-object-asset" dangerouslySetInnerHTML={{ __html: meta.svgCode }} />;
+  }
+
+  if (subType === 'POLYGON') {
+    const points = meta.points?.length
+      ? meta.points
+      : [
+          { x: 0, y: 0 },
+          { x: object.width, y: 0 },
+          { x: object.width, y: object.height },
+          { x: 0, y: object.height }
+        ];
+    const patternId = `public-map-texture-${String(object.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+
+    return (
+      <svg className="public-map-object-asset" viewBox={`0 0 ${object.width} ${object.height}`} preserveAspectRatio="none">
+        {meta.textureUrl ? (
+          <defs>
+            <pattern id={patternId} x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox">
+              <image href={meta.textureUrl} x="0" y="0" width={object.width} height={object.height} preserveAspectRatio="xMidYMid slice" />
+            </pattern>
+          </defs>
+        ) : null}
+        <polygon
+          points={pointsToSvg(points)}
+          fill={meta.textureUrl ? `url(#${patternId})` : getPolygonFill(meta)}
+          opacity={meta.opacity}
+          stroke={meta.strokeColor || '#64748b'}
+          strokeWidth={meta.strokeWidth}
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    );
+  }
+
+  return <span>{label}</span>;
+}
+
 export default function MapPage() {
   const { t, locale } = useLocale();
   const [searchParams] = useSearchParams();
@@ -268,6 +349,7 @@ export default function MapPage() {
                 {state.result.map.objects.map((object) => {
                   const table = object.tableId ? tableById.get(object.tableId) : null;
                   const objectLabel = localizeField(object.label, locale) || object.type;
+                  const meta = parseMetaJson(object.metaJson);
                   if (table) {
                     const disabled = table.status !== 'free' || !tableFitsGuests(table);
                     return (
@@ -295,7 +377,7 @@ export default function MapPage() {
                   return (
                     <div
                       key={object.id}
-                      className={`public-map-object object-${String(object.type).toLowerCase()}`}
+                      className={`public-map-object object-${String(object.type).toLowerCase()} ${meta.svgUrl || meta.svgCode || String(meta.subType || '').toUpperCase() === 'POLYGON' ? 'has-asset' : ''}`}
                       style={{
                         left: object.x,
                         top: object.y,
@@ -307,7 +389,7 @@ export default function MapPage() {
                       }}
                       title={objectLabel}
                     >
-                      <span>{objectLabel}</span>
+                      <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
                     </div>
                   );
                 })}

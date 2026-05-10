@@ -152,6 +152,7 @@ export async function getPublicMapData(mapApi, params = {}) {
       type: String(object.type || 'CUSTOM').toUpperCase(),
       label: object.label || '',
       styleJson: object.styleJson,
+      metaJson: object.metaJson,
       tableId: object.tableId ?? null,
       width: Math.max(Number(object.width) || 44, 24),
       height: Math.max(Number(object.height) || 44, 24),
