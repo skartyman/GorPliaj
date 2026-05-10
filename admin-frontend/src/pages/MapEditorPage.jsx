@@ -32,6 +32,7 @@ const MAP_VARIANT_PRESETS = [
   { key: 'EVENT', name: 'Event layout', slugPrefix: 'event-layout', description: 'Event-focused layout' },
   { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones' }
 ];
+const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', section: 'General' },
   { key: 'interactionMode', type: 'select', section: 'General', options: [
@@ -100,7 +101,7 @@ const ASSET_CATEGORIES = {
       { type: 'TABLE', label: 'Стіл 6', width: 160, height: 70 },
       { type: 'CUSTOM', label: 'Шезлонг', width: 80, height: 160, subType: 'SUNBED' },
       { type: 'CUSTOM', label: 'Парасоля', width: 120, height: 120, subType: 'UMBRELLA' },
-      { type: 'CUSTOM', label: 'Ліжко', width: 160, height: 200, subType: 'BED', interactionMode: 'SELECTABLE' }
+      { type: 'CUSTOM', label: 'Ліжко', width: 160, height: 200, subType: 'BED', interactionMode: 'SELECTABLE', svgUrl: DEFAULT_BED_ASSET_URL, isLocked: true }
     ]
   },
   NATURE: {
@@ -220,9 +221,11 @@ function normalizeObject(object, map) {
   const maxX = Math.max((map?.width || 0) - width, 0);
   const maxY = Math.max((map?.height || 0) - height, 0);
   const metaJson = object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : {};
+  const subType = String(metaJson.subType || '').toUpperCase();
   const interactionMode = typeof metaJson.interactionMode === 'string'
     ? metaJson.interactionMode
-    : (String(metaJson.subType || '').toUpperCase() === 'BED' ? 'SELECTABLE' : '');
+    : (subType === 'BED' ? 'SELECTABLE' : '');
+  const svgUrl = String(metaJson.svgUrl || '').trim() || (subType === 'BED' ? DEFAULT_BED_ASSET_URL : '');
 
   return {
     ...object,
@@ -237,7 +240,8 @@ function normalizeObject(object, map) {
     isActive: Boolean(object.isActive),
     metaJson: {
       ...metaJson,
-      interactionMode
+      interactionMode,
+      ...(svgUrl ? { svgUrl } : {})
     }
   };
 }
@@ -586,14 +590,16 @@ const SVG_TEMPLATES = {
   ),
   BED: (
     <g>
-      <rect x="12" y="18" width="76" height="48" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
-      <rect x="18" y="24" width="24" height="18" rx="3" fill="#e2e8f0" />
-      <rect x="44" y="24" width="26" height="30" rx="4" fill="#dbeafe" />
-      <rect x="18" y="50" width="62" height="10" rx="2" fill="#f1f5f9" />
-      <rect x="20" y="62" width="10" height="20" rx="2" fill="#94a3b8" />
-      <rect x="70" y="62" width="10" height="20" rx="2" fill="#94a3b8" />
-      <rect x="16" y="72" width="18" height="6" rx="2" fill="#cbd5e1" />
-      <rect x="66" y="72" width="18" height="6" rx="2" fill="#cbd5e1" />
+      <rect x="10" y="24" width="80" height="46" rx="7" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+      <rect x="14" y="20" width="18" height="12" rx="3" fill="#e5e7eb" />
+      <rect x="34" y="20" width="20" height="12" rx="3" fill="#dbeafe" />
+      <rect x="56" y="20" width="18" height="12" rx="3" fill="#eef2ff" />
+      <rect x="14" y="52" width="72" height="10" rx="3" fill="#f1f5f9" />
+      <rect x="12" y="70" width="9" height="18" rx="2" fill="#94a3b8" />
+      <rect x="79" y="70" width="9" height="18" rx="2" fill="#94a3b8" />
+      <rect x="16" y="82" width="18" height="5" rx="2" fill="#cbd5e1" />
+      <rect x="66" y="82" width="18" height="5" rx="2" fill="#cbd5e1" />
+      <rect x="10" y="18" width="8" height="58" rx="3" fill="#d1d5db" />
     </g>
   ),
   STAIRS: (
@@ -658,13 +664,14 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
   const accent = getObjectAccent(object, language);
 
   const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor, isLocked } = object.metaJson || {};
+  const effectiveSvgUrl = svgUrl || (String(subType || '').toUpperCase() === 'BED' ? DEFAULT_BED_ASSET_URL : '');
 
   const renderObjectContent = () => {
     // 1. External SVG URL
-    if (svgUrl) {
+    if (effectiveSvgUrl) {
       return (
         <img 
-          src={svgUrl} 
+          src={effectiveSvgUrl} 
           alt="" 
           style={{ 
             width: '100%', height: '100%', 
@@ -783,18 +790,10 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           </svg>
         );
       case 'CUSTOM':
-        if (subType && SVG_TEMPLATES[subType]) {
-          return (
-            <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: opacity || 1 }}>
-              {SVG_TEMPLATES[subType]}
-            </svg>
-          );
-        }
-
-        if (svgUrl) {
+        if (effectiveSvgUrl) {
           return (
             <img
-              src={svgUrl}
+              src={effectiveSvgUrl}
               alt=""
               style={{
                 width: '100%',
@@ -804,6 +803,14 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
                 opacity: opacity || 1
               }}
             />
+          );
+        }
+
+        if (subType && SVG_TEMPLATES[subType]) {
+          return (
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: opacity || 1 }}>
+              {SVG_TEMPLATES[subType]}
+            </svg>
           );
         }
 
@@ -1920,6 +1927,7 @@ export default function MapEditorPage() {
     const width = meta.width || preset.width;
     const height = meta.height || preset.height;
     const zIndex = meta.zIndex !== undefined ? Number(meta.zIndex) : maxZIndex + 1;
+    const isBed = String(meta.subType || '').toUpperCase() === 'BED';
     
     // Use provided coordinates or center on map
     const x = meta.x !== undefined ? meta.x : Math.round((currentMap.width - width) / 2);
@@ -1940,8 +1948,8 @@ export default function MapEditorPage() {
         rotation: 0,
         zIndex,
         isActive: true,
-    metaJson: { 
-          interactionMode: meta.interactionMode || (meta.subType === 'BED' ? 'SELECTABLE' : 'DECOR'),
+        metaJson: { 
+          interactionMode: meta.interactionMode || (isBed ? 'SELECTABLE' : 'DECOR'),
           subType: meta.subType,
           pathData: meta.pathData,
           points: meta.points,
@@ -1950,9 +1958,9 @@ export default function MapEditorPage() {
           opacity: meta.opacity,
           strokeColor: meta.strokeColor,
           strokeWidth: meta.strokeWidth,
-          svgUrl: meta.svgUrl,
+          svgUrl: meta.svgUrl || (isBed ? DEFAULT_BED_ASSET_URL : ''),
           svgCode: meta.svgCode,
-          isLocked: Boolean(meta.isLocked)
+          isLocked: meta.isLocked !== undefined ? Boolean(meta.isLocked) : isBed
         }
       },
       currentMap
@@ -2674,7 +2682,9 @@ export default function MapEditorPage() {
                       {ASSET_CATEGORIES[editorState.activeCategory].items.map((item, idx) => (
                         <button key={idx} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
                           <div className="asset-preview">
-                            {item.subType && SVG_TEMPLATES[item.subType] ? (
+                            {item.svgUrl ? (
+                              <img src={item.svgUrl} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+                            ) : item.subType && SVG_TEMPLATES[item.subType] ? (
                               <svg viewBox="0 0 100 100" style={{ width: '30px', height: '30px' }}>
                                 {SVG_TEMPLATES[item.subType]}
                               </svg>
