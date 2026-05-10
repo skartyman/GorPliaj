@@ -7,7 +7,8 @@ const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu']);
 const SUPPORTED_MIME_TYPES = new Map([
   ['image/jpeg', 'jpg'],
   ['image/png', 'png'],
-  ['image/webp', 'webp']
+  ['image/webp', 'webp'],
+  ['image/svg+xml', 'svg']
 ]);
 
 let cachedClient = null;

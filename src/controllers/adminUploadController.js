@@ -30,7 +30,7 @@ function handleMulterError(error, req, res, next) {
     }
 
     if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-      return res.status(400).json({ message: 'Only JPG, PNG, and WEBP images are allowed.' });
+      return res.status(400).json({ message: 'Only JPG, PNG, WEBP, and SVG images are allowed.' });
     }
 
     return res.status(400).json({ message: 'Invalid image upload payload.' });

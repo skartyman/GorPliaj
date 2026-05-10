@@ -366,9 +366,10 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('folder', 'menu');
+    formData.append('image', file);
 
-    const result = await apiRequest('/api/admin/upload', {
+    const result = await apiRequest('/api/admin/uploads/image', {
       method: 'POST',
       body: formData
     });
@@ -376,7 +377,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
     if (result.response.ok && result.body?.url) {
       onFieldChange(field, result.body.url);
     } else {
-      alert('Upload failed');
+      alert(result.body?.message || 'Upload failed');
     }
 
     event.target.value = '';
@@ -852,9 +853,10 @@ function CustomObjectCreator({ onCreate, t }) {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('folder', 'menu');
+    formData.append('image', file);
 
-    const result = await apiRequest('/api/admin/upload', {
+    const result = await apiRequest('/api/admin/uploads/image', {
       method: 'POST',
       body: formData
     });
@@ -1138,9 +1140,10 @@ export default function MapEditorPage() {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('folder', 'menu');
+    formData.append('image', file);
 
-    const result = await apiRequest('/api/admin/upload', {
+    const result = await apiRequest('/api/admin/uploads/image', {
       method: 'POST',
       body: formData
     });
