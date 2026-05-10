@@ -69,6 +69,7 @@ const MIN_MAP_SCALE = 0.25;
 const MAX_MAP_SCALE = 1.75;
 const MAP_SCALE_STEP = 0.1;
 const MAP_VIEWPORT_PADDING = 18;
+const MAP_OVERFLOW_GUTTER = 240;
 const SURFACE_Z_INDEX = 0;
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
@@ -2675,8 +2676,8 @@ export default function MapEditorPage() {
                 <div
                   className="map-editor-canvas-scale-layer"
                   style={{
-                    width: `${map.width * mapScale}px`,
-                    height: `${map.height * mapScale}px`
+                    width: `${(map.width + MAP_OVERFLOW_GUTTER * 2) * mapScale}px`,
+                    height: `${(map.height + MAP_OVERFLOW_GUTTER * 2) * mapScale}px`
                   }}
                 >
                 <div
@@ -2687,7 +2688,9 @@ export default function MapEditorPage() {
                     transform: `scale(${mapScale})`,
                     transformOrigin: 'top left',
                     boxShadow: '0 0 40px rgba(0,0,0,0.1)',
-                    position: 'relative',
+                    position: 'absolute',
+                    left: `${MAP_OVERFLOW_GUTTER * mapScale}px`,
+                    top: `${MAP_OVERFLOW_GUTTER * mapScale}px`,
                     cursor: ['LINE', 'POLYGON'].includes(editorState.activeTool) ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
                   }}
                   onMouseDown={handleCanvasMouseDown}
