@@ -781,7 +781,7 @@ textarea {
   display: grid;
   place-items: center;
   transform-origin: center;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
+  box-shadow: none;
 }
 
 .interactive-map-object {
@@ -801,7 +801,7 @@ textarea {
 }
 
 .interactive-map-object.selected {
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.95), 0 12px 20px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.95);
 }
 
 .interactive-map-object-svg {
@@ -871,7 +871,7 @@ textarea {
 }
 
 .interactive-map-table.selected {
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.86), 0 12px 20px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.86);
 }
 
 .map-legend {
@@ -1389,7 +1389,7 @@ textarea {
   text-align: center;
   cursor: move;
   font-size: 12px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   backdrop-filter: blur(1px);
 }
 
@@ -1398,7 +1398,7 @@ textarea {
 }
 
 .map-editor-object.selected {
-  box-shadow: 0 0 0 2px #2563eb, 0 10px 22px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 2px #2563eb;
 }
 
 .map-editor-object.inactive {
