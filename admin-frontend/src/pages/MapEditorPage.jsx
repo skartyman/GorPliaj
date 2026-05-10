@@ -584,6 +584,18 @@ const SVG_TEMPLATES = {
   SUNBED: (
     <rect x="10" y="5" width="80" height="90" rx="4" fill="#fff" stroke="#cbd5e1" strokeWidth="2" />
   ),
+  BED: (
+    <g>
+      <rect x="12" y="18" width="76" height="48" rx="6" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+      <rect x="18" y="24" width="24" height="18" rx="3" fill="#e2e8f0" />
+      <rect x="44" y="24" width="26" height="30" rx="4" fill="#dbeafe" />
+      <rect x="18" y="50" width="62" height="10" rx="2" fill="#f1f5f9" />
+      <rect x="20" y="62" width="10" height="20" rx="2" fill="#94a3b8" />
+      <rect x="70" y="62" width="10" height="20" rx="2" fill="#94a3b8" />
+      <rect x="16" y="72" width="18" height="6" rx="2" fill="#cbd5e1" />
+      <rect x="66" y="72" width="18" height="6" rx="2" fill="#cbd5e1" />
+    </g>
+  ),
   STAIRS: (
     <g fill="none" stroke="#94a3b8" strokeWidth="2">
       <rect x="5" y="5" width="90" height="90" />
@@ -771,6 +783,14 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected 
           </svg>
         );
       case 'CUSTOM':
+        if (subType && SVG_TEMPLATES[subType]) {
+          return (
+            <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: opacity || 1 }}>
+              {SVG_TEMPLATES[subType]}
+            </svg>
+          );
+        }
+
         if (svgUrl) {
           return (
             <img
