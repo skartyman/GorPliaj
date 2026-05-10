@@ -183,6 +183,19 @@ function loadTextureAssets() {
   }
 }
 
+function cloneEditorSnapshot(snapshot) {
+  return JSON.parse(JSON.stringify(snapshot));
+}
+
+function normalizeSelectionIds(ids) {
+  return [...new Set((ids || []).filter(Boolean))];
+}
+
+function normalizeSelectionToObjects(ids, objects) {
+  const validIds = new Set((objects || []).map((object) => object.id));
+  return normalizeSelectionIds(ids).filter((id) => validIds.has(id));
+}
+
 function normalizeMap(map) {
   if (!map) {
     return null;
@@ -1070,6 +1083,9 @@ export default function MapEditorPage() {
   const objectIdRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const panStateRef = useRef(null);
+  const historyRef = useRef({ past: [], future: [] });
+  const clipboardRef = useRef([]);
+  const dragStateRef = useRef(null);
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
   const [textureAssets, setTextureAssets] = useState(loadTextureAssets);
@@ -1090,6 +1106,7 @@ export default function MapEditorPage() {
     original: null,
     current: null,
     selectedObjectId: null,
+    selectedObjectIds: [],
     // V2 State
     activeTab: 'PROPERTIES',
     activeTool: 'SELECT',
@@ -1294,18 +1311,56 @@ export default function MapEditorPage() {
     function handleKeyDown(event) {
       const tagName = event.target?.tagName;
       const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
+      const ctrl = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
 
-      if (isEditableTarget || !editorState.selectedObjectId || !['Delete', 'Backspace'].includes(event.key)) {
+      if (ctrl && key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redoChange();
+        } else {
+          undoChange();
+        }
         return;
       }
 
-      event.preventDefault();
-      handleDeleteSelected();
+      if (ctrl && key === 'c') {
+        if (!isEditableTarget) {
+          event.preventDefault();
+          copySelection();
+        }
+        return;
+      }
+
+      if (ctrl && key === 'v') {
+        if (!isEditableTarget) {
+          event.preventDefault();
+          pasteSelection();
+        }
+        return;
+      }
+
+      if (ctrl && key === 'a' && !isEditableTarget) {
+        event.preventDefault();
+        if (objects.length) {
+          setSelection(objects.map((object) => object.id), { activeTab: 'PROPERTIES' });
+        }
+        return;
+      }
+
+      if (isEditableTarget) {
+        return;
+      }
+
+      if (['Delete', 'Backspace'].includes(event.key) && selectedObjects.length) {
+        event.preventDefault();
+        handleDeleteSelected();
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorState.selectedObjectId, editorState.current, t]);
+  }, [objects, selectedObjects, selectedObject, editorState.current, t]);
 
   async function loadInitialMapEditor() {
     setEditorState((prev) => ({
@@ -1373,6 +1428,7 @@ export default function MapEditorPage() {
 
     const currentMapId = Number(editorResult.body.map.id);
     const nextData = buildEditorState(editorResult.body);
+    historyRef.current = { past: [], future: [] };
 
     setEditorState((prev) => ({
       ...prev,
@@ -1384,7 +1440,8 @@ export default function MapEditorPage() {
       selectedMapId: currentMapId,
       original: nextData,
       current: nextData,
-      selectedObjectId: nextData.objects[0]?.id || null
+      selectedObjectId: nextData.objects[0]?.id || null,
+      selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : []
     }));
   }
 
@@ -1402,6 +1459,10 @@ export default function MapEditorPage() {
     () => objects.find((object) => object.id === editorState.selectedObjectId) || null,
     [objects, editorState.selectedObjectId]
   );
+  const selectedObjects = useMemo(
+    () => objects.filter((object) => editorState.selectedObjectIds.includes(object.id)),
+    [objects, editorState.selectedObjectIds]
+  );
   const hasChanges = useMemo(() => {
     if (!editorState.original || !editorState.current) {
       return false;
@@ -1409,6 +1470,16 @@ export default function MapEditorPage() {
 
     return JSON.stringify(editorState.original) !== JSON.stringify(editorState.current);
   }, [editorState.current, editorState.original]);
+
+  function setSelection(ids, options = {}) {
+    const nextIds = normalizeSelectionIds(ids);
+    setEditorState((prev) => ({
+      ...prev,
+      selectedObjectId: nextIds[0] || null,
+      selectedObjectIds: nextIds,
+      activeTab: options.activeTab || prev.activeTab
+    }));
+  }
 
   function fitMapToViewport() {
     setMapAutoFit(true);
@@ -1444,17 +1515,117 @@ export default function MapEditorPage() {
     };
   }, [map?.id, map?.width, map?.height, editorState.loading, mapAutoFit]);
 
-  function updateCurrent(updater) {
+  function pushHistorySnapshot(snapshot) {
+    historyRef.current.past.push(cloneEditorSnapshot(snapshot));
+    historyRef.current.future = [];
+  }
+
+  function snapshotState(state) {
+    return {
+      current: cloneEditorSnapshot(state.current),
+      selectedObjectId: state.selectedObjectId,
+      selectedObjectIds: [...(state.selectedObjectIds || [])],
+      activeTab: state.activeTab
+    };
+  }
+
+  function updateCurrent(updater, options = {}) {
     setEditorState((prev) => {
       if (!prev.current?.map) {
         return prev;
       }
 
+      const next = updater(prev);
+      const shouldTrackHistory = options.recordHistory !== false && next?.current && next.current !== prev.current;
+
+      if (shouldTrackHistory) {
+        pushHistorySnapshot(snapshotState(prev));
+      }
+
       return {
         ...prev,
-        ...updater(prev),
+        ...next,
         saveMessage: '',
         error: ''
+      };
+    });
+  }
+
+  function undoChange() {
+    setEditorState((prev) => {
+      const snapshot = historyRef.current.past.pop();
+      if (!snapshot) {
+        return prev;
+      }
+
+      historyRef.current.future.push(snapshotState(prev));
+      return {
+        ...prev,
+        current: snapshot.current,
+        selectedObjectId: snapshot.selectedObjectId || null,
+        selectedObjectIds: normalizeSelectionToObjects(snapshot.selectedObjectIds, snapshot.current.objects),
+        activeTab: snapshot.activeTab || prev.activeTab,
+        saveMessage: '',
+        error: ''
+      };
+    });
+  }
+
+  function redoChange() {
+    setEditorState((prev) => {
+      const snapshot = historyRef.current.future.pop();
+      if (!snapshot) {
+        return prev;
+      }
+
+      historyRef.current.past.push(snapshotState(prev));
+      return {
+        ...prev,
+        current: snapshot.current,
+        selectedObjectId: snapshot.selectedObjectId || null,
+        selectedObjectIds: normalizeSelectionToObjects(snapshot.selectedObjectIds, snapshot.current.objects),
+        activeTab: snapshot.activeTab || prev.activeTab,
+        saveMessage: '',
+        error: ''
+      };
+    });
+  }
+
+  function copySelection() {
+    const source = selectedObjects.length ? selectedObjects : selectedObject ? [selectedObject] : [];
+    clipboardRef.current = cloneEditorSnapshot(source);
+  }
+
+  function pasteSelection() {
+    if (!clipboardRef.current.length || !editorState.current?.map) {
+      return;
+    }
+
+    updateCurrent((prev) => {
+      const shift = 24;
+      const newObjects = clipboardRef.current.map((object, index) =>
+        normalizeObject(
+          {
+            ...cloneEditorSnapshot(object),
+            id: `tmp-${Date.now()}-${objectIdRef.current + index + 1}`,
+            x: object.x + shift,
+            y: object.y + shift,
+            zIndex: Number(object.zIndex) + index + 1
+          },
+          prev.current.map
+        )
+      );
+
+      objectIdRef.current += newObjects.length;
+
+      return {
+        current: {
+          ...prev.current,
+          objects: [...prev.current.objects, ...newObjects]
+        },
+        selectedObjectId: newObjects[0]?.id || prev.selectedObjectId,
+        selectedObjectIds: newObjects.map((object) => object.id),
+        activeTab: 'PROPERTIES'
       };
     });
   }
@@ -1563,12 +1734,84 @@ export default function MapEditorPage() {
     }));
   }
 
-  function handleDragStop(objectId, position) {
-    updateObject(objectId, (object) => ({
-      ...object,
-      x: roundCoordinate(position.x),
-      y: roundCoordinate(position.y)
-    }));
+  function handleObjectMouseDown(objectId, event) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const isMultiSelect = event.ctrlKey || event.metaKey;
+    const nextIds = isMultiSelect
+      ? (editorState.selectedObjectIds.includes(objectId)
+        ? editorState.selectedObjectIds.filter((id) => id !== objectId)
+        : [...editorState.selectedObjectIds, objectId])
+      : [objectId];
+
+    setSelection(nextIds, { activeTab: 'PROPERTIES' });
+  }
+
+  function handleObjectContextMenu(objectId, event) {
+    event.preventDefault();
+    setSelection([objectId], { activeTab: 'PROPERTIES' });
+  }
+
+  function beginDragGroup(objectId, position) {
+    const draggableObjects = (editorState.selectedObjectIds.includes(objectId) ? selectedObjects : [selectedObject || objects.find((item) => item.id === objectId)].filter(Boolean))
+      .filter((item) => !item.metaJson?.isLocked);
+
+    if (!editorState.selectedObjectIds.includes(objectId)) {
+      setSelection([objectId], { activeTab: 'PROPERTIES' });
+    }
+
+    dragStateRef.current = {
+      objectId,
+      startX: position.x,
+      startY: position.y,
+      before: snapshotState(editorState),
+      positions: new Map(draggableObjects.map((item) => [item.id, { x: item.x, y: item.y }]))
+    };
+  }
+
+  function updateDragGroup(objectId, position) {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.objectId !== objectId) {
+      return;
+    }
+
+    const deltaX = roundCoordinate(position.x - dragState.startX);
+    const deltaY = roundCoordinate(position.y - dragState.startY);
+    updateCurrent((prev) => ({
+      current: {
+        ...prev.current,
+        objects: prev.current.objects.map((object) => {
+          const start = dragState.positions.get(object.id);
+          if (!start) {
+            return object;
+          }
+
+          return normalizeObject(
+            {
+              ...object,
+              x: start.x + deltaX,
+              y: start.y + deltaY
+            },
+            prev.current.map
+          );
+        })
+      }
+    }), { recordHistory: false });
+  }
+
+  function endDragGroup(objectId, position) {
+    const dragState = dragStateRef.current;
+    dragStateRef.current = null;
+
+    if (!dragState || dragState.objectId !== objectId) {
+      return;
+    }
+
+    if (dragState.startX !== position.x || dragState.startY !== position.y) {
+      pushHistorySnapshot(dragState.before);
+    }
   }
 
   function handleResizeStop(objectId, position, size) {
@@ -1593,16 +1836,17 @@ export default function MapEditorPage() {
   }
 
   function moveSelectedLayer(action) {
-    if (!selectedObject) {
+    if (!selectedObjects.length) {
       return;
     }
 
     updateCurrent((prev) => {
       const zIndexes = prev.current.objects.map((object) => Number(object.zIndex) || 0);
       const maxZIndex = Math.max(...zIndexes, 0);
+      const selectedIds = new Set(selectedObjects.map((object) => object.id));
 
       const nextObjects = prev.current.objects.map((object) => {
-        if (object.id !== selectedObject.id) {
+        if (!selectedIds.has(object.id)) {
           return object;
         }
 
@@ -1678,7 +1922,9 @@ export default function MapEditorPage() {
           ...prev.current,
           objects: [...prev.current.objects, newObject]
         },
-        selectedObjectId: newObject.id
+        selectedObjectId: newObject.id,
+        selectedObjectIds: [newObject.id],
+        activeTab: 'PROPERTIES'
       };
     });
   }
@@ -1696,58 +1942,70 @@ export default function MapEditorPage() {
           ...prev.current,
           objects: [...prev.current.objects, normalizedObject]
         },
-        selectedObjectId: normalizedObject.id
+        selectedObjectId: normalizedObject.id,
+        selectedObjectIds: [normalizedObject.id],
+        activeTab: 'PROPERTIES'
       };
     });
   }
 
   function duplicateSelected() {
-    if (!selectedObject || !editorState.current?.map) {
+    if (!selectedObjects.length || !editorState.current?.map) {
       return;
     }
 
     updateCurrent((prev) => {
-      const duplicate = normalizeObject(
+      const baseZIndex = prev.current.objects.reduce((max, object) => Math.max(max, Number(object.zIndex) || 0), 0) + 1;
+      const duplicates = selectedObjects.map((object, index) => normalizeObject(
         {
-          ...selectedObject,
-          id: `tmp-${Date.now()}-${objectIdRef.current + 1}`,
-          x: selectedObject.x + 24,
-          y: selectedObject.y + 24,
-          zIndex: Math.max(selectedObject.zIndex + 1, prev.current.objects.reduce((max, object) => Math.max(max, object.zIndex), 0) + 1)
+          ...cloneEditorSnapshot(object),
+          id: `tmp-${Date.now()}-${objectIdRef.current + index + 1}`,
+          x: object.x + 24,
+          y: object.y + 24,
+          zIndex: baseZIndex + index
         },
         prev.current.map
-      );
+      ));
 
-      objectIdRef.current += 1;
+      objectIdRef.current += duplicates.length;
 
       return {
         current: {
           ...prev.current,
-          objects: [...prev.current.objects, duplicate]
+          objects: [...prev.current.objects, ...duplicates]
         },
-        selectedObjectId: duplicate.id
+        selectedObjectId: duplicates[0]?.id || prev.selectedObjectId,
+        selectedObjectIds: duplicates.map((object) => object.id),
+        activeTab: 'PROPERTIES'
       };
     });
   }
 
   function handleDeleteSelected() {
-    if (!selectedObject) {
+    if (!selectedObjects.length) {
       return;
     }
 
-    const confirmed = window.confirm(t('mapEditor.deleteConfirm', { name: getObjectDisplayName(selectedObject, tableMap, t, language) }));
+    const confirmed = window.confirm(
+      selectedObjects.length > 1
+        ? t('mapEditor.deleteManyConfirm', { count: selectedObjects.length })
+        : t('mapEditor.deleteConfirm', { name: getObjectDisplayName(selectedObjects[0], tableMap, t, language) })
+    );
     if (!confirmed) {
       return;
     }
 
     updateCurrent((prev) => {
-      const nextObjects = prev.current.objects.filter((object) => object.id !== prev.selectedObjectId);
+      const selectedIds = new Set(selectedObjects.map((object) => object.id));
+      const nextObjects = prev.current.objects.filter((object) => !selectedIds.has(object.id));
       return {
         current: {
           ...prev.current,
           objects: nextObjects
         },
-        selectedObjectId: getNextSelectionId(nextObjects)
+        selectedObjectId: getNextSelectionId(nextObjects),
+        selectedObjectIds: nextObjects[0] ? [nextObjects[0].id] : [],
+        activeTab: 'PROPERTIES'
       };
     });
   }
@@ -1831,7 +2089,10 @@ export default function MapEditorPage() {
         saveMessage: '',
         selectedObjectId: prev.original.objects.some((object) => object.id === prev.selectedObjectId)
           ? prev.selectedObjectId
-          : prev.original.objects[0]?.id || null
+          : prev.original.objects[0]?.id || null,
+        selectedObjectIds: prev.original.objects.some((object) => object.id === prev.selectedObjectId)
+          ? normalizeSelectionToObjects(prev.selectedObjectIds, prev.original.objects)
+          : (prev.original.objects[0]?.id ? [prev.original.objects[0].id] : [])
       };
     });
   }
@@ -1883,6 +2144,7 @@ export default function MapEditorPage() {
     const mapsResult = await apiRequest('/api/admin/maps');
     const maps = mapsResult.response.ok && Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : editorState.maps;
     const nextData = buildEditorState(result.body);
+    historyRef.current = { past: [], future: [] };
 
     setEditorState((prev) => ({
       ...prev,
@@ -1893,6 +2155,7 @@ export default function MapEditorPage() {
       original: nextData,
       current: nextData,
       selectedObjectId: nextData.objects[0]?.id || null,
+      selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : [],
       newMapName: '',
       newMapDescription: '',
       makeNewMapDefault: false,
@@ -1949,6 +2212,18 @@ export default function MapEditorPage() {
             </button>
             <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
               {t('mapEditor.reset')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={undoChange} disabled={!historyRef.current.past.length || editorState.loading}>
+              {t('mapEditor.undo')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={redoChange} disabled={!historyRef.current.future.length || editorState.loading}>
+              {t('mapEditor.redo')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={copySelection} disabled={!selectedObjects.length || editorState.loading}>
+              {t('mapEditor.copy')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={pasteSelection} disabled={editorState.loading}>
+              {t('mapEditor.paste')}
             </button>
             <button
               type="button"
@@ -2223,29 +2498,32 @@ export default function MapEditorPage() {
                         bounds="parent"
                         size={{ width: object.width, height: object.height }}
                         position={{ x: object.x, y: object.y }}
-                        onDragStop={(_, data) => handleDragStop(object.id, data)}
+                        onDragStart={(_, data) => beginDragGroup(object.id, data)}
+                        onDrag={(_, data) => updateDragGroup(object.id, data)}
+                        onDragStop={(_, data) => endDragGroup(object.id, data)}
                         onResizeStop={(_, __, ref, ___, position) =>
                           handleResizeStop(object.id, position, {
                             width: ref.offsetWidth,
                             height: ref.offsetHeight
                           })
                         }
-                        onMouseDown={() => {
+                        onMouseDown={(event) => {
                           if (editorState.activeTool === 'SELECT') {
-                            setEditorState((prev) => ({ ...prev, selectedObjectId: object.id, activeTab: 'PROPERTIES' }));
+                            handleObjectMouseDown(object.id, event);
                           }
                         }}
+                        onContextMenu={(event) => handleObjectContextMenu(object.id, event)}
                         enableResizing={editorState.activeTool === 'SELECT' && !object.metaJson?.isLocked}
                         disableDragging={editorState.activeTool !== 'SELECT' || Boolean(object.metaJson?.isLocked)}
                         dragGrid={[1, 1]}
                         resizeGrid={[1, 1]}
                         scale={mapScale}
-                        className={`map-editor-rnd ${editorState.selectedObjectId === object.id ? 'selected' : ''}`}
+                        className={`map-editor-rnd ${editorState.selectedObjectIds.includes(object.id) ? 'selected' : ''}`}
                         style={{ zIndex: object.zIndex }}
                       >
                         <MapObjectRenderer
                           object={object}
-                          isSelected={editorState.selectedObjectId === object.id}
+                          isSelected={editorState.selectedObjectIds.includes(object.id)}
                           tableMap={tableMap}
                           zoneMap={zoneMap}
                           t={t}
