@@ -1,7 +1,8 @@
 const multer = require('multer');
 const { uploadImage, isMimeTypeAllowed } = require('../services/r2StorageService');
 
-const IMAGE_SIZE_LIMIT_BYTES = 5 * 1024 * 1024;
+const IMAGE_SIZE_LIMIT_MB = 25;
+const IMAGE_SIZE_LIMIT_BYTES = IMAGE_SIZE_LIMIT_MB * 1024 * 1024;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -26,7 +27,7 @@ function handleMulterError(error, req, res, next) {
 
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ message: 'Image exceeds size limit of 5MB.' });
+      return res.status(400).json({ message: `Image exceeds size limit of ${IMAGE_SIZE_LIMIT_MB}MB.` });
     }
 
     if (error.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -75,5 +76,6 @@ module.exports = {
   upload,
   handleMulterError,
   uploadAdminImage,
+  IMAGE_SIZE_LIMIT_MB,
   IMAGE_SIZE_LIMIT_BYTES
 };
