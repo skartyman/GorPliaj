@@ -275,6 +275,29 @@ async function deleteAdminMapVariant(req, res) {
   }
 }
 
+async function setDefaultAdminMap(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const result = await adminMapEditorService.setDefaultAdminMap(id);
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      ...result.data
+    });
+  } catch (error) {
+    console.error('[adminController.setDefaultAdminMap] Failed to set default map.', error);
+    return res.status(500).json({ message: 'Unable to set default map.' });
+  }
+}
+
 async function updateAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -319,6 +342,7 @@ module.exports = {
   listAdminMaps,
   createAdminMapVariant,
   deleteAdminMapVariant,
+  setDefaultAdminMap,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor

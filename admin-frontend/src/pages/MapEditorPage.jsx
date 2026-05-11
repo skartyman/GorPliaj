@@ -2835,6 +2835,50 @@ export default function MapEditorPage() {
     }));
   }
 
+  async function setCurrentMapAsDefault() {
+    if (!editorState.selectedMapId) {
+      return;
+    }
+
+    setEditorState((prev) => ({
+      ...prev,
+      saving: true,
+      error: '',
+      saveMessage: ''
+    }));
+
+    const result = await apiRequest(`/api/admin/maps/${editorState.selectedMapId}/default`, {
+      method: 'PATCH'
+    });
+
+    if (!result.response.ok || !result.body?.map?.id) {
+      setEditorState((prev) => ({
+        ...prev,
+        saving: false,
+        error: result.body?.message || 'Unable to set default map.'
+      }));
+      return;
+    }
+
+    const nextData = buildEditorState(result.body);
+    historyRef.current = { past: [], future: [] };
+    setEditorState((prev) => ({
+      ...prev,
+      saving: false,
+      maps: Array.isArray(result.body.maps) ? result.body.maps : prev.maps.map((item) => ({
+        ...item,
+        isDefault: Number(item.id) === Number(result.body.map.id)
+      })),
+      defaultMapId: Number(result.body.map.id),
+      selectedMapId: Number(result.body.map.id),
+      original: nextData,
+      current: nextData,
+      selectedObjectId: nextData.objects[0]?.id || null,
+      selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : [],
+      saveMessage: 'Карту встановлено як основну.'
+    }));
+  }
+
   return (
     <AdminLayout>
       <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')} className="map-editor-page">
@@ -2999,6 +3043,19 @@ export default function MapEditorPage() {
             </label>
           </div>
           <div className="map-management-actions">
+            <button
+              type="button"
+              className="btn btn-primary btn-small"
+              onClick={setCurrentMapAsDefault}
+              disabled={
+                editorState.loading ||
+                editorState.saving ||
+                editorState.mapsLoading ||
+                editorState.maps.find((item) => Number(item.id) === Number(editorState.selectedMapId))?.isDefault
+              }
+            >
+              Зробити основною
+            </button>
             <button type="button" className="btn btn-secondary btn-small" onClick={createMapVariant} disabled={editorState.creatingMap || editorState.loading || editorState.saving}>
               {editorState.creatingMap ? t('mapEditor.creatingMap') : t('mapEditor.createMap')}
             </button>
