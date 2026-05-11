@@ -72,6 +72,13 @@ const MAP_SCALE_STEP = 0.1;
 const MAP_VIEWPORT_PADDING = 18;
 const MAP_OVERFLOW_GUTTER = 240;
 const SURFACE_Z_INDEX = 0;
+const NEW_OBJECT_SPAWN = {
+  x: 56,
+  y: 56,
+  step: 36,
+  columns: 8,
+  attempts: 72
+};
 const RND_RESIZE_HANDLE_STYLES = {
   top: { pointerEvents: 'auto' },
   right: { pointerEvents: 'auto' },
@@ -440,6 +447,36 @@ function normalizeObject(object) {
       interactionMode,
       ...(svgUrl ? { svgUrl } : {})
     }
+  };
+}
+
+function rectsOverlap(a, b, gap = 8) {
+  return !(
+    a.x + a.width + gap <= b.x ||
+    b.x + b.width + gap <= a.x ||
+    a.y + a.height + gap <= b.y ||
+    b.y + b.height + gap <= a.y
+  );
+}
+
+function getNewObjectSpawnPosition(currentMap, currentObjects, width, height) {
+  const maxX = Math.max(0, Number(currentMap.width) - width);
+  const maxY = Math.max(0, Number(currentMap.height) - height);
+
+  for (let index = 0; index < NEW_OBJECT_SPAWN.attempts; index += 1) {
+    const x = Math.min(NEW_OBJECT_SPAWN.x + (index % NEW_OBJECT_SPAWN.columns) * NEW_OBJECT_SPAWN.step, maxX);
+    const y = Math.min(NEW_OBJECT_SPAWN.y + Math.floor(index / NEW_OBJECT_SPAWN.columns) * NEW_OBJECT_SPAWN.step, maxY);
+    const candidate = { x, y, width, height };
+
+    if (!currentObjects.some((object) => rectsOverlap(candidate, object))) {
+      return { x, y };
+    }
+  }
+
+  const fallbackIndex = currentObjects.length % NEW_OBJECT_SPAWN.columns;
+  return {
+    x: Math.min(NEW_OBJECT_SPAWN.x + fallbackIndex * NEW_OBJECT_SPAWN.step, maxX),
+    y: Math.min(NEW_OBJECT_SPAWN.y + Math.floor(currentObjects.length / NEW_OBJECT_SPAWN.columns) * NEW_OBJECT_SPAWN.step, maxY)
   };
 }
 
@@ -2390,9 +2427,9 @@ export default function MapEditorPage() {
     const zIndex = meta.zIndex !== undefined ? Number(meta.zIndex) : maxZIndex + 1;
     const isBed = String(meta.subType || '').toUpperCase() === 'BED';
     
-    // Use provided coordinates or center on map
-    const x = meta.x !== undefined ? meta.x : Math.round((currentMap.width - width) / 2);
-    const y = meta.y !== undefined ? meta.y : Math.round((currentMap.height - height) / 2);
+    const spawnPosition = getNewObjectSpawnPosition(currentMap, currentObjects, width, height);
+    const x = meta.x !== undefined ? meta.x : spawnPosition.x;
+    const y = meta.y !== undefined ? meta.y : spawnPosition.y;
 
     objectIdRef.current += 1;
 
