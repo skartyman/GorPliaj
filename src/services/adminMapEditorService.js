@@ -1,4 +1,4 @@
-const { PrismaClient, MapObjectType } = require('@prisma/client');
+const { PrismaClient, MapObjectType, MapStatus } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -97,7 +97,17 @@ function listAdminMaps() {
   });
 }
 
-async function createAdminMapVariant({ name, slug, description, sourceMapId = null, makeDefault = false }) {
+async function createAdminMapVariant({
+  name,
+  slug,
+  description,
+  sourceMapId = null,
+  creationMode = 'clone',
+  width = null,
+  height = null,
+  backgroundColor = null,
+  makeDefault = false
+}) {
   const normalizedName = String(name || '').trim();
   const normalizedSlug = String(slug || '')
     .trim()
@@ -123,33 +133,39 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
     return { type: 'CONFLICT', message: 'Map slug already exists.' };
   }
 
-  const sourceMap = sourceMapId
-    ? await prisma.map.findUnique({
-        where: { id: Number(sourceMapId) },
-        include: {
-          zones: {
-            orderBy: { sortOrder: 'asc' }
-          },
-          tables: {
-            orderBy: { id: 'asc' }
-          },
-          mapObjects: {
-            orderBy: { id: 'asc' }
-          }
-        }
-      })
-    : await prisma.map.findFirst({
-        where: { isDefault: true },
-        include: {
-          zones: { orderBy: { sortOrder: 'asc' } },
-          tables: { orderBy: { id: 'asc' } },
-          mapObjects: { orderBy: { id: 'asc' } }
-        }
-      });
+  const shouldCloneSource = creationMode !== 'blank';
+  const sourceMap = shouldCloneSource
+    ? (sourceMapId
+        ? await prisma.map.findUnique({
+            where: { id: Number(sourceMapId) },
+            include: {
+              zones: {
+                orderBy: { sortOrder: 'asc' }
+              },
+              tables: {
+                orderBy: { id: 'asc' }
+              },
+              mapObjects: {
+                orderBy: { id: 'asc' }
+              }
+            }
+          })
+        : await prisma.map.findFirst({
+            where: { isDefault: true },
+            include: {
+              zones: { orderBy: { sortOrder: 'asc' } },
+              tables: { orderBy: { id: 'asc' } },
+              mapObjects: { orderBy: { id: 'asc' } }
+            }
+          }))
+    : null;
 
-  if (!sourceMap) {
+  if (shouldCloneSource && !sourceMap) {
     return { type: 'NOT_FOUND', message: 'Source map for cloning is not found.' };
   }
+
+  const blankWidth = Math.max(Number(width) || 1600, 100);
+  const blankHeight = Math.max(Number(height) || 900, 100);
 
   const createdMap = await prisma.$transaction(async (tx) => {
     await syncAutoincrementSequences(tx);
@@ -166,17 +182,17 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
         name: normalizedName,
         slug: normalizedSlug,
         description: normalizedDescription,
-        status: sourceMap.status,
+        status: sourceMap?.status || MapStatus.DRAFT,
         isDefault: Boolean(makeDefault),
-        width: sourceMap.width,
-        height: sourceMap.height,
-        backgroundImage: sourceMap.backgroundImage,
-        backgroundColor: sourceMap.backgroundColor
+        width: sourceMap?.width || blankWidth,
+        height: sourceMap?.height || blankHeight,
+        backgroundImage: sourceMap?.backgroundImage || null,
+        backgroundColor: sourceMap?.backgroundColor || String(backgroundColor || '#f8fafc')
       }
     });
 
     const zoneIdMap = new Map();
-    for (const zone of sourceMap.zones) {
+    for (const zone of sourceMap?.zones || []) {
       const createdZone = await tx.zone.create({
         data: {
           mapId: map.id,
@@ -189,7 +205,7 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
     }
 
     const tableIdMap = new Map();
-    for (const table of sourceMap.tables) {
+    for (const table of sourceMap?.tables || []) {
       const createdTable = await tx.venueTable.create({
         data: {
           mapId: map.id,
@@ -207,7 +223,7 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
       tableIdMap.set(table.id, createdTable.id);
     }
 
-    if (sourceMap.mapObjects.length > 0) {
+    if ((sourceMap?.mapObjects || []).length > 0) {
       await tx.mapObject.createMany({
         data: sourceMap.mapObjects.map((object) => ({
           mapId: map.id,

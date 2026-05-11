@@ -226,6 +226,10 @@ async function createAdminMapVariant(req, res) {
       slug: req.body?.slug,
       description: req.body?.description,
       sourceMapId: req.body?.sourceMapId,
+      creationMode: req.body?.creationMode,
+      width: req.body?.width,
+      height: req.body?.height,
+      backgroundColor: req.body?.backgroundColor,
       makeDefault: req.body?.makeDefault
     });
 

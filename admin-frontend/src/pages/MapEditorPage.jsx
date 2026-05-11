@@ -1519,6 +1519,7 @@ export default function MapEditorPage() {
   const objectIdRef = useRef(0);
   const canvasContainerRef = useRef(null);
   const panStateRef = useRef(null);
+  const spacePressedRef = useRef(false);
   const historyRef = useRef({ past: [], future: [] });
   const clipboardRef = useRef([]);
   const dragStateRef = useRef(null);
@@ -1538,6 +1539,7 @@ export default function MapEditorPage() {
     selectedMapId: null,
     defaultMapId: null,
     newMapPreset: MAP_VARIANT_PRESETS[0].key,
+    newMapMode: 'clone',
     newMapName: '',
     newMapDescription: '',
     makeNewMapDefault: false,
@@ -1581,11 +1583,18 @@ export default function MapEditorPage() {
   };
 
   const handlePanMouseDown = (event) => {
-    if (editorState.activeTool !== 'PAN' || !canvasContainerRef.current) {
+    const clickedObject = event.target?.closest?.('.map-editor-rnd');
+    const shouldPan =
+      editorState.activeTool === 'PAN' ||
+      event.button === 1 ||
+      spacePressedRef.current ||
+      (editorState.activeTool === 'SELECT' && event.button === 0 && !clickedObject);
+    if (!shouldPan || !canvasContainerRef.current) {
       return;
     }
 
     event.preventDefault();
+    event.stopPropagation();
     panStateRef.current = {
       x: event.clientX,
       y: event.clientY,
@@ -1941,8 +1950,13 @@ export default function MapEditorPage() {
       const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName) || event.target?.isContentEditable;
       const ctrl = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
+      const code = event.code;
 
-      if (ctrl && key === 'z') {
+      if (code === 'Space' && !isEditableTarget) {
+        spacePressedRef.current = true;
+      }
+
+      if (ctrl && (code === 'KeyZ' || key === 'z' || key === 'я')) {
         event.preventDefault();
         if (event.shiftKey) {
           redoChange();
@@ -1952,7 +1966,7 @@ export default function MapEditorPage() {
         return;
       }
 
-      if (ctrl && key === 'c') {
+      if (ctrl && (code === 'KeyC' || key === 'c' || key === 'с')) {
         if (!isEditableTarget) {
           event.preventDefault();
           copySelection();
@@ -1960,7 +1974,7 @@ export default function MapEditorPage() {
         return;
       }
 
-      if (ctrl && key === 'v') {
+      if (ctrl && (code === 'KeyV' || key === 'v' || key === 'м')) {
         if (!isEditableTarget) {
           event.preventDefault();
           pasteSelection();
@@ -1968,7 +1982,7 @@ export default function MapEditorPage() {
         return;
       }
 
-      if (ctrl && key === 'a' && !isEditableTarget) {
+      if (ctrl && (code === 'KeyA' || key === 'a' || key === 'ф') && !isEditableTarget) {
         event.preventDefault();
         if (objects.length) {
           setSelection(objects.map((object) => object.id), { activeTab: 'PROPERTIES' });
@@ -1983,11 +1997,35 @@ export default function MapEditorPage() {
       if (['Delete', 'Backspace'].includes(event.key) && selectedObjects.length) {
         event.preventDefault();
         handleDeleteSelected();
+        return;
+      }
+
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+        event.preventDefault();
+        const step = event.shiftKey ? 10 : 1;
+        const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0;
+        const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
+        if (selectedObjects.length) {
+          moveSelectedByKeyboard(dx, dy);
+        } else if (canvasContainerRef.current) {
+          canvasContainerRef.current.scrollLeft += dx * 12;
+          canvasContainerRef.current.scrollTop += dy * 12;
+        }
+      }
+    }
+
+    function handleKeyUp(event) {
+      if (event.code === 'Space') {
+        spacePressedRef.current = false;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyUp, true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUp, true);
+    };
   }, [objects, selectedObjects, selectedObject, editorState.current, t]);
 
   function setSelection(ids, options = {}) {
@@ -2147,6 +2185,30 @@ export default function MapEditorPage() {
         activeTab: 'PROPERTIES'
       };
     });
+  }
+
+  function moveSelectedByKeyboard(deltaX, deltaY) {
+    if (!selectedObjects.length || !editorState.current?.map) {
+      return;
+    }
+
+    const selectedIds = new Set(selectedObjects.map((object) => object.id));
+    updateCurrent((prev) => ({
+      current: {
+        ...prev.current,
+        objects: prev.current.objects.map((object) => {
+          if (!selectedIds.has(object.id) || object.metaJson?.isLocked) {
+            return object;
+          }
+
+          return normalizeObject({
+            ...object,
+            x: object.x + deltaX,
+            y: object.y + deltaY
+          });
+        })
+      }
+    }));
   }
 
   function updateObject(objectId, updater, options = {}) {
@@ -2682,12 +2744,18 @@ export default function MapEditorPage() {
     const preset = MAP_VARIANT_PRESETS.find((item) => item.key === editorState.newMapPreset) || MAP_VARIANT_PRESETS[0];
     const baseName = String(editorState.newMapName || '').trim() || preset.name;
     const baseSlug = `${preset.slugPrefix}-${Date.now()}`;
+    const currentMap = editorState.current?.map;
+    const creationMode = editorState.newMapMode === 'blank' ? 'blank' : 'clone';
 
     return {
       name: baseName, // Бэкенд обернет это в {ua, ru, en}
       slug: baseSlug,
       description: String(editorState.newMapDescription || '').trim() || preset.description,
-      sourceMapId: editorState.selectedMapId,
+      creationMode,
+      sourceMapId: creationMode === 'clone' ? editorState.selectedMapId : null,
+      width: currentMap?.width || 1600,
+      height: currentMap?.height || 900,
+      backgroundColor: currentMap?.backgroundColor || '#f8fafc',
       makeDefault: Boolean(editorState.makeNewMapDefault)
     };
   }
@@ -2729,6 +2797,7 @@ export default function MapEditorPage() {
       current: nextData,
       selectedObjectId: nextData.objects[0]?.id || null,
       selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : [],
+      newMapMode: 'clone',
       newMapName: '',
       newMapDescription: '',
       makeNewMapDefault: false,
@@ -2894,6 +2963,31 @@ export default function MapEditorPage() {
                 disabled={editorState.creatingMap || editorState.loading}
               />
             </label>
+            <fieldset className="map-create-mode">
+              <legend>Основа карти</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="newMapMode"
+                  value="clone"
+                  checked={editorState.newMapMode !== 'blank'}
+                  onChange={() => setEditorState((prev) => ({ ...prev, newMapMode: 'clone' }))}
+                  disabled={editorState.creatingMap || editorState.loading}
+                />
+                Клонувати поточну
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="newMapMode"
+                  value="blank"
+                  checked={editorState.newMapMode === 'blank'}
+                  onChange={() => setEditorState((prev) => ({ ...prev, newMapMode: 'blank' }))}
+                  disabled={editorState.creatingMap || editorState.loading}
+                />
+                Чистий холст
+              </label>
+            </fieldset>
             <label className="checkbox-label">
               <input
                 type="checkbox"
