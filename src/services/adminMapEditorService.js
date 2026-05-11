@@ -37,6 +37,20 @@ const MAP_LIST_SELECT = {
   updatedAt: true
 };
 
+const AUTOINCREMENT_TABLES = ['Map', 'Zone', 'VenueTable', 'MapObject'];
+
+async function syncAutoincrementSequences(tx) {
+  for (const tableName of AUTOINCREMENT_TABLES) {
+    await tx.$executeRawUnsafe(`
+      SELECT setval(
+        pg_get_serial_sequence('"${tableName}"', 'id'),
+        COALESCE((SELECT MAX(id) FROM "${tableName}"), 0) + 1,
+        false
+      )
+    `);
+  }
+}
+
 function serializeMapEditorPayload(map) {
   if (!map) {
     return null;
@@ -138,6 +152,8 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
   }
 
   const createdMap = await prisma.$transaction(async (tx) => {
+    await syncAutoincrementSequences(tx);
+
     if (makeDefault) {
       await tx.map.updateMany({
         where: { isDefault: true },
