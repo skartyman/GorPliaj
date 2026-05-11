@@ -207,9 +207,9 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
       tableIdMap.set(table.id, createdTable.id);
     }
 
-    for (const object of sourceMap.mapObjects) {
-      await tx.mapObject.create({
-        data: {
+    if (sourceMap.mapObjects.length > 0) {
+      await tx.mapObject.createMany({
+        data: sourceMap.mapObjects.map((object) => ({
           mapId: map.id,
           tableId: object.tableId ? tableIdMap.get(object.tableId) || null : null,
           type: object.type,
@@ -223,11 +223,14 @@ async function createAdminMapVariant({ name, slug, description, sourceMapId = nu
           styleJson: object.styleJson ?? null,
           metaJson: object.metaJson ?? null,
           isActive: object.isActive
-        }
+        }))
       });
     }
 
     return map;
+  }, {
+    maxWait: 10000,
+    timeout: 60000
   });
 
   const payload = await getAdminMapEditor(createdMap.id);
