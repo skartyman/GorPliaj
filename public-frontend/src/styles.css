@@ -1118,6 +1118,10 @@ h3 {
   margin-top: 16px;
 }
 
+.map-legend-toggle {
+  display: none;
+}
+
 .legend-dot {
   display: inline-block;
   width: 8px;
@@ -1502,6 +1506,27 @@ h3 {
   .public-map-viewport {
     height: 52vh;
     min-height: 300px;
+  }
+
+  .map-legend-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text);
+    padding: 9px 12px;
+    font: inherit;
+  }
+
+  .map-legend {
+    display: none;
+  }
+
+  .map-legend.is-open {
+    display: flex;
   }
 
   .gallery-item {
