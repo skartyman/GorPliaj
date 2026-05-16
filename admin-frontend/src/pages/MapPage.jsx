@@ -353,7 +353,14 @@ export default function MapPage() {
                 </span>
               </div>
 
-              <div className="interactive-map-viewport" ref={containerRef} {...handlers}>
+              <div
+                className="interactive-map-viewport"
+                ref={containerRef}
+                style={{
+                  aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}`
+                }}
+                {...handlers}
+              >
                 <div
                   className="interactive-map-world"
                   style={{
