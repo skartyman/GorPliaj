@@ -7,6 +7,8 @@ import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { useInteractiveMap } from '../hooks/useInteractiveMap';
 
+const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
+
 function getTimeKey(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
@@ -74,15 +76,20 @@ function parseMetaJson(metaJson) {
       return {};
     }
 
+    const subType = typeof parsed.subType === 'string' ? parsed.subType : '';
+    const normalizedSubType = String(subType || '').toUpperCase();
+    const svgUrl = typeof parsed.svgUrl === 'string' ? parsed.svgUrl : '';
+
     return {
       interactionMode: typeof parsed.interactionMode === 'string' ? parsed.interactionMode : '',
-      isSelectable: Boolean(parsed.isSelectable) || String(parsed.subType || '').toUpperCase() === 'BED',
-      subType: typeof parsed.subType === 'string' ? parsed.subType : '',
-      svgUrl: typeof parsed.svgUrl === 'string' ? parsed.svgUrl : '',
+      isSelectable: Boolean(parsed.isSelectable) || normalizedSubType === 'BED',
+      subType,
+      svgUrl: svgUrl || (normalizedSubType === 'BED' ? DEFAULT_BED_ASSET_URL : ''),
       svgCode: typeof parsed.svgCode === 'string' ? parsed.svgCode : '',
       texture: typeof parsed.texture === 'string' ? parsed.texture : '',
       textureUrl: typeof parsed.textureUrl === 'string' ? parsed.textureUrl : '',
       points: Array.isArray(parsed.points) ? parsed.points : [],
+      pathData: typeof parsed.pathData === 'string' ? parsed.pathData : '',
       opacity: Number.isFinite(Number(parsed.opacity)) ? Number(parsed.opacity) : 1,
       strokeColor: typeof parsed.strokeColor === 'string' ? parsed.strokeColor : '',
       strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2,
@@ -106,6 +113,83 @@ function getPolygonFill(meta) {
   return '#e2e8f0';
 }
 
+function getObjectAccent(object, label) {
+  const normalized = String(label || '').toLowerCase();
+  if (/(sand|пісок|песок)/i.test(normalized)) return 'sand';
+  if (/(sea|море)/i.test(normalized)) return 'water';
+  if (/(deck|настил|wooden path|дерев'яна доріжка|деревянная дорожка)/i.test(normalized)) return 'wood';
+  return '';
+}
+
+function hasBuiltinTemplate(subType) {
+  return ['TREE', 'BUSH', 'UMBRELLA', 'STAGE', 'SUNBED', 'BED', 'STAIRS'].includes(String(subType || '').toUpperCase());
+}
+
+function hasRenderableObjectGraphic(object, meta, label) {
+  const subType = String(meta.subType || '').toUpperCase();
+  const accent = getObjectAccent(object, label);
+  return Boolean(
+    meta.svgUrl ||
+    meta.svgCode ||
+    meta.textureUrl ||
+    meta.texture ||
+    subType === 'POLYGON' ||
+    hasBuiltinTemplate(subType) ||
+    object.type === 'PATH' ||
+    object.type === 'LABEL' ||
+    accent
+  );
+}
+
+function BuiltinObjectTemplate({ subType }) {
+  switch (String(subType || '').toUpperCase()) {
+    case 'TREE':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g fill="#64748b"><circle cx="50" cy="42" r="28" /><rect x="45" y="58" width="10" height="30" rx="4" fill="#7c4a24" /></g>
+        </svg>
+      );
+    case 'BUSH':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g fill="#4ade80"><circle cx="30" cy="35" r="20" /><circle cx="52" cy="35" r="22" /><circle cx="42" cy="55" r="22" /></g>
+        </svg>
+      );
+    case 'UMBRELLA':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2"><circle cx="50" cy="50" r="45" fill="#fff" /><path d="M50,5 L50,95 M5,50 L95,50 M18,18 L82,82 M18,82 L82,18" stroke="#e2e8f0" /><circle cx="50" cy="50" r="4" fill="#94a3b8" /></g>
+        </svg>
+      );
+    case 'STAGE':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="12" y="42" width="76" height="34" rx="4" fill="#f8fafc" stroke="#94a3b8" /><path d="M16 70h68M22 42V24h56v18M26 30h48" /><path d="M32 34l8-6 8 6 8-6 8 6 8-6 8 6" stroke="#60a5fa" /></g>
+        </svg>
+      );
+    case 'SUNBED':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 60L72 18M26 68L80 26" /><path d="M20 62h52c6 0 10 4 10 10v6H28c-6 0-10-4-10-10v-6z" /><path d="M30 70l-6 16M72 30l-7 17M20 62l-4 8M82 40l4 8" /><path d="M32 58h28" stroke="#93c5fd" strokeWidth="4" /></g>
+        </svg>
+      );
+    case 'BED':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g><rect x="10" y="24" width="80" height="46" rx="7" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" /><rect x="14" y="20" width="18" height="12" rx="3" fill="#e5e7eb" /><rect x="34" y="20" width="20" height="12" rx="3" fill="#dbeafe" /><rect x="56" y="20" width="18" height="12" rx="3" fill="#eef2ff" /><rect x="14" y="52" width="72" height="10" rx="3" fill="#f1f5f9" /><rect x="12" y="70" width="9" height="18" rx="2" fill="#94a3b8" /><rect x="79" y="70" width="9" height="18" rx="2" fill="#94a3b8" /></g>
+        </svg>
+      );
+    case 'STAIRS':
+      return (
+        <svg viewBox="0 0 100 100" className="interactive-map-object-svg">
+          <g fill="none" stroke="#94a3b8" strokeWidth="2"><rect x="5" y="5" width="90" height="90" /><line x1="5" y1="25" x2="95" y2="25" /><line x1="5" y1="50" x2="95" y2="50" /><line x1="5" y1="75" x2="95" y2="75" /></g>
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 function MapObjectGraphic({ object, meta, label }) {
   const subType = String(meta.subType || '').toUpperCase();
 
@@ -115,6 +199,10 @@ function MapObjectGraphic({ object, meta, label }) {
 
   if (meta.svgCode) {
     return <div className="interactive-map-object-svg" dangerouslySetInnerHTML={{ __html: meta.svgCode }} />;
+  }
+
+  if (hasBuiltinTemplate(subType)) {
+    return <BuiltinObjectTemplate subType={subType} />;
   }
 
   if (subType === 'POLYGON') {
@@ -149,7 +237,34 @@ function MapObjectGraphic({ object, meta, label }) {
     );
   }
 
-  return <span>{label}</span>;
+  if (object.type === 'PATH') {
+    const pathData = meta.pathData || `M 0 ${object.height / 2} L ${object.width} ${object.height / 2}`;
+    return (
+      <svg className="interactive-map-object-svg" viewBox={`0 0 ${object.width} ${object.height}`} preserveAspectRatio="none">
+        <path d={pathData} stroke={meta.strokeColor || '#64748b'} strokeWidth={meta.strokeWidth || 4} fill="none" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (meta.textureUrl || meta.texture || getObjectAccent(object, label)) {
+    const texture = meta.texture || getObjectAccent(object, label);
+    return (
+      <div
+        className="interactive-map-object-svg"
+        style={{
+          background: meta.textureUrl ? `url(${meta.textureUrl}) center / cover` : getPolygonFill({ texture }),
+          opacity: meta.opacity,
+          borderRadius: 4
+        }}
+      />
+    );
+  }
+
+  if (object.type === 'LABEL') {
+    return <span>{label}</span>;
+  }
+
+  return null;
 }
 
 function mapObjectLabel(object, t, language) {
@@ -391,8 +506,11 @@ export default function MapPage() {
                     };
 
                     if (!object.isTable) {
-                      const hasAsset = Boolean(meta.svgUrl || meta.svgCode || String(meta.subType || '').toUpperCase() === 'POLYGON');
                       const objectLabel = mapObjectLabel(object, t, language);
+                      const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
+                      if (!hasAsset) {
+                        return null;
+                      }
                       return (
                         <button
                           key={object.id}
