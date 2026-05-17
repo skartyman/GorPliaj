@@ -24,16 +24,19 @@ export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSidebar, setOpenSidebar] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.location.pathname.startsWith('/admin/map-editor'));
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const path = window.location.pathname;
+    return path.startsWith('/admin/map-editor') || path === '/admin/map';
+  });
   const { t, toggleLanguage } = useAdminI18n();
   const title = useMemo(() => pageTitle(location.pathname, t), [location.pathname, t]);
-  const isMapEditor = location.pathname.startsWith('/admin/map-editor');
+  const isMapFullscreen = location.pathname.startsWith('/admin/map-editor') || location.pathname === '/admin/map';
 
   useEffect(() => {
-    if (isMapEditor) {
+    if (isMapFullscreen) {
       setSidebarCollapsed(true);
     }
-  }, [isMapEditor]);
+  }, [isMapFullscreen]);
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
@@ -45,7 +48,7 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className={`admin-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isMapEditor ? 'map-editor-shell' : ''}`}>
+    <div className={`admin-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isMapFullscreen ? 'map-editor-shell' : ''}`}>
       <aside className={`sidebar ${openSidebar ? 'open' : ''}`}>
         <div className="sidebar-header">
           <Link to="/admin/dashboard" className="brand" onClick={onNavSelect}>
