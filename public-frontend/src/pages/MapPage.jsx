@@ -431,10 +431,12 @@ export default function MapPage() {
     if (!state.result || !viewportSize.width || !viewportSize.height) return;
 
     const bounds = getMapRenderBounds(state.result.map);
-    const initial = getInitialViewTransform(bounds.width, bounds.height, viewportSize.width, viewportSize.height, MAP_PADDING);
+    const expectedViewportHeight = viewportSize.width * (bounds.height / bounds.width);
+    const viewportHeight = Math.max(viewportSize.height, expectedViewportHeight);
+    const initial = getInitialViewTransform(bounds.width, bounds.height, viewportSize.width, viewportHeight, MAP_PADDING);
     const minScale = clamp(initial.scale * 0.55, 0.25, 2);
     const maxScale = Math.max(minScale + 0.35, Math.max(2.4, initial.scale * 3));
-    const constrained = clampTranslate(bounds.width, bounds.height, viewportSize.width, viewportSize.height, initial.scale, initial.translateX, initial.translateY);
+    const constrained = clampTranslate(bounds.width, bounds.height, viewportSize.width, viewportHeight, initial.scale, initial.translateX, initial.translateY);
     setTransform({
       scale: initial.scale,
       translateX: constrained.translateX,
