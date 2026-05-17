@@ -107,7 +107,9 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
       setTransform((current) => {
         const isPristine = current.scale === 1 && current.translateX === 0 && current.translateY === 0;
         const seedScale = isPristine ? getFitViewScale(nextViewport, worldWidth, worldHeight) : current.scale;
-        return clampTranslate(current.translateX, current.translateY, seedScale, nextViewport);
+        const nextTx = isPristine ? (nextViewport.width - worldWidth * seedScale) / 2 : current.translateX;
+        const nextTy = isPristine ? (nextViewport.height - worldHeight * seedScale) / 2 : current.translateY;
+        return clampTranslate(nextTx, nextTy, seedScale, nextViewport);
       });
     });
 
