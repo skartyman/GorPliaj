@@ -55,9 +55,6 @@ export default function EventDetailPage() {
             <Link className="btn btn-primary" to={`/booking?event=${event.slug}`}>
               {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
             </Link>
-            <Link className="btn btn-secondary" to="/map">
-              {c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}
-            </Link>
             {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl ? (
               <a className="btn btn-secondary" href={event.ticketUrl} target="_blank" rel="noreferrer">
                 {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}

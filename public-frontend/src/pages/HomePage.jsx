@@ -106,8 +106,8 @@ export default function HomePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32 }}>
             <h2 style={{ marginBottom: 8 }}>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Book a table' })}</h2>
-            <p className="muted" style={{ marginBottom: 20 }}>{c({ ua: 'Оберіть дату і стіл на інтерактивній карті закладу.', ru: 'Выберите дату и стол на интерактивной карте заведения.', en: 'Choose a date and table on the interactive venue map.' })}</p>
-            <Link to="/map" className="btn btn-primary">{c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}</Link>
+            <p className="muted" style={{ marginBottom: 20 }}>{c({ ua: 'Оберіть дату, кількість гостей та доступний стіл.', ru: 'Выберите дату, количество гостей и доступный стол.', en: 'Choose a date, guest count and an available table.' })}</p>
+            <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
           </div>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32, display: 'grid', placeItems: 'center' }}>
             <img src="/icons/moonpirs.jpg" alt="" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} loading="lazy" />
@@ -179,7 +179,6 @@ export default function HomePage() {
             <h3>{c({ ua: 'Онлайн', ru: 'Онлайн', en: 'Online' })}</h3>
             <p><Link to="/events">{c({ ua: 'Афіша подій', ru: 'Афиша событий', en: 'Events schedule' })}</Link></p>
             <p><Link to="/menu">{c({ ua: 'Публічне меню', ru: 'Публичное меню', en: 'Public menu' })}</Link></p>
-            <p><Link to="/map">{c({ ua: 'Інтерактивна карта', ru: 'Интерактивная карта', en: 'Interactive map' })}</Link></p>
           </div>
         </div>
       </section>

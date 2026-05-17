@@ -136,7 +136,7 @@ npm run public:build
 
 ### Поточний serve-flow
 
-- Express віддає `public/public-app` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/map`, `/about`, `/menu` та інших публічних маршрутів.
+- Express віддає `public/public-app` як єдиний public client для `/`, `/events`, `/events/:slug`, `/booking`, `/about`, `/menu` та інших публічних маршрутів. Сторінка інтерактивної карти закрита для публічної навігації та доступна тимчасово для перевірки за прямим URL `/map-preview`.
 - Якщо public React build відсутній, сервер завершує запуск з помилкою конфігурації.
 - Маршрути `/admin/*` і `/api/*` працюють окремо, без змін для адмінки та backend API.
 
@@ -154,6 +154,6 @@ Docker build тепер:
 - `/events`
 - `/events/:slug`
 - `/booking`
-- `/map`
+- `/map-preview` - тимчасова dev-preview сторінка карти
 - `/about`
 - `/menu`

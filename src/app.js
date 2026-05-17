@@ -68,7 +68,7 @@ app.get('/events/:slug', (req, res) => {
   return sendPublicIndex(res);
 });
 
-app.get('/map', (req, res) => {
+app.get('/map-preview', (req, res) => {
   return sendPublicIndex(res);
 });
 

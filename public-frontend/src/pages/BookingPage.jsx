@@ -174,9 +174,6 @@ export default function BookingPage() {
           <button type="submit" className="btn btn-primary" disabled={loading || !tableOptions.length}>
             {c({ ua: 'Надіслати заявку', ru: 'Отправить заявку', en: 'Submit request' })}
           </button>
-          <Link className="btn btn-secondary" to={`/map?date=${form.date}&guests=${form.guests}&timeFrom=${form.timeFrom}`}>
-            {c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}
-          </Link>
         </div>
 
         {loading && <div className="state-msg">{c({ ua: 'Оновлюємо дані...', ru: 'Обновляем данные...', en: 'Updating data...' })}</div>}

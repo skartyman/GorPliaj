@@ -17,7 +17,7 @@ export default function App() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:slug" element={<EventDetailPage />} />
         <Route path="/menu" element={<MenuPage />} />
-        <Route path="/map" element={<MapPage />} />
+        <Route path="/map-preview" element={<MapPage />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />

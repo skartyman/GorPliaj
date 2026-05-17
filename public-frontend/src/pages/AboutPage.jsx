@@ -29,7 +29,6 @@ export default function AboutPage() {
           <h3>{c({ ua: 'Що доступно онлайн', ru: 'Что доступно онлайн', en: 'What\'s available online' })}</h3>
           <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
             <li>{c({ ua: 'Актуальна афіша подій', ru: 'Актуальная афиша событий', en: 'Current events schedule' })}</li>
-            <li>{c({ ua: 'Карта закладу та живі статуси столів', ru: 'Карта заведения и живые статусы столов', en: 'Venue map and live table statuses' })}</li>
             <li>{c({ ua: 'Онлайн-заявка на бронювання', ru: 'Онлайн-заявка на бронирование', en: 'Online booking request' })}</li>
             <li>{c({ ua: 'Публічне меню з API', ru: 'Публичное меню из API', en: 'Public menu from API' })}</li>
           </ul>
@@ -42,9 +41,6 @@ export default function AboutPage() {
           <p>🕐 {c({ ua: 'Щодня 10:00-23:00', ru: 'Ежедневно 10:00-23:00', en: 'Daily 10:00-23:00' })}</p>
           <p style={{ marginTop: 12 }}>
             {c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Booking' })}: <Link to="/booking" className="text-link">/booking</Link>
-          </p>
-          <p>
-            {c({ ua: 'Карта', ru: 'Карта', en: 'Map' })}: <Link to="/map" className="text-link">/map</Link>
           </p>
           <p>
             {c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}: <Link to="/menu" className="text-link">/menu</Link>
