@@ -43,7 +43,6 @@ export default function Layout() {
   const { locale, setLocale, t } = useLocale();
   const { settings } = useSettings();
   const isMenuRoute = location.pathname === '/menu';
-  const isMapPreviewRoute = location.pathname === '/map-preview';
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
@@ -139,8 +138,8 @@ export default function Layout() {
       </header>
 
       {/* Main content */}
-      <div className={`main-content${isMapPreviewRoute ? ' map-preview-shell' : ''}`}>
-        <div className={`page-container${isMapPreviewRoute ? ' map-preview-page' : ''}`}>
+      <div className="main-content">
+        <div className="page-container">
           <Outlet />
         </div>
       </div>

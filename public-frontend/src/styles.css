@@ -235,17 +235,6 @@ img { display: block; max-width: 100%; }
   flex: 1;
 }
 
-.map-preview-shell {
-  width: 100%;
-}
-
-.map-preview-page {
-  width: 100%;
-  max-width: none;
-  padding-left: 24px;
-  padding-right: 24px;
-}
-
 /* ===== Top bar for mobile ===== */
 .top-bar {
   display: none;
@@ -1099,7 +1088,7 @@ h3 {
 
 .public-map-viewport {
   position: relative;
-  height: auto;
+  height: 60vh;
   min-height: 420px;
   overflow: hidden;
   touch-action: none;
@@ -1519,7 +1508,7 @@ h3 {
   }
 
   .public-map-viewport {
-    height: auto;
+    height: 52vh;
     min-height: 300px;
   }
 
