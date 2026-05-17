@@ -89,7 +89,7 @@ function toPercentCoordinate(value, total) {
 }
 
 export async function getPublicMapData(mapApi, params = {}) {
-  const data = await mapApi.defaultMap();
+  const data = params.mapId ? await mapApi.byId(params.mapId) : await mapApi.defaultMap();
   const mapData = data.map || data;
   const zones = data.zones || mapData.zones || [];
   const rootTables = data.tables || [];

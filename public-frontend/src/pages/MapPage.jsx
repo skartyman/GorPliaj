@@ -373,6 +373,7 @@ export default function MapPage() {
   const date = searchParams.get('date') || new Date().toISOString().slice(0, 10);
   const timeFrom = searchParams.get('timeFrom') || '12:00';
   const guests = Number(searchParams.get('guests') || '0');
+  const mapId = searchParams.get('mapId') || '';
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
@@ -383,10 +384,10 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
-    getPublicMapData(mapApi, { date, timeFrom })
+    getPublicMapData(mapApi, { date, timeFrom, mapId })
       .then((result) => setState({ loading: false, error: '', result }))
       .catch(() => setState({ loading: false, error: t('mapLoadFailed'), result: null }));
-  }, [date, timeFrom, t]);
+  }, [date, mapId, timeFrom, t]);
 
   useEffect(() => {
     if (!state.result || !viewportRef.current) return undefined;

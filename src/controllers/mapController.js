@@ -17,6 +17,22 @@ async function getDefaultMap(req, res) {
   }
 }
 
+async function getMapById(req, res) {
+  try {
+    const mapId = Number(req.params.mapId);
+    const map = await contentService.getMapById(mapId);
+
+    if (!map) {
+      return res.status(404).json({ message: 'Map not found.' });
+    }
+
+    return res.json(map);
+  } catch (error) {
+    console.error('[mapController.getMapById] Failed to load map.', error);
+    return res.status(500).json({ message: 'Failed to load map.' });
+  }
+}
+
 async function getMapAvailability(req, res) {
   try {
     const mapId = Number(req.params.mapId);
@@ -58,5 +74,6 @@ async function getMapAvailability(req, res) {
 
 module.exports = {
   getDefaultMap,
+  getMapById,
   getMapAvailability
 };

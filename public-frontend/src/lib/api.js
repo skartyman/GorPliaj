@@ -44,6 +44,7 @@ export const menuApi = {
 
 export const mapApi = {
   defaultMap: () => request('/maps/default'),
+  byId: (mapId) => request(`/maps/${mapId}`),
   availability: (mapId, reservationDate, timeFrom) =>
     request(`/maps/${mapId}/availability?date=${encodeURIComponent(reservationDate)}&timeFrom=${encodeURIComponent(timeFrom)}`)
 };

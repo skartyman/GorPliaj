@@ -14,6 +14,7 @@ router.get('/events/:slug', publicController.getEventBySlug);
 router.get('/news', publicController.getNews);
 router.get('/settings', publicController.getSettings);
 router.get('/maps/default', mapController.getDefaultMap);
+router.get('/maps/:mapId', mapController.getMapById);
 router.get('/maps/:mapId/availability', mapController.getMapAvailability);
 
 router.get('/reservations', reservationController.getReservations);

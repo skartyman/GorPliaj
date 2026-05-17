@@ -53,8 +53,58 @@ async function getDefaultMap() {
   }
 }
 
+async function getMapById(mapId) {
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+
+  try {
+    const id = Number(mapId);
+    if (!Number.isInteger(id) || id <= 0) {
+      return null;
+    }
+
+    const map = await prisma.map.findUnique({
+      where: { id },
+      include: {
+        zones: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+        tables: true,
+        mapObjects: {
+          orderBy: [
+            {
+              zIndex: 'asc',
+            },
+            {
+              id: 'asc',
+            },
+          ],
+        },
+      },
+    });
+
+    if (!map) {
+      return null;
+    }
+
+    const { zones, tables, mapObjects, ...mapData } = map;
+
+    return {
+      map: mapData,
+      zones,
+      tables,
+      objects: mapObjects,
+    };
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 module.exports = {
   getEvents,
   getNews,
   getDefaultMap,
+  getMapById,
 };
