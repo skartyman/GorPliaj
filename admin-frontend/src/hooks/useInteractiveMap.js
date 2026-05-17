@@ -6,6 +6,27 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function getFitWidthScale(viewportWidth, worldWidth) {
+  if (!viewportWidth || !worldWidth) {
+    return 1;
+  }
+
+  return viewportWidth / worldWidth;
+}
+
+function getFitViewScale(viewport, worldWidth, worldHeight) {
+  const fitWidthScale = getFitWidthScale(viewport.width, worldWidth);
+  if (!viewport.width || !viewport.height || !worldWidth || !worldHeight) {
+    return fitWidthScale;
+  }
+
+  return Math.min(viewport.width / worldWidth, viewport.height / worldHeight);
+}
+
+function getMinScale(viewport, worldWidth, worldHeight, minScaleProp) {
+  return Math.max(minScaleProp, getFitViewScale(viewport, worldWidth, worldHeight) * 0.65);
+}
+
 function getDistance(a, b) {
   const dx = a.clientX - b.clientX;
   const dy = a.clientY - b.clientY;
@@ -28,38 +49,29 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0 });
 
-  const fitWidthScale = useMemo(() => {
-    if (!viewport.width || !worldWidth) {
-      return 1;
-    }
-    return viewport.width / worldWidth;
-  }, [viewport.width, worldWidth]);
-
   const fitViewScale = useMemo(() => {
-    if (!viewport.width || !viewport.height || !worldWidth || !worldHeight) {
-      return fitWidthScale;
-    }
-    return Math.min(viewport.width / worldWidth, viewport.height / worldHeight);
-  }, [fitWidthScale, viewport.height, viewport.width, worldHeight, worldWidth]);
+    return getFitViewScale(viewport, worldWidth, worldHeight);
+  }, [viewport, worldHeight, worldWidth]);
 
-  const minScale = useMemo(() => Math.max(minScaleProp, fitViewScale * 0.65), [fitViewScale, minScaleProp]);
+  const minScale = useMemo(() => getMinScale(viewport, worldWidth, worldHeight, minScaleProp), [minScaleProp, viewport, worldHeight, worldWidth]);
 
   const clampTranslate = useCallback(
-    (translateX, translateY, scale) => {
-      const boundedScale = clamp(scale, minScale, maxScale);
+    (translateX, translateY, scale, nextViewport = viewport) => {
+      const viewportMinScale = getMinScale(nextViewport, worldWidth, worldHeight, minScaleProp);
+      const boundedScale = clamp(scale, viewportMinScale, maxScale);
       const scaledWidth = worldWidth * boundedScale;
       const scaledHeight = worldHeight * boundedScale;
       const edgeLimit = 64;
 
       const xBounds =
-        scaledWidth <= viewport.width
-          ? { min: (viewport.width - scaledWidth) / 2, max: (viewport.width - scaledWidth) / 2 }
-          : { min: viewport.width - scaledWidth - edgeLimit, max: edgeLimit };
+        scaledWidth <= nextViewport.width
+          ? { min: (nextViewport.width - scaledWidth) / 2, max: (nextViewport.width - scaledWidth) / 2 }
+          : { min: nextViewport.width - scaledWidth - edgeLimit, max: edgeLimit };
 
       const yBounds =
-        scaledHeight <= viewport.height
-          ? { min: (viewport.height - scaledHeight) / 2, max: (viewport.height - scaledHeight) / 2 }
-          : { min: viewport.height - scaledHeight - edgeLimit, max: edgeLimit };
+        scaledHeight <= nextViewport.height
+          ? { min: (nextViewport.height - scaledHeight) / 2, max: (nextViewport.height - scaledHeight) / 2 }
+          : { min: nextViewport.height - scaledHeight - edgeLimit, max: edgeLimit };
 
       return {
         scale: boundedScale,
@@ -67,7 +79,7 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
         translateY: clamp(translateY, yBounds.min, yBounds.max)
       };
     },
-    [maxScale, minScale, viewport.height, viewport.width, worldHeight, worldWidth]
+    [maxScale, minScaleProp, viewport, worldHeight, worldWidth]
   );
 
   useEffect(() => {
@@ -85,16 +97,19 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
         height: entry.contentRect.height
       };
 
-      setViewport(nextViewport);
+      setViewport((current) =>
+        current.width === nextViewport.width && current.height === nextViewport.height ? current : nextViewport
+      );
       setTransform((current) => {
-        const seedScale = current.scale === 1 && current.translateX === 0 && current.translateY === 0 ? fitViewScale : current.scale;
-        return clampTranslate(current.translateX, current.translateY, seedScale);
+        const isPristine = current.scale === 1 && current.translateX === 0 && current.translateY === 0;
+        const seedScale = isPristine ? getFitViewScale(nextViewport, worldWidth, worldHeight) : current.scale;
+        return clampTranslate(current.translateX, current.translateY, seedScale, nextViewport);
       });
     });
 
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [clampTranslate, fitViewScale]);
+  }, [clampTranslate, worldHeight, worldWidth]);
 
   useEffect(() => {
     setTransform((current) => clampTranslate(current.translateX, current.translateY, current.scale));

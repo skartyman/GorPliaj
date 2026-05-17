@@ -66,6 +66,50 @@ function getPolygonFill(meta) {
   return '#e2e8f0';
 }
 
+function hasBuiltinTexture(texture) {
+  return ['sand', 'water', 'wood', 'grass'].includes(String(texture || '').toLowerCase());
+}
+
+function BuiltinTexturePattern({ id, texture }) {
+  switch (String(texture || '').toLowerCase()) {
+    case 'grass':
+      return (
+        <pattern id={id} x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="#dcfce7" />
+          <path d="M10,20 Q15,10 20,20 T30,20" stroke="#86efac" fill="none" strokeWidth="1" />
+          <path d="M5,35 Q10,25 15,35 T25,35" stroke="#86efac" fill="none" strokeWidth="1" />
+        </pattern>
+      );
+    case 'sand':
+      return (
+        <pattern id={id} x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+          <rect width="50" height="50" fill="#fef9c3" />
+          <circle cx="10" cy="10" r="0.5" fill="#fde047" />
+          <circle cx="30" cy="25" r="0.8" fill="#fde047" />
+          <circle cx="15" cy="40" r="0.6" fill="#fde047" />
+        </pattern>
+      );
+    case 'water':
+      return (
+        <pattern id={id} x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+          <rect width="60" height="60" fill="#e0f2fe" />
+          <path d="M0,20 Q15,10 30,20 T60,20" stroke="#bae6fd" fill="none" strokeWidth="2" opacity="0.5" />
+          <path d="M0,45 Q15,35 30,45 T60,45" stroke="#bae6fd" fill="none" strokeWidth="2" opacity="0.5" />
+        </pattern>
+      );
+    case 'wood':
+      return (
+        <pattern id={id} x="0" y="0" width="100" height="20" patternUnits="userSpaceOnUse">
+          <rect width="100" height="20" fill="#fef3c7" />
+          <line x1="0" y1="19" x2="100" y2="19" stroke="#fcd34d" strokeWidth="1" />
+          <path d="M20,10 Q50,5 80,10" stroke="#f59e0b" fill="none" strokeWidth="0.5" opacity="0.2" />
+        </pattern>
+      );
+    default:
+      return null;
+  }
+}
+
 function getObjectAccent(object, label) {
   const normalized = String(label || '').toLowerCase();
   if (/(sand|пісок|песок)/i.test(normalized)) return 'sand';
@@ -167,20 +211,40 @@ function PublicMapObjectGraphic({ object, meta, label }) {
           { x: object.width, y: object.height },
           { x: 0, y: object.height }
         ];
-    const patternId = `public-map-texture-${String(object.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+    const safeId = String(object.id).replace(/[^a-zA-Z0-9_-]/g, '-');
+    const patternId = `public-map-texture-${safeId}`;
+    const clipId = `public-map-texture-clip-${safeId}`;
+    const polygonPoints = pointsToSvg(points);
+    const usesBuiltinPattern = !meta.textureUrl && hasBuiltinTexture(meta.texture);
 
     return (
       <svg className="public-map-object-asset" viewBox={`0 0 ${object.width} ${object.height}`} preserveAspectRatio="none">
-        {meta.textureUrl ? (
+        {meta.textureUrl || usesBuiltinPattern ? (
           <defs>
-            <pattern id={patternId} x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox">
-              <image href={meta.textureUrl} x="0" y="0" width={object.width} height={object.height} preserveAspectRatio="xMidYMid slice" />
-            </pattern>
+            {meta.textureUrl ? (
+              <clipPath id={clipId}>
+                <polygon points={polygonPoints} />
+              </clipPath>
+            ) : (
+              <BuiltinTexturePattern id={patternId} texture={meta.texture} />
+            )}
           </defs>
         ) : null}
+        {meta.textureUrl ? (
+          <image
+            href={meta.textureUrl}
+            x="0"
+            y="0"
+            width={object.width}
+            height={object.height}
+            preserveAspectRatio="xMidYMid slice"
+            clipPath={`url(#${clipId})`}
+            opacity={meta.opacity}
+          />
+        ) : null}
         <polygon
-          points={pointsToSvg(points)}
-          fill={meta.textureUrl ? `url(#${patternId})` : getPolygonFill(meta)}
+          points={polygonPoints}
+          fill={meta.textureUrl ? 'none' : usesBuiltinPattern ? `url(#${patternId})` : getPolygonFill(meta)}
           opacity={meta.opacity}
           stroke={meta.strokeColor || '#64748b'}
           strokeWidth={meta.strokeWidth}
@@ -234,6 +298,7 @@ export default function MapPage() {
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   useMeta(`${t('mapTitle')} · ГорПляж`, 'Интерактивная карта заведения с живыми статусами столов.');
 
   const date = searchParams.get('date') || new Date().toISOString().slice(0, 10);
@@ -255,12 +320,29 @@ export default function MapPage() {
   }, [date, timeFrom, t]);
 
   useEffect(() => {
-    if (!state.result || !viewportRef.current) return;
-    const rect = viewportRef.current.getBoundingClientRect();
-    const initial = getInitialViewTransform(state.result.map.width, state.result.map.height, rect.width, rect.height, MAP_PADDING);
+    if (!state.result || !viewportRef.current) return undefined;
+
+    const syncSize = () => {
+      const rect = viewportRef.current.getBoundingClientRect();
+      const nextSize = { width: rect.width, height: rect.height };
+      setViewportSize((current) =>
+        current.width === nextSize.width && current.height === nextSize.height ? current : nextSize
+      );
+    };
+    const observer = new ResizeObserver(syncSize);
+    observer.observe(viewportRef.current);
+    syncSize();
+
+    return () => observer.disconnect();
+  }, [state.result]);
+
+  useEffect(() => {
+    if (!state.result || !viewportSize.width || !viewportSize.height) return;
+
+    const initial = getInitialViewTransform(state.result.map.width, state.result.map.height, viewportSize.width, viewportSize.height, MAP_PADDING);
     const minScale = clamp(initial.scale * 0.55, 0.25, 2);
     const maxScale = Math.max(minScale + 0.35, Math.max(2.4, initial.scale * 3));
-    const constrained = clampTranslate(state.result.map.width, state.result.map.height, rect.width, rect.height, initial.scale, initial.translateX, initial.translateY);
+    const constrained = clampTranslate(state.result.map.width, state.result.map.height, viewportSize.width, viewportSize.height, initial.scale, initial.translateX, initial.translateY);
     setTransform({
       scale: initial.scale,
       translateX: constrained.translateX,
@@ -269,7 +351,7 @@ export default function MapPage() {
       maxScale,
       initial
     });
-  }, [state.result]);
+  }, [state.result, viewportSize.height, viewportSize.width]);
 
   useEffect(() => {
     if (!state.result) return;
