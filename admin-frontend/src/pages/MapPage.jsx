@@ -446,6 +446,24 @@ export default function MapPage() {
     height: state.mapData?.map?.height || 760
   };
 
+  const [computedViewportHeight, setComputedViewportHeight] = useState('auto');
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const update = () => {
+      const w = node.offsetWidth;
+      if (!w) return;
+      const h = w * mapDimensions.height / mapDimensions.width;
+      const maxH = Math.min(window.innerHeight * 0.78, 860);
+      setComputedViewportHeight(Math.max(360, Math.min(h, maxH)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [mapDimensions]);
+
   const { containerRef, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
     worldWidth: mapDimensions.width,
     worldHeight: mapDimensions.height,
@@ -581,7 +599,7 @@ export default function MapPage() {
                 className="interactive-map-viewport"
                 ref={containerRef}
                 style={{
-                  aspectRatio: `${mapDimensions.width} / ${mapDimensions.height}`
+                  height: computedViewportHeight
                 }}
                 {...handlers}
               >

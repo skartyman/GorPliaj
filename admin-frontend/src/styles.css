@@ -752,7 +752,6 @@ textarea {
   position: relative;
   width: 100%;
   min-height: 360px;
-  max-height: min(78vh, 860px);
   overflow: hidden;
   user-select: none;
   touch-action: none;
@@ -1027,10 +1026,6 @@ textarea {
   .mobile-only {
     display: inline-grid;
     place-items: center;
-  }
-
-  .interactive-map-viewport {
-    min-height: min(62vh, 520px);
   }
 
   .map-zoom-indicator {

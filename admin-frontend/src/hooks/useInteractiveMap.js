@@ -20,7 +20,7 @@ function getFitViewScale(viewport, worldWidth, worldHeight) {
     return fitWidthScale;
   }
 
-  return Math.min(viewport.width / worldWidth, viewport.height / worldHeight);
+  return Math.min(viewport.width / worldWidth, viewport.height / worldHeight, 1);
 }
 
 function getMinScale(viewport, worldWidth, worldHeight, minScaleProp) {
@@ -63,15 +63,19 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
       const scaledHeight = worldHeight * boundedScale;
       const edgeLimit = 64;
 
-      const xBounds =
-        scaledWidth <= nextViewport.width
-          ? { min: (nextViewport.width - scaledWidth) / 2, max: (nextViewport.width - scaledWidth) / 2 }
-          : { min: nextViewport.width - scaledWidth - edgeLimit, max: edgeLimit };
+      const rawXMin = nextViewport.width - scaledWidth - edgeLimit;
+      const rawXMax = edgeLimit;
+      const xBounds = {
+        min: Math.min(rawXMin, rawXMax),
+        max: Math.max(rawXMin, rawXMax)
+      };
 
-      const yBounds =
-        scaledHeight <= nextViewport.height
-          ? { min: (nextViewport.height - scaledHeight) / 2, max: (nextViewport.height - scaledHeight) / 2 }
-          : { min: nextViewport.height - scaledHeight - edgeLimit, max: edgeLimit };
+      const rawYMin = nextViewport.height - scaledHeight - edgeLimit;
+      const rawYMax = edgeLimit;
+      const yBounds = {
+        min: Math.min(rawYMin, rawYMax),
+        max: Math.max(rawYMin, rawYMax)
+      };
 
       return {
         scale: boundedScale,
