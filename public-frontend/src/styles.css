@@ -235,6 +235,17 @@ img { display: block; max-width: 100%; }
   flex: 1;
 }
 
+.map-preview-shell {
+  width: 100%;
+}
+
+.map-preview-page {
+  width: 100%;
+  max-width: none;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
 /* ===== Top bar for mobile ===== */
 .top-bar {
   display: none;
