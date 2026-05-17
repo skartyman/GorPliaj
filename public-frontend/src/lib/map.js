@@ -159,7 +159,7 @@ export async function getPublicMapData(mapApi, params = {}) {
       x: Number(object.x) || 0,
       y: Number(object.y) || 0,
       rotation: Number(object.rotation) || 0,
-      zIndex: Number(object.zIndex) || 2
+      zIndex: Number.isFinite(Number(object.zIndex)) ? Number(object.zIndex) : 2
     }))
   };
 

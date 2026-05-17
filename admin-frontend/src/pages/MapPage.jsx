@@ -566,7 +566,7 @@ export default function MapPage() {
                       width: object.width,
                       height: object.height,
                       transform: `rotate(${rotation}deg)`,
-                      zIndex: object.zIndex || 2
+                      zIndex: Number.isFinite(Number(object.zIndex)) ? Number(object.zIndex) : 2
                     };
 
                     if (!object.isTable) {

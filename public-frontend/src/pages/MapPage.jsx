@@ -9,6 +9,16 @@ import { useMeta } from '../hooks/useMeta';
 const MAP_PADDING = 24;
 const PINCH_SENSITIVITY = 0.006;
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
+const STATIC_TYPE_ACCENTS = {
+  BAR: 'bar',
+  STAGE: 'stage',
+  ENTRANCE: 'entrance',
+  WC: 'wc',
+  LABEL: 'label',
+  DECOR: 'decor',
+  STAIRS: 'stairs',
+  PATH: 'path'
+};
 
 function parseStyleJson(styleJson) {
   if (!styleJson) return {};
@@ -111,11 +121,13 @@ function BuiltinTexturePattern({ id, texture }) {
 }
 
 function getObjectAccent(object, label) {
+  if (String(object.type || '').toUpperCase() === 'TABLE') return 'table';
   const normalized = String(label || '').toLowerCase();
   if (/(sand|пісок|песок)/i.test(normalized)) return 'sand';
-  if (/(sea|море)/i.test(normalized)) return 'water';
-  if (/(deck|настил|wooden path|дерев'яна доріжка|деревянная дорожка)/i.test(normalized)) return 'wood';
-  return '';
+  if (/(sea|море)/i.test(normalized)) return 'sea';
+  if (/(deck|настил)/i.test(normalized)) return 'deck';
+  if (/(wooden path|дерев'яна доріжка|деревянная дорожка)/i.test(normalized)) return 'path';
+  return STATIC_TYPE_ACCENTS[String(object.type || '').toUpperCase()] || 'static';
 }
 
 function hasBuiltinTemplate(subType) {
@@ -136,6 +148,13 @@ function hasRenderableObjectGraphic(object, meta, label) {
     object.type === 'LABEL' ||
     accent
   );
+}
+
+function resolveAccentTexture(accent) {
+  if (accent === 'sand') return 'sand';
+  if (accent === 'sea') return 'water';
+  if (accent === 'deck' || accent === 'path') return 'wood';
+  return '';
 }
 
 function BuiltinObjectTemplate({ subType }) {
@@ -213,7 +232,6 @@ function PublicMapObjectGraphic({ object, meta, label }) {
         ];
     const safeId = String(object.id).replace(/[^a-zA-Z0-9_-]/g, '-');
     const patternId = `public-map-texture-${safeId}`;
-    const clipId = `public-map-texture-clip-${safeId}`;
     const polygonPoints = pointsToSvg(points);
     const usesBuiltinPattern = !meta.textureUrl && hasBuiltinTexture(meta.texture);
 
@@ -222,29 +240,17 @@ function PublicMapObjectGraphic({ object, meta, label }) {
         {meta.textureUrl || usesBuiltinPattern ? (
           <defs>
             {meta.textureUrl ? (
-              <clipPath id={clipId}>
-                <polygon points={polygonPoints} />
-              </clipPath>
+              <pattern id={patternId} x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox">
+                <image href={meta.textureUrl} x="0" y="0" width={object.width} height={object.height} preserveAspectRatio="xMidYMid slice" />
+              </pattern>
             ) : (
               <BuiltinTexturePattern id={patternId} texture={meta.texture} />
             )}
           </defs>
         ) : null}
-        {meta.textureUrl ? (
-          <image
-            href={meta.textureUrl}
-            x="0"
-            y="0"
-            width={object.width}
-            height={object.height}
-            preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#${clipId})`}
-            opacity={meta.opacity}
-          />
-        ) : null}
         <polygon
           points={polygonPoints}
-          fill={meta.textureUrl ? 'none' : usesBuiltinPattern ? `url(#${patternId})` : getPolygonFill(meta)}
+          fill={meta.textureUrl || usesBuiltinPattern ? `url(#${patternId})` : getPolygonFill(meta)}
           opacity={meta.opacity}
           stroke={meta.strokeColor || '#64748b'}
           strokeWidth={meta.strokeWidth}
@@ -255,7 +261,7 @@ function PublicMapObjectGraphic({ object, meta, label }) {
   }
 
   if (object.type === 'PATH') {
-    const pathData = meta.pathData || `M 0 ${object.height / 2} L ${object.width} ${object.height / 2}`;
+    const pathData = meta.pathData || `M 0 0 L ${object.width} 0`;
     return (
       <svg className="public-map-object-asset" viewBox={`0 0 ${object.width} ${object.height}`} preserveAspectRatio="none">
         <path d={pathData} stroke={meta.strokeColor || '#64748b'} strokeWidth={meta.strokeWidth || 4} fill="none" strokeLinecap="round" />
@@ -263,13 +269,14 @@ function PublicMapObjectGraphic({ object, meta, label }) {
     );
   }
 
-  if (meta.textureUrl || meta.texture || getObjectAccent(object, label)) {
-    const texture = meta.texture || getObjectAccent(object, label);
+  const accent = getObjectAccent(object, label);
+  const accentTexture = meta.texture || resolveAccentTexture(accent);
+  if (meta.textureUrl || accentTexture) {
     return (
       <div
         className="public-map-object-asset"
         style={{
-          background: meta.textureUrl ? `url(${meta.textureUrl}) center / cover` : getPolygonFill({ texture }),
+          background: meta.textureUrl ? `url(${meta.textureUrl})` : getPolygonFill({ texture: accentTexture }),
           opacity: meta.opacity,
           borderRadius: 4
         }}
@@ -281,7 +288,11 @@ function PublicMapObjectGraphic({ object, meta, label }) {
     return <span>{label}</span>;
   }
 
-  return null;
+  return (
+    <div className="public-map-object-asset" style={{ background: '#f1f5f9', border: '2px dashed #cbd5e1', borderRadius: 4 }}>
+      <span style={{ fontSize: 11, color: '#475569' }}>{label}</span>
+    </div>
+  );
 }
 
 export default function MapPage() {
@@ -299,7 +310,7 @@ export default function MapPage() {
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  useMeta(`${t('mapTitle')} · ГорПляж`, 'Интерактивная карта заведения с живыми статусами столов.');
+  useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
 
   const date = searchParams.get('date') || new Date().toISOString().slice(0, 10);
   const timeFrom = searchParams.get('timeFrom') || '12:00';
@@ -468,7 +479,7 @@ export default function MapPage() {
   }
 
   if (state.loading) {
-    return <div className="state-msg">{t('mapLoading') || 'Загрузка карты...'}</div>;
+    return <div className="state-msg">{t('mapLoading') || 'Loading map...'}</div>;
   }
 
   if (state.error || !state.result) {
@@ -543,7 +554,7 @@ export default function MapPage() {
                 />
 
                 {state.result.map.objects.map((object) => {
-                  const table = object.tableId ? tableById.get(object.tableId) : null;
+                  const table = object.type === 'TABLE' && object.tableId ? tableById.get(object.tableId) : null;
                   const objectLabel = localizeField(object.label, locale) || object.type;
                   const meta = parseMetaJson(object.metaJson);
                   if (table) {
@@ -560,7 +571,7 @@ export default function MapPage() {
                           height: object.height,
                           transform: `rotate(${object.rotation}deg)`,
                           zIndex: object.zIndex,
-                          borderRadius: table.shape === 'ROUND' ? 999 : 12
+                          borderRadius: object.width === object.height ? 999 : 8
                         }}
                         onClick={() => selectTable(table.id)}
                         disabled={disabled}
@@ -598,7 +609,7 @@ export default function MapPage() {
             </div>
           </div>
 
-          {!canInteractWithMap ? <p className="muted">Подготавливаем карту...</p> : null}
+          {!canInteractWithMap ? <p className="muted">Preparing map...</p> : null}
 
           {!state.result.map.objects.length ? <p className="muted">{t('mapEmpty')}</p> : null}
 
