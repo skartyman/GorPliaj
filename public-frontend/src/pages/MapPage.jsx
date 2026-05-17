@@ -92,6 +92,28 @@ function compareMapObjects(a, b) {
   return (Number(a?.id) || 0) - (Number(b?.id) || 0);
 }
 
+function getMapRenderBounds(map) {
+  const bounds = (map?.objects || []).reduce(
+    (acc, object) => ({
+      minX: Math.min(acc.minX, Number(object.x) || 0),
+      minY: Math.min(acc.minY, Number(object.y) || 0),
+      maxX: Math.max(acc.maxX, (Number(object.x) || 0) + (Number(object.width) || 0)),
+      maxY: Math.max(acc.maxY, (Number(object.y) || 0) + (Number(object.height) || 0))
+    }),
+    {
+      minX: 0,
+      minY: 0,
+      maxX: Number(map?.width) || 0,
+      maxY: Number(map?.height) || 0
+    }
+  );
+
+  return {
+    width: Math.max(Number(map?.width) || 0, bounds.maxX - Math.min(0, bounds.minX)),
+    height: Math.max(Number(map?.height) || 0, bounds.maxY - Math.min(0, bounds.minY))
+  };
+}
+
 function getPolygonFill(meta) {
   if (meta.texture === 'sand') return '#fef3c7';
   if (meta.texture === 'water') return '#bfdbfe';
@@ -408,10 +430,11 @@ export default function MapPage() {
   useEffect(() => {
     if (!state.result || !viewportSize.width || !viewportSize.height) return;
 
-    const initial = getInitialViewTransform(state.result.map.width, state.result.map.height, viewportSize.width, viewportSize.height, MAP_PADDING);
+    const bounds = getMapRenderBounds(state.result.map);
+    const initial = getInitialViewTransform(bounds.width, bounds.height, viewportSize.width, viewportSize.height, MAP_PADDING);
     const minScale = clamp(initial.scale * 0.55, 0.25, 2);
     const maxScale = Math.max(minScale + 0.35, Math.max(2.4, initial.scale * 3));
-    const constrained = clampTranslate(state.result.map.width, state.result.map.height, viewportSize.width, viewportSize.height, initial.scale, initial.translateX, initial.translateY);
+    const constrained = clampTranslate(bounds.width, bounds.height, viewportSize.width, viewportSize.height, initial.scale, initial.translateX, initial.translateY);
     setTransform({
       scale: initial.scale,
       translateX: constrained.translateX,
@@ -436,6 +459,7 @@ export default function MapPage() {
     () => [...(state.result?.map.objects || [])].sort(compareMapObjects),
     [state.result]
   );
+  const renderBounds = useMemo(() => getMapRenderBounds(state.result?.map), [state.result]);
 
   const canInteractWithMap = Boolean(state.result && transform.initial);
   const resetTransform = transform.initial || {
@@ -447,7 +471,7 @@ export default function MapPage() {
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
-    const constrained = clampTranslate(state.result.map.width, state.result.map.height, rect.width, rect.height, nextScale, nextX, nextY);
+    const constrained = clampTranslate(renderBounds.width, renderBounds.height, rect.width, rect.height, nextScale, nextX, nextY);
     setTransform((current) => ({ ...current, scale: nextScale, translateX: constrained.translateX, translateY: constrained.translateY }));
   }
 
@@ -557,7 +581,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      <div className="map-container">
+      <div className="map-container map-preview-container">
         <article className="map-zone-board">
           <div className="map-controls">
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale * 1.15)}>
@@ -582,6 +606,7 @@ export default function MapPage() {
               className="public-map-viewport"
               ref={viewportRef}
               role="application"
+              style={{ aspectRatio: `${renderBounds.width} / ${renderBounds.height}` }}
               onWheel={(event) => {
                 if (!canInteractWithMap) return;
                 event.preventDefault();

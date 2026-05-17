@@ -1046,6 +1046,10 @@ h3 {
   gap: 24px;
 }
 
+.map-preview-container {
+  grid-template-columns: 1fr;
+}
+
 .map-viewport-wrapper {
   border-radius: var(--radius);
   overflow: hidden;
@@ -1084,7 +1088,7 @@ h3 {
 
 .public-map-viewport {
   position: relative;
-  height: 60vh;
+  height: auto;
   min-height: 420px;
   overflow: hidden;
   touch-action: none;
@@ -1504,7 +1508,7 @@ h3 {
   }
 
   .public-map-viewport {
-    height: 52vh;
+    height: auto;
     min-height: 300px;
   }
 
