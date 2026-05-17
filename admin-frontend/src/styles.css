@@ -802,9 +802,10 @@ textarea {
 
 .interactive-map-object.has-asset {
   background: transparent;
-  border-color: transparent;
+  border: 0;
   padding: 0;
   overflow: visible;
+  line-height: 0;
 }
 
 .interactive-map-object.selectable {

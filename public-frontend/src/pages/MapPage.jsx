@@ -68,6 +68,30 @@ function pointsToSvg(points) {
   return (points || []).map((point) => `${Number(point.x) || 0},${Number(point.y) || 0}`).join(' ');
 }
 
+function getObjectZIndex(object) {
+  const value = Number(object?.zIndex);
+  return Number.isFinite(value) ? value : 2;
+}
+
+function getObjectRenderPriority(object, meta = parseMetaJson(object?.metaJson)) {
+  const type = String(object?.type || '').toUpperCase();
+  const subType = String(meta?.subType || '').toUpperCase();
+  if (subType === 'POLYGON') return 0;
+  if (type === 'PATH') return 1;
+  if (type === 'TABLE') return 3;
+  return 2;
+}
+
+function compareMapObjects(a, b) {
+  const zIndexDiff = getObjectZIndex(a) - getObjectZIndex(b);
+  if (zIndexDiff) return zIndexDiff;
+
+  const priorityDiff = getObjectRenderPriority(a) - getObjectRenderPriority(b);
+  if (priorityDiff) return priorityDiff;
+
+  return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+}
+
 function getPolygonFill(meta) {
   if (meta.texture === 'sand') return '#fef3c7';
   if (meta.texture === 'water') return '#bfdbfe';
@@ -162,13 +186,22 @@ function BuiltinObjectTemplate({ subType }) {
     case 'TREE':
       return (
         <svg viewBox="0 0 100 100" className="public-map-object-asset">
-          <g fill="#64748b"><circle cx="50" cy="42" r="28" /><rect x="45" y="58" width="10" height="30" rx="4" fill="#7c4a24" /></g>
+          <g fill="#22c55e">
+            <circle cx="50" cy="50" r="40" opacity="0.6" />
+            <circle cx="40" cy="40" r="20" />
+            <circle cx="60" cy="45" r="25" />
+            <circle cx="50" cy="65" r="20" />
+          </g>
         </svg>
       );
     case 'BUSH':
       return (
         <svg viewBox="0 0 100 100" className="public-map-object-asset">
-          <g fill="#4ade80"><circle cx="30" cy="35" r="20" /><circle cx="52" cy="35" r="22" /><circle cx="42" cy="55" r="22" /></g>
+          <g fill="#4ade80">
+            <circle cx="30" cy="30" r="20" />
+            <circle cx="50" cy="35" r="20" />
+            <circle cx="40" cy="50" r="20" />
+          </g>
         </svg>
       );
     case 'UMBRELLA':
@@ -180,19 +213,44 @@ function BuiltinObjectTemplate({ subType }) {
     case 'STAGE':
       return (
         <svg viewBox="0 0 100 100" className="public-map-object-asset">
-          <g fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="12" y="42" width="76" height="34" rx="4" fill="#f8fafc" stroke="#94a3b8" /><path d="M16 70h68M22 42V24h56v18M26 30h48" /><path d="M32 34l8-6 8 6 8-6 8 6 8-6 8 6" stroke="#60a5fa" /></g>
+          <g fill="none" stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="12" y="42" width="76" height="34" rx="4" fill="#f8fafc" stroke="#94a3b8" />
+            <path d="M16 70h68" />
+            <path d="M22 42V24h56v18" />
+            <path d="M26 30h48" stroke="#cbd5e1" />
+            <path d="M32 34l8-6 8 6 8-6 8 6 8-6 8 6" stroke="#60a5fa" />
+            <path d="M34 76v8M66 76v8" />
+          </g>
         </svg>
       );
     case 'SUNBED':
       return (
         <svg viewBox="0 0 100 100" className="public-map-object-asset">
-          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 60L72 18M26 68L80 26" /><path d="M20 62h52c6 0 10 4 10 10v6H28c-6 0-10-4-10-10v-6z" /><path d="M30 70l-6 16M72 30l-7 17M20 62l-4 8M82 40l4 8" /><path d="M32 58h28" stroke="#93c5fd" strokeWidth="4" /></g>
+          <g fill="#f8fafc" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 60L72 18" />
+            <path d="M26 68L80 26" opacity="0.9" />
+            <path d="M20 62h52c6 0 10 4 10 10v6H28c-6 0-10-4-10-10v-6z" />
+            <path d="M30 70l-6 16M72 30l-7 17" />
+            <path d="M20 62l-4 8M82 40l4 8" />
+            <path d="M32 58h28" stroke="#93c5fd" strokeWidth="4" />
+          </g>
         </svg>
       );
     case 'BED':
       return (
         <svg viewBox="0 0 100 100" className="public-map-object-asset">
-          <g><rect x="10" y="24" width="80" height="46" rx="7" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" /><rect x="14" y="20" width="18" height="12" rx="3" fill="#e5e7eb" /><rect x="34" y="20" width="20" height="12" rx="3" fill="#dbeafe" /><rect x="56" y="20" width="18" height="12" rx="3" fill="#eef2ff" /><rect x="14" y="52" width="72" height="10" rx="3" fill="#f1f5f9" /><rect x="12" y="70" width="9" height="18" rx="2" fill="#94a3b8" /><rect x="79" y="70" width="9" height="18" rx="2" fill="#94a3b8" /></g>
+          <g>
+            <rect x="10" y="24" width="80" height="46" rx="7" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+            <rect x="14" y="20" width="18" height="12" rx="3" fill="#e5e7eb" />
+            <rect x="34" y="20" width="20" height="12" rx="3" fill="#dbeafe" />
+            <rect x="56" y="20" width="18" height="12" rx="3" fill="#eef2ff" />
+            <rect x="14" y="52" width="72" height="10" rx="3" fill="#f1f5f9" />
+            <rect x="12" y="70" width="9" height="18" rx="2" fill="#94a3b8" />
+            <rect x="79" y="70" width="9" height="18" rx="2" fill="#94a3b8" />
+            <rect x="16" y="82" width="18" height="5" rx="2" fill="#cbd5e1" />
+            <rect x="66" y="82" width="18" height="5" rx="2" fill="#cbd5e1" />
+            <rect x="10" y="18" width="8" height="58" rx="3" fill="#d1d5db" />
+          </g>
         </svg>
       );
     case 'STAIRS':
@@ -374,6 +432,10 @@ export default function MapPage() {
     if (!state.result) return new Map();
     return new Map(state.result.map.zones.flatMap((zone) => zone.tables).map((table) => [table.id, table]));
   }, [state.result]);
+  const renderObjects = useMemo(
+    () => [...(state.result?.map.objects || [])].sort(compareMapObjects),
+    [state.result]
+  );
 
   const canInteractWithMap = Boolean(state.result && transform.initial);
   const resetTransform = transform.initial || {
@@ -553,7 +615,7 @@ export default function MapPage() {
                   }}
                 />
 
-                {state.result.map.objects.map((object) => {
+                {renderObjects.map((object) => {
                   const table = object.type === 'TABLE' && object.tableId ? tableById.get(object.tableId) : null;
                   const objectLabel = localizeField(object.label, locale) || object.type;
                   const meta = parseMetaJson(object.metaJson);
@@ -570,7 +632,7 @@ export default function MapPage() {
                           width: object.width,
                           height: object.height,
                           transform: `rotate(${object.rotation}deg)`,
-                          zIndex: object.zIndex,
+                          zIndex: getObjectZIndex(object),
                           borderRadius: object.width === object.height ? 999 : 8
                         }}
                         onClick={() => selectTable(table.id)}
@@ -596,7 +658,7 @@ export default function MapPage() {
                         width: object.width,
                         height: object.height,
                         transform: `rotate(${object.rotation}deg)`,
-                        zIndex: object.zIndex,
+                        zIndex: getObjectZIndex(object),
                         ...parseStyleJson(object.styleJson)
                       }}
                       title={objectLabel}

@@ -275,6 +275,30 @@ function pointsToSvg(points) {
   return (points || []).map((point) => `${point.x},${point.y}`).join(' ');
 }
 
+function getObjectZIndex(object) {
+  const value = Number(object?.zIndex);
+  return Number.isFinite(value) ? value : 2;
+}
+
+function getObjectRenderPriority(object) {
+  const type = String(object?.type || '').toUpperCase();
+  const subType = String(object?.metaJson?.subType || '').toUpperCase();
+  if (subType === 'POLYGON') return 0;
+  if (type === 'PATH') return 1;
+  if (type === 'TABLE') return 3;
+  return 2;
+}
+
+function compareMapObjects(a, b) {
+  const zIndexDiff = getObjectZIndex(a) - getObjectZIndex(b);
+  if (zIndexDiff) return zIndexDiff;
+
+  const priorityDiff = getObjectRenderPriority(a) - getObjectRenderPriority(b);
+  if (priorityDiff) return priorityDiff;
+
+  return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+}
+
 function loadTextureAssets() {
   try {
     const parsed = JSON.parse(localStorage.getItem(TEXTURE_ASSETS_STORAGE_KEY) || '[]');
@@ -1874,6 +1898,7 @@ export default function MapEditorPage() {
 
   const map = editorState.current?.map;
   const objects = editorState.current?.objects || [];
+  const renderObjects = useMemo(() => [...objects].sort(compareMapObjects), [objects]);
   const tableMap = useMemo(
     () => new Map((editorState.current?.tables || []).map((table) => [table.id, table])),
     [editorState.current?.tables]
@@ -3217,7 +3242,7 @@ export default function MapEditorPage() {
                     </svg>
                   ) : null}
 
-                  {objects.map((object) => {
+                  {renderObjects.map((object) => {
                     return (
                       <Rnd
                         key={object.id}
@@ -3241,7 +3266,7 @@ export default function MapEditorPage() {
                         resizeGrid={[1, 1]}
                         scale={mapScale}
                         className={`map-editor-rnd ${editorState.selectedObjectIds.includes(object.id) ? 'selected' : ''}`}
-                        style={{ zIndex: object.zIndex }}
+                        style={{ zIndex: getObjectZIndex(object) }}
                       >
                         <MapObjectRenderer
                           object={object}
