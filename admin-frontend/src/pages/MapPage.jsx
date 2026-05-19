@@ -10,6 +10,63 @@ import { useInteractiveMap } from '../hooks/useInteractiveMap';
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
 const MAP_PREVIEW_GUTTER = 240;
 
+function getRotatedObjectBounds(object) {
+  const x = Number(object?.x) || 0;
+  const y = Number(object?.y) || 0;
+  const width = Math.max(Number(object?.width) || 44, 24);
+  const height = Math.max(Number(object?.height) || 44, 24);
+  const rotation = ((Number(object?.rotation) || 0) * Math.PI) / 180;
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  const corners = [
+    [0, 0],
+    [width, 0],
+    [width, height],
+    [0, height]
+  ].map(([cornerX, cornerY]) => {
+    const dx = cornerX - width / 2;
+    const dy = cornerY - height / 2;
+    return {
+      x: centerX + dx * Math.cos(rotation) - dy * Math.sin(rotation),
+      y: centerY + dx * Math.sin(rotation) + dy * Math.cos(rotation)
+    };
+  });
+
+  return {
+    minX: Math.min(...corners.map((corner) => corner.x)),
+    minY: Math.min(...corners.map((corner) => corner.y)),
+    maxX: Math.max(...corners.map((corner) => corner.x)),
+    maxY: Math.max(...corners.map((corner) => corner.y))
+  };
+}
+
+function getMapCanvasBounds(mapDimensions, objects = []) {
+  const bounds = objects.reduce(
+    (acc, object) => {
+      const objectBounds = getRotatedObjectBounds(object);
+      return {
+        minX: Math.min(acc.minX, objectBounds.minX),
+        minY: Math.min(acc.minY, objectBounds.minY),
+        maxX: Math.max(acc.maxX, objectBounds.maxX),
+        maxY: Math.max(acc.maxY, objectBounds.maxY)
+      };
+    },
+    { minX: 0, minY: 0, maxX: mapDimensions.width, maxY: mapDimensions.height }
+  );
+
+  const minX = Math.floor(bounds.minX);
+  const minY = Math.floor(bounds.minY);
+  const maxX = Math.ceil(bounds.maxX);
+  const maxY = Math.ceil(bounds.maxY);
+
+  return {
+    width: Math.max(mapDimensions.width, maxX - minX),
+    height: Math.max(mapDimensions.height, maxY - minY),
+    offsetX: -minX,
+    offsetY: -minY
+  };
+}
+
 function getTimeKey(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
@@ -446,12 +503,16 @@ export default function MapPage() {
     width: state.mapData?.map?.width || 1200,
     height: state.mapData?.map?.height || 760
   };
+  const mapCanvasBounds = useMemo(
+    () => getMapCanvasBounds(mapDimensions, state.mapData?.objects || []),
+    [mapDimensions.height, mapDimensions.width, state.mapData?.objects]
+  );
   const mapRenderFrame = useMemo(() => ({
-    width: mapDimensions.width + MAP_PREVIEW_GUTTER * 2,
-    height: mapDimensions.height + MAP_PREVIEW_GUTTER * 2,
+    width: mapCanvasBounds.width + MAP_PREVIEW_GUTTER * 2,
+    height: mapCanvasBounds.height + MAP_PREVIEW_GUTTER * 2,
     offsetX: MAP_PREVIEW_GUTTER,
     offsetY: MAP_PREVIEW_GUTTER
-  }), [mapDimensions.height, mapDimensions.width]);
+  }), [mapCanvasBounds.height, mapCanvasBounds.width]);
 
   const [computedViewportHeight, setComputedViewportHeight] = useState('auto');
 
@@ -623,15 +684,20 @@ export default function MapPage() {
                   <div
                     className="interactive-map-canvas"
                     style={{
+                      backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
                       left: mapRenderFrame.offsetX,
                       top: mapRenderFrame.offsetY,
-                      width: mapDimensions.width,
-                      height: mapDimensions.height
+                      width: mapCanvasBounds.width,
+                      height: mapCanvasBounds.height
                     }}
                   >
                     <div
                       className="interactive-map-background"
                       style={{
+                        left: mapCanvasBounds.offsetX,
+                        top: mapCanvasBounds.offsetY,
+                        width: mapDimensions.width,
+                        height: mapDimensions.height,
                         backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
                         backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
                       }}
@@ -642,8 +708,8 @@ export default function MapPage() {
                       const meta = object.meta || {};
                       const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
                       const baseStyle = {
-                        left: object.x,
-                        top: object.y,
+                        left: object.x + mapCanvasBounds.offsetX,
+                        top: object.y + mapCanvasBounds.offsetY,
                         width: object.width,
                         height: object.height,
                         transform: `rotate(${rotation}deg)`,

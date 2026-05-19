@@ -74,6 +74,63 @@ function getObjectZIndex(object) {
   return Number.isFinite(value) ? value : 2;
 }
 
+function getRotatedObjectBounds(object) {
+  const x = Number(object?.x) || 0;
+  const y = Number(object?.y) || 0;
+  const width = Math.max(Number(object?.width) || 44, 24);
+  const height = Math.max(Number(object?.height) || 44, 24);
+  const rotation = ((Number(object?.rotation) || 0) * Math.PI) / 180;
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  const corners = [
+    [0, 0],
+    [width, 0],
+    [width, height],
+    [0, height]
+  ].map(([cornerX, cornerY]) => {
+    const dx = cornerX - width / 2;
+    const dy = cornerY - height / 2;
+    return {
+      x: centerX + dx * Math.cos(rotation) - dy * Math.sin(rotation),
+      y: centerY + dx * Math.sin(rotation) + dy * Math.cos(rotation)
+    };
+  });
+
+  return {
+    minX: Math.min(...corners.map((corner) => corner.x)),
+    minY: Math.min(...corners.map((corner) => corner.y)),
+    maxX: Math.max(...corners.map((corner) => corner.x)),
+    maxY: Math.max(...corners.map((corner) => corner.y))
+  };
+}
+
+function getMapCanvasBounds(mapDimensions, objects = []) {
+  const bounds = objects.reduce(
+    (acc, object) => {
+      const objectBounds = getRotatedObjectBounds(object);
+      return {
+        minX: Math.min(acc.minX, objectBounds.minX),
+        minY: Math.min(acc.minY, objectBounds.minY),
+        maxX: Math.max(acc.maxX, objectBounds.maxX),
+        maxY: Math.max(acc.maxY, objectBounds.maxY)
+      };
+    },
+    { minX: 0, minY: 0, maxX: mapDimensions.width, maxY: mapDimensions.height }
+  );
+
+  const minX = Math.floor(bounds.minX);
+  const minY = Math.floor(bounds.minY);
+  const maxX = Math.ceil(bounds.maxX);
+  const maxY = Math.ceil(bounds.maxY);
+
+  return {
+    width: Math.max(mapDimensions.width, maxX - minX),
+    height: Math.max(mapDimensions.height, maxY - minY),
+    offsetX: -minX,
+    offsetY: -minY
+  };
+}
+
 function getObjectRenderPriority(object, meta = parseMetaJson(object?.metaJson)) {
   const type = String(object?.type || '').toUpperCase();
   const subType = String(meta?.subType || '').toUpperCase();
@@ -379,12 +436,16 @@ export default function MapPage() {
     width: state.result?.map?.width || 1200,
     height: state.result?.map?.height || 760
   }), [state.result?.map?.height, state.result?.map?.width]);
+  const mapCanvasBounds = useMemo(
+    () => getMapCanvasBounds(mapDimensions, state.result?.map?.objects || []),
+    [mapDimensions.height, mapDimensions.width, state.result?.map?.objects]
+  );
   const mapRenderFrame = useMemo(() => ({
-    width: mapDimensions.width + MAP_PREVIEW_GUTTER * 2,
-    height: mapDimensions.height + MAP_PREVIEW_GUTTER * 2,
+    width: mapCanvasBounds.width + MAP_PREVIEW_GUTTER * 2,
+    height: mapCanvasBounds.height + MAP_PREVIEW_GUTTER * 2,
     offsetX: MAP_PREVIEW_GUTTER,
     offsetY: MAP_PREVIEW_GUTTER
-  }), [mapDimensions.height, mapDimensions.width]);
+  }), [mapCanvasBounds.height, mapCanvasBounds.width]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
@@ -485,8 +546,8 @@ export default function MapPage() {
     if (!selectedObject) return;
     const center = getObjectCenter(selectedObject);
     const rect = viewportRef.current.getBoundingClientRect();
-    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * transform.scale;
-    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - (center.y + mapRenderFrame.offsetY) * transform.scale;
+    const targetX = rect.width / 2 - (center.x + mapCanvasBounds.offsetX + mapRenderFrame.offsetX) * transform.scale;
+    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - (center.y + mapCanvasBounds.offsetY + mapRenderFrame.offsetY) * transform.scale;
     applyTransform(transform.scale, targetX, targetY);
   }
 
@@ -627,15 +688,20 @@ export default function MapPage() {
                 <div
                   className="public-map-canvas"
                   style={{
+                    backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
                     left: mapRenderFrame.offsetX,
                     top: mapRenderFrame.offsetY,
-                    width: mapDimensions.width,
-                    height: mapDimensions.height
+                    width: mapCanvasBounds.width,
+                    height: mapCanvasBounds.height
                   }}
                 >
                   <div
                     className="public-map-background"
                     style={{
+                      left: mapCanvasBounds.offsetX,
+                      top: mapCanvasBounds.offsetY,
+                      width: mapDimensions.width,
+                      height: mapDimensions.height,
                       backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
                       backgroundImage: state.result.map.backgroundImage ? `url(${state.result.map.backgroundImage})` : 'none'
                     }}
@@ -653,8 +719,8 @@ export default function MapPage() {
                           type="button"
                           className={`public-map-table ${table.status} ${!tableFitsGuests(table) ? 'no-fit' : ''} ${selectedTableId === table.id ? 'selected' : ''}`}
                           style={{
-                            left: object.x,
-                            top: object.y,
+                            left: object.x + mapCanvasBounds.offsetX,
+                            top: object.y + mapCanvasBounds.offsetY,
                             width: object.width,
                             height: object.height,
                             transform: `rotate(${object.rotation}deg)`,
@@ -679,8 +745,8 @@ export default function MapPage() {
                         key={object.id}
                         className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''}`}
                         style={{
-                          left: object.x,
-                          top: object.y,
+                          left: object.x + mapCanvasBounds.offsetX,
+                          top: object.y + mapCanvasBounds.offsetY,
                           width: object.width,
                           height: object.height,
                           transform: `rotate(${object.rotation}deg)`,
