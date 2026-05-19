@@ -767,6 +767,11 @@ textarea {
   will-change: transform;
 }
 
+.interactive-map-canvas {
+  position: absolute;
+  overflow: visible;
+}
+
 .interactive-map-background {
   position: absolute;
   inset: 0;

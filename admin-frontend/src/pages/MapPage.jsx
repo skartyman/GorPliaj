@@ -8,6 +8,7 @@ import { useAdminI18n } from '../lib/i18n';
 import { useInteractiveMap } from '../hooks/useInteractiveMap';
 
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
+const MAP_PREVIEW_GUTTER = 240;
 
 function getTimeKey(date) {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -445,6 +446,12 @@ export default function MapPage() {
     width: state.mapData?.map?.width || 1200,
     height: state.mapData?.map?.height || 760
   };
+  const mapRenderFrame = useMemo(() => ({
+    width: mapDimensions.width + MAP_PREVIEW_GUTTER * 2,
+    height: mapDimensions.height + MAP_PREVIEW_GUTTER * 2,
+    offsetX: MAP_PREVIEW_GUTTER,
+    offsetY: MAP_PREVIEW_GUTTER
+  }), [mapDimensions.height, mapDimensions.width]);
 
   const [computedViewportHeight, setComputedViewportHeight] = useState('auto');
 
@@ -465,8 +472,10 @@ export default function MapPage() {
   }, [mapDimensions]);
 
   const { containerRef, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
-    worldWidth: mapDimensions.width,
-    worldHeight: mapDimensions.height,
+    worldWidth: mapRenderFrame.width,
+    worldHeight: mapRenderFrame.height,
+    fitWorldWidth: mapDimensions.width,
+    fitWorldHeight: mapDimensions.height,
     minScale: 0.22,
     maxScale: 3
   });
@@ -606,76 +615,86 @@ export default function MapPage() {
                 <div
                   className="interactive-map-world"
                   style={{
-                    width: mapDimensions.width,
-                    height: mapDimensions.height,
+                    width: mapRenderFrame.width,
+                    height: mapRenderFrame.height,
                     transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
                   }}
                 >
                   <div
-                    className="interactive-map-background"
+                    className="interactive-map-canvas"
                     style={{
-                      backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
-                      backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+                      left: mapRenderFrame.offsetX,
+                      top: mapRenderFrame.offsetY,
+                      width: mapDimensions.width,
+                      height: mapDimensions.height
                     }}
-                  />
+                  >
+                    <div
+                      className="interactive-map-background"
+                      style={{
+                        backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
+                        backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+                      }}
+                    />
 
-                  {mapEntities.map((object) => {
-                    const rotation = Number(object.rotation) || 0;
-                    const meta = object.meta || {};
-                    const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
-                    const baseStyle = {
-                      left: object.x,
-                      top: object.y,
-                      width: object.width,
-                      height: object.height,
-                      transform: `rotate(${rotation}deg)`,
-                      zIndex: getObjectZIndex(object)
-                    };
+                    {mapEntities.map((object) => {
+                      const rotation = Number(object.rotation) || 0;
+                      const meta = object.meta || {};
+                      const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
+                      const baseStyle = {
+                        left: object.x,
+                        top: object.y,
+                        width: object.width,
+                        height: object.height,
+                        transform: `rotate(${rotation}deg)`,
+                        zIndex: getObjectZIndex(object)
+                      };
 
-                    if (!object.isTable) {
-                      const objectLabel = mapObjectLabel(object, t, language);
-                      const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
-                      if (!hasAsset) {
-                        return null;
+                      if (!object.isTable) {
+                        const objectLabel = mapObjectLabel(object, t, language);
+                        const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
+                        if (!hasAsset) {
+                          return null;
+                        }
+                        return (
+                          <button
+                            key={object.id}
+                            type="button"
+                            className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
+                            style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
+                            title={objectLabel}
+                            aria-disabled={!isSelectableObject}
+                            tabIndex={isSelectableObject ? 0 : -1}
+                            onClick={() => selectObject(object)}
+                          >
+                            <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
+                          </button>
+                        );
                       }
+
+                      const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
+                      const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
+
                       return (
                         <button
                           key={object.id}
                           type="button"
-                          className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
-                          style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
-                          title={objectLabel}
-                          aria-disabled={!isSelectableObject}
-                          tabIndex={isSelectableObject ? 0 : -1}
-                          onClick={() => selectObject(object)}
+                          className={`interactive-map-table ${status.toLowerCase()} ${selectedTableId === object.tableId ? 'selected' : ''}`}
+                          style={{
+                            ...baseStyle,
+                            borderRadius: tableShape === 'ROUND' ? 999 : 12
+                          }}
+                          title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
+                          onClick={() => {
+                            setSelectedTableId(object.tableId);
+                            setSelectedObjectId(null);
+                          }}
                         >
-                          <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
+                          <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                         </button>
                       );
-                    }
-
-                    const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
-                    const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
-
-                    return (
-                      <button
-                        key={object.id}
-                        type="button"
-                        className={`interactive-map-table ${status.toLowerCase()} ${selectedTableId === object.tableId ? 'selected' : ''}`}
-                        style={{
-                          ...baseStyle,
-                          borderRadius: tableShape === 'ROUND' ? 999 : 12
-                        }}
-                        title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
-                        onClick={() => {
-                          setSelectedTableId(object.tableId);
-                          setSelectedObjectId(null);
-                        }}
-                      >
-                        <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
-                      </button>
-                    );
-                  })}
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

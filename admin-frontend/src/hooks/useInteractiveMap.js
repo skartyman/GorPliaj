@@ -27,6 +27,13 @@ function getMinScale(viewport, worldWidth, worldHeight, minScaleProp) {
   return Math.max(minScaleProp, getFitViewScale(viewport, worldWidth, worldHeight) * 0.65);
 }
 
+function getCenteredTranslate(viewport, worldWidth, worldHeight, scale) {
+  return {
+    translateX: (viewport.width - worldWidth * scale) / 2,
+    translateY: (viewport.height - worldHeight * scale) / 2
+  };
+}
+
 function getDistance(a, b) {
   const dx = a.clientX - b.clientX;
   const dy = a.clientY - b.clientY;
@@ -40,7 +47,14 @@ function getCenter(a, b) {
   };
 }
 
-export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleProp = 0.6, maxScale = 3.2 }) {
+export function useInteractiveMap({
+  worldWidth,
+  worldHeight,
+  fitWorldWidth = worldWidth,
+  fitWorldHeight = worldHeight,
+  minScale: minScaleProp = 0.6,
+  maxScale = 3.2
+}) {
   const containerRef = useRef(null);
   const pointersRef = useRef(new Map());
   const panStartRef = useRef(null);
@@ -50,14 +64,17 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0 });
 
   const fitViewScale = useMemo(() => {
-    return getFitViewScale(viewport, worldWidth, worldHeight);
-  }, [viewport, worldHeight, worldWidth]);
+    return getFitViewScale(viewport, fitWorldWidth, fitWorldHeight);
+  }, [fitWorldHeight, fitWorldWidth, viewport]);
 
-  const minScale = useMemo(() => getMinScale(viewport, worldWidth, worldHeight, minScaleProp), [minScaleProp, viewport, worldHeight, worldWidth]);
+  const minScale = useMemo(
+    () => getMinScale(viewport, fitWorldWidth, fitWorldHeight, minScaleProp),
+    [fitWorldHeight, fitWorldWidth, minScaleProp, viewport]
+  );
 
   const clampTranslate = useCallback(
     (translateX, translateY, scale, nextViewport = viewport) => {
-      const viewportMinScale = getMinScale(nextViewport, worldWidth, worldHeight, minScaleProp);
+      const viewportMinScale = getMinScale(nextViewport, fitWorldWidth, fitWorldHeight, minScaleProp);
       const boundedScale = clamp(scale, viewportMinScale, maxScale);
       const scaledWidth = worldWidth * boundedScale;
       const scaledHeight = worldHeight * boundedScale;
@@ -83,7 +100,7 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
         translateY: clamp(translateY, yBounds.min, yBounds.max)
       };
     },
-    [maxScale, minScaleProp, viewport, worldHeight, worldWidth]
+    [fitWorldHeight, fitWorldWidth, maxScale, minScaleProp, viewport, worldHeight, worldWidth]
   );
 
   useEffect(() => {
@@ -106,16 +123,17 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
       );
       setTransform((current) => {
         const isPristine = current.scale === 1 && current.translateX === 0 && current.translateY === 0;
-        const seedScale = isPristine ? getFitViewScale(nextViewport, worldWidth, worldHeight) : current.scale;
-        const nextTx = isPristine ? (nextViewport.width - worldWidth * seedScale) / 2 : current.translateX;
-        const nextTy = isPristine ? (nextViewport.height - worldHeight * seedScale) / 2 : current.translateY;
+        const seedScale = isPristine ? getFitViewScale(nextViewport, fitWorldWidth, fitWorldHeight) : current.scale;
+        const centered = getCenteredTranslate(nextViewport, worldWidth, worldHeight, seedScale);
+        const nextTx = isPristine ? centered.translateX : current.translateX;
+        const nextTy = isPristine ? centered.translateY : current.translateY;
         return clampTranslate(nextTx, nextTy, seedScale, nextViewport);
       });
     });
 
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [clampTranslate, worldHeight, worldWidth]);
+  }, [clampTranslate, fitWorldHeight, fitWorldWidth, worldHeight, worldWidth]);
 
   useEffect(() => {
     setTransform((current) => clampTranslate(current.translateX, current.translateY, current.scale));
@@ -252,8 +270,9 @@ export function useInteractiveMap({ worldWidth, worldHeight, minScale: minScaleP
   }, [transform.scale, zoomAtPoint]);
 
   const fitToView = useCallback(() => {
-    setTransform(clampTranslate(0, 0, fitViewScale));
-  }, [clampTranslate, fitViewScale]);
+    const centered = getCenteredTranslate(viewport, worldWidth, worldHeight, fitViewScale);
+    setTransform(clampTranslate(centered.translateX, centered.translateY, fitViewScale));
+  }, [clampTranslate, fitViewScale, viewport, worldHeight, worldWidth]);
 
   return {
     containerRef,
