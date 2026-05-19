@@ -606,7 +606,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   }
 
   const mapUpdateData = normalizeMapInput(mapInput);
-  const contentSize = getMapContentSize({ ...existingMap, ...mapUpdateData }, objects);
+  const contentSize = getMapContentSize({ ...map, ...mapUpdateData }, objects);
   mapUpdateData.width = contentSize.width;
   mapUpdateData.height = contentSize.height;
   const operations = [];
