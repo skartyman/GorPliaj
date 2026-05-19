@@ -1,4 +1,5 @@
 const { PrismaClient, MapObjectType, MapStatus } = require('@prisma/client');
+const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
 
 const prisma = new PrismaClient();
 
@@ -59,7 +60,7 @@ function serializeMapEditorPayload(map) {
   const { zones, tables, mapObjects, ...mapData } = map;
 
   return {
-    map: mapData,
+    map: fitMapToObjects(mapData, mapObjects),
     zones,
     tables,
     objects: mapObjects
@@ -605,6 +606,9 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   }
 
   const mapUpdateData = normalizeMapInput(mapInput);
+  const contentSize = getMapContentSize({ ...existingMap, ...mapUpdateData }, objects);
+  mapUpdateData.width = contentSize.width;
+  mapUpdateData.height = contentSize.height;
   const operations = [];
 
   if (Object.keys(mapUpdateData).length) {

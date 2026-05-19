@@ -1,3 +1,5 @@
+const { fitMapToObjects } = require('../utils/mapBounds');
+
 function getEvents() {
   return [];
 }
@@ -43,7 +45,7 @@ async function getDefaultMap() {
     const { zones, tables, mapObjects, ...mapData } = map;
 
     return {
-      map: mapData,
+      map: fitMapToObjects(mapData, mapObjects),
       zones,
       tables,
       objects: mapObjects,
@@ -92,7 +94,7 @@ async function getMapById(mapId) {
     const { zones, tables, mapObjects, ...mapData } = map;
 
     return {
-      map: mapData,
+      map: fitMapToObjects(mapData, mapObjects),
       zones,
       tables,
       objects: mapObjects,
