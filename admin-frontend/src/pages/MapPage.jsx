@@ -678,6 +678,7 @@ export default function MapPage() {
                   style={{
                     width: mapRenderFrame.width,
                     height: mapRenderFrame.height,
+                    backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
                     transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
                   }}
                 >
