@@ -398,7 +398,7 @@ export default function MapPage() {
   useEffect(() => {
     getPublicMapData(mapApi, { date, timeFrom, mapId, draft })
       .then((result) => setState({ loading: false, error: '', result }))
-      .catch(() => setState({ loading: false, error: t('mapLoadFailed'), result: null }));
+      .catch((error) => setState({ loading: false, error: error?.message || t('mapLoadFailed'), result: null }));
   }, [date, draft, mapId, timeFrom, t]);
 
   useEffect(() => {

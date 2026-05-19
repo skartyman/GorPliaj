@@ -1103,8 +1103,17 @@ h3 {
 .public-map-canvas { position: absolute; overflow: visible; }
 .public-map-background { inset: 0; background-size: 100% 100%; background-position: center; position: absolute; }
 .public-map-object, .public-map-table { position: absolute; display: grid; place-items: center; font-size: 0.82rem; border: 1px solid rgba(255, 255, 255, 0.12); }
-.public-map-object.has-asset { border: 0; background: transparent; overflow: visible; line-height: 0; }
-.public-map-object-asset { width: 100%; height: 100%; display: block; object-fit: contain; pointer-events: none; overflow: visible; }
+.public-map-object.has-asset { display: block; border: 0; background: transparent; overflow: visible; line-height: 0; }
+.public-map-object-asset {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  overflow: visible;
+}
 .public-map-table { background: rgba(255, 255, 255, 0.06); cursor: pointer; }
 .public-map-table.free { background: rgba(92, 184, 138, 0.15); border-color: rgba(92, 184, 138, 0.3); }
 .public-map-table.held { background: rgba(217, 170, 84, 0.15); border-color: rgba(217, 170, 84, 0.3); }

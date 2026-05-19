@@ -112,6 +112,10 @@ function readPreviewDraft(mapId) {
 
 export async function getPublicMapData(mapApi, params = {}) {
   const draftData = params.draft ? readPreviewDraft(params.mapId) : null;
+  if (params.draft && !draftData) {
+    throw new Error('Draft preview is unavailable. Open Preview from the map editor on the same domain.');
+  }
+
   const data = draftData || (params.mapId ? await mapApi.byId(params.mapId) : await mapApi.defaultMap());
   const mapData = data.map || data;
   const zones = data.zones || mapData.zones || [];
