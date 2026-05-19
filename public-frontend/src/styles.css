@@ -1095,6 +1095,7 @@ h3 {
 }
 
 .public-map-world { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.public-map-canvas { position: absolute; overflow: visible; }
 .public-map-background { inset: 0; background-size: 100% 100%; background-position: center; position: absolute; }
 .public-map-object, .public-map-table { position: absolute; display: grid; place-items: center; font-size: 0.82rem; border: 1px solid rgba(255, 255, 255, 0.12); }
 .public-map-object.has-asset { border: 0; background: transparent; overflow: visible; line-height: 0; }

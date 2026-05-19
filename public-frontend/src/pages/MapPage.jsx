@@ -7,6 +7,7 @@ import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
 const MAP_PADDING = 24;
+const MAP_PREVIEW_GUTTER = 240;
 const PINCH_SENSITIVITY = 0.006;
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
 const STATIC_TYPE_ACCENTS = {
@@ -374,6 +375,16 @@ export default function MapPage() {
   const timeFrom = searchParams.get('timeFrom') || '12:00';
   const guests = Number(searchParams.get('guests') || '0');
   const mapId = searchParams.get('mapId') || '';
+  const mapDimensions = useMemo(() => ({
+    width: state.result?.map?.width || 1200,
+    height: state.result?.map?.height || 760
+  }), [state.result?.map?.height, state.result?.map?.width]);
+  const mapRenderFrame = useMemo(() => ({
+    width: mapDimensions.width + MAP_PREVIEW_GUTTER * 2,
+    height: mapDimensions.height + MAP_PREVIEW_GUTTER * 2,
+    offsetX: MAP_PREVIEW_GUTTER,
+    offsetY: MAP_PREVIEW_GUTTER
+  }), [mapDimensions.height, mapDimensions.width]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
@@ -409,10 +420,15 @@ export default function MapPage() {
   useEffect(() => {
     if (!state.result || !viewportSize.width || !viewportSize.height) return;
 
-    const initial = getInitialViewTransform(state.result.map.width, state.result.map.height, viewportSize.width, viewportSize.height, MAP_PADDING);
+    const fit = getInitialViewTransform(mapDimensions.width, mapDimensions.height, viewportSize.width, viewportSize.height, MAP_PADDING);
+    const initial = {
+      ...fit,
+      translateX: (viewportSize.width - mapRenderFrame.width * fit.scale) / 2,
+      translateY: (viewportSize.height - mapRenderFrame.height * fit.scale) / 2
+    };
     const minScale = clamp(initial.scale * 0.55, 0.25, 2);
     const maxScale = Math.max(minScale + 0.35, Math.max(2.4, initial.scale * 3));
-    const constrained = clampTranslate(state.result.map.width, state.result.map.height, viewportSize.width, viewportSize.height, initial.scale, initial.translateX, initial.translateY);
+    const constrained = clampTranslate(mapRenderFrame.width, mapRenderFrame.height, viewportSize.width, viewportSize.height, initial.scale, initial.translateX, initial.translateY);
     setTransform({
       scale: initial.scale,
       translateX: constrained.translateX,
@@ -421,7 +437,7 @@ export default function MapPage() {
       maxScale,
       initial
     });
-  }, [state.result, viewportSize.height, viewportSize.width]);
+  }, [mapDimensions.height, mapDimensions.width, mapRenderFrame.height, mapRenderFrame.width, state.result, viewportSize.height, viewportSize.width]);
 
   useEffect(() => {
     if (!state.result) return;
@@ -448,7 +464,7 @@ export default function MapPage() {
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
-    const constrained = clampTranslate(state.result.map.width, state.result.map.height, rect.width, rect.height, nextScale, nextX, nextY);
+    const constrained = clampTranslate(mapRenderFrame.width, mapRenderFrame.height, rect.width, rect.height, nextScale, nextX, nextY);
     setTransform((current) => ({ ...current, scale: nextScale, translateX: constrained.translateX, translateY: constrained.translateY }));
   }
 
@@ -469,8 +485,8 @@ export default function MapPage() {
     if (!selectedObject) return;
     const center = getObjectCenter(selectedObject);
     const rect = viewportRef.current.getBoundingClientRect();
-    const targetX = rect.width / 2 - center.x * transform.scale;
-    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - center.y * transform.scale;
+    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * transform.scale;
+    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - (center.y + mapRenderFrame.offsetY) * transform.scale;
     applyTransform(transform.scale, targetX, targetY);
   }
 
@@ -603,30 +619,65 @@ export default function MapPage() {
               <div
                 className="public-map-world"
                 style={{
-                  width: state.result.map.width,
-                  height: state.result.map.height,
+                  width: mapRenderFrame.width,
+                  height: mapRenderFrame.height,
                   transform: `translate3d(${transform.translateX}px, ${transform.translateY}px, 0) scale(${transform.scale})`
                 }}
               >
                 <div
-                  className="public-map-background"
+                  className="public-map-canvas"
                   style={{
-                    backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
-                    backgroundImage: state.result.map.backgroundImage ? `url(${state.result.map.backgroundImage})` : 'none'
+                    left: mapRenderFrame.offsetX,
+                    top: mapRenderFrame.offsetY,
+                    width: mapDimensions.width,
+                    height: mapDimensions.height
                   }}
-                />
+                >
+                  <div
+                    className="public-map-background"
+                    style={{
+                      backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
+                      backgroundImage: state.result.map.backgroundImage ? `url(${state.result.map.backgroundImage})` : 'none'
+                    }}
+                  />
 
-                {renderObjects.map((object) => {
-                  const table = object.type === 'TABLE' && object.tableId ? tableById.get(object.tableId) : null;
-                  const objectLabel = localizeField(object.label, locale) || object.type;
-                  const meta = parseMetaJson(object.metaJson);
-                  if (table) {
-                    const disabled = table.status !== 'free' || !tableFitsGuests(table);
+                  {renderObjects.map((object) => {
+                    const table = object.type === 'TABLE' && object.tableId ? tableById.get(object.tableId) : null;
+                    const objectLabel = localizeField(object.label, locale) || object.type;
+                    const meta = parseMetaJson(object.metaJson);
+                    if (table) {
+                      const disabled = table.status !== 'free' || !tableFitsGuests(table);
+                      return (
+                        <button
+                          key={object.id}
+                          type="button"
+                          className={`public-map-table ${table.status} ${!tableFitsGuests(table) ? 'no-fit' : ''} ${selectedTableId === table.id ? 'selected' : ''}`}
+                          style={{
+                            left: object.x,
+                            top: object.y,
+                            width: object.width,
+                            height: object.height,
+                            transform: `rotate(${object.rotation}deg)`,
+                            zIndex: getObjectZIndex(object),
+                            borderRadius: object.width === object.height ? 999 : 8
+                          }}
+                          onClick={() => selectTable(table.id)}
+                          disabled={disabled}
+                        >
+                          {table.code}
+                        </button>
+                      );
+                    }
+
+                    const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
+                    if (!hasAsset) {
+                      return null;
+                    }
+
                     return (
-                      <button
+                      <div
                         key={object.id}
-                        type="button"
-                        className={`public-map-table ${table.status} ${!tableFitsGuests(table) ? 'no-fit' : ''} ${selectedTableId === table.id ? 'selected' : ''}`}
+                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''}`}
                         style={{
                           left: object.x,
                           top: object.y,
@@ -634,40 +685,15 @@ export default function MapPage() {
                           height: object.height,
                           transform: `rotate(${object.rotation}deg)`,
                           zIndex: getObjectZIndex(object),
-                          borderRadius: object.width === object.height ? 999 : 8
+                          ...parseStyleJson(object.styleJson)
                         }}
-                        onClick={() => selectTable(table.id)}
-                        disabled={disabled}
+                        title={objectLabel}
                       >
-                        {table.code}
-                      </button>
+                        <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
+                      </div>
                     );
-                  }
-
-                  const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
-                  if (!hasAsset) {
-                    return null;
-                  }
-
-                  return (
-                    <div
-                      key={object.id}
-                      className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''}`}
-                      style={{
-                        left: object.x,
-                        top: object.y,
-                        width: object.width,
-                        height: object.height,
-                        transform: `rotate(${object.rotation}deg)`,
-                        zIndex: getObjectZIndex(object),
-                        ...parseStyleJson(object.styleJson)
-                      }}
-                      title={objectLabel}
-                    >
-                      <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
-                    </div>
-                  );
-                })}
+                  })}
+                </div>
               </div>
             </div>
           </div>
