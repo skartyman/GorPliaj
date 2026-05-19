@@ -695,10 +695,10 @@ export default function MapPage() {
                     <div
                       className="interactive-map-background"
                       style={{
-                        left: mapCanvasBounds.offsetX,
-                        top: mapCanvasBounds.offsetY,
-                        width: mapDimensions.width,
-                        height: mapDimensions.height,
+                        left: 0,
+                        top: 0,
+                        width: mapCanvasBounds.width,
+                        height: mapCanvasBounds.height,
                         backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
                         backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
                       }}

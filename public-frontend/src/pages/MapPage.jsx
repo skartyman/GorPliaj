@@ -635,7 +635,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      <div className="map-container">
+      <div className="map-container map-preview-container">
         <article className="map-zone-board">
           <div className="map-controls">
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale * 1.15)}>
@@ -699,10 +699,10 @@ export default function MapPage() {
                   <div
                     className="public-map-background"
                     style={{
-                      left: mapCanvasBounds.offsetX,
-                      top: mapCanvasBounds.offsetY,
-                      width: mapDimensions.width,
-                      height: mapDimensions.height,
+                      left: 0,
+                      top: 0,
+                      width: mapCanvasBounds.width,
+                      height: mapCanvasBounds.height,
                       backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
                       backgroundImage: state.result.map.backgroundImage ? `url(${state.result.map.backgroundImage})` : 'none'
                     }}

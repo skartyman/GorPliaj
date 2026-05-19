@@ -1094,6 +1094,11 @@ h3 {
   touch-action: none;
 }
 
+.map-preview-container .public-map-viewport {
+  height: min(78vh, 860px);
+  min-height: 620px;
+}
+
 .public-map-world { position: absolute; top: 0; left: 0; transform-origin: top left; }
 .public-map-canvas { position: absolute; overflow: visible; }
 .public-map-background { inset: 0; background-size: 100% 100%; background-position: center; position: absolute; }
@@ -1329,6 +1334,11 @@ h3 {
 @media (max-width: 900px) {
   .map-container {
     grid-template-columns: 1fr;
+  }
+
+  .map-preview-container .public-map-viewport {
+    height: 64vh;
+    min-height: 420px;
   }
 
   .footer-top {
