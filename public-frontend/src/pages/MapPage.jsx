@@ -375,6 +375,7 @@ export default function MapPage() {
   const timeFrom = searchParams.get('timeFrom') || '12:00';
   const guests = Number(searchParams.get('guests') || '0');
   const mapId = searchParams.get('mapId') || '';
+  const draft = searchParams.get('draft') === '1';
   const mapDimensions = useMemo(() => ({
     width: state.result?.map?.width || 1200,
     height: state.result?.map?.height || 760
@@ -395,10 +396,10 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
-    getPublicMapData(mapApi, { date, timeFrom, mapId })
+    getPublicMapData(mapApi, { date, timeFrom, mapId, draft })
       .then((result) => setState({ loading: false, error: '', result }))
       .catch(() => setState({ loading: false, error: t('mapLoadFailed'), result: null }));
-  }, [date, mapId, timeFrom, t]);
+  }, [date, draft, mapId, timeFrom, t]);
 
   useEffect(() => {
     if (!state.result || !viewportRef.current) return undefined;

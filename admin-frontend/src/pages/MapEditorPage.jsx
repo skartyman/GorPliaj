@@ -8,6 +8,7 @@ import { useAdminI18n } from '../lib/i18n';
 
 const TEXTURE_ASSETS_STORAGE_KEY = 'map-editor-texture-assets';
 const CUSTOM_OBJECT_ASSETS_STORAGE_KEY = 'map-editor-custom-object-assets';
+const MAP_PREVIEW_DRAFT_STORAGE_PREFIX = 'map-editor-preview-draft:';
 
 const STATIC_TYPE_ACCENTS = {
   BAR: 'bar',
@@ -515,6 +516,24 @@ function buildEditorState(payload) {
       photoUrl: String(table.photoUrl || '').trim()
     })),
     objects: (payload.objects || []).map((object) => normalizeObject(object, map))
+  };
+}
+
+function getPreviewDraftStorageKey(mapId) {
+  return `${MAP_PREVIEW_DRAFT_STORAGE_PREFIX}${mapId}`;
+}
+
+function buildPreviewDraftPayload(current) {
+  if (!current?.map) {
+    return null;
+  }
+
+  return {
+    map: current.map,
+    zones: current.zones || [],
+    tables: current.tables || [],
+    objects: current.objects || [],
+    savedAt: new Date().toISOString()
   };
 }
 
@@ -1813,6 +1832,18 @@ export default function MapEditorPage() {
     localStorage.setItem(CUSTOM_OBJECT_ASSETS_STORAGE_KEY, JSON.stringify(customObjectAssets));
   }, [customObjectAssets]);
 
+  useEffect(() => {
+    const mapId = editorState.selectedMapId || editorState.current?.map?.id;
+    const payload = buildPreviewDraftPayload(editorState.current);
+    if (!mapId || !payload) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(getPreviewDraftStorageKey(mapId), JSON.stringify(payload));
+    } catch {}
+  }, [editorState.current, editorState.selectedMapId]);
+
   async function loadInitialMapEditor() {
     setEditorState((prev) => ({
       ...prev,
@@ -2726,6 +2757,20 @@ export default function MapEditorPage() {
     }));
   }
 
+  function openDraftPreview() {
+    const mapId = editorState.selectedMapId || editorState.current?.map?.id;
+    const payload = buildPreviewDraftPayload(editorState.current);
+    if (!mapId || !payload) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(getPreviewDraftStorageKey(mapId), JSON.stringify(payload));
+    } catch {}
+
+    window.open(`/map-preview?mapId=${mapId}&draft=1&v=${Date.now()}`, '_blank', 'noopener,noreferrer');
+  }
+
   useEffect(() => {
     if (!pendingSaveRef.current || editorState.saving || editorState.loading) {
       return;
@@ -2920,6 +2965,9 @@ export default function MapEditorPage() {
           <div className="map-editor-toolbar-group">
             <button type="button" className="btn" onClick={saveChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
               {editorState.saving ? t('mapEditor.saving') : t('mapEditor.save')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={openDraftPreview} disabled={!editorState.current || editorState.loading}>
+              Preview
             </button>
             <button type="button" className="btn btn-secondary" onClick={resetChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
               {t('mapEditor.reset')}

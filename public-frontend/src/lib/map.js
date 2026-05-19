@@ -88,8 +88,31 @@ function toPercentCoordinate(value, total) {
   return value;
 }
 
+function getPreviewDraftStorageKey(mapId) {
+  return `map-editor-preview-draft:${mapId}`;
+}
+
+function readPreviewDraft(mapId) {
+  if (!mapId || typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(getPreviewDraftStorageKey(mapId));
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    return parsed?.map ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getPublicMapData(mapApi, params = {}) {
-  const data = params.mapId ? await mapApi.byId(params.mapId) : await mapApi.defaultMap();
+  const draftData = params.draft ? readPreviewDraft(params.mapId) : null;
+  const data = draftData || (params.mapId ? await mapApi.byId(params.mapId) : await mapApi.defaultMap());
   const mapData = data.map || data;
   const zones = data.zones || mapData.zones || [];
   const rootTables = data.tables || [];
@@ -178,5 +201,5 @@ export async function getPublicMapData(mapApi, params = {}) {
     } catch {}
   }
 
-  return { map: normalizedMap, source: 'api' };
+  return { map: normalizedMap, source: draftData ? 'draft' : 'api' };
 }
