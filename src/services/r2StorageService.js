@@ -3,7 +3,7 @@ const path = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { R2_CONFIG, isR2Configured } = require('../config/env');
 
-const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu']);
+const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu', 'map-objects']);
 const SUPPORTED_MIME_TYPES = new Map([
   ['image/jpeg', 'jpg'],
   ['image/png', 'png'],

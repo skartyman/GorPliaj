@@ -48,11 +48,6 @@ const PROPERTY_FIELDS = [
     { value: 'DECOR', label: 'Декор' },
     { value: 'SELECTABLE', label: 'Вибирається гостем' }
   ]},
-  { key: 'price', type: 'number', section: 'Business', step: 1 },
-  { key: 'priceUnit', type: 'text', section: 'Business', placeholder: 'UAH' },
-  { key: 'depositRequired', type: 'checkbox', section: 'Business' },
-  { key: 'depositAmount', type: 'number', section: 'Business', step: 1 },
-  { key: 'photoUrl', type: 'url', section: 'Business', placeholder: 'https://example.com/photo.jpg' },
   { key: 'texture', type: 'select', section: 'Graphics', options: [
     { value: '', label: 'Без текстури' },
     { value: 'grass', label: 'Трава' },
@@ -73,11 +68,6 @@ const PROPERTY_FIELDS = [
 ];
 const META_PROPERTY_FIELDS = new Set([
   'interactionMode',
-  'price',
-  'priceUnit',
-  'depositRequired',
-  'depositAmount',
-  'photoUrl',
   'texture',
   'textureUrl',
   'opacity',
@@ -111,16 +101,8 @@ const RND_RESIZE_HANDLE_STYLES = {
 };
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
-  Business: 'mapEditor.sections.business',
   Graphics: 'mapEditor.sections.graphics',
   Transform: 'mapEditor.sections.transform'
-};
-const FIELD_LABEL_OVERRIDES = {
-  price: 'Ціна',
-  priceUnit: 'Валюта',
-  depositRequired: 'Потрібен депозит',
-  depositAmount: 'Сума депозиту',
-  photoUrl: 'Фото позиції'
 };
 const CREATION_PRESETS = {
   TABLE: { width: 108, height: 72 },
@@ -809,7 +791,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
         {sections.map(section => (
           <div key={section} className="inspector-section" style={{ marginBottom: '16px' }}>
             <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
-              {section === 'Business' ? 'Ціна і бронювання' : t(SECTION_LABEL_KEYS[section] || section)}
+              {t(SECTION_LABEL_KEYS[section] || section)}
             </h5>
             <div className="editor-form-grid">
               {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
@@ -819,11 +801,10 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                     field.type === 'textarea' ? 'field-span-2' : '',
                     field.key === 'opacity' ? 'field-opacity' : '',
                     field.key === 'strokeColor' ? 'field-color' : '',
-                    field.key === 'texture' ? 'field-span-2 field-texture' : '',
-                    field.key === 'photoUrl' ? 'field-span-2' : ''
+                    field.key === 'texture' ? 'field-span-2 field-texture' : ''
                   ].filter(Boolean).join(' ')}
                 >
-                  <span style={{ display: 'block', marginBottom: '4px' }}>{FIELD_LABEL_OVERRIDES[field.key] || t(`mapEditor.fields.${field.key}`)}</span>
+                  <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
                   {field.key === 'texture' ? (
                     <div className="texture-choice-grid">
                       {TEXTURE_CHOICES.map((choice) => (
@@ -846,12 +827,6 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                     >
                       {field.options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
-                  ) : field.type === 'checkbox' ? (
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedObject.metaJson?.[field.key])}
-                      onChange={(event) => onFieldChange(field.key, event.target.checked)}
-                    />
                   ) : field.type === 'textarea' ? (
                     <textarea
                       value={selectedObject.metaJson?.[field.key] || ''}
@@ -886,7 +861,6 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
           </div>
         ))} 
         <input id="svgUrl-upload" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'svgUrl')} />
-        <input id="photoUrl-upload" type="file" accept=".png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'photoUrl')} />
 
         {selectedObject.type !== 'TABLE' ? (
           <div className="inspector-asset-card">
@@ -901,24 +875,6 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                 <img src={selectedObject.metaJson.svgUrl} alt="" />
               ) : selectedObject.metaJson?.svgCode ? (
                 <div dangerouslySetInnerHTML={{ __html: selectedObject.metaJson?.svgCode || '' }} />
-              ) : (
-                <div className="inspector-asset-placeholder">{t('mapEditor.noSelection')}</div>
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        {selectedObject.type !== 'TABLE' ? (
-          <div className="inspector-asset-card">
-            <div className="inspector-asset-head">
-              <strong>{FIELD_LABEL_OVERRIDES.photoUrl}</strong>
-              <button type="button" className="icon-action-btn tiny" onClick={() => document.getElementById('photoUrl-upload').click()} title={t('mapEditor.uploadAsset')} aria-label={t('mapEditor.uploadAsset')}>
-                <ActionIcon name="upload" />
-              </button>
-            </div>
-            <div className="inspector-asset-preview">
-              {selectedObject.metaJson?.photoUrl ? (
-                <img src={selectedObject.metaJson.photoUrl} alt="" />
               ) : (
                 <div className="inspector-asset-placeholder">{t('mapEditor.noSelection')}</div>
               )}
@@ -2393,15 +2349,9 @@ export default function MapEditorPage() {
       }
 
       if (META_PROPERTY_FIELDS.has(field)) {
-        let nextValue = value;
-        if (field === 'depositRequired') {
-          nextValue = Boolean(value);
-        } else if (field === 'price' || field === 'depositAmount' || field === 'strokeWidth') {
-          nextValue = value === '' || value === null || value === undefined ? '' : Number(value);
-        } else if (field !== 'opacity') {
-          nextValue = String(value);
-        }
-
+        const nextValue = field === 'strokeWidth'
+          ? (value === '' || value === null || value === undefined ? '' : Number(value))
+          : (field === 'opacity' ? value : String(value));
         const nextMeta = { ...object.metaJson, [field]: nextValue };
 
         if (field === 'svgUrl' && value) {

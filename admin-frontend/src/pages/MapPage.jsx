@@ -670,19 +670,28 @@ export default function MapPage() {
     return Number.isFinite(numeric) ? numeric : value;
   }
 
-  function saveSelectedObjectSettings() {
+  function saveSelectedObjectSettings(overrides = {}) {
+    const form = {
+      ...selectedObjectForm,
+      ...overrides
+    };
+
+    if (Object.keys(overrides).length) {
+      setSelectedObjectForm(form);
+    }
+
     updateSelectedObject((object) => {
       const rawMeta = object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : parseMetaJson(object.metaJson);
       return {
         ...object,
-        tableId: selectedObjectForm.tableId ? Number(selectedObjectForm.tableId) : null,
+        tableId: form.tableId ? Number(form.tableId) : null,
         metaJson: {
           ...rawMeta,
-          price: normalizeMetaValue(selectedObjectForm.price),
-          priceUnit: selectedObjectForm.priceUnit || 'UAH',
-          depositRequired: Boolean(selectedObjectForm.depositRequired),
-          depositAmount: normalizeMetaValue(selectedObjectForm.depositAmount),
-          photoUrl: selectedObjectForm.photoUrl || ''
+          price: normalizeMetaValue(form.price),
+          priceUnit: form.priceUnit || 'UAH',
+          depositRequired: Boolean(form.depositRequired),
+          depositAmount: normalizeMetaValue(form.depositAmount),
+          photoUrl: form.photoUrl || ''
         }
       };
     });
@@ -693,8 +702,9 @@ export default function MapPage() {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('folder', 'menu');
+    formData.append('folder', 'map-objects');
     formData.append('image', file);
+    setObjectActionState({ saving: true, error: '' });
 
     const result = await apiRequest('/api/admin/uploads/image', {
       method: 'POST',
@@ -702,7 +712,7 @@ export default function MapPage() {
     });
 
     if (result.response.ok && result.body?.url) {
-      setSelectedObjectForm((current) => ({ ...current, photoUrl: result.body.url }));
+      saveSelectedObjectSettings({ photoUrl: result.body.url });
     } else {
       setObjectActionState({ saving: false, error: result.body?.message || 'Unable to upload object photo.' });
     }
