@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
@@ -409,6 +409,8 @@ export default function MapPage() {
     depositAmount: '',
     photoUrl: ''
   });
+  const objectManagementRef = useRef(null);
+  const objectPrimaryFieldRef = useRef(null);
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
@@ -568,6 +570,17 @@ export default function MapPage() {
       photoUrl: selectedObject.meta?.photoUrl || ''
     });
   }, [selectedObject]);
+
+  useEffect(() => {
+    if (!selectedObjectId || !objectManagementRef.current) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      objectManagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      objectPrimaryFieldRef.current?.focus({ preventScroll: true });
+    });
+  }, [selectedObjectId]);
 
   const onBookTable = (table) => {
     // future booking flow callback
@@ -927,19 +940,20 @@ export default function MapPage() {
                 </div>
               </div>
             ) : selectedObject ? (
-              <div className="table-bottom-sheet" role="dialog" aria-live="polite">
+              <div
+                className="table-bottom-sheet object-management-sheet"
+                ref={objectManagementRef}
+                role="dialog"
+                aria-live="polite"
+                aria-label="Object business settings"
+                tabIndex={-1}
+              >
                 <div className="table-sheet-head">
-                  <h4>{mapObjectLabel(selectedObject, t, language)}</h4>
+                  <div>
+                    <span className="eyebrow">Position management</span>
+                    <h4>{mapObjectLabel(selectedObject, t, language)}</h4>
+                  </div>
                   <button type="button" className="btn btn-secondary" onClick={() => setSelectedObjectId(null)}>Close</button>
-                </div>
-
-                <div className="details-grid compact table-sheet-grid">
-                  <div className="detail-row"><span className="muted">Type</span><strong>{selectedObject.type || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">Mode</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Working object' : 'Decor'}</strong></div>
-                  <div className="detail-row"><span className="muted">Active</span><strong>{selectedObject.isActive === false ? 'Hidden from client' : 'Visible'}</strong></div>
-                  <div className="detail-row"><span className="muted">Linked table</span><strong>{selectedObject.tableId || 'Not linked'}</strong></div>
-                  <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Attached' : 'No asset'}</strong></div>
-                  <div className="detail-row"><span className="muted">Price</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Not set'}</strong></div>
                 </div>
 
                 <div className="object-admin-form">
@@ -951,6 +965,7 @@ export default function MapPage() {
                   <label>
                     Linked table
                     <select
+                      ref={objectPrimaryFieldRef}
                       value={selectedObjectForm.tableId}
                       onChange={(event) => setSelectedObjectForm((current) => ({ ...current, tableId: event.target.value }))}
                     >
@@ -988,9 +1003,21 @@ export default function MapPage() {
                   </label>
                 </div>
 
+                <details className="object-admin-details">
+                  <summary>Technical details</summary>
+                  <div className="details-grid compact table-sheet-grid">
+                    <div className="detail-row"><span className="muted">Type</span><strong>{selectedObject.type || '—'}</strong></div>
+                    <div className="detail-row"><span className="muted">Mode</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Working object' : 'Decor'}</strong></div>
+                    <div className="detail-row"><span className="muted">Active</span><strong>{selectedObject.isActive === false ? 'Hidden from client' : 'Visible'}</strong></div>
+                    <div className="detail-row"><span className="muted">Linked table</span><strong>{selectedObject.tableId || 'Not linked'}</strong></div>
+                    <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Attached' : 'No asset'}</strong></div>
+                    <div className="detail-row"><span className="muted">Price</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Not set'}</strong></div>
+                  </div>
+                </details>
+
                 {selectedObjectReservations.length ? (
-                  <div className="object-reservation-list">
-                    <h5>Linked reservations</h5>
+                  <details className="object-reservation-list">
+                    <summary>Linked reservations ({selectedObjectReservations.length})</summary>
                     <ul className="plain-list compact">
                       {selectedObjectReservations.slice(0, 5).map((reservation) => (
                         <li key={reservation.id}>
@@ -1013,7 +1040,7 @@ export default function MapPage() {
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </details>
                 ) : null}
 
                 {objectActionState.error ? <p className="error">{objectActionState.error}</p> : null}

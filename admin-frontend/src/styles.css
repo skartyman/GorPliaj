@@ -971,6 +971,45 @@ textarea {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
 }
 
+.object-management-sheet {
+  scroll-margin-top: 18px;
+}
+
+.object-management-sheet:focus {
+  outline: none;
+}
+
+.object-management-sheet .table-sheet-head h4 {
+  margin: 2px 0 0;
+}
+
+.object-admin-details,
+.object-reservation-list {
+  margin: 12px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.object-admin-details > summary,
+.object-reservation-list > summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.object-admin-details[open],
+.object-reservation-list[open] {
+  padding-bottom: 10px;
+}
+
+.object-admin-details .table-sheet-grid,
+.object-reservation-list .plain-list {
+  margin: 0;
+  padding: 0 12px;
+}
+
 .table-sheet-head {
   display: flex;
   justify-content: space-between;
