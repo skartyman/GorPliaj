@@ -1137,6 +1137,28 @@ h3 {
   top: 80px;
 }
 
+.map-object-photo,
+.booking-object-summary {
+  margin: 0 0 12px;
+}
+
+.map-object-photo img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.booking-object-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .map-legend {
   display: flex;
   gap: 16px;

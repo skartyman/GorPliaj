@@ -22,7 +22,9 @@ function createReservation(payload) {
     reservationDate,
     timeFrom,
     timeTo,
-    commentCustomer
+    commentCustomer,
+    depositRequired,
+    depositAmount
   } = payload;
 
   return prisma.reservation.create({
@@ -36,7 +38,26 @@ function createReservation(payload) {
       reservationDate,
       timeFrom,
       timeTo,
-      commentCustomer: commentCustomer || null
+      commentCustomer: commentCustomer || null,
+      depositRequired: Boolean(depositRequired),
+      depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount
+    }
+  });
+}
+
+function getReservationObject({ objectId, mapId, tableId }) {
+  return prisma.mapObject.findFirst({
+    where: {
+      id: objectId,
+      mapId,
+      tableId,
+      isActive: true
+    },
+    select: {
+      id: true,
+      label: true,
+      metaJson: true,
+      tableId: true
     }
   });
 }
@@ -165,6 +186,7 @@ async function deleteReservation(id) {
 module.exports = {
   getReservations,
   createReservation,
+  getReservationObject,
   findReservationConflict,
   getMapAvailability,
   updateReservationStatus,

@@ -44,6 +44,15 @@ function hasMissingRequiredFields(body) {
   return requiredFields.some((field) => !body[field]);
 }
 
+function getDepositFromObject(object) {
+  const meta = object?.metaJson && typeof object.metaJson === 'object' ? object.metaJson : {};
+  const amount = Number(meta.depositAmount ?? meta.deposit ?? 0);
+  return {
+    depositRequired: Boolean(meta.depositRequired) || amount > 0,
+    depositAmount: Number.isFinite(amount) && amount > 0 ? amount : null
+  };
+}
+
 async function createReservation(req, res) {
   try {
     if (hasMissingRequiredFields(req.body)) {
@@ -68,6 +77,8 @@ async function createReservation(req, res) {
     }
 
     const tableId = Number(req.body.tableId);
+    const mapId = Number(req.body.mapId);
+    const zoneId = Number(req.body.zoneId);
     const conflict = await reservationService.findReservationConflict({
       tableId,
       reservationDate,
@@ -79,17 +90,29 @@ async function createReservation(req, res) {
       return res.status(409).json({ message: 'Стіл уже заброньований на обраний проміжок часу.' });
     }
 
+    const objectId = Number(req.body.objectId || 0);
+    let deposit = { depositRequired: false, depositAmount: null };
+    if (objectId) {
+      const reservationObject = await reservationService.getReservationObject({ objectId, mapId, tableId });
+      if (!reservationObject) {
+        return res.status(400).json({ message: 'Selected map object is not available for booking.' });
+      }
+      deposit = getDepositFromObject(reservationObject);
+    }
+
     const reservation = await reservationService.createReservation({
       tableId,
-      mapId: Number(req.body.mapId),
-      zoneId: Number(req.body.zoneId),
+      mapId,
+      zoneId,
       customerName: req.body.customerName,
       customerPhone: req.body.customerPhone,
       guests,
       reservationDate,
       timeFrom,
       timeTo,
-      commentCustomer: req.body.commentCustomer
+      commentCustomer: req.body.commentCustomer,
+      depositRequired: deposit.depositRequired,
+      depositAmount: deposit.depositAmount
     });
 
     return res.status(201).json({

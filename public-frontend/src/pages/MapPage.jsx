@@ -62,7 +62,10 @@ function parseMetaJson(metaJson) {
       strokeColor: typeof parsed.strokeColor === 'string' ? parsed.strokeColor : '',
       strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2,
       price: parsed.price ?? parsed.objectPrice ?? '',
-      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : ''
+      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : '',
+      depositRequired: Boolean(parsed.depositRequired),
+      depositAmount: parsed.depositAmount ?? parsed.deposit ?? '',
+      photoUrl: typeof parsed.photoUrl === 'string' ? parsed.photoUrl : ''
     };
   } catch {
     return {};
@@ -377,6 +380,7 @@ export default function MapPage() {
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
+  const transformRef = useRef(transform);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
 
@@ -482,6 +486,25 @@ export default function MapPage() {
     translateX: 0,
     translateY: 0
   };
+
+  useEffect(() => {
+    transformRef.current = transform;
+  }, [transform]);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node || !canInteractWithMap) return undefined;
+
+    const handleWheel = (event) => {
+      event.preventDefault();
+      const current = transformRef.current;
+      const rect = node.getBoundingClientRect();
+      zoomTo(current.scale * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX - rect.left, event.clientY - rect.top);
+    };
+
+    node.addEventListener('wheel', handleWheel, { passive: false });
+    return () => node.removeEventListener('wheel', handleWheel);
+  }, [canInteractWithMap, transform.maxScale, transform.minScale]);
 
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
@@ -632,12 +655,6 @@ export default function MapPage() {
               className="public-map-viewport"
               ref={viewportRef}
               role="application"
-              onWheel={(event) => {
-                if (!canInteractWithMap) return;
-                event.preventDefault();
-                const rect = viewportRef.current.getBoundingClientRect();
-                zoomTo(transform.scale * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX - rect.left, event.clientY - rect.top);
-              }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerEnd}
@@ -701,6 +718,7 @@ export default function MapPage() {
                             borderRadius: object.width === object.height ? 999 : 8
                           }}
                           onClick={() => selectTable(table.id)}
+                          onPointerDown={(event) => event.stopPropagation()}
                           disabled={disabled}
                         >
                           {table.code}
@@ -735,6 +753,7 @@ export default function MapPage() {
                         }}
                         title={objectLabel}
                         tabIndex={isSelectableObject ? 0 : undefined}
+                        onPointerDown={isSelectableObject ? (event) => event.stopPropagation() : undefined}
                         onClick={isSelectableObject ? () => selectObject(object) : undefined}
                       >
                         <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
@@ -791,9 +810,19 @@ export default function MapPage() {
               <p>
                 <strong>{selectedObjectLabel}</strong>
               </p>
+              {selectedObjectMeta.photoUrl ? (
+                <div className="map-object-photo">
+                  <img src={selectedObjectMeta.photoUrl} alt={selectedObjectLabel} />
+                </div>
+              ) : null}
               {selectedObjectMeta.price !== '' && selectedObjectMeta.price !== null && selectedObjectMeta.price !== undefined ? (
                 <p className="muted">
                   Price: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}
+                </p>
+              ) : null}
+              {selectedObjectMeta.depositRequired || selectedObjectMeta.depositAmount ? (
+                <p className="muted">
+                  Deposit: {selectedObjectMeta.depositAmount || 'required'} {selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}
                 </p>
               ) : null}
               {selectedObjectTable ? (

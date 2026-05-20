@@ -6,6 +6,21 @@ import { localizedCopy, localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
+function parseObjectMeta(metaJson) {
+  try {
+    const parsed = typeof metaJson === 'string' ? JSON.parse(metaJson) : metaJson;
+    if (!parsed || typeof parsed !== 'object') return {};
+    return {
+      price: parsed.price ?? parsed.objectPrice ?? '',
+      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : 'UAH',
+      depositRequired: Boolean(parsed.depositRequired),
+      depositAmount: parsed.depositAmount ?? parsed.deposit ?? ''
+    };
+  } catch {
+    return {};
+  }
+}
+
 export default function BookingPage() {
   const { t, locale } = useLocale();
   const [searchParams] = useSearchParams();
@@ -16,6 +31,7 @@ export default function BookingPage() {
   const [mapName, setMapName] = useState('');
   const [tableOptions, setTableOptions] = useState([]);
   const [selectedObjectName, setSelectedObjectName] = useState('');
+  const [selectedObjectMeta, setSelectedObjectMeta] = useState({});
   const [selected, setSelected] = useState({
     mapId: Number(searchParams.get('mapId') || '0'),
     zoneId: Number(searchParams.get('zoneId') || '0'),
@@ -57,6 +73,7 @@ export default function BookingPage() {
         const linkedObject = requestedObjectId ? result.map.objects.find((object) => Number(object.id) === requestedObjectId) : null;
         const linkedTableId = Number(linkedObject?.tableId) || 0;
         setSelectedObjectName(linkedObject ? localizeField(linkedObject.label, locale) || linkedObject.type || '' : '');
+        setSelectedObjectMeta(linkedObject ? parseObjectMeta(linkedObject.metaJson) : {});
         setSelected((current) => {
           const selectedTable = linkedTableId
             ? options.find((table) => table.id === linkedTableId)
@@ -103,6 +120,7 @@ export default function BookingPage() {
         reservationDate: form.date,
         timeFrom: form.timeFrom,
         timeTo: '23:00',
+        objectId: selected.objectId || undefined,
         commentCustomer
       });
 
@@ -147,9 +165,17 @@ export default function BookingPage() {
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           {selected.objectId && selectedObjectName ? (
-            <p className="muted" style={{ margin: '0 0 8px' }}>
-              Selected object: <strong>{selectedObjectName}</strong>
-            </p>
+            <div className="booking-object-summary">
+              <p className="muted" style={{ margin: 0 }}>
+                Selected object: <strong>{selectedObjectName}</strong>
+              </p>
+              {selectedObjectMeta.price !== '' && selectedObjectMeta.price !== null && selectedObjectMeta.price !== undefined ? (
+                <p className="muted" style={{ margin: 0 }}>Price: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}</p>
+              ) : null}
+              {selectedObjectMeta.depositRequired || selectedObjectMeta.depositAmount ? (
+                <p className="muted" style={{ margin: 0 }}>Deposit: {selectedObjectMeta.depositAmount || 'required'} {selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}</p>
+              ) : null}
+            </div>
           ) : null}
           <label>{c({ ua: 'Доступні столи', ru: 'Доступные столы', en: 'Available tables' })} ({mapName || c({ ua: 'карта', ru: 'карта', en: 'map' })})</label>
           <select

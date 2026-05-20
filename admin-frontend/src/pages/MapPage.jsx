@@ -95,7 +95,10 @@ function parseMetaJson(metaJson) {
       strokeColor: typeof parsed.strokeColor === 'string' ? parsed.strokeColor : '',
       strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2,
       price: parsed.price ?? parsed.objectPrice ?? '',
-      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : ''
+      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : '',
+      depositRequired: Boolean(parsed.depositRequired),
+      depositAmount: parsed.depositAmount ?? parsed.deposit ?? '',
+      photoUrl: typeof parsed.photoUrl === 'string' ? parsed.photoUrl : ''
     };
   } catch {
     return {};
@@ -398,6 +401,14 @@ export default function MapPage() {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
+  const [selectedObjectForm, setSelectedObjectForm] = useState({
+    tableId: '',
+    price: '',
+    priceUnit: 'UAH',
+    depositRequired: false,
+    depositAmount: '',
+    photoUrl: ''
+  });
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
@@ -535,6 +546,7 @@ export default function MapPage() {
 
   const selectedTable = selectedTableId ? tableMap.get(selectedTableId) : null;
   const selectedObject = selectedObjectId ? mapEntities.find((object) => object.id === selectedObjectId) || null : null;
+  const selectedObjectReservations = selectedObject?.tableId ? reservationsByTable[selectedObject.tableId] || [] : [];
   const selectedReservations = (selectedTable && reservationsByTable[selectedTable.id]) || [];
   const selectedStatus = selectedTable
     ? getTableDisplayStatus(selectedTable, reservationsByTable, heldTableIds, busyTableIds)
@@ -542,18 +554,27 @@ export default function MapPage() {
 
   const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
 
+  useEffect(() => {
+    if (!selectedObject) {
+      return;
+    }
+
+    setSelectedObjectForm({
+      tableId: selectedObject.tableId || '',
+      price: selectedObject.meta?.price ?? '',
+      priceUnit: selectedObject.meta?.priceUnit || 'UAH',
+      depositRequired: Boolean(selectedObject.meta?.depositRequired),
+      depositAmount: selectedObject.meta?.depositAmount ?? '',
+      photoUrl: selectedObject.meta?.photoUrl || ''
+    });
+  }, [selectedObject]);
+
   const onBookTable = (table) => {
     // future booking flow callback
     console.info('booking hook', table);
   };
 
   const selectObject = (object) => {
-    const meta = object?.meta || {};
-    const isSelectable = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
-    if (!isSelectable) {
-      return;
-    }
-
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
   };
@@ -641,6 +662,71 @@ export default function MapPage() {
         }
       };
     });
+  }
+
+  function normalizeMetaValue(value) {
+    if (value === '') return '';
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : value;
+  }
+
+  function saveSelectedObjectSettings() {
+    updateSelectedObject((object) => {
+      const rawMeta = object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : parseMetaJson(object.metaJson);
+      return {
+        ...object,
+        tableId: selectedObjectForm.tableId ? Number(selectedObjectForm.tableId) : null,
+        metaJson: {
+          ...rawMeta,
+          price: normalizeMetaValue(selectedObjectForm.price),
+          priceUnit: selectedObjectForm.priceUnit || 'UAH',
+          depositRequired: Boolean(selectedObjectForm.depositRequired),
+          depositAmount: normalizeMetaValue(selectedObjectForm.depositAmount),
+          photoUrl: selectedObjectForm.photoUrl || ''
+        }
+      };
+    });
+  }
+
+  async function uploadSelectedObjectPhoto(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('folder', 'menu');
+    formData.append('image', file);
+
+    const result = await apiRequest('/api/admin/uploads/image', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (result.response.ok && result.body?.url) {
+      setSelectedObjectForm((current) => ({ ...current, photoUrl: result.body.url }));
+    } else {
+      setObjectActionState({ saving: false, error: result.body?.message || 'Unable to upload object photo.' });
+    }
+
+    event.target.value = '';
+  }
+
+  async function updateReservationStatusOnMap(id, status) {
+    const result = await apiRequest(`/api/admin/reservations/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+
+    if (!result.response.ok) {
+      setObjectActionState({ saving: false, error: result.body?.message || 'Unable to update reservation.' });
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      reservations: prev.reservations.map((reservation) =>
+        reservation.id === id ? { ...reservation, status: result.body?.reservation?.status || status } : reservation
+      )
+    }));
   }
 
   return (
@@ -752,11 +838,10 @@ export default function MapPage() {
                           <button
                             key={object.id}
                             type="button"
-                            className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''} ${object.isActive === false ? 'inactive' : ''}`.trim()}
+                            className={`interactive-map-object manageable object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''} ${object.isActive === false ? 'inactive' : ''}`.trim()}
                             style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                             title={objectLabel}
-                            aria-disabled={!isSelectableObject}
-                            tabIndex={isSelectableObject ? 0 : -1}
+                            tabIndex={0}
                             onClick={() => selectObject(object)}
                           >
                             <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
@@ -847,8 +932,85 @@ export default function MapPage() {
                   <div className="detail-row"><span className="muted">Price</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Not set'}</strong></div>
                 </div>
 
+                <div className="object-admin-form">
+                  {selectedObjectForm.photoUrl ? (
+                    <div className="object-admin-photo">
+                      <img src={selectedObjectForm.photoUrl} alt={mapObjectLabel(selectedObject, t, language)} />
+                    </div>
+                  ) : null}
+                  <label>
+                    Linked table
+                    <select
+                      value={selectedObjectForm.tableId}
+                      onChange={(event) => setSelectedObjectForm((current) => ({ ...current, tableId: event.target.value }))}
+                    >
+                      <option value="">Not linked</option>
+                      {(state.mapData?.tables || []).map((table) => (
+                        <option key={table.id} value={table.id}>
+                          {table.code || localizeField(table.name, language) || `#${table.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Price
+                    <input type="number" min="0" step="1" value={selectedObjectForm.price} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, price: event.target.value }))} />
+                  </label>
+                  <label>
+                    Currency
+                    <input type="text" value={selectedObjectForm.priceUnit} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, priceUnit: event.target.value }))} />
+                  </label>
+                  <label className="checkbox-label inline">
+                    <input type="checkbox" checked={selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositRequired: event.target.checked }))} />
+                    Deposit required
+                  </label>
+                  <label>
+                    Deposit amount
+                    <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
+                  </label>
+                  <label className="object-admin-form-wide">
+                    Photo URL
+                    <input type="url" value={selectedObjectForm.photoUrl} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, photoUrl: event.target.value }))} />
+                  </label>
+                  <label className="btn btn-secondary btn-small object-upload-button">
+                    Upload photo
+                    <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadSelectedObjectPhoto} />
+                  </label>
+                </div>
+
+                {selectedObjectReservations.length ? (
+                  <div className="object-reservation-list">
+                    <h5>Linked reservations</h5>
+                    <ul className="plain-list compact">
+                      {selectedObjectReservations.slice(0, 5).map((reservation) => (
+                        <li key={reservation.id}>
+                          <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
+                          {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)} • <StatusPill status={reservation.status} />
+                          <span className="reservation-inline-actions">
+                            {reservation.status === 'PENDING' ? (
+                              <>
+                                <button type="button" className="btn btn-small" onClick={() => updateReservationStatusOnMap(reservation.id, 'CONFIRMED')}>Confirm</button>
+                                <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                              </>
+                            ) : null}
+                            {reservation.status === 'CONFIRMED' ? (
+                              <>
+                                <button type="button" className="btn btn-small btn-success" onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Complete</button>
+                                <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                              </>
+                            ) : null}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 {objectActionState.error ? <p className="error">{objectActionState.error}</p> : null}
                 <div className="actions">
+                  <button type="button" className="btn btn-primary" onClick={saveSelectedObjectSettings} disabled={objectActionState.saving}>
+                    Save object settings
+                  </button>
                   <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectActive} disabled={objectActionState.saving}>
                     {selectedObject.isActive === false ? 'Show to client' : 'Hide from client'}
                   </button>
