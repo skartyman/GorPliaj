@@ -15,10 +15,12 @@ export default function BookingPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [mapName, setMapName] = useState('');
   const [tableOptions, setTableOptions] = useState([]);
+  const [selectedObjectName, setSelectedObjectName] = useState('');
   const [selected, setSelected] = useState({
     mapId: Number(searchParams.get('mapId') || '0'),
     zoneId: Number(searchParams.get('zoneId') || '0'),
-    tableId: Number(searchParams.get('tableId') || '0')
+    tableId: Number(searchParams.get('tableId') || '0'),
+    objectId: Number(searchParams.get('objectId') || '0')
   });
   const [form, setForm] = useState({
     date: searchParams.get('date') || today,
@@ -41,7 +43,9 @@ export default function BookingPage() {
       setErrorMessage('');
 
       try {
-        const result = await getPublicMapData(mapApi, { date: form.date, timeFrom: form.timeFrom });
+        const requestedMapId = Number(searchParams.get('mapId') || '0');
+        const requestedObjectId = Number(searchParams.get('objectId') || '0');
+        const result = await getPublicMapData(mapApi, { date: form.date, timeFrom: form.timeFrom, mapId: requestedMapId || '' });
         const options = result.map.zones.flatMap((zone) =>
           zone.tables
             .filter((table) => table.status === 'free' && form.guests >= table.seatsMin && form.guests <= table.seatsMax)
@@ -50,12 +54,18 @@ export default function BookingPage() {
 
         setMapName(localizeField(result.map.name, locale));
         setTableOptions(options);
+        const linkedObject = requestedObjectId ? result.map.objects.find((object) => Number(object.id) === requestedObjectId) : null;
+        const linkedTableId = Number(linkedObject?.tableId) || 0;
+        setSelectedObjectName(linkedObject ? localizeField(linkedObject.label, locale) || linkedObject.type || '' : '');
         setSelected((current) => {
-          const selectedTable = options.find((table) => table.id === current.tableId) || options[0];
+          const selectedTable = linkedTableId
+            ? options.find((table) => table.id === linkedTableId)
+            : options.find((table) => table.id === current.tableId) || options[0];
           return {
             mapId: current.mapId || result.map.id,
             zoneId: selectedTable?.zoneId || current.zoneId,
-            tableId: selectedTable?.id || 0
+            tableId: selectedTable?.id || 0,
+            objectId: current.objectId || requestedObjectId
           };
         });
       } catch {
@@ -80,6 +90,9 @@ export default function BookingPage() {
     setSuccessMessage('');
 
     try {
+      const objectNote = selected.objectId && selectedObjectName ? `Object: ${selectedObjectName} (#${selected.objectId})` : '';
+      const commentCustomer = [objectNote, form.commentCustomer].filter(Boolean).join('\n\n');
+
       await bookingsApi.create({
         tableId: selected.tableId,
         mapId: selected.mapId,
@@ -90,7 +103,7 @@ export default function BookingPage() {
         reservationDate: form.date,
         timeFrom: form.timeFrom,
         timeTo: '23:00',
-        commentCustomer: form.commentCustomer
+        commentCustomer
       });
 
       setSuccessMessage(c({ ua: 'Заявку на бронювання створено. Менеджер звʼяжеться з вами.', ru: 'Заявка на бронирование создана. Менеджер свяжется с вами.', en: 'Booking request created. Manager will contact you.' }));
@@ -133,6 +146,11 @@ export default function BookingPage() {
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          {selected.objectId && selectedObjectName ? (
+            <p className="muted" style={{ margin: '0 0 8px' }}>
+              Selected object: <strong>{selectedObjectName}</strong>
+            </p>
+          ) : null}
           <label>{c({ ua: 'Доступні столи', ru: 'Доступные столы', en: 'Available tables' })} ({mapName || c({ ua: 'карта', ru: 'карта', en: 'map' })})</label>
           <select
             className="form-input"

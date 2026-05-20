@@ -49,6 +49,8 @@ function parseMetaJson(metaJson) {
     const svgUrl = typeof parsed.svgUrl === 'string' ? parsed.svgUrl : '';
 
     return {
+      interactionMode: typeof parsed.interactionMode === 'string' ? parsed.interactionMode : '',
+      isSelectable: parsed.interactionMode === 'DECOR' ? false : (Boolean(parsed.isSelectable) || normalizedSubType === 'BED'),
       subType,
       svgUrl: svgUrl || (normalizedSubType === 'BED' ? DEFAULT_BED_ASSET_URL : ''),
       svgCode: typeof parsed.svgCode === 'string' ? parsed.svgCode : '',
@@ -58,7 +60,9 @@ function parseMetaJson(metaJson) {
       pathData: typeof parsed.pathData === 'string' ? parsed.pathData : '',
       opacity: Number.isFinite(Number(parsed.opacity)) ? Number(parsed.opacity) : 1,
       strokeColor: typeof parsed.strokeColor === 'string' ? parsed.strokeColor : '',
-      strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2
+      strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2,
+      price: parsed.price ?? parsed.objectPrice ?? '',
+      priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : ''
     };
   } catch {
     return {};
@@ -173,6 +177,10 @@ function hasRenderableObjectGraphic(object, meta, label) {
     object.type === 'LABEL' ||
     accent
   );
+}
+
+function isSelectableMapObject(object, meta) {
+  return object?.isActive !== false && (meta.interactionMode === 'SELECTABLE' || meta.isSelectable);
 }
 
 function resolveAccentTexture(accent) {
@@ -359,6 +367,7 @@ export default function MapPage() {
   const [searchParams] = useSearchParams();
   const [state, setState] = useState({ loading: true, error: '', result: null });
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -454,6 +463,18 @@ export default function MapPage() {
     () => [...(state.result?.map.objects || [])].sort(compareMapObjects),
     [state.result]
   );
+  const selectedObject = useMemo(
+    () => selectedObjectId ? renderObjects.find((object) => object.id === selectedObjectId) || null : null,
+    [renderObjects, selectedObjectId]
+  );
+  const selectedObjectMeta = useMemo(() => parseMetaJson(selectedObject?.metaJson), [selectedObject]);
+  const selectedObjectTable = selectedObject?.tableId ? tableById.get(selectedObject.tableId) || null : null;
+  const selectedObjectLabel = selectedObject ? localizeField(selectedObject.label, locale) || selectedObject.type : '';
+  const selectedObjectCanBook = Boolean(
+    selectedObjectTable &&
+    selectedObjectTable.status === 'free' &&
+    tableFitsGuests(selectedObjectTable)
+  );
 
   const canInteractWithMap = Boolean(state.result && transform.initial);
   const resetTransform = transform.initial || {
@@ -481,6 +502,7 @@ export default function MapPage() {
 
   function selectTable(tableId) {
     setSelectedTableId(tableId);
+    setSelectedObjectId(null);
     if (!viewportRef.current || !state.result) return;
     const selectedObject = state.result.map.objects.find((item) => item.tableId === tableId);
     if (!selectedObject) return;
@@ -493,6 +515,16 @@ export default function MapPage() {
 
   function tableFitsGuests(table) {
     return !guests || (guests >= table.seatsMin && guests <= table.seatsMax);
+  }
+
+  function selectObject(object) {
+    const meta = parseMetaJson(object.metaJson);
+    if (!isSelectableMapObject(object, meta)) {
+      return;
+    }
+
+    setSelectedObjectId(object.id);
+    setSelectedTableId(null);
   }
 
   function handlePointerDown(event) {
@@ -676,15 +708,22 @@ export default function MapPage() {
                       );
                     }
 
+                    if (object.isActive === false) {
+                      return null;
+                    }
+
                     const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
                     if (!hasAsset) {
                       return null;
                     }
 
+                    const isSelectableObject = isSelectableMapObject(object, meta);
+                    const Component = isSelectableObject ? 'button' : 'div';
                     return (
-                      <div
+                      <Component
                         key={object.id}
-                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''}`}
+                        type={isSelectableObject ? 'button' : undefined}
+                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`}
                         style={{
                           left: object.x,
                           top: object.y,
@@ -695,9 +734,11 @@ export default function MapPage() {
                           ...parseStyleJson(object.styleJson)
                         }}
                         title={objectLabel}
+                        tabIndex={isSelectableObject ? 0 : undefined}
+                        onClick={isSelectableObject ? () => selectObject(object) : undefined}
                       >
                         <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
-                      </div>
+                      </Component>
                     );
                   })}
                 </div>
@@ -728,7 +769,7 @@ export default function MapPage() {
           </div>
         </article>
 
-        <aside className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable ? 'is-open' : ''}`}>
+        <aside className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable || selectedObject ? 'is-open' : ''}`}>
           <h3>{t('mapSelectedTitle')}</h3>
           {selectedTable ? (
             <>
@@ -744,6 +785,39 @@ export default function MapPage() {
               >
                 {t('mapGoToBooking')}
               </Link>
+            </>
+          ) : selectedObject ? (
+            <>
+              <p>
+                <strong>{selectedObjectLabel}</strong>
+              </p>
+              {selectedObjectMeta.price !== '' && selectedObjectMeta.price !== null && selectedObjectMeta.price !== undefined ? (
+                <p className="muted">
+                  Price: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}
+                </p>
+              ) : null}
+              {selectedObjectTable ? (
+                <>
+                  <p className="muted">
+                    {t('mapSeats')}: {selectedObjectTable.seatsMin}-{selectedObjectTable.seatsMax}
+                  </p>
+                  <p className="muted">
+                    Status: {selectedObjectTable.status === 'free' && tableFitsGuests(selectedObjectTable) ? t('mapFree') : t('mapBusy')}
+                  </p>
+                  {selectedObjectCanBook ? (
+                    <Link
+                      className="btn btn-primary"
+                      to={`/booking?date=${date}&guests=${searchParams.get('guests') || ''}&timeFrom=${timeFrom}&tableId=${selectedObjectTable.id}&mapId=${state.result.map.id}&zoneId=${selectedObjectTable.zoneId}&objectId=${selectedObject.id}`}
+                    >
+                      {t('mapGoToBooking')}
+                    </Link>
+                  ) : (
+                    <p className="muted">This object is not available for the selected date, time, or guest count.</p>
+                  )}
+                </>
+              ) : (
+                <p className="muted">This object is clickable, but it is not linked to a booking place yet.</p>
+              )}
             </>
           ) : (
             <p className="muted">{t('mapSelectHint')}</p>

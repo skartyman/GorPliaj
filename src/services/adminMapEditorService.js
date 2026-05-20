@@ -410,10 +410,6 @@ function normalizeEditableObject(object, existingObject = null) {
     normalized[field] = Number(object[field] ?? existingObject?.[field]);
   }
 
-  if (normalized.type !== 'TABLE') {
-    normalized.tableId = null;
-  }
-
   return normalized;
 }
 

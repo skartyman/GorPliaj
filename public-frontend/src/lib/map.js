@@ -181,6 +181,7 @@ export async function getPublicMapData(mapApi, params = {}) {
       styleJson: object.styleJson,
       metaJson: object.metaJson,
       tableId: object.tableId ?? null,
+      isActive: object.isActive ?? true,
       width: Math.max(Number(object.width) || 44, 24),
       height: Math.max(Number(object.height) || 44, 24),
       x: Number(object.x) || 0,

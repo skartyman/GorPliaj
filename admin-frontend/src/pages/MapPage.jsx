@@ -83,7 +83,7 @@ function parseMetaJson(metaJson) {
 
     return {
       interactionMode: typeof parsed.interactionMode === 'string' ? parsed.interactionMode : '',
-      isSelectable: Boolean(parsed.isSelectable) || normalizedSubType === 'BED',
+      isSelectable: parsed.interactionMode === 'DECOR' ? false : (Boolean(parsed.isSelectable) || normalizedSubType === 'BED'),
       subType,
       svgUrl: svgUrl || (normalizedSubType === 'BED' ? DEFAULT_BED_ASSET_URL : ''),
       svgCode: typeof parsed.svgCode === 'string' ? parsed.svgCode : '',
@@ -397,6 +397,7 @@ export default function MapPage() {
   });
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
@@ -557,6 +558,91 @@ export default function MapPage() {
     setSelectedTableId(null);
   };
 
+  async function saveObjectChanges(nextObjects) {
+    if (!state.mapData?.map?.id) {
+      return;
+    }
+
+    setObjectActionState({ saving: true, error: '' });
+    const payload = {
+      map: {
+        width: state.mapData.map.width,
+        height: state.mapData.map.height,
+        backgroundImage: state.mapData.map.backgroundImage || null,
+        backgroundColor: state.mapData.map.backgroundColor || null
+      },
+      tables: (state.mapData.tables || []).map((table) => ({
+        id: table.id,
+        photoUrl: table.photoUrl || null
+      })),
+      objects: nextObjects.map((object) => ({
+        id: object.id,
+        type: object.type,
+        tableId: object.tableId || null,
+        label: object.label || null,
+        x: object.x,
+        y: object.y,
+        width: object.width,
+        height: object.height,
+        rotation: object.rotation,
+        zIndex: object.zIndex,
+        styleJson: object.styleJson || null,
+        metaJson: object.metaJson || null,
+        isActive: object.isActive
+      }))
+    };
+
+    const result = await apiRequest(`/api/admin/maps/${state.mapData.map.id}/editor`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+
+    if (!result.response.ok) {
+      setObjectActionState({ saving: false, error: result.body?.message || 'Unable to save object.' });
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      mapData: {
+        ...prev.mapData,
+        ...result.body
+      }
+    }));
+    setObjectActionState({ saving: false, error: '' });
+  }
+
+  function updateSelectedObject(updater) {
+    if (!selectedObject) {
+      return;
+    }
+
+    const nextObjects = (state.mapData?.objects || []).map((object) =>
+      object.id === selectedObject.id ? updater(object) : object
+    );
+    saveObjectChanges(nextObjects);
+  }
+
+  function toggleSelectedObjectActive() {
+    updateSelectedObject((object) => ({
+      ...object,
+      isActive: object.isActive === false
+    }));
+  }
+
+  function toggleSelectedObjectMode() {
+    updateSelectedObject((object) => {
+      const meta = parseMetaJson(object.metaJson);
+      return {
+        ...object,
+        metaJson: {
+          ...(object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : meta),
+          interactionMode: meta.interactionMode === 'SELECTABLE' || meta.isSelectable ? 'DECOR' : 'SELECTABLE'
+        }
+      };
+    });
+  }
+
   return (
     <AdminLayout>
       <PageContainer
@@ -666,7 +752,7 @@ export default function MapPage() {
                           <button
                             key={object.id}
                             type="button"
-                            className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`.trim()}
+                            className={`interactive-map-object object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''} ${object.isActive === false ? 'inactive' : ''}`.trim()}
                             style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                             title={objectLabel}
                             aria-disabled={!isSelectableObject}
@@ -755,11 +841,20 @@ export default function MapPage() {
                 <div className="details-grid compact table-sheet-grid">
                   <div className="detail-row"><span className="muted">Type</span><strong>{selectedObject.type || '—'}</strong></div>
                   <div className="detail-row"><span className="muted">Mode</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Working object' : 'Decor'}</strong></div>
+                  <div className="detail-row"><span className="muted">Active</span><strong>{selectedObject.isActive === false ? 'Hidden from client' : 'Visible'}</strong></div>
+                  <div className="detail-row"><span className="muted">Linked table</span><strong>{selectedObject.tableId || 'Not linked'}</strong></div>
                   <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Attached' : 'No asset'}</strong></div>
                   <div className="detail-row"><span className="muted">Price</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Not set'}</strong></div>
                 </div>
 
+                {objectActionState.error ? <p className="error">{objectActionState.error}</p> : null}
                 <div className="actions">
+                  <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectActive} disabled={objectActionState.saving}>
+                    {selectedObject.isActive === false ? 'Show to client' : 'Hide from client'}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectMode} disabled={objectActionState.saving}>
+                    {selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Make decor' : 'Make clickable'}
+                  </button>
                   <button type="button" className="btn" onClick={() => window.location.assign('/admin/map-editor')}>
                     Edit in editor
                   </button>

@@ -2716,7 +2716,7 @@ export default function MapEditorPage() {
       objects: stateToSave.current.objects.map((object) => ({
         id: object.id,
         type: object.type,
-        tableId: object.type === 'TABLE' ? object.tableId : null,
+        tableId: object.tableId || null,
         label: object.label || null,
         x: object.x,
         y: object.y,

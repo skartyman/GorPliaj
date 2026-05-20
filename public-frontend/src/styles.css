@@ -1104,6 +1104,13 @@ h3 {
 .public-map-background { inset: 0; background-size: 100% 100%; background-position: center; position: absolute; }
 .public-map-object, .public-map-table { position: absolute; display: grid; place-items: center; font-size: 0.82rem; border: 1px solid rgba(255, 255, 255, 0.12); }
 .public-map-object.has-asset { display: block; border: 0; background: transparent; overflow: visible; line-height: 0; }
+.public-map-object.selectable {
+  cursor: pointer;
+  pointer-events: auto;
+}
+.public-map-object.selected {
+  box-shadow: 0 0 0 2px var(--brand);
+}
 .public-map-object-asset {
   position: absolute;
   inset: 0;
