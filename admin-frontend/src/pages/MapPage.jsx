@@ -865,6 +865,7 @@ export default function MapPage() {
                             style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                             title={objectLabel}
                             tabIndex={0}
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => selectObject(object)}
                           >
                             <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
@@ -885,6 +886,7 @@ export default function MapPage() {
                             borderRadius: tableShape === 'ROUND' ? 999 : 12
                           }}
                           title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
+                          onPointerDown={(event) => event.stopPropagation()}
                           onClick={() => {
                             setSelectedTableId(object.tableId);
                             setSelectedObjectId(null);
