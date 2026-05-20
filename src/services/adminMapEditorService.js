@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
 const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];
-const TABLE_EDITABLE_FIELDS = ['photoUrl'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 const MAP_EDITOR_INCLUDE = {
   zones: {
@@ -364,6 +364,17 @@ function normalizeTableInput(tableInput, existingTable = null) {
   for (const field of TABLE_EDITABLE_FIELDS) {
     if (field === 'photoUrl') {
       normalized.photoUrl = String(tableInput?.photoUrl ?? existingTable?.photoUrl ?? '').trim() || null;
+      continue;
+    }
+
+    if (field === 'code') {
+      normalized.code = String(tableInput?.code ?? existingTable?.code ?? '').trim() || null;
+      continue;
+    }
+
+    if (field === 'name') {
+      const nextValue = tableInput?.name === undefined ? existingTable?.name : tableInput?.name;
+      normalized.name = normalizeJsonValue(nextValue);
     }
   }
 

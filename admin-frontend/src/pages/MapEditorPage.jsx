@@ -3,7 +3,7 @@ import { Rnd } from 'react-rnd';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import PanelCard from '../components/PanelCard';
-import { apiRequest, localizeField } from '../lib/api';
+import { apiRequest, localizeField, normalizeLocalizedField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 const TEXTURE_ASSETS_STORAGE_KEY = 'map-editor-texture-assets';
@@ -520,10 +520,12 @@ function buildEditorState(payload) {
   return {
     map,
     zones: payload.zones || [],
-    tables: (payload.tables || []).map((table) => ({
-      ...table,
-      photoUrl: String(table.photoUrl || '').trim()
-    })),
+      tables: (payload.tables || []).map((table) => ({
+        ...table,
+        code: String(table.code || '').trim(),
+        name: table.name,
+        photoUrl: String(table.photoUrl || '').trim()
+      })),
     objects: (payload.objects || []).map((object) => normalizeObject(object, map))
   };
 }
@@ -894,6 +896,28 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label>
+              Номер столу
+              <input
+                type="text"
+                value={table?.code || ''}
+                placeholder="Номер у закладі"
+                onChange={(event) => onFieldChange('tableCode', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label>
+              Назва столу
+              <input
+                type="text"
+                value={localizeField(table?.name, language) || ''}
+                placeholder="Наприклад: Бунгало"
+                onChange={(event) => onFieldChange('tableName', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
             </label>
 
             <label>
@@ -2309,7 +2333,7 @@ export default function MapEditorPage() {
       return;
     }
 
-    if (field === 'tablePhotoUrl') {
+    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName') {
       if (!selectedObject.tableId) {
         return;
       }
@@ -2322,7 +2346,9 @@ export default function MapEditorPage() {
               table.id === selectedObject.tableId
                 ? {
                     ...table,
-                    photoUrl: String(value)
+                    ...(field === 'tablePhotoUrl' ? { photoUrl: String(value) } : {}),
+                    ...(field === 'tableCode' ? { code: String(value).trim() } : {}),
+                    ...(field === 'tableName' ? { name: normalizeLocalizedField(value) } : {})
                   }
                 : table
             )
@@ -2723,6 +2749,8 @@ export default function MapEditorPage() {
       },
       tables: stateToSave.current.tables.map((table) => ({
         id: table.id,
+        code: table.code || null,
+        name: table.name || null,
         photoUrl: table.photoUrl || null
       })),
       objects: stateToSave.current.objects.map((object) => ({

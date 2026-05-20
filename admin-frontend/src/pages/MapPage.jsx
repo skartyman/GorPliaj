@@ -952,10 +952,10 @@ export default function MapPage() {
               >
                 <div className="table-sheet-head">
                   <div>
-                    <span className="eyebrow">Position management</span>
+                    <span className="eyebrow">Керування позицією</span>
                     <h4>{mapObjectLabel(selectedObject, t, language)}</h4>
                   </div>
-                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedObjectId(null)}>Close</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedObjectId(null)}>Закрити</button>
                 </div>
 
                 <div className="object-admin-form">
@@ -965,13 +965,13 @@ export default function MapPage() {
                     </div>
                   ) : null}
                   <label>
-                    Linked table
+                    Номер столу
                     <select
                       ref={objectPrimaryFieldRef}
                       value={selectedObjectForm.tableId}
                       onChange={(event) => setSelectedObjectForm((current) => ({ ...current, tableId: event.target.value }))}
                     >
-                      <option value="">Not linked</option>
+                      <option value="">Не прив’язано</option>
                       {(state.mapData?.tables || []).map((table) => (
                         <option key={table.id} value={table.id}>
                           {table.code || localizeField(table.name, language) || `#${table.id}`}
@@ -980,46 +980,47 @@ export default function MapPage() {
                     </select>
                   </label>
                   <label>
-                    Price
+                    Ціна
                     <input type="number" min="0" step="1" value={selectedObjectForm.price} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, price: event.target.value }))} />
                   </label>
                   <label>
-                    Currency
+                    Валюта
                     <input type="text" value={selectedObjectForm.priceUnit} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, priceUnit: event.target.value }))} />
                   </label>
                   <label className="checkbox-label inline">
                     <input type="checkbox" checked={selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositRequired: event.target.checked }))} />
-                    Deposit required
+                    Потрібна застава
                   </label>
                   <label>
-                    Deposit amount
+                    Сума застави
                     <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
                   </label>
                   <label className="object-admin-form-wide">
-                    Photo URL
+                    URL фото
                     <input type="url" value={selectedObjectForm.photoUrl} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, photoUrl: event.target.value }))} />
                   </label>
                   <label className="btn btn-secondary btn-small object-upload-button">
-                    Upload photo
+                    Завантажити фото
                     <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadSelectedObjectPhoto} />
                   </label>
                 </div>
 
                 <details className="object-admin-details">
-                  <summary>Technical details</summary>
+                  <summary>Технічні дані</summary>
                   <div className="details-grid compact table-sheet-grid">
-                    <div className="detail-row"><span className="muted">Type</span><strong>{selectedObject.type || '—'}</strong></div>
-                    <div className="detail-row"><span className="muted">Mode</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Working object' : 'Decor'}</strong></div>
-                    <div className="detail-row"><span className="muted">Active</span><strong>{selectedObject.isActive === false ? 'Hidden from client' : 'Visible'}</strong></div>
-                    <div className="detail-row"><span className="muted">Linked table</span><strong>{selectedObject.tableId || 'Not linked'}</strong></div>
-                    <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Attached' : 'No asset'}</strong></div>
-                    <div className="detail-row"><span className="muted">Price</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Not set'}</strong></div>
+                    <div className="detail-row"><span className="muted">Тип</span><strong>{selectedObject.type || '—'}</strong></div>
+                    <div className="detail-row"><span className="muted">Режим</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Робочий об’єкт' : 'Декор'}</strong></div>
+                    <div className="detail-row"><span className="muted">Активний</span><strong>{selectedObject.isActive === false ? 'Сховано від клієнта' : 'Видимий'}</strong></div>
+                    <div className="detail-row"><span className="muted">Номер столу</span><strong>{selectedObject.table?.code || localizeField(selectedObject.table?.name, language) || 'Не прив’язано'}</strong></div>
+                    <div className="detail-row"><span className="muted">Назва столу</span><strong>{localizeField(selectedObject.table?.name, language) || '—'}</strong></div>
+                    <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Додано' : 'Немає'}</strong></div>
+                    <div className="detail-row"><span className="muted">Ціна</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Не задано'}</strong></div>
                   </div>
                 </details>
 
                 {selectedObjectReservations.length ? (
                   <details className="object-reservation-list">
-                    <summary>Linked reservations ({selectedObjectReservations.length})</summary>
+                    <summary>Пов’язані бронювання ({selectedObjectReservations.length})</summary>
                     <ul className="plain-list compact">
                       {selectedObjectReservations.slice(0, 5).map((reservation) => (
                         <li key={reservation.id}>
@@ -1048,16 +1049,16 @@ export default function MapPage() {
                 {objectActionState.error ? <p className="error">{objectActionState.error}</p> : null}
                 <div className="actions">
                   <button type="button" className="btn btn-primary" onClick={saveSelectedObjectSettings} disabled={objectActionState.saving}>
-                    Save object settings
+                    Зберегти налаштування
                   </button>
                   <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectActive} disabled={objectActionState.saving}>
-                    {selectedObject.isActive === false ? 'Show to client' : 'Hide from client'}
+                    {selectedObject.isActive === false ? 'Показати клієнту' : 'Сховати від клієнта'}
                   </button>
                   <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectMode} disabled={objectActionState.saving}>
-                    {selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Make decor' : 'Make clickable'}
+                    {selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Зробити декором' : 'Зробити клікабельним'}
                   </button>
                   <button type="button" className="btn" onClick={() => window.location.assign('/admin/map-editor')}>
-                    Edit in editor
+                    Відкрити редактор
                   </button>
                 </div>
               </div>
