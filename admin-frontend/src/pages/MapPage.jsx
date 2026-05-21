@@ -98,7 +98,9 @@ function parseMetaJson(metaJson) {
       priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : '',
       depositRequired: Boolean(parsed.depositRequired),
       depositAmount: parsed.depositAmount ?? parsed.deposit ?? '',
-      photoUrl: typeof parsed.photoUrl === 'string' ? parsed.photoUrl : ''
+      photoUrl: typeof parsed.photoUrl === 'string' ? parsed.photoUrl : '',
+      zoneId: Number.isInteger(Number(parsed.zoneId)) ? Number(parsed.zoneId) : null,
+      tableCode: typeof parsed.tableCode === 'string' ? parsed.tableCode : ''
     };
   } catch {
     return {};
@@ -390,6 +392,70 @@ function mapObjectLabel(object, t, language) {
   return fallback && fallback !== `mapEditor.objectType.${object.type}` ? fallback : object.type || 'OBJECT';
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function zoneDisplayName(zone, language) {
+  return localizeField(zone?.name, language) || localizeField(zone?.name, 'ua') || localizeField(zone?.name, 'ru') || '';
+}
+
+function getZoneCodePrefix(zone, map, language) {
+  const zoneText = [
+    zoneDisplayName(zone, language),
+    zoneDisplayName(zone, 'ua'),
+    zoneDisplayName(zone, 'ru'),
+    zoneDisplayName(zone, 'en')
+  ].join(' ').toLowerCase();
+  const mapText = [
+    localizeField(map?.name, language),
+    localizeField(map?.name, 'ua'),
+    localizeField(map?.name, 'ru'),
+    localizeField(map?.name, 'en'),
+    map?.slug
+  ].join(' ').toLowerCase();
+
+  if (/(пирс|пірс|pier)/i.test(zoneText)) return 'П';
+  if (/(терас|terrace)/i.test(zoneText)) return 'T';
+  if (/(ресторан|restaurant|зал|hall)/i.test(zoneText)) return 'P';
+  if (/(веч|ніч|ноч|night|evening|кальян|hookah)/i.test(`${zoneText} ${mapText}`)) return 'К';
+  if (/(кровать|ліж|лежак|bed|sunbed|bali)/i.test(zoneText)) return 'К';
+
+  return 'T';
+}
+
+function getZoneCodeHint(prefix) {
+  switch (prefix) {
+    case 'P':
+      return 'P1 - ресторанний стіл 1';
+    case 'T':
+      return 'T1 - тераса, стіл 1';
+    case 'К':
+      return 'К1 - ліжко 1, у вечірній посадці кальянний столик 1';
+    case 'П':
+      return 'П1 - пірс 1';
+    default:
+      return 'Код формується за зоною';
+  }
+}
+
+function getNextZoneCode(zoneId, tables, zones, map, language) {
+  const numericZoneId = Number(zoneId);
+  if (!Number.isInteger(numericZoneId)) return '';
+
+  const zone = zones.find((item) => item.id === numericZoneId);
+  const prefix = getZoneCodePrefix(zone, map, language);
+  const matcher = new RegExp(`^${escapeRegExp(prefix)}(\\d+)$`, 'i');
+  const maxNumber = tables.reduce((max, table) => {
+    if (Number(table.zoneId) !== numericZoneId) return max;
+    const match = String(table.code || '').trim().match(matcher);
+    if (!match) return max;
+    return Math.max(max, Number(match[1]) || 0);
+  }, 0);
+
+  return `${prefix}${maxNumber + 1}`;
+}
+
 export default function MapPage() {
   const [state, setState] = useState({
     loading: true,
@@ -402,7 +468,9 @@ export default function MapPage() {
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
   const [selectedObjectForm, setSelectedObjectForm] = useState({
+    zoneId: '',
     tableId: '',
+    tableCode: '',
     price: '',
     priceUnit: 'UAH',
     depositRequired: false,
@@ -530,8 +598,9 @@ export default function MapPage() {
     return objects.map((object) => {
       const isTable = object.type === 'TABLE';
       const table = isTable && object.tableId ? tableMap.get(object.tableId) : null;
-      const zone = table ? zoneMap.get(table.zoneId) : null;
       const meta = parseMetaJson(object.metaJson);
+      const metaZoneId = Number(meta.zoneId);
+      const zone = table ? zoneMap.get(table.zoneId) : (Number.isInteger(metaZoneId) ? zoneMap.get(metaZoneId) : null);
       return {
         ...object,
         isTable,
@@ -555,6 +624,20 @@ export default function MapPage() {
     : null;
 
   const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
+  const selectedFormZoneId = selectedObjectForm.zoneId ? Number(selectedObjectForm.zoneId) : null;
+  const selectedFormZone = selectedFormZoneId ? zoneMap.get(selectedFormZoneId) : null;
+  const selectedZonePrefix = selectedFormZone ? getZoneCodePrefix(selectedFormZone, state.mapData?.map, language) : '';
+  const suggestedObjectCode = selectedFormZoneId
+    ? getNextZoneCode(selectedFormZoneId, state.mapData?.tables || [], state.mapData?.zones || [], state.mapData?.map, language)
+    : '';
+  const objectTableOptions = useMemo(() => {
+    const tables = state.mapData?.tables || [];
+    if (!selectedFormZoneId) {
+      return tables;
+    }
+
+    return tables.filter((table) => Number(table.zoneId) === selectedFormZoneId);
+  }, [selectedFormZoneId, state.mapData?.tables]);
 
   useEffect(() => {
     if (!selectedObject) {
@@ -562,7 +645,9 @@ export default function MapPage() {
     }
 
     setSelectedObjectForm({
+      zoneId: selectedObject.zone?.id || selectedObject.meta?.zoneId || '',
       tableId: selectedObject.tableId || '',
+      tableCode: selectedObject.table?.code || selectedObject.meta?.tableCode || '',
       price: selectedObject.meta?.price ?? '',
       priceUnit: selectedObject.meta?.priceUnit || 'UAH',
       depositRequired: Boolean(selectedObject.meta?.depositRequired),
@@ -582,6 +667,35 @@ export default function MapPage() {
     });
   }, [selectedObjectId]);
 
+  function handleObjectZoneChange(event) {
+    const zoneId = event.target.value;
+    setSelectedObjectForm((current) => {
+      const currentTable = current.tableId ? tableMap.get(Number(current.tableId)) : null;
+      const keepsCurrentTable = currentTable && zoneId && Number(currentTable.zoneId) === Number(zoneId);
+      const nextCode = !current.tableCode || !keepsCurrentTable
+        ? getNextZoneCode(zoneId, state.mapData?.tables || [], state.mapData?.zones || [], state.mapData?.map, language)
+        : current.tableCode;
+
+      return {
+        ...current,
+        zoneId,
+        tableId: keepsCurrentTable ? current.tableId : '',
+        tableCode: nextCode
+      };
+    });
+  }
+
+  function handleObjectTableChange(event) {
+    const tableId = event.target.value;
+    const table = tableId ? tableMap.get(Number(tableId)) : null;
+    setSelectedObjectForm((current) => ({
+      ...current,
+      tableId,
+      zoneId: table?.zoneId || current.zoneId,
+      tableCode: table?.code || current.tableCode
+    }));
+  }
+
   const onBookTable = (table) => {
     // future booking flow callback
     console.info('booking hook', table);
@@ -592,7 +706,7 @@ export default function MapPage() {
     setSelectedTableId(null);
   };
 
-  async function saveObjectChanges(nextObjects) {
+  async function saveObjectChanges(nextObjects, nextTables = state.mapData?.tables || []) {
     if (!state.mapData?.map?.id) {
       return;
     }
@@ -605,8 +719,11 @@ export default function MapPage() {
         backgroundImage: state.mapData.map.backgroundImage || null,
         backgroundColor: state.mapData.map.backgroundColor || null
       },
-      tables: (state.mapData.tables || []).map((table) => ({
+      tables: (nextTables || []).map((table) => ({
         id: table.id,
+        zoneId: table.zoneId,
+        code: table.code || null,
+        name: table.name || null,
         photoUrl: table.photoUrl || null
       })),
       objects: nextObjects.map((object) => ({
@@ -684,6 +801,10 @@ export default function MapPage() {
   }
 
   function saveSelectedObjectSettings(overrides = {}) {
+    if (!selectedObject) {
+      return;
+    }
+
     const form = {
       ...selectedObjectForm,
       ...overrides
@@ -693,13 +814,33 @@ export default function MapPage() {
       setSelectedObjectForm(form);
     }
 
-    updateSelectedObject((object) => {
+    const normalizedTableId = form.tableId ? Number(form.tableId) : null;
+    const normalizedZoneId = form.zoneId ? Number(form.zoneId) : null;
+    const normalizedTableCode = String(form.tableCode || '').trim();
+    const nextTables = (state.mapData?.tables || []).map((table) => {
+      if (!normalizedTableId || table.id !== normalizedTableId) {
+        return table;
+      }
+
+      return {
+        ...table,
+        zoneId: normalizedZoneId || table.zoneId,
+        code: normalizedTableCode || table.code || null
+      };
+    });
+    const nextObjects = (state.mapData?.objects || []).map((object) => {
+      if (object.id !== selectedObject.id) {
+        return object;
+      }
+
       const rawMeta = object.metaJson && typeof object.metaJson === 'object' ? object.metaJson : parseMetaJson(object.metaJson);
       return {
         ...object,
-        tableId: form.tableId ? Number(form.tableId) : null,
+        tableId: normalizedTableId,
         metaJson: {
           ...rawMeta,
+          zoneId: normalizedZoneId,
+          tableCode: normalizedTableCode,
           price: normalizeMetaValue(form.price),
           priceUnit: form.priceUnit || 'UAH',
           depositRequired: Boolean(form.depositRequired),
@@ -708,6 +849,8 @@ export default function MapPage() {
         }
       };
     });
+
+    saveObjectChanges(nextObjects, nextTables);
   }
 
   async function uploadSelectedObjectPhoto(event) {
@@ -880,17 +1023,14 @@ export default function MapPage() {
                         <button
                           key={object.id}
                           type="button"
-                          className={`interactive-map-table ${status.toLowerCase()} ${selectedTableId === object.tableId ? 'selected' : ''}`}
+                          className={`interactive-map-table ${status.toLowerCase()} ${selectedObjectId === object.id || selectedTableId === object.tableId ? 'selected' : ''}`}
                           style={{
                             ...baseStyle,
                             borderRadius: tableShape === 'ROUND' ? 999 : 12
                           }}
                           title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
                           onPointerDown={(event) => event.stopPropagation()}
-                          onClick={() => {
-                            setSelectedTableId(object.tableId);
-                            setSelectedObjectId(null);
-                          }}
+                          onClick={() => selectObject(object)}
                         >
                           <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                         </button>
@@ -953,7 +1093,7 @@ export default function MapPage() {
                 <div className="table-sheet-head">
                   <div>
                     <span className="eyebrow">Керування позицією</span>
-                    <h4>{mapObjectLabel(selectedObject, t, language)}</h4>
+                    <h4>{selectedObject.table?.code || localizeField(selectedObject.table?.name, language) || selectedObject.meta?.tableCode || mapObjectLabel(selectedObject, t, language)}</h4>
                   </div>
                   <button type="button" className="btn btn-secondary" onClick={() => setSelectedObjectId(null)}>Закрити</button>
                 </div>
@@ -965,14 +1105,43 @@ export default function MapPage() {
                     </div>
                   ) : null}
                   <label>
-                    Номер столу
+                    Зона
                     <select
                       ref={objectPrimaryFieldRef}
+                      value={selectedObjectForm.zoneId}
+                      onChange={handleObjectZoneChange}
+                    >
+                      <option value="">Не вибрано</option>
+                      {(state.mapData?.zones || []).map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Код позиції
+                    <input
+                      type="text"
+                      value={selectedObjectForm.tableCode}
+                      placeholder={suggestedObjectCode || 'P1'}
+                      onChange={(event) => setSelectedObjectForm((current) => ({ ...current, tableCode: event.target.value.toUpperCase() }))}
+                    />
+                    {selectedZonePrefix ? (
+                      <span className="object-form-hint">
+                        {getZoneCodeHint(selectedZonePrefix)}
+                        {suggestedObjectCode ? ` · наступний: ${suggestedObjectCode}` : ''}
+                      </span>
+                    ) : null}
+                  </label>
+                  <label>
+                    Номер столу
+                    <select
                       value={selectedObjectForm.tableId}
-                      onChange={(event) => setSelectedObjectForm((current) => ({ ...current, tableId: event.target.value }))}
+                      onChange={handleObjectTableChange}
                     >
                       <option value="">Не прив’язано</option>
-                      {(state.mapData?.tables || []).map((table) => (
+                      {objectTableOptions.map((table) => (
                         <option key={table.id} value={table.id}>
                           {table.code || localizeField(table.name, language) || `#${table.id}`}
                         </option>

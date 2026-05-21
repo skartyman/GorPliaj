@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
 const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];
-const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 const MAP_EDITOR_INCLUDE = {
   zones: {
@@ -375,6 +375,12 @@ function normalizeTableInput(tableInput, existingTable = null) {
     if (field === 'name') {
       const nextValue = tableInput?.name === undefined ? existingTable?.name : tableInput?.name;
       normalized.name = normalizeJsonValue(nextValue);
+      continue;
+    }
+
+    if (field === 'zoneId') {
+      const nextZoneId = tableInput?.zoneId === undefined ? existingTable?.zoneId : tableInput?.zoneId;
+      normalized.zoneId = Number(nextZoneId);
     }
   }
 
@@ -519,6 +525,13 @@ function validateEditorTables(tables) {
     if (table.photoUrl !== undefined && table.photoUrl !== null && typeof table.photoUrl !== 'string') {
       return `Table ${tableId} contains an invalid photo URL.`;
     }
+
+    if (table.zoneId !== undefined && table.zoneId !== null && table.zoneId !== '') {
+      const zoneId = Number(table.zoneId);
+      if (!Number.isInteger(zoneId) || zoneId <= 0) {
+        return `Table ${tableId} contains an invalid zone id.`;
+      }
+    }
   }
 
   return null;
@@ -539,7 +552,15 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
       tables: {
         select: {
           id: true,
-          photoUrl: true
+          photoUrl: true,
+          code: true,
+          name: true,
+          zoneId: true
+        }
+      },
+      zones: {
+        select: {
+          id: true
         }
       }
     }
@@ -561,6 +582,17 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
   if ((tablesInput || []).some((table) => !tableIds.has(Number(table.id)))) {
     return { type: 'INVALID', message: 'Tables payload references an unknown table id.' };
+  }
+
+  const zoneIds = new Set((map.zones || []).map((zone) => zone.id));
+  if ((tablesInput || []).some((table) => {
+    if (table.zoneId === undefined || table.zoneId === null || table.zoneId === '') {
+      return false;
+    }
+
+    return !zoneIds.has(Number(table.zoneId));
+  })) {
+    return { type: 'INVALID', message: 'Tables payload references an unknown zone id.' };
   }
 
   const existingObjects = await prisma.mapObject.findMany({
