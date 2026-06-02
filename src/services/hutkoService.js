@@ -2,6 +2,7 @@ const https = require('https');
 const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
 const { sendTicketEmail } = require('./emailService');
+const { buildVerifyUrl } = require('../utils/ticketSignature');
 const QRCode = require('qrcode');
 
 function postToHutko(path, data) {
@@ -205,10 +206,8 @@ async function processCallback(payload) {
       });
 
       if (reservation && reservation.customerEmail) {
-        const qrDataUrl = await QRCode.toDataURL(
-          `${process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev'}/api/admin/reservations/verify/${reservation.ticketCode}`,
-          { width: 300, margin: 2 }
-        );
+        const verifyUrl = buildVerifyUrl(reservation.ticketCode, reservation.reservationDate);
+        const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
 
         await sendTicketEmail({
           to: reservation.customerEmail,

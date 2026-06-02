@@ -6,6 +6,7 @@ const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
 const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
 const { generateTicketCode } = require('../utils/ticket');
+const { verifyTicketSignature } = require('../utils/ticketSignature');
 const prisma = require('../lib/prisma');
 
 function buildAuthCookie(token) {
@@ -444,6 +445,7 @@ async function createAdminReservation(req, res) {
 async function verifyAdminReservation(req, res) {
   try {
     const ticketCode = String(req.params.ticketCode || '').trim();
+    const signature = String(req.query.t || '').trim();
     if (!ticketCode) {
       return res.status(400).json({ message: 'Ticket code is required.' });
     }
@@ -461,10 +463,15 @@ async function verifyAdminReservation(req, res) {
       return res.status(404).json({ message: 'Ticket not found.' });
     }
 
+    const isAuthentic = signature
+      ? verifyTicketSignature(ticketCode, reservation.reservationDate, signature)
+      : false;
+
     return res.json({
       reservation: {
         id: reservation.id,
         ticketCode: reservation.ticketCode,
+        isAuthentic,
         customerName: reservation.customerName,
         customerPhone: reservation.customerPhone,
         customerEmail: reservation.customerEmail,
