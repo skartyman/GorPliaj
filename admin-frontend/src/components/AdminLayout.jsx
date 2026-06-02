@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
 
 function IconDashboard() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>; }
 function IconReservations() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>; }
@@ -12,31 +13,41 @@ function IconEvents() { return <svg viewBox="0 0 24 24" fill="none" stroke="curr
 function IconNews() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>; }
 function IconPayments() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><path d="M7 15h.01M11 15h2"/></svg>; }
 function IconSettings() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>; }
+function IconUsers() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>; }
+function IconTicket() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>; }
 function IconHamburger() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>; }
 function IconChevronLeft() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>; }
 function IconChevronRight() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>; }
 function IconLogout() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
 
-const navItems = [
-  { to: '/admin/dashboard', labelKey: 'nav.dashboard', icon: IconDashboard },
-  { to: '/admin/reservations', labelKey: 'nav.reservations', icon: IconReservations },
-  { to: '/admin/map-editor', labelKey: 'nav.mapEditor', icon: IconMapEditor },
-  { to: '/admin/map', labelKey: 'nav.map', icon: IconMap },
-  { to: '/admin/menu', labelKey: 'nav.menu', icon: IconMenu },
-  { to: '/admin/events', labelKey: 'nav.events', icon: IconEvents },
-  { to: '/admin/news', labelKey: 'nav.news', icon: IconNews },
-  { to: '/admin/payments', labelKey: 'nav.payments', icon: IconPayments },
-  { to: '/admin/settings', labelKey: 'nav.settings', icon: IconSettings }
+const ALL_NAV_ITEMS = [
+  { to: '/admin/dashboard', labelKey: 'nav.dashboard', icon: IconDashboard, roles: ['*'] },
+  { to: '/admin/reservations', labelKey: 'nav.reservations', icon: IconReservations, roles: ['admin', 'hostess', 'manager', 'owner'] },
+  { to: '/admin/map-editor', labelKey: 'nav.mapEditor', icon: IconMapEditor, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/map', labelKey: 'nav.map', icon: IconMap, roles: ['*'] },
+  { to: '/admin/menu', labelKey: 'nav.menu', icon: IconMenu, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/events', labelKey: 'nav.events', icon: IconEvents, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
+  { to: '/admin/news', labelKey: 'nav.news', icon: IconNews, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
+  { to: '/admin/payments', labelKey: 'nav.payments', icon: IconPayments, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/verify-ticket', labelKey: 'nav.verifyTicket', icon: IconTicket, roles: ['hostess', 'admin', 'manager', 'owner'] },
+  { to: '/admin/users', labelKey: 'nav.users', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/settings', labelKey: 'nav.settings', icon: IconSettings, roles: ['seo_smm', 'admin', 'manager', 'owner'] }
 ];
 
+function getNavItems(role) {
+  if (role === 'manager' || role === 'owner') return ALL_NAV_ITEMS;
+  return ALL_NAV_ITEMS.filter((item) => item.roles.includes('*') || item.roles.includes(role));
+}
+
 function pageTitle(pathname, t) {
-  const item = navItems.find((entry) => pathname.startsWith(entry.to));
+  const item = ALL_NAV_ITEMS.find((entry) => pathname.startsWith(entry.to));
   return item ? t(item.labelKey) : t('common.admin');
 }
 
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [openSidebar, setOpenSidebar] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const path = window.location.pathname;
@@ -45,6 +56,7 @@ export default function AdminLayout({ children }) {
   const { t, toggleLanguage } = useAdminI18n();
   const title = useMemo(() => pageTitle(location.pathname, t), [location.pathname, t]);
   const isMapFullscreen = location.pathname.startsWith('/admin/map-editor') || location.pathname === '/admin/map';
+  const navItems = useMemo(() => getNavItems(user?.role), [user?.role]);
 
   useEffect(() => {
     if (isMapFullscreen) {
@@ -114,9 +126,12 @@ export default function AdminLayout({ children }) {
             </button>
             <h1>{title}</h1>
           </div>
-          <button type="button" className="btn btn-logout" onClick={onLogout}>
-            <IconLogout /> {t('common.logout')}
-          </button>
+          <div className="topbar-right">
+            <span className="topbar-role">{user?.role ? t(`roles.${user.role}`) : ''}</span>
+            <button type="button" className="btn btn-logout" onClick={onLogout}>
+              <IconLogout /> {t('common.logout')}
+            </button>
+          </div>
         </header>
         <main className="content">{children}</main>
       </div>

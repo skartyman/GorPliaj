@@ -118,6 +118,9 @@ model Reservation {
   timeTo          DateTime
   status          ReservationStatus @default(PENDING)
   source          ReservationSource @default(WEB)
+  ticketCode      String?
+  arrivedAt       DateTime?
+  arrivedGuests   Int?
   commentCustomer String?
   commentAdmin    String?
   depositRequired Boolean           @default(false)
@@ -328,6 +331,8 @@ enum ReservationSource {
   PHONE
   WALK_IN
   EVENT
+  INSTAGRAM
+  FACEBOOK
 }
 
 enum TableHoldStatus {

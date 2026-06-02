@@ -121,18 +121,21 @@ async function upsertEvent(eventData) {
 async function main() {
   const adminPasswordHash = await hashPassword(adminSeedPassword);
 
-  await prisma.adminUser.upsert({
-    where: { email: 'admin@gorpliaj.local' },
-    update: {
-      password: adminPasswordHash,
-      role: 'owner',
-    },
-    create: {
-      email: 'admin@gorpliaj.local',
-      password: adminPasswordHash,
-      role: 'owner',
-    },
-  });
+  const seedUsers = [
+    { email: 'owner@gorpliaj.local', role: 'owner' },
+    { email: 'manager@gorpliaj.local', role: 'manager' },
+    { email: 'admin@gorpliaj.local', role: 'admin' },
+    { email: 'hostess@gorpliaj.local', role: 'hostess' },
+    { email: 'smm@gorpliaj.local', role: 'seo_smm' },
+  ];
+
+  for (const user of seedUsers) {
+    await prisma.adminUser.upsert({
+      where: { email: user.email },
+      update: { password: adminPasswordHash, role: user.role },
+      create: { email: user.email, password: adminPasswordHash, role: user.role },
+    });
+  }
 
   await prisma.map.updateMany({
     where: {

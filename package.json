@@ -34,7 +34,9 @@
     "hutko-node-js-sdk": "github:hutko-service/node-js-sdk",
     "jsqr": "^1.4.0",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.10",
     "prisma": "^6.19.2",
+    "qrcode": "^1.5.4",
     "sharp": "^0.34.5",
     "telegraf": "^4.16.3"
   }

@@ -1,8 +1,12 @@
-  const adminAuthService = require('../services/adminAuthService');
+const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
 const adminMapEditorService = require('../services/adminMapEditorService');
+const reservationService = require('../services/reservationService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
+const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+const { generateTicketCode } = require('../utils/ticket');
+const prisma = require('../lib/prisma');
 
 function buildAuthCookie(token) {
   const maxAgeSeconds = Math.floor(adminAuthService.getTokenTtlMs() / 1000);
@@ -352,6 +356,179 @@ async function updateAdminMapEditor(req, res) {
   }
 }
 
+async function createAdminReservation(req, res) {
+  try {
+    const body = req.body || {};
+    const requiredFields = ['tableId', 'mapId', 'zoneId', 'customerName', 'customerPhone', 'guests', 'reservationDate', 'timeFrom'];
+    const missing = requiredFields.filter((f) => !body[f]);
+    if (missing.length) {
+      return res.status(400).json({ message: `Missing required fields: ${missing.join(', ')}` });
+    }
+
+    const role = req.adminAuth.role;
+    const source = body.source || null;
+
+    if (source) {
+      const socialSources = ['INSTAGRAM', 'FACEBOOK'];
+      const phoneSource = 'PHONE';
+      if (role === 'seo_smm' && !socialSources.includes(source)) {
+        return res.status(403).json({ message: 'SEO/SMM can only create reservations with Instagram or Facebook source.' });
+      }
+      if (role === 'hostess' && ![...socialSources, phoneSource, 'WALK_IN'].includes(source)) {
+        return res.status(403).json({ message: 'Hostess cannot create reservations with this source.' });
+      }
+    }
+
+    const guests = Number(body.guests);
+    if (!Number.isFinite(guests) || guests <= 0) {
+      return res.status(400).json({ message: 'Guests must be greater than 0.' });
+    }
+
+    const reservationDate = new Date(`${body.reservationDate}T00:00:00`);
+    const timeFrom = toDateTime(body.reservationDate, body.timeFrom);
+    const timeTo = body.timeTo ? toDateTime(body.reservationDate, body.timeTo) : getClosingDateTime(body.reservationDate);
+
+    if (Number.isNaN(reservationDate.getTime()) || Number.isNaN(timeFrom.getTime()) || Number.isNaN(timeTo.getTime())) {
+      return res.status(400).json({ message: 'Invalid date or time.' });
+    }
+
+    if (timeFrom >= timeTo) {
+      return res.status(400).json({ message: 'Start time must be before end time.' });
+    }
+
+    const tableId = Number(body.tableId);
+    const mapId = Number(body.mapId);
+    const zoneId = Number(body.zoneId);
+
+    const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
+    if (conflict) {
+      return res.status(409).json({ message: 'Table is already booked for this time.' });
+    }
+
+    const ticketCode = generateTicketCode();
+
+    const reservation = await prisma.reservation.create({
+      data: {
+        tableId,
+        mapId,
+        zoneId,
+        eventId: body.eventId ? Number(body.eventId) : null,
+        customerName: body.customerName,
+        customerPhone: body.customerPhone,
+        customerEmail: body.customerEmail || null,
+        guests,
+        reservationDate,
+        timeFrom,
+        timeTo,
+        source: source || undefined,
+        ticketCode,
+        commentCustomer: body.commentCustomer || null,
+        commentAdmin: body.commentAdmin || null,
+        depositRequired: Boolean(body.depositRequired),
+        depositAmount: body.depositAmount ? Number(body.depositAmount) : null,
+        status: body.status || 'PENDING'
+      },
+      include: {
+        table: { select: { id: true, name: true, code: true } },
+        zone: { select: { id: true, name: true } }
+      }
+    });
+
+    return res.status(201).json({ reservation });
+  } catch (error) {
+    console.error('[adminController.createAdminReservation] Failed to create reservation.', error);
+    return res.status(500).json({ message: 'Unable to create reservation.' });
+  }
+}
+
+async function verifyAdminReservation(req, res) {
+  try {
+    const ticketCode = String(req.params.ticketCode || '').trim();
+    if (!ticketCode) {
+      return res.status(400).json({ message: 'Ticket code is required.' });
+    }
+
+    const reservation = await prisma.reservation.findUnique({
+      where: { ticketCode },
+      include: {
+        table: { select: { id: true, name: true } },
+        zone: { select: { id: true, name: true } },
+        payment: true
+      }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({ message: 'Ticket not found.' });
+    }
+
+    return res.json({
+      reservation: {
+        id: reservation.id,
+        ticketCode: reservation.ticketCode,
+        customerName: reservation.customerName,
+        customerPhone: reservation.customerPhone,
+        customerEmail: reservation.customerEmail,
+        guests: reservation.guests,
+        reservationDate: reservation.reservationDate,
+        timeFrom: reservation.timeFrom,
+        timeTo: reservation.timeTo,
+        status: reservation.status,
+        source: reservation.source,
+        arrivedAt: reservation.arrivedAt,
+        arrivedGuests: reservation.arrivedGuests,
+        table: reservation.table,
+        zone: reservation.zone,
+        paymentStatus: reservation.payment?.status || null,
+        paymentAmount: reservation.payment?.amount || null,
+        paidAt: reservation.payment?.paidAt || null
+      }
+    });
+  } catch (error) {
+    console.error('[adminController.verifyAdminReservation] Failed to verify ticket.', error);
+    return res.status(500).json({ message: 'Unable to verify ticket.' });
+  }
+}
+
+async function arriveAdminReservation(req, res) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Invalid reservation id.' });
+    }
+
+    const existing = await prisma.reservation.findUnique({
+      where: { id },
+      select: { id: true, arrivedAt: true }
+    });
+    if (!existing) {
+      return res.status(404).json({ message: 'Reservation not found.' });
+    }
+    if (existing.arrivedAt) {
+      return res.status(409).json({ message: 'Guests have already arrived.' });
+    }
+
+    const arrivedGuests = req.body.arrivedGuests ? Number(req.body.arrivedGuests) : null;
+
+    const reservation = await prisma.reservation.update({
+      where: { id },
+      data: {
+        arrivedAt: new Date(),
+        arrivedGuests,
+        status: 'COMPLETED'
+      },
+      include: {
+        table: { select: { id: true, name: true } },
+        zone: { select: { id: true, name: true } }
+      }
+    });
+
+    return res.json({ reservation });
+  } catch (error) {
+    console.error('[adminController.arriveAdminReservation] Failed to mark arrival.', error);
+    return res.status(500).json({ message: 'Unable to mark arrival.' });
+  }
+}
+
 module.exports = {
   getAdminStatus,
   loginAdmin,
@@ -361,6 +538,9 @@ module.exports = {
   getAdminReservationById,
   updateAdminReservationStatus,
   deleteAdminReservation,
+  createAdminReservation,
+  verifyAdminReservation,
+  arriveAdminReservation,
   listAdminMaps,
   createAdminMapVariant,
   deleteAdminMapVariant,

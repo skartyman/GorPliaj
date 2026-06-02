@@ -34,6 +34,8 @@ const translations = {
       events: 'Події',
       news: 'Новини',
       payments: 'Платежі',
+      verifyTicket: 'Квитки',
+      users: 'Користувачі',
       settings: 'Налаштування'
     },
     login: {
@@ -589,6 +591,54 @@ const translations = {
         workingHours: 'Години роботи',
         socialMedia: 'Соціальні мережі'
       }
+    },
+    roles: {
+      seo_smm: 'SEO/SMM',
+      hostess: 'Хостес',
+      admin: 'Адмін',
+      manager: 'Управляючий',
+      owner: 'Власник'
+    },
+    verifyTicket: {
+      title: 'Перевірка квитків',
+      placeholder: 'GP-XXXXXXXX',
+      search: 'Знайти',
+      searching: 'Пошук...',
+      notFound: 'Квиток не знайдено',
+      error: 'Помилка пошуку',
+      guest: 'Гість',
+      phone: 'Телефон',
+      email: 'Email',
+      table: 'Стіл',
+      zone: 'Зона',
+      guests: 'Гостей',
+      date: 'Дата',
+      time: 'Час',
+      status: 'Статус',
+      payment: 'Оплата',
+      noPayment: 'Немає оплати',
+      source: 'Джерело',
+      arrivedAt: 'Прибули о',
+      markArrived: 'Відмітити прибуття',
+      arrivedGuestsPlaceholder: 'Скільки прийшло',
+      confirmArrive: 'Прибули!',
+      saving: 'Зберігаємо...',
+      arrived: '✓ Прибуття відмічено'
+    },
+    users: {
+      title: 'Користувачі',
+      createNew: 'Створити користувача',
+      email: 'Email',
+      password: 'Пароль',
+      role: 'Роль',
+      createdAt: 'Створено',
+      actions: 'Дії',
+      edit: 'Редагувати',
+      save: 'Зберегти',
+      cancel: 'Скасувати',
+      delete: 'Видалити',
+      create: 'Створити',
+      confirmDelete: 'Видалити цього користувача?'
     }
   },
   ru: {
@@ -605,6 +655,54 @@ const translations = {
       soon: 'скоро',
       unknownStatus: 'НЕИЗВЕСТНО'
     },
+    roles: {
+      seo_smm: 'SEO/SMM',
+      hostess: 'Хостес',
+      admin: 'Админ',
+      manager: 'Управляющий',
+      owner: 'Владелец'
+    },
+    verifyTicket: {
+      title: 'Проверка билетов',
+      placeholder: 'GP-XXXXXXXX',
+      search: 'Найти',
+      searching: 'Поиск...',
+      notFound: 'Билет не найден',
+      error: 'Ошибка поиска',
+      guest: 'Гость',
+      phone: 'Телефон',
+      email: 'Email',
+      table: 'Стол',
+      zone: 'Зона',
+      guests: 'Гостей',
+      date: 'Дата',
+      time: 'Время',
+      status: 'Статус',
+      payment: 'Оплата',
+      noPayment: 'Нет оплаты',
+      source: 'Источник',
+      arrivedAt: 'Прибыли в',
+      markArrived: 'Отметить прибытие',
+      arrivedGuestsPlaceholder: 'Сколько пришло',
+      confirmArrive: 'Прибыли!',
+      saving: 'Сохраняем...',
+      arrived: '✓ Прибытие отмечено'
+    },
+    users: {
+      title: 'Пользователи',
+      createNew: 'Создать пользователя',
+      email: 'Email',
+      password: 'Пароль',
+      role: 'Роль',
+      createdAt: 'Создан',
+      actions: 'Действия',
+      edit: 'Редактировать',
+      save: 'Сохранить',
+      cancel: 'Отмена',
+      delete: 'Удалить',
+      create: 'Создать',
+      confirmDelete: 'Удалить этого пользователя?'
+    }
     // ... остальное RU остается без изменений
   },
   en: {
@@ -621,6 +719,54 @@ const translations = {
       soon: 'soon',
       unknownStatus: 'UNKNOWN'
     },
+    roles: {
+      seo_smm: 'SEO/SMM',
+      hostess: 'Hostess',
+      admin: 'Admin',
+      manager: 'Manager',
+      owner: 'Owner'
+    },
+    verifyTicket: {
+      title: 'Ticket Verification',
+      placeholder: 'GP-XXXXXXXX',
+      search: 'Search',
+      searching: 'Searching...',
+      notFound: 'Ticket not found',
+      error: 'Search error',
+      guest: 'Guest',
+      phone: 'Phone',
+      email: 'Email',
+      table: 'Table',
+      zone: 'Zone',
+      guests: 'Guests',
+      date: 'Date',
+      time: 'Time',
+      status: 'Status',
+      payment: 'Payment',
+      noPayment: 'No payment',
+      source: 'Source',
+      arrivedAt: 'Arrived at',
+      markArrived: 'Mark arrived',
+      arrivedGuestsPlaceholder: 'How many arrived',
+      confirmArrive: 'Arrived!',
+      saving: 'Saving...',
+      arrived: '✓ Arrival confirmed'
+    },
+    users: {
+      title: 'Users',
+      createNew: 'Create user',
+      email: 'Email',
+      password: 'Password',
+      role: 'Role',
+      createdAt: 'Created',
+      actions: 'Actions',
+      edit: 'Edit',
+      save: 'Save',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      create: 'Create',
+      confirmDelete: 'Delete this user?'
+    }
     // ... остальное EN остается без изменений
   }
 };

@@ -1,6 +1,8 @@
 const https = require('https');
 const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
+const { sendTicketEmail } = require('./emailService');
+const QRCode = require('qrcode');
 
 function postToHutko(path, data) {
   return new Promise((resolve, reject) => {
@@ -191,6 +193,40 @@ async function processCallback(payload) {
       rawPayload: payload
     }
   });
+
+  if (ourStatus === 'PAID') {
+    try {
+      const reservation = await prisma.reservation.findUnique({
+        where: { id: reservationId },
+        include: {
+          table: { select: { name: true } },
+          payment: true
+        }
+      });
+
+      if (reservation && reservation.customerEmail) {
+        const qrDataUrl = await QRCode.toDataURL(
+          `${process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev'}/api/admin/reservations/verify/${reservation.ticketCode}`,
+          { width: 300, margin: 2 }
+        );
+
+        await sendTicketEmail({
+          to: reservation.customerEmail,
+          ticketCode: reservation.ticketCode,
+          customerName: reservation.customerName,
+          reservationDate: reservation.reservationDate,
+          timeFrom: reservation.timeFrom,
+          timeTo: reservation.timeTo,
+          guests: reservation.guests,
+          tableName: reservation.table?.name || '',
+          qrDataUrl,
+          status: 'PAID'
+        });
+      }
+    } catch (emailError) {
+      console.error(`[hutko] Failed to send ticket email for reservation #${reservationId}:`, emailError.message);
+    }
+  }
 
   return { type: 'SUCCESS', payment };
 }
