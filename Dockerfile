@@ -25,7 +25,7 @@ COPY public-frontend/package-lock.json public-frontend/package.json ./public-fro
 RUN npm --prefix public-frontend ci
 
 COPY admin-frontend/package-lock.json admin-frontend/package.json ./admin-frontend/
-RUN npm --prefix admin-frontend ci
+RUN npm --prefix admin-frontend install
 
 # Copy application code
 COPY . .
