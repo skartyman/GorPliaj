@@ -106,6 +106,7 @@ function getPaygateConfig() {
   const merchantId = process.env.FONDY_MERCHANT_ID || '';
   const secretKey = process.env.FONDY_SECRET_KEY || '';
   return {
+    provider: 'hutko',
     configured: !!(merchantId && secretKey),
     merchantId: merchantId ? `${merchantId.slice(0, 4)}...${merchantId.slice(-4)}` : null
   };

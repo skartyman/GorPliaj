@@ -1120,7 +1120,7 @@ textarea { resize: vertical; min-height: 96px; }
   background: transparent;
 }
 .inspector-tab.active { color: var(--accent-gold); border-bottom-color: var(--accent-gold); background: var(--bg-card); }
-.inspector-content { padding: 14px; padding-bottom: 96px; min-height: 0; flex: 1 1 auto; }
+.inspector-content { padding: 14px; padding-bottom: 96px; min-height: 0; flex: 1 1 auto; overflow-y: auto; }
 
 .inspector-content::-webkit-scrollbar { width: 6px; }
 .inspector-content::-webkit-scrollbar-track { background: transparent; }

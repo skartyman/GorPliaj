@@ -7,6 +7,7 @@ require('./config/env');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const paymentsRoutes = require('./routes/payments');
+const hutkoRoutes = require('./routes/paygate/hutko');
 const { extractInvoiceData } = require('./services/groqVisionService');
 const { saveInvoice, isSheetsConfigured } = require('./services/sheetsService');
 const { setupBotWebhook } = require('./services/botService');
@@ -61,6 +62,7 @@ app.use('/admin/assets', express.static(path.join(adminAppDir, 'assets')));
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/paygate/hutko', hutkoRoutes);
 
 app.get(['/booking', '/booking/*'], (req, res) => {
   return sendPublicIndex(res);
