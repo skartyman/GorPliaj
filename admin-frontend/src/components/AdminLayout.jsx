@@ -79,7 +79,8 @@ export default function AdminLayout({ children }) {
       <aside className={`sidebar ${openSidebar ? 'open' : ''}`}>
         <div className="sidebar-header">
           <Link to="/admin/dashboard" className="brand" onClick={onNavSelect}>
-            {t('brand')}
+            <img src="/icons/logo1.png" alt="GorPliaj" className="brand-logo" />
+            <span className="brand-text">{t('brand')}</span>
           </Link>
           <button
             type="button"

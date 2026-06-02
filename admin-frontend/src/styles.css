@@ -98,12 +98,32 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 18px;
   color: #F5EDE0;
   text-decoration: none;
   letter-spacing: 0.02em;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.sidebar-collapsed .brand-logo {
+  width: 28px;
+  height: 28px;
+}
+
+.sidebar-collapsed .brand-text {
+  display: none;
 }
 
 .lang-toggle-btn {
@@ -958,6 +978,14 @@ textarea { resize: vertical; min-height: 96px; }
 .page-hero { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 16px; margin-bottom: 16px; }
 .page-hero.compact { align-items: center; }
 .page-hero-copy { display: grid; gap: 10px; }
+
+.login-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
 
 .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: var(--text-muted); font-weight: 700; }
 

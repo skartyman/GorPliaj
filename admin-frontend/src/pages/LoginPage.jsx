@@ -50,6 +50,7 @@ export default function LoginPage() {
     <div className="page page-center auth-page">
       <section className="login-shell card">
         <div className="login-intro">
+          <img src="/icons/logo1.png" alt="GorPliaj" className="login-logo" />
           <span className="eyebrow">{t('login.eyebrow')}</span>
           <h1>{t('login.title')}</h1>
           <p className="muted">{t('login.description')}</p>
