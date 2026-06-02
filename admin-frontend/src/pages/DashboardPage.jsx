@@ -5,8 +5,11 @@ import PageCard from '../components/PageCard';
 import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const canMenu = ['admin', 'manager', 'owner'].includes(user?.role);
   const [state, setState] = useState({
     loading: true,
     error: '',
@@ -42,7 +45,7 @@ export default function DashboardPage() {
           setState((current) => ({
             ...current,
             loading: false,
-            error: insightsResult.body.message || t('dashboard.errors.loadInsights'),
+            error: reservationsResult.response.ok ? '' : (reservationsResult.body.message || t('dashboard.errors.load')),
             rows: Array.isArray(reservationsResult.body) ? reservationsResult.body : []
           }));
           return;
@@ -110,7 +113,7 @@ export default function DashboardPage() {
           <p className="muted">{t('dashboard.description')}</p>
           <div className="actions hero-actions">
             <Link className="btn" to="/admin/reservations">{t('dashboard.openReservations')}</Link>
-            <Link className="btn btn-secondary" to="/admin/menu">{t('dashboard.openMenu')}</Link>
+            {canMenu && <Link className="btn btn-secondary" to="/admin/menu">{t('dashboard.openMenu')}</Link>}
           </div>
         </div>
 

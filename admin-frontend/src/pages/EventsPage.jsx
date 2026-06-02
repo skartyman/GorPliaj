@@ -224,8 +224,8 @@ export default function EventsPage() {
     setUploadingImage(false);
 
     if (!response.ok || !body.url) {
-      setPosterUploadState({ status: 'error', details: body.message || 'Failed to upload poster.' });
-      setFeedback({ tone: 'error', message: body.message || 'Failed to upload poster.' });
+      setPosterUploadState({ status: 'error', details: body.message || t('eventsAdmin.errors.upload') });
+      setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.upload') });
       return;
     }
 
@@ -235,16 +235,16 @@ export default function EventsPage() {
   }
 
   const columns = [
-    { key: 'title', label: 'Event', render: (row) => <strong>{localizeField(row.title, language)}</strong> },
-    { key: 'startAt', label: 'Start', render: (row) => formatDateTime(row.startAt, language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US')) },
-    { key: 'status', label: 'Status' },
+    { key: 'title', label: t('eventsAdmin.columns.title'), render: (row) => <strong>{localizeField(row.title, language)}</strong> },
+    { key: 'startAt', label: t('eventsAdmin.columns.start'), render: (row) => formatDateTime(row.startAt, language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US')) },
+    { key: 'status', label: t('eventsAdmin.columns.status') },
     {
       key: 'actions',
-      label: 'Actions',
+      label: t('eventsAdmin.columns.actions'),
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>Edit</button>
-          <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>Delete</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('eventsAdmin.form.fields.title')}</button>
+          <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>{t('eventsAdmin.form.delete')}</button>
         </div>
       )
     }
@@ -252,19 +252,19 @@ export default function EventsPage() {
 
   return (
     <AdminLayout>
-      <PageContainer title="Events" description="Manage posters, translations, and public event pages.">
+      <PageContainer title={t('eventsAdmin.title')} description={t('eventsAdmin.description')}>
         <div className="metric-compact-grid">
           <div className="metric-compact-item">
             <strong>{stats.total}</strong>
-            <span className="muted">Total events</span>
+            <span className="muted">{t('eventsAdmin.total')}</span>
           </div>
           <div className="metric-compact-item">
             <strong>{stats.published}</strong>
-            <span className="muted">Published</span>
+            <span className="muted">{t('eventsAdmin.published')}</span>
           </div>
           <div className="metric-compact-item">
             <strong>{stats.featured}</strong>
-            <span className="muted">Featured</span>
+            <span className="muted">{t('eventsAdmin.featured')}</span>
           </div>
         </div>
         <div className="menu-admin-section-switch" role="tablist" style={{ marginTop: 14 }}>
@@ -273,21 +273,21 @@ export default function EventsPage() {
             className={`menu-admin-section-switch-btn ${viewMode === 'table' ? 'active' : ''}`}
             onClick={() => setViewMode('table')}
           >
-            Table
+            {t('eventsAdmin.table')}
           </button>
           <button
             type="button"
             className={`menu-admin-section-switch-btn ${viewMode === 'calendar' ? 'active' : ''}`}
             onClick={() => setViewMode('calendar')}
           >
-            Calendar
+            {t('eventsAdmin.calendar')}
           </button>
         </div>
 
-        {state.loading ? <p>Loading events...</p> : null}
+        {state.loading ? <p>{t('eventsAdmin.loading')}</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
         {!state.loading && viewMode === 'table' ? (
-          <DataTable columns={columns} rows={state.events} emptyText="No events yet." />
+          <DataTable columns={columns} rows={state.events} emptyText={t('eventsAdmin.empty')} />
         ) : null}
         {!state.loading && viewMode === 'calendar' ? (
           <CalendarView
@@ -323,13 +323,13 @@ export default function EventsPage() {
       </PageContainer>
 
       <div className="grid-two-col" style={{ alignItems: 'start' }}>
-        <PanelCard title={editId ? 'Edit event' : 'Create event'} subtitle="Poster, schedule, translations, and CTA settings.">
+        <PanelCard title={editId ? t('eventsAdmin.form.edit') : t('eventsAdmin.form.create')} subtitle="">
           <form onSubmit={submitForm} className="event-admin-form">
             <div className="grid-two-col">
-              <label>Title (UA) <input value={form.title.ua} onChange={(e) => setLocalizedField('title', 'ua', e.target.value)} required /></label>
-              <label>Title (RU) <input value={form.title.ru} onChange={(e) => setLocalizedField('title', 'ru', e.target.value)} placeholder="Auto-translated" /></label>
-              <label>Title (EN) <input value={form.title.en} onChange={(e) => setLocalizedField('title', 'en', e.target.value)} placeholder="Auto-translated" /></label>
-              <label>Slug <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
+              <label>{t('eventsAdmin.form.fields.title')} (UA) <input value={form.title.ua} onChange={(e) => setLocalizedField('title', 'ua', e.target.value)} required /></label>
+              <label>{t('eventsAdmin.form.fields.title')} (RU) <input value={form.title.ru} onChange={(e) => setLocalizedField('title', 'ru', e.target.value)} placeholder={t('eventsAdmin.form.placeholders.autoTranslated')} /></label>
+              <label>{t('eventsAdmin.form.fields.title')} (EN) <input value={form.title.en} onChange={(e) => setLocalizedField('title', 'en', e.target.value)} placeholder={t('eventsAdmin.form.placeholders.autoTranslated')} /></label>
+              <label>{t('eventsAdmin.form.fields.slug')} <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
             </div>
 
             <div className="actions compact" style={{ marginTop: '0.5rem' }}>
@@ -339,22 +339,22 @@ export default function EventsPage() {
             </div>
 
             <div className="grid-two-col" style={{ marginTop: '1rem' }}>
-              <label>Start <input type="datetime-local" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} required /></label>
-              <label>End <input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
+              <label>{t('eventsAdmin.form.fields.start')} <input type="datetime-local" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} required /></label>
+              <label>{t('eventsAdmin.form.fields.end')} <input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
               <label>
-                Status
+                {t('eventsAdmin.form.fields.status')}
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="PUBLISHED">PUBLISHED</option>
-                  <option value="ARCHIVED">ARCHIVED</option>
+                  <option value="DRAFT">{t('eventsAdmin.statusOptions.DRAFT')}</option>
+                  <option value="PUBLISHED">{t('eventsAdmin.statusOptions.PUBLISHED')}</option>
+                  <option value="ARCHIVED">{t('eventsAdmin.statusOptions.ARCHIVED')}</option>
                 </select>
               </label>
               <label>
-                CTA
+                {t('eventsAdmin.form.fields.cta')}
                 <select value={form.ctaType} onChange={(e) => setForm({ ...form, ctaType: e.target.value })}>
-                  <option value="BOOKING">BOOKING</option>
-                  <option value="TICKETS">TICKETS</option>
-                  <option value="BOTH">BOTH</option>
+                  <option value="BOOKING">{t('eventsAdmin.ctaOptions.BOOKING')}</option>
+                  <option value="TICKETS">{t('eventsAdmin.ctaOptions.TICKETS')}</option>
+                  <option value="BOTH">{t('eventsAdmin.ctaOptions.BOTH')}</option>
                 </select>
               </label>
             </div>

@@ -1053,16 +1053,16 @@ export default function MapPage() {
               <div className="table-bottom-sheet" role="dialog" aria-live="polite">
                 <div className="table-sheet-head">
                   <h4>{localizeField(selectedTable.name, language) || selectedTable.code || t('map.fields.table')}</h4>
-                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedTableId(null)}>Close</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedTableId(null)}>{t('map.fields.close')}</button>
                 </div>
 
                 <div className="details-grid compact table-sheet-grid">
-                  <div className="detail-row"><span className="muted">Code</span><strong>{selectedTable.code || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">Capacity</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">Deposit</span><strong>{selectedTable.deposit || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">Zone</span><strong>{localizeField(zoneMap.get(selectedTable.zoneId)?.name, language) || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">Bookable</span><strong>{selectedTable.isBookable ? 'Yes' : 'No'}</strong></div>
-                  <div className="detail-row"><span className="muted">Status</span><strong><StatusPill status={selectedStatus} /></strong></div>
+                  <div className="detail-row"><span className="muted">{t('map.fields.code')}</span><strong>{selectedTable.code || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedTable.deposit || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedTable.zoneId)?.name, language) || '—'}</strong></div>
+                  <div className="detail-row"><span className="muted">{t('map.fields.bookable')}</span><strong>{selectedTable.isBookable ? t('map.fields.yes') : t('map.fields.no')}</strong></div>
+                  <div className="detail-row"><span className="muted">{t('map.fields.status')}</span><strong><StatusPill status={selectedStatus} /></strong></div>
                 </div>
 
                 {!selectedReservations.length ? <p className="muted">{t('map.noActiveReservations')}</p> : null}
@@ -1078,7 +1078,7 @@ export default function MapPage() {
                 ) : null}
 
                 <div className="actions">
-                  <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Prepare booking</button>
+                  <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>{t('map.fields.prepareBooking')}</button>
                 </div>
               </div>
             ) : selectedObject ? (

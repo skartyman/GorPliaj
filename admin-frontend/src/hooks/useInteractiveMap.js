@@ -253,6 +253,13 @@ export function useInteractiveMap({
     [transform.scale, zoomAtPoint]
   );
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel, { passive: false });
+  }, [onWheel]);
+
   const zoomIn = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) {
@@ -283,8 +290,7 @@ export function useInteractiveMap({
       onPointerDown,
       onPointerMove,
       onPointerUp,
-      onPointerCancel: onPointerUp,
-      onWheel
+      onPointerCancel: onPointerUp
     },
     actions: {
       zoomIn,

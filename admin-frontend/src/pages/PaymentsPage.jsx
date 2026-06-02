@@ -7,22 +7,23 @@ import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDateTime } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
-const STATUS_ACTIONS = {
-  PENDING: [
-    { label: 'Mark paid', status: 'PAID', className: 'btn btn-small btn-success' },
-    { label: 'Cancel', status: 'CANCELLED', className: 'btn btn-small btn-danger' }
-  ],
-  REQUIRES_ACTION: [
-    { label: 'Mark paid', status: 'PAID', className: 'btn btn-small btn-success' },
-    { label: 'Mark failed', status: 'FAILED', className: 'btn btn-small btn-danger' }
-  ],
-  PAID: [
-    { label: 'Refund', status: 'REFUNDED', className: 'btn btn-small btn-warning' }
-  ]
-};
-
 export default function PaymentsPage() {
   const { t, language } = useAdminI18n();
+
+  const STATUS_ACTIONS = useMemo(() => ({
+    PENDING: [
+      { label: t('payments.statuses.PAID'), status: 'PAID', className: 'btn btn-small btn-success' },
+      { label: t('payments.statuses.CANCELLED'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+    ],
+    REQUIRES_ACTION: [
+      { label: t('payments.statuses.PAID'), status: 'PAID', className: 'btn btn-small btn-success' },
+      { label: t('payments.statuses.FAILED'), status: 'FAILED', className: 'btn btn-small btn-danger' }
+    ],
+    PAID: [
+      { label: t('payments.statuses.REFUNDED'), status: 'REFUNDED', className: 'btn btn-small btn-warning' }
+    ]
+  }), [t]);
+
   const [state, setState] = useState({ loading: true, error: '', payments: [], config: null });
   const [actionLoadingId, setActionLoadingId] = useState('');
 
@@ -136,7 +137,7 @@ export default function PaymentsPage() {
                 disabled={actionLoadingId === row.id}
                 onClick={() => onStatusUpdate(row.id, action.status)}
               >
-                {actionLoadingId === row.id ? 'Saving...' : action.label}
+                {actionLoadingId === row.id ? t('common.loading') : action.label}
               </button>
             ))}
           </div>

@@ -17,7 +17,15 @@ const translations = {
       guest: 'Гість',
       noData: '—',
       soon: 'скоро',
-      unknownStatus: 'НЕВІДОМО'
+      unknownStatus: 'НЕВІДОМО',
+      noAccess: 'Немає доступу до цієї сторінки',
+      loadFailed: 'Не вдалося завантажити дані',
+      failed: 'Не вдалося',
+      saved: 'Збережено',
+      deleted: 'Видалено',
+      noItems: 'Немає даних',
+      id: 'ID',
+      total: 'Всього'
     },
     install: {
       title: 'Встановити адмінку',
@@ -460,7 +468,15 @@ const translations = {
         table: 'Стіл',
         zone: 'Зона',
         availability: 'Доступність',
-        capacity: 'Місткість'
+        capacity: 'Місткість',
+        code: 'Код',
+        deposit: 'Депозит',
+        bookable: 'Бронювання',
+        yes: 'Так',
+        no: 'Ні',
+        status: 'Статус',
+        close: 'Закрити',
+        prepareBooking: 'Забронювати'
       },
       tablePhotoAlt: 'Фото столу {table}'
     },
@@ -476,6 +492,76 @@ const translations = {
       UNAVAILABLE: 'Недоступно',
       FREE: 'Вільно',
       UNKNOWN: 'Невідомо'
+    },
+    eventsAdmin: {
+      title: 'Події',
+      description: 'Управління афішами, перекладами та сторінками подій.',
+      loading: 'Завантажуємо події...',
+      empty: 'Подій поки немає.',
+      table: 'Таблиця',
+      calendar: 'Календар',
+      total: 'Всього подій',
+      published: 'Опубліковано',
+      featured: 'Вибрані',
+      errors: {
+        load: 'Не вдалося завантажити події.',
+        save: 'Не вдалося зберегти подію.',
+        delete: 'Не вдалося видалити подію.',
+        upload: 'Не вдалося завантажити постер.'
+      },
+      columns: {
+        title: 'Подія',
+        start: 'Початок',
+        status: 'Статус',
+        actions: 'Дії'
+      },
+      form: {
+        edit: 'Редагувати подію',
+        create: 'Створити подію',
+        delete: 'Видалити',
+        save: 'Зберегти зміни',
+        saving: 'Зберігаємо...',
+        cancel: 'Скасувати',
+        created: 'Подію створено.',
+        updated: 'Подію оновлено.',
+        deleted: 'Подію видалено.',
+        translate: '✦✦ Перекласти RU/EN з UA',
+        translating: 'Перекладаємо...',
+        deleteConfirm: 'Видалити подію "{title}"?',
+        preview: 'Попередній перегляд',
+        openPublic: 'Відкрити публічну сторінку',
+        posterUpload: 'Завантажити постер',
+        fields: {
+          title: 'Назва',
+          slug: 'Посилання (slug)',
+          start: 'Початок',
+          end: 'Кінець',
+          status: 'Статус',
+          cta: 'Кнопка (CTA)',
+          shortDescription: 'Короткий опис',
+          fullDescription: 'Повний опис',
+          posterUrl: 'URL постера',
+          ticketUrl: 'URL квитків',
+          featured: 'Вибранa подія'
+        },
+        placeholders: {
+          autoTranslated: 'Автоматичний переклад',
+          fullDescriptionUa: 'Повний опис українською...',
+          fullDescriptionRu: 'Повний опис російською...',
+          fullDescriptionEn: 'Full description in English...',
+          ticketUrl: 'https://tickets.example.com'
+        }
+      },
+      statusOptions: {
+        DRAFT: 'Чернетка',
+        PUBLISHED: 'Опубліковано',
+        ARCHIVED: 'В архіві'
+      },
+      ctaOptions: {
+        BOOKING: 'Бронювання',
+        TICKETS: 'Квитки',
+        BOTH: 'Обидва'
+      }
     },
     newsAdmin: {
       title: 'Новини',
@@ -661,7 +747,15 @@ const translations = {
       guest: 'Гость',
       noData: '—',
       soon: 'скоро',
-      unknownStatus: 'НЕИЗВЕСТНО'
+      unknownStatus: 'НЕИЗВЕСТНО',
+      noAccess: 'Нет доступа к этой странице',
+      loadFailed: 'Не удалось загрузить данные',
+      failed: 'Не удалось',
+      saved: 'Сохранено',
+      deleted: 'Удалено',
+      noItems: 'Нет данных',
+      id: 'ID',
+      total: 'Всего'
     },
     roles: {
       seo_smm: 'SEO/SMM',
@@ -733,7 +827,15 @@ const translations = {
       guest: 'Guest',
       noData: '—',
       soon: 'soon',
-      unknownStatus: 'UNKNOWN'
+      unknownStatus: 'UNKNOWN',
+      noAccess: 'No access to this page',
+      loadFailed: 'Failed to load data',
+      failed: 'Failed',
+      saved: 'Saved',
+      deleted: 'Deleted',
+      noItems: 'No data',
+      id: 'ID',
+      total: 'Total'
     },
     roles: {
       seo_smm: 'SEO/SMM',

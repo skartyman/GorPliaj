@@ -1,11 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
 import PageContainer from '../components/PageContainer';
 
 const VALID_ROLES = ['seo_smm', 'hostess', 'admin', 'manager', 'owner'];
+const ADMIN_ROLES = ['admin', 'manager', 'owner'];
 
 export default function UsersPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { t } = useAdminI18n();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,14 +28,15 @@ export default function UsersPage() {
         const data = await response.json();
         setUsers(data.users);
       } else {
-        setError('Failed to load users');
+        const errData = await response.json().catch(() => null);
+        setError(errData?.message || t('common.loadFailed'));
       }
     } catch {
-      setError('Failed to load users');
+      setError(t('common.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -49,10 +55,10 @@ export default function UsersPage() {
         fetchUsers();
       } else {
         const errData = await response.json().catch(() => null);
-        setError(errData?.message || 'Failed to create user');
+        setError(errData?.message || t('common.failed'));
       }
     } catch {
-      setError('Failed to create user');
+      setError(t('common.failed'));
     }
   }
 
@@ -69,10 +75,10 @@ export default function UsersPage() {
         fetchUsers();
       } else {
         const errData = await response.json().catch(() => null);
-        setError(errData?.message || 'Failed to update user');
+        setError(errData?.message || t('common.failed'));
       }
     } catch {
-      setError('Failed to update user');
+      setError(t('common.failed'));
     }
   }
 
@@ -85,11 +91,19 @@ export default function UsersPage() {
         fetchUsers();
       } else {
         const errData = await response.json().catch(() => null);
-        setError(errData?.message || 'Failed to delete user');
+        setError(errData?.message || t('common.failed'));
       }
     } catch {
-      setError('Failed to delete user');
+      setError(t('common.failed'));
     }
+  }
+
+  if (!ADMIN_ROLES.includes(user?.role)) {
+    return (
+      <PageContainer title={t('users.title')}>
+        <p className="card">{t('common.noAccess')}</p>
+      </PageContainer>
+    );
   }
 
   if (loading) {
@@ -130,7 +144,7 @@ export default function UsersPage() {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>{t('common.id')}</th>
               <th>{t('users.email')}</th>
               <th>{t('users.role')}</th>
               <th>{t('users.createdAt')}</th>
