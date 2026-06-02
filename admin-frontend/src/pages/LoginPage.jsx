@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { t } = useAdminI18n();
@@ -40,6 +42,7 @@ export default function LoginPage() {
       return;
     }
 
+    setUser(body.admin);
     navigate('/admin/dashboard', { replace: true });
   }
 
