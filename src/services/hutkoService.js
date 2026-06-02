@@ -201,6 +201,7 @@ async function processCallback(payload) {
         where: { id: reservationId },
         include: {
           table: { select: { name: true } },
+          zone: { select: { name: true } },
           payment: true
         }
       });
@@ -213,13 +214,17 @@ async function processCallback(payload) {
           to: reservation.customerEmail,
           ticketCode: reservation.ticketCode,
           customerName: reservation.customerName,
+          customerPhone: reservation.customerPhone || '',
           reservationDate: reservation.reservationDate,
           timeFrom: reservation.timeFrom,
           timeTo: reservation.timeTo,
           guests: reservation.guests,
           tableName: reservation.table?.name || '',
+          zoneName: reservation.zone?.name || '',
           qrDataUrl,
-          status: 'PAID'
+          verifyUrl,
+          status: 'PAID',
+          paymentStatus: 'PAID'
         });
       }
     } catch (emailError) {
