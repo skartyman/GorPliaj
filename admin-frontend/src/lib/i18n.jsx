@@ -144,6 +144,10 @@ const translations = {
       },
       statuses: {
         all: 'Всі'
+      },
+      viewToggle: {
+        table: 'Таблиця',
+        kanban: 'Дошка'
       }
     },
     reservationDetail: {
@@ -470,6 +474,82 @@ const translations = {
       UNAVAILABLE: 'Недоступно',
       FREE: 'Вільно',
       UNKNOWN: 'Невідомо'
+    },
+    newsAdmin: {
+      title: 'Новини',
+      description: 'Редагуйте новини та анонси для головної сторінки.',
+      eyebrow: 'Новини закладу',
+      heroTitle: 'Створюйте та публікуйте новини',
+      heroDescription: 'Додавайте заголовки та тексти новин з автоперекладом.',
+      loading: 'Завантажуємо новини...',
+      empty: 'Новин поки немає. Створіть першу новину.',
+      errors: {
+        load: 'Не вдалося завантажити новини.',
+        save: 'Не вдалося зберегти новину.',
+        delete: 'Не вдалося видалити новину.'
+      },
+      stats: {
+        total: 'Всього новин'
+      },
+      form: {
+        createTitle: 'Створити новину',
+        editTitle: 'Редагувати новину',
+        titleLabel: 'Заголовок',
+        bodyLabel: 'Текст новини',
+        save: 'Зберегти новину',
+        saving: 'Зберігаємо...',
+        cancel: 'Скасувати',
+        delete: 'Видалити',
+        deleteConfirm: 'Видалити новину «{title}»?',
+        translate: '✦✦ Перекласти RU/EN з UA',
+        translating: 'Перекладаємо...',
+        created: 'Новину створено.',
+        updated: 'Новину оновлено.',
+        deleted: 'Новину видалено.'
+      },
+      columns: {
+        title: 'Заголовок',
+        date: 'Дата',
+        actions: 'Дії'
+      }
+    },
+    payments: {
+      title: 'Платежі',
+      description: 'Перегляд транзакцій та управління платежами.',
+      eyebrow: 'Фінанси',
+      heroTitle: 'Транзакції та статуси платежів',
+      heroDescription: 'Моніторинг усіх платежів через Hutko (Fondy).',
+      loading: 'Завантажуємо платежі...',
+      empty: 'Платежів поки немає.',
+      notConfigured: 'Платіжний шлюз не налаштовано. Додайте FONDY_MERCHANT_ID та FONDY_SECRET_KEY у .env.',
+      errors: {
+        load: 'Не вдалося завантажити платежі.',
+        update: 'Не вдалося оновити статус платежу.'
+      },
+      summary: {
+        total: 'Всього',
+        paid: 'Сплачено',
+        pending: 'Очікує',
+        failed: 'Невдало',
+        amount: 'Сума'
+      },
+      columns: {
+        id: '№',
+        reservation: 'Бронювання',
+        amount: 'Сума',
+        status: 'Статус',
+        provider: 'Провайдер',
+        date: 'Дата',
+        actions: 'Дії'
+      },
+      statuses: {
+        PENDING: 'Очікує',
+        REQUIRES_ACTION: 'Потрібна дія',
+        PAID: 'Сплачено',
+        FAILED: 'Невдало',
+        REFUNDED: 'Повернено',
+        CANCELLED: 'Скасовано'
+      }
     },
     settings: {
       title: 'Налаштування',

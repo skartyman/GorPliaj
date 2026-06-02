@@ -3,6 +3,8 @@ import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import PanelCard from '../components/PanelCard';
 import DataTable from '../components/DataTable';
+import CalendarView from '../components/CalendarView';
+import RichEditor from '../components/RichEditor';
 import { apiRequest, formatDateTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
@@ -50,6 +52,7 @@ function fromDateTimeLocal(value) {
 
 export default function EventsPage() {
   const { language } = useAdminI18n();
+  const [viewMode, setViewMode] = useState('table');
   const [state, setState] = useState({ loading: true, error: '', events: [] });
   const [form, setForm] = useState(DEFAULT_FORM);
   const [editId, setEditId] = useState(null);
@@ -264,9 +267,59 @@ export default function EventsPage() {
             <span className="muted">Featured</span>
           </div>
         </div>
+        <div className="menu-admin-section-switch" role="tablist" style={{ marginTop: 14 }}>
+          <button
+            type="button"
+            className={`menu-admin-section-switch-btn ${viewMode === 'table' ? 'active' : ''}`}
+            onClick={() => setViewMode('table')}
+          >
+            Table
+          </button>
+          <button
+            type="button"
+            className={`menu-admin-section-switch-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+          >
+            Calendar
+          </button>
+        </div>
+
         {state.loading ? <p>Loading events...</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
-        {!state.loading && <DataTable columns={columns} rows={state.events} emptyText="No events yet." />}
+        {!state.loading && viewMode === 'table' ? (
+          <DataTable columns={columns} rows={state.events} emptyText="No events yet." />
+        ) : null}
+        {!state.loading && viewMode === 'calendar' ? (
+          <CalendarView
+            items={state.events.map((event) => ({
+              date: event.startAt,
+              title: localizeField(event.title, language),
+              color: event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'neutral' : 'danger',
+              renderItem: () => (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 8 }}>
+                  <div>
+                    <strong>{localizeField(event.title, language)}</strong>
+                    <div className="muted" style={{ fontSize: 11 }}>
+                      {formatDateTime(event.startAt, language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}
+                    </div>
+                  </div>
+                  <span className={`status-pill ${event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'neutral' : 'danger'}`}>
+                    {event.status}
+                  </span>
+                </div>
+              )
+            }))}
+            onDateClick={(date) => {
+              const match = state.events.find((e) => {
+                const d = new Date(e.startAt);
+                return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() && d.getDate() === date.getDate();
+              });
+              if (match) {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+              }
+            }}
+          />
+        ) : null}
       </PageContainer>
 
       <div className="grid-two-col" style={{ alignItems: 'start' }}>
@@ -319,9 +372,30 @@ export default function EventsPage() {
             </div>
 
             <div style={{ marginTop: '1rem' }}>
-              <label>Full Description (UA) <textarea value={form.fullDescription.ua} onChange={(e) => setLocalizedField('fullDescription', 'ua', e.target.value)} rows="5" /></label>
-              <label>Full Description (RU) <textarea value={form.fullDescription.ru} onChange={(e) => setLocalizedField('fullDescription', 'ru', e.target.value)} placeholder="Auto-translated" rows="5" /></label>
-              <label>Full Description (EN) <textarea value={form.fullDescription.en} onChange={(e) => setLocalizedField('fullDescription', 'en', e.target.value)} placeholder="Auto-translated" rows="5" /></label>
+              <label>
+                Full Description (UA)
+                <RichEditor
+                  value={form.fullDescription.ua}
+                  onChange={(html) => setLocalizedField('fullDescription', 'ua', html)}
+                  placeholder="Full description in Ukrainian..."
+                />
+              </label>
+              <label>
+                Full Description (RU)
+                <RichEditor
+                  value={form.fullDescription.ru}
+                  onChange={(html) => setLocalizedField('fullDescription', 'ru', html)}
+                  placeholder="Full description in Russian..."
+                />
+              </label>
+              <label>
+                Full Description (EN)
+                <RichEditor
+                  value={form.fullDescription.en}
+                  onChange={(html) => setLocalizedField('fullDescription', 'en', html)}
+                  placeholder="Full description in English..."
+                />
+              </label>
             </div>
 
             <div className="actions compact" style={{ marginTop: '0.5rem' }}>

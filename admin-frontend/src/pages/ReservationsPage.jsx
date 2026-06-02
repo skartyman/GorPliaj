@@ -9,8 +9,113 @@ import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { parseReservationMeta } from '../lib/reservationMeta';
 
+const KANBAN_STATUS_ORDER = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'HELD', 'SEATED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+
+function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language, dateLocale }) {
+  const meta = parseReservationMeta(reservation.commentCustomer);
+  const actions = {
+    PENDING: [
+      { label: t('reservations.actions.confirm'), status: 'CONFIRMED', className: 'btn btn-small' },
+      { label: t('reservations.actions.cancel'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+    ],
+    CONFIRMED: [
+      { label: t('reservations.actions.complete'), status: 'COMPLETED', className: 'btn btn-small btn-success' },
+      { label: t('reservations.actions.cancel'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+    ]
+  }[reservation.status] || [];
+
+  return (
+    <div className="kanban-card">
+      <div className="kanban-card-head">
+        <Link to={`/admin/reservations/${reservation.id}`} className="kanban-card-title">
+          #{reservation.id} {reservation.customerName || t('common.guest')}
+        </Link>
+        <StatusPill status={reservation.status} />
+      </div>
+      <div className="kanban-card-body">
+        <div className="kanban-card-row">
+          <span className="muted">{t('reservations.columns.phone')}:</span>
+          <span>{reservation.customerPhone || t('common.noData')}</span>
+        </div>
+        <div className="kanban-card-row">
+          <span className="muted">{t('reservations.columns.guests')}:</span>
+          <span>{reservation.guests || '—'}</span>
+        </div>
+        <div className="kanban-card-row">
+          <span className="muted">{t('reservations.columns.tableZone')}:</span>
+          <span>{reservation.table?.code || localizeField(reservation.table?.name, language) || '—'} / {localizeField(reservation.zone?.name, language) || '—'}</span>
+        </div>
+        <div className="kanban-card-row">
+          <span className="muted">{t('reservations.columns.dateTime')}:</span>
+          <span>{formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)}</span>
+        </div>
+        <div className="kanban-card-row">
+          <span className="muted">{t('reservations.columns.modePlace')}:</span>
+          <span>{meta.mode ? t(`reservationMeta.mode.${meta.mode}`) : '—'} / {meta.place ? t(`reservationMeta.place.${meta.place}`) : '—'}</span>
+        </div>
+      </div>
+      {actions.length > 0 ? (
+        <div className="kanban-card-actions">
+          {actions.map((action) => (
+            <button
+              key={`${reservation.id}-${action.status}`}
+              type="button"
+              className={action.className}
+              disabled={actionLoadingId === reservation.id}
+              onClick={() => onQuickAction(reservation.id, action.status)}
+            >
+              {actionLoadingId === reservation.id ? t('reservations.actions.save') : action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function KanbanBoard({ rows, onQuickAction, actionLoadingId, t, language, dateLocale }) {
+  const dateLocaleResolved = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
+  const columns = useMemo(() => {
+    const grouped = {};
+    for (const status of KANBAN_STATUS_ORDER) {
+      const items = rows.filter((r) => r.status === status);
+      if (items.length > 0) {
+        grouped[status] = items;
+      }
+    }
+    return grouped;
+  }, [rows]);
+
+  return (
+    <div className="kanban-board">
+      {Object.entries(columns).map(([status, items]) => (
+        <div key={status} className="kanban-column">
+          <div className="kanban-column-head">
+            <StatusPill status={status} />
+            <span className="kanban-column-count">{items.length}</span>
+          </div>
+          <div className="kanban-column-body">
+            {items.map((reservation) => (
+              <KanbanCard
+                key={reservation.id}
+                reservation={reservation}
+                onQuickAction={onQuickAction}
+                actionLoadingId={actionLoadingId}
+                t={t}
+                language={language}
+                dateLocale={dateLocaleResolved}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ReservationsPage() {
   const [state, setState] = useState({ loading: true, error: '', rows: [] });
+  const [viewMode, setViewMode] = useState('table');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
@@ -227,6 +332,23 @@ export default function ReservationsPage() {
           </div>
         </section>
 
+        <div className="menu-admin-section-switch" role="tablist">
+          <button
+            type="button"
+            className={`menu-admin-section-switch-btn ${viewMode === 'table' ? 'active' : ''}`}
+            onClick={() => setViewMode('table')}
+          >
+            {t('reservations.viewToggle.table')}
+          </button>
+          <button
+            type="button"
+            className={`menu-admin-section-switch-btn ${viewMode === 'kanban' ? 'active' : ''}`}
+            onClick={() => setViewMode('kanban')}
+          >
+            {t('reservations.viewToggle.kanban')}
+          </button>
+        </div>
+
         <FilterBar>
           <label>
             {t('reservations.searchLabel')}
@@ -257,7 +379,18 @@ export default function ReservationsPage() {
         {state.loading ? <p>{t('reservations.loading')}</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
         {!state.loading && !state.error ? (
-          <DataTable columns={columns} rows={filteredRows} emptyText={t('reservations.empty')} />
+          viewMode === 'table' ? (
+            <DataTable columns={columns} rows={filteredRows} emptyText={t('reservations.empty')} />
+          ) : (
+            <KanbanBoard
+              rows={filteredRows}
+              onQuickAction={onQuickAction}
+              actionLoadingId={actionLoadingId}
+              t={t}
+              language={language}
+              dateLocale={dateLocale}
+            />
+          )
         ) : null}
       </PageContainer>
     </AdminLayout>

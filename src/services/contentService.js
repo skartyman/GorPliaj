@@ -6,8 +6,9 @@ function getEvents() {
   return [];
 }
 
-function getNews() {
-  return [];
+async function getNews() {
+  const { listPublicNews } = require('./newsService');
+  return await listPublicNews();
 }
 
 async function getDefaultMap() {

@@ -89,8 +89,14 @@ async function getEventBySlug(req, res) {
   }
 }
 
-function getNews(req, res) {
-  res.json(contentService.getNews());
+async function getNews(req, res) {
+  try {
+    const news = await contentService.getNews();
+    return res.json(news);
+  } catch (error) {
+    console.error('[publicController.getNews] Failed to load news.', error);
+    return res.status(500).json({ message: 'Unable to load news.' });
+  }
 }
 
 async function getSettings(req, res) {

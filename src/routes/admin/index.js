@@ -37,6 +37,19 @@ const {
   deleteAdminEvent
 } = require('../../controllers/adminEventController');
 const {
+  getAdminPayments,
+  getAdminPaymentById,
+  updateAdminPaymentStatus,
+  getPaygateConfig
+} = require('../../controllers/adminPaymentController');
+const {
+  getAdminNews,
+  getAdminNewsById,
+  createAdminNews,
+  updateAdminNews,
+  deleteAdminNews
+} = require('../../controllers/adminNewsController');
+const {
   getSettings,
   updateSettings,
   patchSettings
@@ -84,6 +97,17 @@ router.get('/events/:id', requireAdminAuth, getAdminEventById);
 router.post('/events', requireAdminAuth, createAdminEvent);
 router.patch('/events/:id', requireAdminAuth, updateAdminEvent);
 router.delete('/events/:id', requireAdminAuth, deleteAdminEvent);
+
+router.get('/news', requireAdminAuth, getAdminNews);
+router.get('/news/:id', requireAdminAuth, getAdminNewsById);
+router.post('/news', requireAdminAuth, createAdminNews);
+router.patch('/news/:id', requireAdminAuth, updateAdminNews);
+router.delete('/news/:id', requireAdminAuth, deleteAdminNews);
+
+router.get('/payments', requireAdminAuth, getAdminPayments);
+router.get('/payments/config', requireAdminAuth, getPaygateConfig);
+router.get('/payments/:id', requireAdminAuth, getAdminPaymentById);
+router.patch('/payments/:id/status', requireAdminAuth, updateAdminPaymentStatus);
 
 router.get('/settings', requireAdminAuth, getSettings);
 router.put('/settings', requireAdminAuth, updateSettings);
