@@ -1,7 +1,6 @@
-const { PrismaClient, MapObjectType, MapStatus } = require('@prisma/client');
+const { MapObjectType, MapStatus } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
-
-const prisma = new PrismaClient();
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
 const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];

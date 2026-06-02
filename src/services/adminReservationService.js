@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const ALLOWED_TRANSITIONS = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
@@ -124,9 +122,25 @@ async function updateAdminReservationStatus({ id, status }) {
   return { type: 'UPDATED', reservation };
 }
 
+async function deleteAdminReservation(id) {
+  try {
+    await prisma.reservation.delete({
+      where: { id }
+    });
+    return true;
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 module.exports = {
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,
-  getAllowedNextStatuses
+  getAllowedNextStatuses,
+  deleteAdminReservation
 };

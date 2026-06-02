@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 import { LocaleProvider } from './state/locale';
 import { CartProvider } from './state/cart';
 import { SettingsProvider } from './state/settings';
@@ -68,14 +69,16 @@ if ('serviceWorker' in navigator) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <SettingsProvider>
-        <LocaleProvider>
-          <CartProvider>
-            <App />
-          </CartProvider>
-        </LocaleProvider>
-      </SettingsProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <SettingsProvider>
+          <LocaleProvider>
+            <CartProvider>
+              <App />
+            </CartProvider>
+          </LocaleProvider>
+        </SettingsProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );

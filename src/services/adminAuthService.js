@@ -1,14 +1,17 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { ADMIN_AUTH_SECRET, isLocalDevelopment } = require('../config/env');
 
-const prisma = new PrismaClient();
+const effectiveSecret = ADMIN_AUTH_SECRET || (() => {
+  if (!isLocalDevelopment) {
+    throw new Error('ADMIN_AUTH_SECRET environment variable is required for admin authentication.');
+  }
 
-if (!ADMIN_AUTH_SECRET) {
-  const environmentLabel = isLocalDevelopment ? 'local development' : 'non-development environments';
-  throw new Error(`ADMIN_AUTH_SECRET must be set for admin authentication in ${environmentLabel}.`);
-}
+  const generated = crypto.randomBytes(32).toString('hex');
+  console.warn('ADMIN_AUTH_SECRET not set. Generated temporary key for development:', generated);
+  return generated;
+})();
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 
 function encodePayload(payload) {
@@ -26,7 +29,7 @@ function decodePayload(tokenPart) {
 
 function signTokenPart(tokenPart) {
   return crypto
-    .createHmac('sha256', ADMIN_AUTH_SECRET)
+    .createHmac('sha256', effectiveSecret)
     .update(tokenPart)
     .digest('base64url');
 }

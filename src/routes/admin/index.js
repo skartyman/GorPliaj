@@ -7,6 +7,7 @@ const {
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,
+  deleteAdminReservation,
   listAdminMaps,
   createAdminMapVariant,
   deleteAdminMapVariant,
@@ -27,6 +28,7 @@ const {
   deleteMenuItem
 } = require('../../controllers/adminMenuController');
 const { requireAdminAuth } = require('../../middleware/adminAuth');
+const { rateLimiter } = require('../../middleware/rateLimiter');
 const {
   getAdminEvents,
   getAdminEventById,
@@ -50,13 +52,14 @@ const router = express.Router();
 
 router.get('/status', getAdminStatus);
 
-router.post('/auth/login', loginAdmin);
+router.post('/auth/login', rateLimiter, loginAdmin);
 router.get('/auth/me', requireAdminAuth, getAdminMe);
 router.post('/auth/logout', requireAdminAuth, logoutAdmin);
 
 router.get('/reservations', requireAdminAuth, getAdminReservations);
 router.get('/reservations/:id', requireAdminAuth, getAdminReservationById);
 router.patch('/reservations/:id/status', requireAdminAuth, updateAdminReservationStatus);
+router.delete('/reservations/:id', requireAdminAuth, deleteAdminReservation);
 router.get('/maps', requireAdminAuth, listAdminMaps);
 router.post('/maps', requireAdminAuth, createAdminMapVariant);
 router.patch('/maps/:id/default', requireAdminAuth, setDefaultAdminMap);

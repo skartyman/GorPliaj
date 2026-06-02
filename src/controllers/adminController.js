@@ -1,4 +1,4 @@
-const adminAuthService = require('../services/adminAuthService');
+  const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
 const adminMapEditorService = require('../services/adminMapEditorService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
@@ -173,6 +173,27 @@ async function updateAdminReservationStatus(req, res) {
 }
 
 
+async function deleteAdminReservation(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Invalid reservation id.' });
+    }
+
+    const wasDeleted = await adminReservationService.deleteAdminReservation(id);
+
+    if (!wasDeleted) {
+      return res.status(404).json({ message: 'Reservation not found.' });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('[adminController.deleteAdminReservation] Failed to delete reservation.', error);
+    return res.status(500).json({ message: 'Unable to delete reservation.' });
+  }
+}
+
 async function getAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -339,6 +360,7 @@ module.exports = {
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,
+  deleteAdminReservation,
   listAdminMaps,
   createAdminMapVariant,
   deleteAdminMapVariant,

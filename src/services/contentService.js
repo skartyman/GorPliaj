@@ -1,3 +1,5 @@
+const { MapStatus } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { fitMapToObjects } = require('../utils/mapBounds');
 
 function getEvents() {
@@ -9,99 +11,85 @@ function getNews() {
 }
 
 async function getDefaultMap() {
-  const { PrismaClient, MapStatus } = require('@prisma/client');
-  const prisma = new PrismaClient();
-
-  try {
-    const map = await prisma.map.findFirst({
-      where: {
-        isDefault: true,
-        status: MapStatus.ACTIVE,
+  const map = await prisma.map.findFirst({
+    where: {
+      isDefault: true,
+      status: MapStatus.ACTIVE,
+    },
+    include: {
+      zones: {
+        orderBy: {
+          sortOrder: 'asc',
+        },
       },
-      include: {
-        zones: {
-          orderBy: {
-            sortOrder: 'asc',
+      tables: true,
+      mapObjects: {
+        orderBy: [
+          {
+            zIndex: 'asc',
           },
-        },
-        tables: true,
-        mapObjects: {
-          orderBy: [
-            {
-              zIndex: 'asc',
-            },
-            {
-              id: 'asc',
-            },
-          ],
-        },
+          {
+            id: 'asc',
+          },
+        ],
       },
-    });
+    },
+  });
 
-    if (!map) {
-      return null;
-    }
-
-    const { zones, tables, mapObjects, ...mapData } = map;
-
-    return {
-      map: fitMapToObjects(mapData, mapObjects),
-      zones,
-      tables,
-      objects: mapObjects,
-    };
-  } finally {
-    await prisma.$disconnect();
+  if (!map) {
+    return null;
   }
+
+  const { zones, tables, mapObjects, ...mapData } = map;
+
+  return {
+    map: fitMapToObjects(mapData, mapObjects),
+    zones,
+    tables,
+    objects: mapObjects,
+  };
 }
 
 async function getMapById(mapId) {
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient();
+  const id = Number(mapId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
 
-  try {
-    const id = Number(mapId);
-    if (!Number.isInteger(id) || id <= 0) {
-      return null;
-    }
-
-    const map = await prisma.map.findUnique({
-      where: { id },
-      include: {
-        zones: {
-          orderBy: {
-            sortOrder: 'asc',
-          },
-        },
-        tables: true,
-        mapObjects: {
-          orderBy: [
-            {
-              zIndex: 'asc',
-            },
-            {
-              id: 'asc',
-            },
-          ],
+  const map = await prisma.map.findUnique({
+    where: { id },
+    include: {
+      zones: {
+        orderBy: {
+          sortOrder: 'asc',
         },
       },
-    });
+      tables: true,
+      mapObjects: {
+        orderBy: [
+          {
+            zIndex: 'asc',
+          },
+          {
+            id: 'asc',
+          },
+        ],
+      },
+    },
+  });
 
-    if (!map) {
-      return null;
-    }
-
-    const { zones, tables, mapObjects, ...mapData } = map;
-
-    return {
-      map: fitMapToObjects(mapData, mapObjects),
-      zones,
-      tables,
-      objects: mapObjects,
-    };
-  } finally {
-    await prisma.$disconnect();
+  if (!map) {
+    return null;
   }
+
+  const { zones, tables, mapObjects, ...mapData } = map;
+
+  return {
+    map: fitMapToObjects(mapData, mapObjects),
+    zones,
+    tables,
+    objects: mapObjects,
+  };
 }
 
 module.exports = {

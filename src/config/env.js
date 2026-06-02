@@ -52,8 +52,13 @@ module.exports = {
   GROQ_API_KEY: getOptionalEnv('GROQ_API_KEY', ''),
   APP_BASE_URL: getOptionalEnv('APP_BASE_URL', 'http://localhost:8080'),
   VENUE_CLOSING_TIME: getOptionalEnv('VENUE_CLOSING_TIME', '23:59'),
+  INVOICE_BOT_TOKEN: getOptionalEnv('INVOICE_BOT_TOKEN', ''),
+  GOOGLE_SHEETS_PRIVATE_KEY: getOptionalEnv('GOOGLE_SHEETS_PRIVATE_KEY', ''),
+  GOOGLE_SHEETS_CLIENT_EMAIL: getOptionalEnv('GOOGLE_SHEETS_CLIENT_EMAIL', ''),
+  GOOGLE_SHEETS_SPREADSHEET_ID: getOptionalEnv('GOOGLE_SHEETS_SPREADSHEET_ID', ''),
   R2_CONFIG,
   isR2Configured,
   isLocalDevelopment,
+  getOptionalEnv,
   getRequiredEnv
 };

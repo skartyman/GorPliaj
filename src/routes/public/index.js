@@ -17,9 +17,6 @@ router.get('/maps/default', mapController.getDefaultMap);
 router.get('/maps/:mapId', mapController.getMapById);
 router.get('/maps/:mapId/availability', mapController.getMapAvailability);
 
-router.get('/reservations', reservationController.getReservations);
 router.post('/reservations', reservationController.createReservation);
-router.patch('/reservations/:id/status', reservationController.updateReservationStatus);
-router.delete('/reservations/:id', reservationController.deleteReservation);
 
 module.exports = router;
