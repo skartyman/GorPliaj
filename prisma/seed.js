@@ -14,72 +14,55 @@ async function hashPassword(password) {
   return bcrypt.hash(password, 10);
 }
 
-async function upsertZone(mapId, zoneData) {
-  const existingZone = await prisma.zone.findFirst({
-    where: {
-      mapId,
-      name: zoneData.name,
-    },
+function jsonStr(uk, ru, en) {
+  return { uk, ru, en };
+}
+
+async function upsertZone(mapId, zoneKey, zoneData) {
+  const existing = await prisma.zone.findFirst({
+    where: { mapId, sortOrder: zoneData.sortOrder },
     select: { id: true },
   });
 
-  if (existingZone) {
+  if (existing) {
     return prisma.zone.update({
-      where: { id: existingZone.id },
+      where: { id: existing.id },
       data: zoneData,
     });
   }
 
   return prisma.zone.create({
-    data: {
-      mapId,
-      ...zoneData,
-    },
+    data: { mapId, ...zoneData },
   });
 }
 
 async function upsertTable(mapId, zoneId, tableData) {
   const existingTable = await prisma.venueTable.findFirst({
-    where: {
-      mapId,
-      code: tableData.code,
-    },
+    where: { mapId, code: tableData.code },
     select: { id: true },
   });
 
   if (existingTable) {
     return prisma.venueTable.update({
       where: { id: existingTable.id },
-      data: {
-        ...tableData,
-        zoneId,
-      },
+      data: { ...tableData, zoneId },
     });
   }
 
   return prisma.venueTable.create({
-    data: {
-      mapId,
-      zoneId,
-      ...tableData,
-    },
+    data: { mapId, zoneId, ...tableData },
   });
 }
 
 async function upsertMapObject(mapId, objectData) {
-  const baseWhere = {
-    mapId,
-    type: objectData.type,
-    tableId: objectData.tableId ?? null,
-  };
-
   const existingObject = await prisma.mapObject.findFirst({
-    where: objectData.type === MapObjectType.TABLE
-      ? baseWhere
-      : {
-          ...baseWhere,
-          label: objectData.label ?? null,
-        },
+    where: {
+      mapId,
+      type: objectData.type,
+      tableId: objectData.tableId ?? null,
+      x: objectData.x,
+      y: objectData.y,
+    },
     select: { id: true },
   });
 
@@ -91,14 +74,9 @@ async function upsertMapObject(mapId, objectData) {
   }
 
   return prisma.mapObject.create({
-    data: {
-      mapId,
-      ...objectData,
-    },
+    data: { mapId, ...objectData },
   });
 }
-
-
 
 async function upsertEvent(eventData) {
   const existingEvent = await prisma.event.findUnique({
@@ -113,9 +91,7 @@ async function upsertEvent(eventData) {
     });
   }
 
-  return prisma.event.create({
-    data: eventData,
-  });
+  return prisma.event.create({ data: eventData });
 }
 
 async function main() {
@@ -150,8 +126,8 @@ async function main() {
   const map = await prisma.map.upsert({
     where: { slug: 'main-venue' },
     update: {
-      name: 'Main venue map',
-      description: 'Main booking map for GorPliaj',
+      name: jsonStr('Main venue map', 'Main venue map', 'Main venue map'),
+      description: jsonStr('Main booking map for GorPliaj', 'Main booking map for GorPliaj', 'Main booking map for GorPliaj'),
       status: MapStatus.ACTIVE,
       isDefault: true,
       width: 1600,
@@ -159,9 +135,9 @@ async function main() {
       backgroundColor: '#0f172a',
     },
     create: {
-      name: 'Main venue map',
+      name: jsonStr('Main venue map', 'Main venue map', 'Main venue map'),
       slug: 'main-venue',
-      description: 'Main booking map for GorPliaj',
+      description: jsonStr('Main booking map for GorPliaj', 'Main booking map for GorPliaj', 'Main booking map for GorPliaj'),
       status: MapStatus.ACTIVE,
       isDefault: true,
       width: 1600,
@@ -171,33 +147,33 @@ async function main() {
   });
 
   const zones = {
-    beach: await upsertZone(map.id, {
-      name: 'Beach',
+    beach: await upsertZone(map.id, 'beach', {
+      name: jsonStr('Пляж', 'Пляж', 'Beach'),
       color: '#F4A261',
       sortOrder: 1,
     }),
-    lounge: await upsertZone(map.id, {
-      name: 'Lounge',
+    lounge: await upsertZone(map.id, 'lounge', {
+      name: jsonStr('Лаунж', 'Лаунж', 'Lounge'),
       color: '#2A9D8F',
       sortOrder: 2,
     }),
-    vip: await upsertZone(map.id, {
-      name: 'VIP',
+    vip: await upsertZone(map.id, 'vip', {
+      name: jsonStr('VIP', 'VIP', 'VIP'),
       color: '#6A4C93',
       sortOrder: 3,
     }),
   };
 
   const tables = [
-    { zoneKey: 'beach', name: 'Beach Table 1', code: 'B-01', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 140, y: 640 },
-    { zoneKey: 'beach', name: 'Beach Table 2', code: 'B-02', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 300, y: 640 },
-    { zoneKey: 'beach', name: 'Beach Family', code: 'B-03', seatsMin: 4, seatsMax: 6, deposit: '700.00', photoUrl: null, x: 470, y: 640 },
-    { zoneKey: 'lounge', name: 'Lounge Corner', code: 'L-01', seatsMin: 2, seatsMax: 4, deposit: '600.00', photoUrl: null, x: 640, y: 470 },
-    { zoneKey: 'lounge', name: 'Lounge Center', code: 'L-02', seatsMin: 4, seatsMax: 6, deposit: '800.00', photoUrl: null, x: 820, y: 470 },
-    { zoneKey: 'lounge', name: 'Lounge Sofa', code: 'L-03', seatsMin: 4, seatsMax: 8, deposit: '1000.00', photoUrl: null, x: 1000, y: 470 },
-    { zoneKey: 'vip', name: 'VIP Gold 1', code: 'V-01', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1220, y: 240 },
-    { zoneKey: 'vip', name: 'VIP Gold 2', code: 'V-02', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1380, y: 240 },
-    { zoneKey: 'vip', name: 'VIP Platinum', code: 'V-03', seatsMin: 6, seatsMax: 10, deposit: '1800.00', photoUrl: null, x: 1300, y: 420 },
+    { zoneKey: 'beach', name: jsonStr('Столик 1', 'Столик 1', 'Table 1'), code: 'B-01', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 140, y: 640 },
+    { zoneKey: 'beach', name: jsonStr('Столик 2', 'Столик 2', 'Table 2'), code: 'B-02', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 300, y: 640 },
+    { zoneKey: 'beach', name: jsonStr('Сімейний', 'Семейный', 'Family'), code: 'B-03', seatsMin: 4, seatsMax: 6, deposit: '700.00', photoUrl: null, x: 470, y: 640 },
+    { zoneKey: 'lounge', name: jsonStr('Кутовий', 'Угловой', 'Corner'), code: 'L-01', seatsMin: 2, seatsMax: 4, deposit: '600.00', photoUrl: null, x: 640, y: 470 },
+    { zoneKey: 'lounge', name: jsonStr('Центральний', 'Центральный', 'Center'), code: 'L-02', seatsMin: 4, seatsMax: 6, deposit: '800.00', photoUrl: null, x: 820, y: 470 },
+    { zoneKey: 'lounge', name: jsonStr('Софа', 'Софа', 'Sofa'), code: 'L-03', seatsMin: 4, seatsMax: 8, deposit: '1000.00', photoUrl: null, x: 1000, y: 470 },
+    { zoneKey: 'vip', name: jsonStr('VIP Gold 1', 'VIP Gold 1', 'VIP Gold 1'), code: 'V-01', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1220, y: 240 },
+    { zoneKey: 'vip', name: jsonStr('VIP Gold 2', 'VIP Gold 2', 'VIP Gold 2'), code: 'V-02', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1380, y: 240 },
+    { zoneKey: 'vip', name: jsonStr('VIP Platinum', 'VIP Platinum', 'VIP Platinum'), code: 'V-03', seatsMin: 6, seatsMax: 10, deposit: '1800.00', photoUrl: null, x: 1300, y: 420 },
   ];
 
   for (const table of tables) {
@@ -215,7 +191,7 @@ async function main() {
     await upsertMapObject(map.id, {
       tableId: tableRecord.id,
       type: MapObjectType.TABLE,
-      label: table.code,
+      label: jsonStr(table.code, table.code, table.code),
       x: table.x,
       y: table.y,
       width: 120,
@@ -229,7 +205,7 @@ async function main() {
   const staticObjects = [
     {
       type: MapObjectType.BAR,
-      label: 'Main Bar',
+      label: jsonStr('Головний бар', 'Главный бар', 'Main Bar'),
       x: 720,
       y: 120,
       width: 260,
@@ -237,7 +213,7 @@ async function main() {
     },
     {
       type: MapObjectType.STAGE,
-      label: 'Summer Stage',
+      label: jsonStr('Літня сцена', 'Летняя сцена', 'Summer Stage'),
       x: 300,
       y: 110,
       width: 280,
@@ -245,7 +221,7 @@ async function main() {
     },
     {
       type: MapObjectType.ENTRANCE,
-      label: 'Main Entrance',
+      label: jsonStr('Головний вхід', 'Главный вход', 'Main Entrance'),
       x: 40,
       y: 360,
       width: 100,
@@ -253,7 +229,7 @@ async function main() {
     },
     {
       type: MapObjectType.WC,
-      label: 'WC',
+      label: jsonStr('WC', 'WC', 'WC'),
       x: 1460,
       y: 100,
       width: 90,
@@ -261,7 +237,7 @@ async function main() {
     },
     {
       type: MapObjectType.STAIRS,
-      label: 'Sea View Stairs',
+      label: jsonStr('Сходи до моря', 'Лестница к морю', 'Sea View Stairs'),
       x: 1180,
       y: 620,
       width: 120,
@@ -269,7 +245,7 @@ async function main() {
     },
     {
       type: MapObjectType.PATH,
-      label: 'Main Walkway',
+      label: jsonStr('Головна алея', 'Главная аллея', 'Main Walkway'),
       x: 120,
       y: 760,
       width: 1220,
@@ -296,10 +272,18 @@ async function main() {
 
   const now = new Date();
   await upsertEvent({
-    title: 'Sunset DJ Session',
+    title: jsonStr('Sunset DJ Session', 'Sunset DJ Session', 'Sunset DJ Session'),
     slug: 'sunset-dj-session',
-    shortDescription: 'Friday sunset set on the beach terrace.',
-    fullDescription: 'Live DJ set with signature cocktails, beach lounge mood, and evening skyline at GorPliaj.',
+    shortDescription: jsonStr(
+      'П\'ятничний захід на заході сонця на пляжній терасі.',
+      'Пятничное мероприятие на закате на пляжной террасе.',
+      'Friday sunset set on the beach terrace.'
+    ),
+    fullDescription: jsonStr(
+      'Живий DJ-сет з фірмовими коктейлями, пляжним настроєм і вечірнім небом у GorPliaj.',
+      'Живой DJ-сет с фирменными коктейлями, пляжным настроением и вечерним небом в GorPliaj.',
+      'Live DJ set with signature cocktails, beach lounge mood, and evening skyline at GorPliaj.'
+    ),
     posterImage: '/icons/photo_2026-03-22_18-51-11.jpg',
     startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 19, 0, 0),
     endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 23, 30, 0),
@@ -307,6 +291,28 @@ async function main() {
     isFeatured: true,
     ctaType: EventCtaType.BOTH,
     ticketUrl: 'https://example.com/tickets/sunset-dj-session',
+  });
+
+  await upsertEvent({
+    title: jsonStr('Family Beach Weekend', 'Family Beach Weekend', 'Family Beach Weekend'),
+    slug: 'family-beach-weekend',
+    shortDescription: jsonStr(
+      'Вікенд сімейних заходів біля моря.',
+      'Выходные семейных мероприятий у моря.',
+      'Weekend family-friendly activities by the sea.'
+    ),
+    fullDescription: jsonStr(
+      'Дитячі активності, сімейне меню та затишні зони для візитів у денний час.',
+      'Детские активности, семейное меню и уютные зоны для дневных визитов.',
+      'Kids activities, family menu offers, and relaxed seating zones for weekend daytime visits.'
+    ),
+    posterImage: '/icons/lebedi.jpg',
+    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 12, 0, 0),
+    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 18, 0, 0),
+    status: EventStatus.PUBLISHED,
+    isFeatured: false,
+    ctaType: EventCtaType.BOOKING,
+    ticketUrl: null,
   });
 
   await upsertEvent({
