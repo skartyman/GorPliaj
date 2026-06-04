@@ -6,9 +6,8 @@ import PanelCard from '../components/PanelCard';
 import { apiRequest, localizeField, normalizeLocalizedField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
-const TEXTURE_ASSETS_STORAGE_KEY = 'map-editor-texture-assets';
-const CUSTOM_OBJECT_ASSETS_STORAGE_KEY = 'map-editor-custom-object-assets';
 const MAP_PREVIEW_DRAFT_STORAGE_PREFIX = 'map-editor-preview-draft:';
+const MAP_ASSET_LIBRARY_ENDPOINT = '/api/admin/map-assets';
 
 const STATIC_TYPE_ACCENTS = {
   BAR: 'bar',
@@ -309,22 +308,21 @@ function compareMapObjects(a, b) {
   return (Number(a?.id) || 0) - (Number(b?.id) || 0);
 }
 
-function loadTextureAssets() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(TEXTURE_ASSETS_STORAGE_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+function normalizeTextureAsset(asset) {
+  if (!asset || asset.assetType !== 'texture' || !asset.url) return null;
+  return {
+    id: asset.id,
+    assetType: 'texture',
+    name: asset.name || 'Texture',
+    url: asset.url,
+    key: asset.key || ''
+  };
 }
 
-function loadCustomObjectAssets() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CUSTOM_OBJECT_ASSETS_STORAGE_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed.map(normalizeObjectTemplate).filter(Boolean) : [];
-  } catch {
-    return [];
-  }
+function normalizeStoredObjectAsset(asset) {
+  if (!asset || asset.assetType !== 'object') return null;
+  const normalized = normalizeObjectTemplate(asset);
+  return normalized ? { ...asset, ...normalized, assetType: 'object' } : null;
 }
 
 function cloneEditorSnapshot(snapshot) {
@@ -620,7 +618,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('folder', 'menu');
+    formData.append('folder', 'map-objects');
     formData.append('image', file);
 
     const result = await apiRequest('/api/admin/uploads/image', {
@@ -722,7 +720,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('folder', 'menu');
+    formData.append('folder', 'map-objects');
     formData.append('image', file);
 
     const result = await apiRequest('/api/admin/uploads/image', {
@@ -1441,7 +1439,7 @@ function CustomObjectCreator({ onCreate, onCreateAndSave, t }) {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('folder', 'menu');
+    formData.append('folder', 'map-objects');
     formData.append('image', file);
 
     const result = await apiRequest('/api/admin/uploads/image', {
@@ -1602,8 +1600,8 @@ export default function MapEditorPage() {
   const pendingSaveRef = useRef(null);
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
-  const [textureAssets, setTextureAssets] = useState(loadTextureAssets);
-  const [customObjectAssets, setCustomObjectAssets] = useState(loadCustomObjectAssets);
+  const [textureAssets, setTextureAssets] = useState([]);
+  const [customObjectAssets, setCustomObjectAssets] = useState([]);
   const [editorState, setEditorState] = useState({
     loading: true,
     saving: false,
@@ -1776,12 +1774,27 @@ export default function MapEditorPage() {
     setEditorState((prev) => ({ ...prev, polygonDraft: null }));
   }
 
+  function syncMapAssetsFromLibrary(assets) {
+    const normalizedAssets = Array.isArray(assets) ? assets : [];
+    setTextureAssets(normalizedAssets.map(normalizeTextureAsset).filter(Boolean));
+    setCustomObjectAssets(normalizedAssets.map(normalizeStoredObjectAsset).filter(Boolean));
+  }
+
+  async function loadMapAssetLibrary() {
+    const result = await apiRequest(MAP_ASSET_LIBRARY_ENDPOINT);
+    if (result.response.ok) {
+      syncMapAssetsFromLibrary(result.body?.assets);
+    }
+  }
+
   async function handleTextureUpload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('folder', 'menu');
+    formData.append('folder', 'map-objects');
+    formData.append('assetType', 'texture');
+    formData.append('name', file.name);
     formData.append('image', file);
 
     const result = await apiRequest('/api/admin/uploads/image', {
@@ -1791,10 +1804,12 @@ export default function MapEditorPage() {
 
     if (result.response.ok && result.body?.url) {
       setTextureAssets((prev) => [
-        {
+        normalizeTextureAsset(result.body.asset) || {
           id: `texture-${Date.now()}`,
+          assetType: 'texture',
           name: file.name,
-          url: result.body.url
+          url: result.body.url,
+          key: result.body.key || ''
         },
         ...prev
       ]);
@@ -1811,11 +1826,20 @@ export default function MapEditorPage() {
     handleFieldChange('texture', '');
   }
 
-  function deleteTextureAsset(assetId) {
+  async function deleteTextureAsset(assetId) {
+    const result = await apiRequest(`${MAP_ASSET_LIBRARY_ENDPOINT}/${encodeURIComponent(assetId)}`, {
+      method: 'DELETE'
+    });
+
+    if (result.response.ok && Array.isArray(result.body?.assets)) {
+      syncMapAssetsFromLibrary(result.body.assets);
+      return;
+    }
+
     setTextureAssets((prev) => prev.filter((asset) => asset.id !== assetId));
   }
 
-  function upsertCustomObjectAsset(template) {
+  async function upsertCustomObjectAsset(template) {
     const normalized = normalizeObjectTemplate(template);
     if (!normalized) return;
 
@@ -1830,6 +1854,19 @@ export default function MapEditorPage() {
 
       return next.slice(0, 60);
     });
+
+    const result = await apiRequest(MAP_ASSET_LIBRARY_ENDPOINT, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...normalized,
+        assetType: 'object',
+        name: normalized.label
+      })
+    });
+
+    if (result.response.ok && Array.isArray(result.body?.assets)) {
+      syncMapAssetsFromLibrary(result.body.assets);
+    }
   }
 
   function registerSelectedObjectTemplate(metaOverrides = {}) {
@@ -1858,12 +1895,8 @@ export default function MapEditorPage() {
   }, [t]);
 
   useEffect(() => {
-    localStorage.setItem(TEXTURE_ASSETS_STORAGE_KEY, JSON.stringify(textureAssets));
-  }, [textureAssets]);
-
-  useEffect(() => {
-    localStorage.setItem(CUSTOM_OBJECT_ASSETS_STORAGE_KEY, JSON.stringify(customObjectAssets));
-  }, [customObjectAssets]);
+    loadMapAssetLibrary().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const mapId = editorState.selectedMapId || editorState.current?.map?.id;

@@ -1,5 +1,6 @@
 const { MapObjectType, MapStatus } = require('@prisma/client');
 const prisma = require('../lib/prisma');
+const { saveMapSnapshot } = require('./r2StorageService');
 const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
@@ -720,6 +721,12 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   }
 
   const updatedMap = await getAdminMapEditor(mapId);
+  try {
+    await saveMapSnapshot(mapId, updatedMap);
+  } catch (error) {
+    console.error('[adminMapEditorService.updateAdminMapEditor] Failed to save R2 map snapshot.', error);
+  }
+
   return {
     type: 'UPDATED',
     data: updatedMap

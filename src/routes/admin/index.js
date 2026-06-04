@@ -62,7 +62,10 @@ const { handleTranslate } = require('../../controllers/adminTranslationControlle
 const {
   upload,
   handleMulterError,
-  uploadAdminImage
+  uploadAdminImage,
+  listMapAssets,
+  createMapAsset,
+  removeMapAsset
 } = require('../../controllers/adminUploadController');
 const {
   listUsers,
@@ -129,6 +132,9 @@ router.patch('/settings', requireAdminAuth, requirePermission('settings:edit'), 
 router.post('/translate', requireAdminAuth, handleTranslate);
 
 router.post('/uploads/image', requireAdminAuth, upload.single('image'), handleMulterError, uploadAdminImage);
+router.get('/map-assets', requireAdminAuth, requirePermission('map:view'), listMapAssets);
+router.post('/map-assets', requireAdminAuth, requirePermission('map:edit'), createMapAsset);
+router.delete('/map-assets/:id', requireAdminAuth, requirePermission('map:edit'), removeMapAsset);
 
 router.get('/users', requireAdminAuth, requirePermission('users:view'), listUsers);
 router.post('/users', requireAdminAuth, requirePermission('users:create'), createUser);
