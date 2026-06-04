@@ -3505,8 +3505,8 @@ export default function MapEditorPage() {
                       {(assetCategories[editorState.activeCategory] || assetCategories.SURFACES).items.map((item, idx) => (
                         <button key={idx} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
                           <div className="asset-preview">
-                            {item.svgUrl ? (
-                              <img src={item.svgUrl} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+                            {item.svgUrl || item.textureUrl || item.url ? (
+                              <img src={item.svgUrl || item.textureUrl || item.url} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
                             ) : item.subType && SVG_TEMPLATES[item.subType] ? (
                               <svg viewBox="0 0 100 100" style={{ width: '30px', height: '30px' }}>
                                 {SVG_TEMPLATES[item.subType]}
