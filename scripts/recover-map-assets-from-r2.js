@@ -1,10 +1,11 @@
 const crypto = require('crypto');
 const path = require('path');
 const { ListObjectsV2Command, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
+const { NodeHttpHandler } = require('@smithy/node-http-handler');
 const { R2_CONFIG, isR2Configured } = require('../src/config/env');
 const { MAP_ASSET_LIBRARY_KEY } = require('../src/services/r2StorageService');
 
-const SCAN_PREFIXES = ['map-objects/', 'menu/'];
+const DEFAULT_SCAN_PREFIXES = ['map-objects/', 'menu/'];
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
 const TEXTURE_HINTS = [
   'texture',
@@ -30,6 +31,11 @@ function getClient() {
   return new S3Client({
     region: 'auto',
     endpoint: R2_CONFIG.endpoint,
+    maxAttempts: 2,
+    requestHandler: new NodeHttpHandler({
+      connectionTimeout: 10_000,
+      requestTimeout: 30_000
+    }),
     credentials: {
       accessKeyId: R2_CONFIG.accessKeyId,
       secretAccessKey: R2_CONFIG.secretAccessKey
@@ -61,7 +67,7 @@ function isRecoverableKey(key) {
   if (!isImageKey(key)) return false;
   if (key === MAP_ASSET_LIBRARY_KEY) return false;
   if (key.includes('/map-backups/')) return false;
-  return SCAN_PREFIXES.some((prefix) => key.startsWith(prefix));
+  return getScanPrefixes().some((prefix) => key.startsWith(prefix));
 }
 
 function looksLikeTexture(key) {
@@ -123,8 +129,12 @@ function buildObjectAsset(key, createdAt) {
 async function listKeys(client, prefix) {
   const objects = [];
   let ContinuationToken;
+  let page = 0;
+
+  console.log(`Scanning R2 prefix: ${prefix}`);
 
   do {
+    page += 1;
     const result = await client.send(new ListObjectsV2Command({
       Bucket: R2_CONFIG.bucketName,
       Prefix: prefix,
@@ -138,9 +148,21 @@ async function listKeys(client, prefix) {
     }
 
     ContinuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+    console.log(`Prefix ${prefix}: page ${page}, total recoverable images ${objects.length}.`);
   } while (ContinuationToken);
 
   return objects;
+}
+
+function getScanPrefixes() {
+  const argPrefixes = process.argv
+    .slice(2)
+    .filter((arg) => !arg.startsWith('-'))
+    .map((arg) => String(arg || '').trim())
+    .filter(Boolean)
+    .map((arg) => (arg.endsWith('/') ? arg : `${arg}/`));
+
+  return argPrefixes.length ? argPrefixes : DEFAULT_SCAN_PREFIXES;
 }
 
 async function main() {
@@ -149,7 +171,14 @@ async function main() {
   }
 
   const client = getClient();
-  const listed = (await Promise.all(SCAN_PREFIXES.map((prefix) => listKeys(client, prefix)))).flat();
+  const scanPrefixes = getScanPrefixes();
+  console.log(`R2 recovery started. Prefixes: ${scanPrefixes.join(', ')}`);
+  const listed = [];
+
+  for (const prefix of scanPrefixes) {
+    listed.push(...await listKeys(client, prefix));
+  }
+
   const byKey = new Map(listed.map((item) => [item.Key, item]));
   const now = new Date().toISOString();
   const assets = [];
