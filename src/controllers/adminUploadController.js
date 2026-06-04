@@ -6,6 +6,7 @@ const {
   uploadImage,
   isMimeTypeAllowed
 } = require('../services/r2StorageService');
+const { recoverMapAssetsFromR2 } = require('../../scripts/recover-map-assets-from-r2');
 
 const IMAGE_SIZE_LIMIT_MB = 25;
 const IMAGE_SIZE_LIMIT_BYTES = IMAGE_SIZE_LIMIT_MB * 1024 * 1024;
@@ -95,7 +96,17 @@ async function uploadAdminImage(req, res) {
 
 async function listMapAssets(req, res) {
   try {
-    const library = await getMapAssetLibrary();
+    let library = await getMapAssetLibrary();
+
+    if (!library.assets.length && req.query.recover !== '0') {
+      try {
+        await recoverMapAssetsFromR2(['map-objects', 'menu']);
+        library = await getMapAssetLibrary();
+      } catch (recoveryError) {
+        console.error('[adminUploadController.listMapAssets] Failed to recover map assets from R2.', recoveryError);
+      }
+    }
+
     return res.json(library);
   } catch (error) {
     console.error('[adminUploadController.listMapAssets] Failed to load map assets.', error);
@@ -153,6 +164,7 @@ module.exports = {
   uploadAdminImage,
   listMapAssets,
   createMapAsset,
+  recoverMapAssetsFromR2,
   removeMapAsset,
   IMAGE_SIZE_LIMIT_MB,
   IMAGE_SIZE_LIMIT_BYTES

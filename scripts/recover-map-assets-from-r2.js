@@ -165,13 +165,15 @@ function getScanPrefixes() {
   return argPrefixes.length ? argPrefixes : DEFAULT_SCAN_PREFIXES;
 }
 
-async function main() {
+async function recoverMapAssetsFromR2(prefixes = []) {
   if (!isR2Configured) {
     throw new Error('R2 is not configured. Missing one of R2_* env vars.');
   }
 
   const client = getClient();
-  const scanPrefixes = getScanPrefixes();
+  const scanPrefixes = prefixes.length
+    ? prefixes.map((prefix) => (String(prefix).endsWith('/') ? String(prefix) : `${prefix}/`))
+    : getScanPrefixes();
   console.log(`R2 recovery started. Prefixes: ${scanPrefixes.join(', ')}`);
   const listed = [];
 
@@ -219,9 +221,23 @@ async function main() {
   const objectCount = assets.filter((asset) => asset.assetType === 'object').length;
   console.log(`Recovered ${assets.length} map assets from ${byKey.size} R2 images.`);
   console.log(`Textures: ${textureCount}. Objects: ${objectCount}. Manifest: ${MAP_ASSET_LIBRARY_KEY}.`);
+
+  return {
+    assets,
+    imageCount: byKey.size,
+    textureCount,
+    objectCount,
+    manifestKey: MAP_ASSET_LIBRARY_KEY
+  };
 }
 
-main().catch((error) => {
-  console.error(error.message || error);
-  process.exit(1);
-});
+if (require.main === module) {
+  recoverMapAssetsFromR2().catch((error) => {
+    console.error(error.message || error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  recoverMapAssetsFromR2
+};
