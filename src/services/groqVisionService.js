@@ -13,19 +13,25 @@ async function groqChat(messages, options = {}) {
   const model = options.model || 'meta-llama/llama-4-scout-17b-16e-instruct';
   const temperature = options.temperature ?? 0.1;
   const maxTokens = options.maxTokens || 4096;
+  const timeoutMs = options.timeoutMs || 60_000;
 
   let lastError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const body = { model, messages, temperature, max_tokens: maxTokens };
       if (options.responseFormat) body.response_format = options.responseFormat;
+
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: controller.signal
       });
 
       const data = await response.json().catch(() => ({}));
@@ -38,12 +44,15 @@ async function groqChat(messages, options = {}) {
       return content;
     } catch (error) {
       lastError = error;
-      const message = error?.message || '';
+      const message = error?.name === 'AbortError' ? 'Groq request timeout' : (error?.message || '');
       const canRetry = /rate limit|429|temporarily|timeout/i.test(message);
       if (!canRetry || attempt === 2) break;
       await sleep(getRetryDelayMs(message, 3000 * (attempt + 1)));
+    } finally {
+      clearTimeout(timeout);
     }
   }
+
   throw lastError || new Error('Groq request failed');
 }
 
@@ -53,6 +62,48 @@ async function imageToBuffer(fileUrl) {
   return Buffer.from(await resp.arrayBuffer());
 }
 
+async function toDataUrl(buf) {
+  const sharp = require('sharp');
+  const meta = await sharp(buf).metadata();
+  let img = sharp(buf).rotate();
+
+  if ((meta.width || 0) > 1600 || (meta.height || 0) > 1600) {
+    img = img.resize(1600, 1600, { fit: 'inside', withoutEnlargement: true });
+  }
+
+  const jpeg = await img.jpeg({ quality: 72, mozjpeg: true }).toBuffer();
+  return `data:image/jpeg;base64,${jpeg.toString('base64')}`;
+}
+
+function normalizeQuantity(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const match = String(value || '')
+    .replace(/\s+/g, '')
+    .replace(',', '.')
+    .match(/\d+(?:\.\d+)?/u);
+  return match ? Number(match[0]) : 0;
+}
+
+function normalizeInvoiceData(data) {
+  const source = data && typeof data === 'object' ? data : {};
+  const rawItems = Array.isArray(source.items) ? source.items : [];
+  const items = rawItems
+    .map((item) => ({
+      name: String(item?.name || item?.title || '').trim(),
+      quantity: normalizeQuantity(item?.quantity ?? item?.qty ?? item?.count),
+      unit: String(item?.unit || 'шт').trim() || 'шт'
+    }))
+    .filter((item) => item.name && item.quantity > 0);
+
+  return {
+    supplier: String(source.supplier || '').trim(),
+    venue: String(source.venue || source.recipient || '').trim(),
+    invoice_number: String(source.invoice_number || source.invoiceNumber || source.number || '').trim(),
+    items,
+    error: source.error
+  };
+}
+
 async function decodeBarcode(imageSource) {
   const buf = typeof imageSource === 'string' && !imageSource.startsWith('data:')
     ? await imageToBuffer(imageSource)
@@ -60,19 +111,22 @@ async function decodeBarcode(imageSource) {
       ? Buffer.from(imageSource.split(',')[1], 'base64')
       : imageSource;
 
-  // Try jsQR first (QR codes)
   try {
     const sharp = require('sharp');
     const jsQR = require('jsqr');
     const { data, info } = await sharp(buf).raw().ensureAlpha().toBuffer({ resolveWithObject: true });
     const code = jsQR(new Uint8ClampedArray(data), info.width, info.height);
     if (code && code.data) return code.data;
-  } catch (_) { /* jsQR failed, fall back to Groq */ }
+  } catch (_) {
+    // Fall back to vision OCR below.
+  }
 
-  // Fall back to Groq Vision
   const imageDataUrl = await toDataUrl(buf);
-
-  const prompt = 'На фото — акцизна марка на алкоголь. Знайди на ній штрихкод (DataMatrix або QR код) або номер акцизної марки надрукований на самій марці. Поверни ТІЛЬКИ номер (цифри та літери разом, без пробілів), без пояснень. Якщо не бачиш — поверни "ERROR: no barcode".';
+  const prompt = [
+    'На фото акцизная марка на алкоголь.',
+    'Найди DataMatrix/QR код или напечатанный номер акцизной марки.',
+    'Верни только номер: буквы и цифры без пробелов. Если не видишь код, верни "ERROR: no barcode".'
+  ].join('\n');
 
   const content = await groqChat([
     { role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageDataUrl } }] }
@@ -84,17 +138,6 @@ async function decodeBarcode(imageSource) {
   return cleaned;
 }
 
-async function toDataUrl(buf) {
-  const sharp = require('sharp');
-  const meta = await sharp(buf).metadata();
-  let img = sharp(buf);
-  if ((meta.width || 0) > 2000 || (meta.height || 0) > 2000) {
-    img = img.resize(2000, 2000, { fit: 'inside', withoutEnlargement: true });
-  }
-  const mime = `image/${meta.format || 'jpeg'}`;
-  return `data:${mime};base64,${(await img.jpeg({ quality: 80 }).toBuffer()).toString('base64')}`;
-}
-
 async function extractInvoiceData(imageSource) {
   const buf = typeof imageSource === 'string' && !imageSource.startsWith('data:')
     ? await imageToBuffer(imageSource)
@@ -103,34 +146,48 @@ async function extractInvoiceData(imageSource) {
       : imageSource;
   const imageDataUrl = await toDataUrl(buf);
 
-  const prompt = `Ти — помічник бухгалтера. На фото — накладна (видаткова накладна) на алкогольні напої.
+  const prompt = `Ти бухгалтерський OCR-парсер. На зображенні видаткова накладна / товарна накладна на алкогольні напої.
 
-ВАЖЛИВО: Копіюй назви товарів ТОЧНО як написано в накладній, буква в букву. НЕ скорочуй, НЕ перефразовуй, НЕ змінюй регістр.
+Потрібно прочитати таблицю товарів. Повертай тільки валідний JSON без markdown і пояснень.
 
-Прочитай накладну і поверни ТІЛЬКИ JSON без пояснень:
+Правила:
+- Копіюй назви товарів точно як у накладній: не скорочуй, не перекладай, не перефразовуй.
+- Витягни тільки рядки товарів, не додавай підсумки, ПДВ, тару, послуги доставки, заголовки таблиці.
+- Кількість бери з колонки "К-ть", "Кількість", "Кол-во", "Qty" або схожої.
+- Якщо кількість дробова, поверни число з крапкою.
+- unit завжди "шт", якщо в документі немає іншої одиниці.
+- Якщо фото повернуте, розмите або частково обрізане, прочитай усе, що видно.
+
+Формат відповіді:
 {
   "supplier": "назва постачальника",
-  "venue": "назва закладу-отримувача (наприклад, кафе Отрада або кафе Горпляж)",
-  "invoice_number": "номер накладної (наприклад, РН-12345 або накладна від 29.05.2026)",
+  "venue": "назва отримувача / закладу",
+  "invoice_number": "номер накладної або дата+номер",
   "items": [
-    { "name": "назва товару ТОЧНО як у накладній", "quantity": число, "unit": "шт" }
+    { "name": "точна назва товару", "quantity": 1, "unit": "шт" }
   ]
 }
 
-Кількість — лише цифра. Unit завжди "шт".
-Якщо не вдається розібрати — поверни {"error": "причина"}. Не додавай нічого крім JSON.`;
+Якщо не бачиш жодного товарного рядка, поверни:
+{ "error": "не знайдено товарні позиції", "items": [] }`;
 
   const content = await groqChat([
     { role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageDataUrl } }] }
-  ], { responseFormat: { type: 'json_object' } });
+  ], { responseFormat: { type: 'json_object' }, maxTokens: 4096 });
 
   try {
-    return JSON.parse(content);
+    return normalizeInvoiceData(JSON.parse(content));
   } catch {
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('No JSON in Groq response');
-    return JSON.parse(jsonMatch[0]);
+    return normalizeInvoiceData(JSON.parse(jsonMatch[0]));
   }
 }
 
-module.exports = { extractInvoiceData, decodeBarcode, imageToBuffer, groqChat };
+module.exports = {
+  decodeBarcode,
+  extractInvoiceData,
+  groqChat,
+  imageToBuffer,
+  normalizeInvoiceData
+};
