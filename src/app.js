@@ -9,7 +9,6 @@ const adminRoutes = require('./routes/admin');
 const paymentsRoutes = require('./routes/payments');
 const hutkoRoutes = require('./routes/paygate/hutko');
 const { extractInvoiceData } = require('./services/groqVisionService');
-const { saveInvoice, isSheetsConfigured } = require('./services/sheetsService');
 const { setupBotWebhook } = require('./services/botService');
 
 const app = express();
@@ -102,6 +101,7 @@ app.post('/api/invoice/ocr', async (req, res) => {
 
 app.post('/api/invoice/save', async (req, res) => {
   try {
+    const { saveInvoice, isSheetsConfigured } = require('./services/sheetsService');
     const { supplier, venue, invoiceNumber, items } = req.body;
     if (!supplier || !items?.length) return res.status(400).json({ error: 'Missing required fields' });
     if (!isSheetsConfigured()) return res.status(400).json({ error: 'Google Sheets not configured' });

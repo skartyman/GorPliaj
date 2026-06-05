@@ -1,6 +1,5 @@
 const { Telegraf, Markup } = require('telegraf');
 const { getOptionalEnv, APP_BASE_URL } = require('../config/env');
-const { initSheets } = require('./sheetsService');
 const { extractInvoiceData } = require('./groqVisionService');
 
 const BOT_TOKEN = getOptionalEnv('INVOICE_BOT_TOKEN', '');
@@ -161,23 +160,26 @@ async function setupBotWebhook(app) {
     return;
   }
 
-  try {
-    await initSheets();
-  } catch (e) {
-    console.warn('[invoice-bot] sheets init failed:', e.message);
-  }
-
   const webhookPath = '/webhooks/invoice-bot';
   const webhookUrl = `${APP_BASE_URL}${webhookPath}`;
 
   app.post(webhookPath, bot.webhookCallback(webhookPath));
 
-  try {
-    await bot.telegram.setWebhook(webhookUrl);
-    console.log(`[invoice-bot] webhook set to ${webhookUrl}`);
-  } catch (err) {
-    console.error('[invoice-bot] webhook registration failed:', err.message);
-  }
+  setTimeout(async () => {
+    try {
+      const { initSheets } = require('./sheetsService');
+      await initSheets();
+    } catch (e) {
+      console.warn('[invoice-bot] sheets init failed:', e.message);
+    }
+
+    try {
+      await bot.telegram.setWebhook(webhookUrl);
+      console.log(`[invoice-bot] webhook set to ${webhookUrl}`);
+    } catch (err) {
+      console.error('[invoice-bot] webhook registration failed:', err.message);
+    }
+  }, 1000);
 }
 
 module.exports = { setupBotWebhook, bot };

@@ -6,18 +6,18 @@ function startServer() {
   let isReady = false;
 
   bootstrapApp.get('/healthz', (_req, res) => {
-    res.status(200).json({ status: isReady ? 'ok' : 'starting' });
+    res.status(isReady ? 200 : 503).json({ status: isReady ? 'ok' : 'starting' });
   });
 
   const server = bootstrapApp.listen(PORT, '0.0.0.0', () => {
-    console.log(`ГорПляж app is running on http://0.0.0.0:${PORT}`);
+    console.log(`GorPliaj app is running on http://0.0.0.0:${PORT}`);
 
     process.nextTick(() => {
       try {
         const app = require('./app');
         bootstrapApp.use(app);
         isReady = true;
-        console.log('ГорПляж routes initialized');
+        console.log('GorPliaj routes initialized');
       } catch (error) {
         console.error('Failed to initialize application routes:', error);
         process.exit(1);
