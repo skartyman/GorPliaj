@@ -525,7 +525,9 @@ function normalizeObject(object) {
   return {
     ...object,
     label: object.label || '',
-    tableId: Number.isInteger(Number(object.tableId)) && Number(object.tableId) > 0 ? Number(object.tableId) : null,
+    tableId: object.tableId === null || object.tableId === undefined || object.tableId === ''
+      ? null
+      : (Number.isInteger(Number(object.tableId)) && Number(object.tableId) > 0 ? Number(object.tableId) : String(object.tableId)),
     x: roundCoordinate(object.x),
     y: roundCoordinate(object.y),
     width,
@@ -670,7 +672,12 @@ function buildEditorState(payload) {
         positionType: String(table.positionType || '').trim(),
         positionSide: String(table.positionSide || '').trim(),
         name: table.name,
-        photoUrl: String(table.photoUrl || '').trim()
+        photoUrl: String(table.photoUrl || '').trim(),
+        seatsMin: Number(table.seatsMin) || 1,
+        seatsMax: Number(table.seatsMax) || 4,
+        deposit: Number(table.deposit) || 0,
+        isActive: table.isActive ?? true,
+        isBookable: table.isBookable ?? true
       })),
     objects: (payload.objects || []).map((object) => normalizeObject(object, map))
   };
@@ -940,7 +947,7 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, language })
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -953,6 +960,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
   const positionSide = table?.positionSide || inferredPosition.positionSide;
   const positionTypeConfig = getPositionTypeConfig(positionType);
   const suggestedPositionCode = getNextPositionCode(positionType, positionSide, tables, table?.id);
+  const persistedZones = (zones || []).filter((item) => Number.isInteger(Number(item.id)) && Number(item.id) > 0);
 
   const uploadFileToField = async (event, field) => {
     const file = event.target.files?.[0];
@@ -1127,10 +1135,36 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
           </h5>
           <div className="editor-form-grid">
             {!selectedObject.tableId ? (
-              <p className="muted small field-span-2">
-                У объекта пока нет позиции бронирования. Тип и код доступны после привязки объекта к позиции.
-              </p>
+              <div className="field-span-2">
+                <p className="muted small">
+                  У объекта пока нет позиции бронирования. Создайте ее из объекта, без выбора старых позиций.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={onCreatePosition}
+                  disabled={!persistedZones.length}
+                >
+                  Создать позицию
+                </button>
+              </div>
             ) : null}
+
+            <label className="field-span-2">
+              Зона позиции
+              <select
+                value={table?.zoneId || ''}
+                onChange={(event) => onFieldChange('tableZoneId', event.target.value)}
+                disabled={!selectedObject.tableId}
+              >
+                <option value="">Не задана</option>
+                {persistedZones.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {localizeField(item.name, language) || `Zone #${item.id}`}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <label>
               Тип
@@ -2698,7 +2732,7 @@ export default function MapEditorPage() {
       return;
     }
 
-    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName') {
+    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableZoneId') {
       if (!selectedObject.tableId) {
         return;
       }
@@ -2713,7 +2747,8 @@ export default function MapEditorPage() {
                     ...table,
                     ...(field === 'tablePhotoUrl' ? { photoUrl: String(value) } : {}),
                     ...(field === 'tableCode' ? { code: String(value).trim() } : {}),
-                    ...(field === 'tableName' ? { name: normalizeLocalizedField(value) } : {})
+                    ...(field === 'tableName' ? { name: normalizeLocalizedField(value) } : {}),
+                    ...(field === 'tableZoneId' ? { zoneId: value === '' ? null : Number(value) } : {})
                   }
                 : table
             )
@@ -2730,6 +2765,11 @@ export default function MapEditorPage() {
         return next;
       });
 
+      return;
+    }
+
+    if (field === 'createPosition') {
+      createPositionForSelectedObject();
       return;
     }
 
@@ -2900,6 +2940,64 @@ export default function MapEditorPage() {
               viewportJson: getZoneFallbackViewport(prev.current.map)
             }
           ]
+        }
+      };
+    });
+  }
+
+  function createPositionForSelectedObject() {
+    if (!selectedObject || selectedObject.tableId) {
+      return;
+    }
+
+    updateCurrent((prev) => {
+      const zones = prev.current.zones || [];
+      const defaultZone = zones.find((zone) => Number.isInteger(Number(zone.id)) && Number(zone.id) > 0);
+      if (!defaultZone) {
+        return {};
+      }
+
+      const tempTableId = `tmp-table-${Date.now()}`;
+      const inferred = inferPositionSettings(selectedObject, null);
+      const positionType = inferred.positionType || (selectedObject.type === 'TABLE' ? 'RESTAURANT' : '');
+      const typeConfig = getPositionTypeConfig(positionType);
+      const positionSide = typeConfig.requiresSide ? (inferred.positionSide || 'LEFT') : '';
+      const code = getNextPositionCode(positionType, positionSide, prev.current.tables);
+      const displayName = code || localizeField(selectedObject.label, language) || 'Новая позиция';
+
+      return {
+        current: {
+          ...prev.current,
+          tables: [
+            ...prev.current.tables,
+            {
+              id: tempTableId,
+              zoneId: Number(defaultZone.id),
+              name: normalizeLocalizedField(displayName),
+              code: code || null,
+              positionType: positionType || null,
+              positionSide: positionSide || null,
+              photoUrl: '',
+              seatsMin: 1,
+              seatsMax: 4,
+              deposit: 0,
+              isActive: true,
+              isBookable: true
+            }
+          ],
+          objects: prev.current.objects.map((object) =>
+            object.id === selectedObject.id
+              ? normalizeObject({
+                  ...object,
+                  tableId: tempTableId,
+                  metaJson: {
+                    ...(object.metaJson || {}),
+                    positionType: positionType || '',
+                    positionSide: positionSide || ''
+                  }
+                }, prev.current.map)
+              : object
+          )
         }
       };
     });
@@ -3215,11 +3313,17 @@ export default function MapEditorPage() {
       },
       tables: stateToSave.current.tables.map((table) => ({
         id: table.id,
+        zoneId: table.zoneId || null,
         code: table.code || null,
         positionType: table.positionType || null,
         positionSide: table.positionSide || null,
         name: table.name || null,
-        photoUrl: table.photoUrl || null
+        photoUrl: table.photoUrl || null,
+        seatsMin: table.seatsMin ?? 1,
+        seatsMax: table.seatsMax ?? 4,
+        deposit: table.deposit ?? 0,
+        isActive: table.isActive ?? true,
+        isBookable: table.isBookable ?? true
       })),
       zones: stateToSave.current.zones.map((zone) => ({
         id: zone.id,
@@ -3945,8 +4049,10 @@ export default function MapEditorPage() {
                       selectedObject={selectedObject}
                       tableMap={tableMap}
                       zoneMap={zoneMap}
+                      zones={editorState.current.zones}
                       tables={editorState.current.tables}
                       onFieldChange={handleFieldChange}
+                      onCreatePosition={createPositionForSelectedObject}
                       onRegisterTemplate={registerSelectedObjectTemplate}
                       onDuplicate={duplicateSelected}
                       onDelete={handleDeleteSelected}
