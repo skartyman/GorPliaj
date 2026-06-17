@@ -524,28 +524,6 @@ function normalizeZonePolygon(value) {
   return normalizedPoints.length >= 3 ? { points: normalizedPoints } : null;
 }
 
-function getBoundsFromAbsolutePoints(points, map, padding = 80) {
-  if (!Array.isArray(points) || points.length < 3) {
-    return null;
-  }
-
-  const minX = Math.min(...points.map((point) => Number(point.x) || 0));
-  const minY = Math.min(...points.map((point) => Number(point.y) || 0));
-  const maxX = Math.max(...points.map((point) => Number(point.x) || 0));
-  const maxY = Math.max(...points.map((point) => Number(point.y) || 0));
-  const boundedMinX = Math.max(0, minX - padding);
-  const boundedMinY = Math.max(0, minY - padding);
-  const boundedMaxX = Math.min(Number(map?.width) || maxX + padding, maxX + padding);
-  const boundedMaxY = Math.min(Number(map?.height) || maxY + padding, maxY + padding);
-
-  return {
-    x: roundCoordinate(boundedMinX),
-    y: roundCoordinate(boundedMinY),
-    width: Math.max(roundCoordinate(boundedMaxX - boundedMinX), 1),
-    height: Math.max(roundCoordinate(boundedMaxY - boundedMinY), 1)
-  };
-}
-
 function normalizeObject(object) {
   const width = Math.max(roundCoordinate(object.width), 24);
   const height = Math.max(roundCoordinate(object.height), 24);
@@ -922,13 +900,16 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, onDrawZoneP
         const viewport = normalizeZoneViewport(zone.viewportJson) || getZoneFallbackViewport(map);
         const polygon = normalizeZonePolygon(zone.polygonJson);
         const zoneName = localizeField(zone.name, language) || `Zone #${zone.id}`;
+        const boundsLabel = polygon
+          ? `полигон: ${polygon.points.length} точек`
+          : (zone.viewportJson ? `${viewport.x}, ${viewport.y} · ${viewport.width}×${viewport.height}` : 'границы не заданы');
 
         return (
           <details key={zone.id} className="zone-viewport-card">
             <summary>
               <strong>{zoneName}</strong>
               <span className="muted small">
-                {zone.viewportJson ? `${viewport.x}, ${viewport.y} · ${viewport.width}×${viewport.height}` : 'границы не заданы'}
+                {boundsLabel}
               </span>
             </summary>
             <div className="editor-form-grid">
@@ -951,30 +932,34 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, onDrawZoneP
                   onChange={(event) => onZoneChange(zone.id, { color: event.target.value })}
                 />
               </label>
-              {['x', 'y', 'width', 'height'].map((field) => (
-                <label key={field}>
-                  {field.toUpperCase()}
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={viewport[field]}
-                    onChange={(event) => onZoneChange(zone.id, {
-                      viewportJson: {
-                        ...viewport,
-                        [field]: Number(event.target.value) || 0
-                      }
-                    })}
-                  />
-                </label>
-              ))}
-              <button
-                type="button"
-                className="btn btn-secondary btn-small field-span-2"
-                onClick={() => onZoneChange(zone.id, { viewportJson: null })}
-              >
-                Очистить границы зоны
-              </button>
+              {!polygon ? (
+                <>
+                  {['x', 'y', 'width', 'height'].map((field) => (
+                    <label key={field}>
+                      {field.toUpperCase()}
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={viewport[field]}
+                        onChange={(event) => onZoneChange(zone.id, {
+                          viewportJson: {
+                            ...viewport,
+                            [field]: Number(event.target.value) || 0
+                          }
+                        })}
+                      />
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small field-span-2"
+                    onClick={() => onZoneChange(zone.id, { viewportJson: null })}
+                  >
+                    Очистить прямоугольные границы
+                  </button>
+                </>
+              ) : null}
               <button
                 type="button"
                 className="btn btn-secondary btn-small field-span-2"
@@ -2172,9 +2157,8 @@ export default function MapEditorPage() {
     if (editorState.activeTool === 'ZONE_POLYGON') {
       const zoneId = editorState.polygonDraft?.zoneId;
       const polygonJson = normalizeZonePolygon({ points });
-      const viewportJson = getBoundsFromAbsolutePoints(polygonJson?.points || [], editorState.current?.map);
       if (zoneId && polygonJson) {
-        handleZoneChange(zoneId, { polygonJson, viewportJson });
+        handleZoneChange(zoneId, { polygonJson, viewportJson: null });
       }
       setEditorState((prev) => ({ ...prev, polygonDraft: null, activeTool: 'SELECT' }));
       return;
@@ -4033,6 +4017,10 @@ export default function MapEditorPage() {
                   </svg>
 
                   {(editorState.current.zones || []).map((zone) => {
+                    if (normalizeZonePolygon(zone.polygonJson)) {
+                      return null;
+                    }
+
                     const viewport = normalizeZoneViewport(zone.viewportJson);
                     if (!viewport) {
                       return null;
