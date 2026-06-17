@@ -781,6 +781,13 @@ textarea { resize: vertical; min-height: 96px; }
   cursor: pointer;
 }
 .map-zone-tab:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+.map-zone-tab.active {
+  border-color: var(--wood-dark);
+  background: var(--wood-dark);
+  color: var(--text-on-dark);
+  box-shadow: 0 10px 24px rgba(44, 24, 16, 0.22);
+}
+.map-zone-tab.active:hover { color: var(--text-on-dark); }
 .map-control {
   width: 38px;
   height: 38px;
@@ -1882,6 +1889,17 @@ textarea { resize: vertical; min-height: 96px; }
   border-radius: var(--radius-btn);
   background: var(--bg-page);
   font-size: 13px;
+}
+
+.calendar-detail-item.is-clickable {
+  cursor: pointer;
+}
+
+.calendar-detail-item.is-clickable:hover,
+.calendar-detail-item.is-clickable:focus-visible {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 2px rgba(200, 146, 65, 0.16);
+  outline: none;
 }
 
 @media (max-width: 720px) {

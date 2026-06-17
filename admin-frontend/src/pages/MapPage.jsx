@@ -535,6 +535,7 @@ export default function MapPage() {
   });
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
   const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
   const [selectedObjectForm, setSelectedObjectForm] = useState({
     zoneId: '',
@@ -809,6 +810,16 @@ export default function MapPage() {
     console.info('booking hook', table);
   };
 
+  function focusWholeMap() {
+    setActiveZoneFocusId('all');
+    actions.fitToView();
+  }
+
+  function focusZone(zoneId, bounds) {
+    setActiveZoneFocusId(String(zoneId));
+    actions.focusRect(bounds);
+  }
+
   const selectObject = (object) => {
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
@@ -1043,15 +1054,21 @@ export default function MapPage() {
             <div className="interactive-map-shell">
               {zoneFocusItems.length ? (
                 <div className="interactive-map-zone-tabs" aria-label="Map zones">
-                  <button type="button" className="map-zone-tab" onClick={actions.fitToView}>
+                  <button
+                    type="button"
+                    className={`map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
+                    onClick={focusWholeMap}
+                    aria-pressed={activeZoneFocusId === 'all'}
+                  >
                     Вся карта
                   </button>
                   {zoneFocusItems.map(({ zone, bounds }) => (
                     <button
                       key={zone.id}
                       type="button"
-                      className="map-zone-tab"
-                      onClick={() => actions.focusRect(bounds)}
+                      className={`map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
+                      onClick={() => focusZone(zone.id, bounds)}
+                      aria-pressed={activeZoneFocusId === String(zone.id)}
                     >
                       {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
                     </button>
@@ -1061,7 +1078,7 @@ export default function MapPage() {
               <div className="interactive-map-controls">
                 <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
                 <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>
-                <button type="button" className="map-control fit" onClick={actions.fitToView} aria-label="Fit map">⤢</button>
+                <button type="button" className="map-control fit" onClick={focusWholeMap} aria-label="Fit map">⤢</button>
                 <span className="map-zoom-indicator">
                   {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
                 </span>
