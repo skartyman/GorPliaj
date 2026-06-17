@@ -135,6 +135,75 @@ function compareMapObjects(a, b) {
   return (Number(a?.id) || 0) - (Number(b?.id) || 0);
 }
 
+function expandBounds(bounds, object) {
+  const x = Number(object?.x) || 0;
+  const y = Number(object?.y) || 0;
+  const width = Math.max(Number(object?.width) || 0, 1);
+  const height = Math.max(Number(object?.height) || 0, 1);
+  const maxX = x + width;
+  const maxY = y + height;
+
+  if (!bounds) {
+    return { minX: x, minY: y, maxX, maxY };
+  }
+
+  return {
+    minX: Math.min(bounds.minX, x),
+    minY: Math.min(bounds.minY, y),
+    maxX: Math.max(bounds.maxX, maxX),
+    maxY: Math.max(bounds.maxY, maxY)
+  };
+}
+
+function padBounds(bounds, mapDimensions, padding = 96) {
+  if (!bounds) {
+    return null;
+  }
+
+  const minX = Math.max(0, bounds.minX - padding);
+  const minY = Math.max(0, bounds.minY - padding);
+  const maxX = Math.min(mapDimensions.width, bounds.maxX + padding);
+  const maxY = Math.min(mapDimensions.height, bounds.maxY + padding);
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(maxX - minX, 80),
+    height: Math.max(maxY - minY, 80)
+  };
+}
+
+function parseZoneViewport(value, mapDimensions) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const x = Math.max(0, Number(value.x) || 0);
+  const y = Math.max(0, Number(value.y) || 0);
+  const width = Math.min(Math.max(Number(value.width) || 0, 1), Math.max(mapDimensions.width - x, 1));
+  const height = Math.min(Math.max(Number(value.height) || 0, 1), Math.max(mapDimensions.height - y, 1));
+
+  return width > 1 && height > 1 ? { x, y, width, height } : null;
+}
+
+function parseZonePolygonBounds(value, mapDimensions) {
+  const points = Array.isArray(value?.points) ? value.points : [];
+  if (points.length < 3) {
+    return null;
+  }
+
+  const normalized = points.map((point) => ({
+    x: Math.max(Number(point?.x) || 0, 0),
+    y: Math.max(Number(point?.y) || 0, 0)
+  }));
+  const minX = Math.min(...normalized.map((point) => point.x));
+  const minY = Math.min(...normalized.map((point) => point.y));
+  const maxX = Math.max(...normalized.map((point) => point.x));
+  const maxY = Math.max(...normalized.map((point) => point.y));
+
+  return padBounds({ minX, minY, maxX, maxY }, mapDimensions);
+}
+
 function getPolygonFill(meta) {
   if (meta.texture === 'sand') return '#fef3c7';
   if (meta.texture === 'water') return '#bfdbfe';
@@ -597,7 +666,7 @@ export default function MapPage() {
 
     return objects.map((object) => {
       const isTable = object.type === 'TABLE';
-      const table = isTable && object.tableId ? tableMap.get(object.tableId) : null;
+      const table = object.tableId ? tableMap.get(object.tableId) : null;
       const meta = parseMetaJson(object.metaJson);
       const metaZoneId = Number(meta.zoneId);
       const zone = table ? zoneMap.get(table.zoneId) : (Number.isInteger(metaZoneId) ? zoneMap.get(metaZoneId) : null);
@@ -614,6 +683,45 @@ export default function MapPage() {
       };
     }).sort(compareMapObjects);
   }, [state.mapData?.objects, tableMap, zoneMap]);
+
+  const zoneFocusItems = useMemo(() => {
+    const zones = state.mapData?.zones || [];
+    if (!zones.length || !mapEntities.length) {
+      return [];
+    }
+
+    const boundsByZoneId = new Map();
+    mapEntities.forEach((object) => {
+      const zoneId = object.zone?.id || object.table?.zoneId || object.meta?.zoneId;
+      if (!zoneId) {
+        return;
+      }
+
+      boundsByZoneId.set(zoneId, expandBounds(boundsByZoneId.get(zoneId), object));
+    });
+
+    return zones
+      .map((zone) => {
+        const bounds =
+          parseZonePolygonBounds(zone.polygonJson, mapDimensions) ||
+          parseZoneViewport(zone.viewportJson, mapDimensions) ||
+          padBounds(boundsByZoneId.get(zone.id), mapDimensions);
+        if (!bounds) {
+          return null;
+        }
+
+        return {
+          zone,
+          bounds: {
+            x: bounds.x + mapRenderFrame.offsetX,
+            y: bounds.y + mapRenderFrame.offsetY,
+            width: bounds.width,
+            height: bounds.height
+          }
+        };
+      })
+      .filter(Boolean);
+  }, [mapDimensions, mapEntities, mapRenderFrame.offsetX, mapRenderFrame.offsetY, state.mapData?.zones]);
 
   const selectedTable = selectedTableId ? tableMap.get(selectedTableId) : null;
   const selectedObject = selectedObjectId ? mapEntities.find((object) => object.id === selectedObjectId) || null : null;
@@ -933,6 +1041,23 @@ export default function MapPage() {
             </div>
 
             <div className="interactive-map-shell">
+              {zoneFocusItems.length ? (
+                <div className="interactive-map-zone-tabs" aria-label="Map zones">
+                  <button type="button" className="map-zone-tab" onClick={actions.fitToView}>
+                    Вся карта
+                  </button>
+                  {zoneFocusItems.map(({ zone, bounds }) => (
+                    <button
+                      key={zone.id}
+                      type="button"
+                      className="map-zone-tab"
+                      onClick={() => actions.focusRect(bounds)}
+                    >
+                      {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div className="interactive-map-controls">
                 <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
                 <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>

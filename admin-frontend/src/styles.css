@@ -1143,6 +1143,9 @@ textarea { resize: vertical; min-height: 96px; }
 .zone-viewport-card .editor-form-grid { padding: 12px; }
 .map-editor-zone-viewport { position: absolute; pointer-events: none; border: 2px dashed #2563eb; background: rgba(37, 99, 235, 0.08); z-index: 5; }
 .map-editor-zone-viewport span { position: absolute; left: 8px; top: 8px; max-width: calc(100% - 16px); padding: 3px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.9); color: var(--text-primary); font-size: 11px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-editor-zone-polygons { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 6; }
+.map-editor-zone-polygons polygon { fill: color-mix(in srgb, var(--zone-color, #2563eb) 16%, transparent); stroke: var(--zone-color, #2563eb); stroke-width: 3; stroke-dasharray: 10 7; }
+.map-editor-zone-polygons text { paint-order: stroke; stroke: rgba(255, 255, 255, 0.92); stroke-width: 5px; fill: var(--text-primary); font-size: 14px; font-weight: 800; }
 
 .field-opacity { align-self: start; }
 .field-with-suffix { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }

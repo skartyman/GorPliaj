@@ -45,6 +45,8 @@ model Zone {
   name         Json
   color        String
   sortOrder    Int           @default(0)
+  viewportJson Json?
+  polygonJson  Json?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
@@ -60,6 +62,8 @@ model VenueTable {
   zoneId       Int
   name         Json
   code         String?
+  positionType VenuePositionType?
+  positionSide VenuePositionSide?
   photoUrl     String?
   seatsMin     Int
   seatsMax     Int
@@ -118,7 +122,7 @@ model Reservation {
   timeTo          DateTime
   status          ReservationStatus @default(PENDING)
   source          ReservationSource @default(WEB)
-  ticketCode      String?
+  ticketCode      String?           @unique
   arrivedAt       DateTime?
   arrivedGuests   Int?
   commentCustomer String?
@@ -172,7 +176,8 @@ model TableHold {
 
 model Payment {
   id                Int           @id @default(autoincrement())
-  reservationId     Int           @unique
+  reservationId     Int?          @unique
+  ticketOrderId     Int?          @unique
   provider          String
   providerPaymentId String?
   providerOrderId   String?
@@ -184,8 +189,10 @@ model Payment {
   paidAt            DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
-  reservation       Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservation       Reservation?  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  ticketOrder       TicketOrder?  @relation(fields: [ticketOrderId], references: [id], onDelete: Cascade)
 
+  @@index([ticketOrderId])
   @@index([providerPaymentId])
   @@index([providerOrderId])
   @@index([status])
@@ -208,11 +215,101 @@ model Event {
   updatedAt        DateTime      @updatedAt
   reservations     Reservation[]
   tableHolds       TableHold[]
+  ticketTypes      TicketType[]
+  ticketOrders     TicketOrder[]
+  tickets          Ticket[]
 
   @@index([slug])
   @@index([status])
   @@index([startAt])
   @@index([isFeatured])
+}
+
+model TicketType {
+  id          Int      @id @default(autoincrement())
+  eventId     Int
+  name        Json
+  description Json?
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("UAH")
+  capacity    Int
+  soldCount   Int      @default(0)
+  salesStart  DateTime?
+  salesEnd    DateTime?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tickets     Ticket[]
+
+  @@index([eventId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model TicketOrder {
+  id            Int               @id @default(autoincrement())
+  eventId       Int
+  orderNumber   String            @unique
+  downloadToken String            @unique
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  amount        Decimal           @db.Decimal(10, 2)
+  currency      String            @default("UAH")
+  status        TicketOrderStatus @default(PENDING)
+  expiresAt     DateTime?
+  paidAt        DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  event         Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  payment       Payment?
+  tickets       Ticket[]
+
+  @@index([eventId])
+  @@index([status])
+  @@index([customerEmail])
+  @@index([createdAt])
+}
+
+model Ticket {
+  id           Int          @id @default(autoincrement())
+  orderId      Int
+  eventId      Int
+  ticketTypeId Int
+  code         String       @unique
+  status       TicketStatus @default(RESERVED)
+  holderName   String?
+  holderEmail  String?
+  issuedAt     DateTime?
+  usedAt       DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  order        TicketOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  scans        TicketScan[]
+
+  @@index([orderId])
+  @@index([eventId])
+  @@index([ticketTypeId])
+  @@index([status])
+}
+
+model TicketScan {
+  id          Int      @id @default(autoincrement())
+  ticketId    Int
+  adminUserId Int?
+  result      String
+  note        String?
+  scannedAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([scannedAt])
 }
 
 model MenuCategory {
@@ -276,6 +373,9 @@ model FrontendSettings {
   socialMedia  Json?
   heroTitle    Json?
   heroSubtitle Json?
+  aboutTitle   Json?
+  aboutText    Json?
+  aboutImageUrl String?
   footerText   Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -325,6 +425,19 @@ enum MapObjectType {
   CUSTOM
 }
 
+enum VenuePositionType {
+  BUNGALOW
+  KROVAT
+  PIER
+  RESTAURANT
+  TERRACE
+}
+
+enum VenuePositionSide {
+  LEFT
+  RIGHT
+}
+
 enum ReservationSource {
   WEB
   ADMIN
@@ -361,6 +474,23 @@ enum EventCtaType {
   BOOKING
   TICKETS
   BOTH
+}
+
+enum TicketOrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum TicketStatus {
+  RESERVED
+  VALID
+  USED
+  CANCELLED
+  REFUNDED
 }
 
 enum MenuSection {

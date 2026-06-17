@@ -1,0 +1,1 @@
+ALTER TABLE "Zone" ADD COLUMN "polygonJson" JSONB;

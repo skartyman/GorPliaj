@@ -512,6 +512,40 @@ function normalizeZoneViewport(value) {
   return viewport.width > 0 && viewport.height > 0 ? viewport : null;
 }
 
+function normalizeZonePolygon(value) {
+  const points = Array.isArray(value?.points) ? value.points : (Array.isArray(value) ? value : []);
+  const normalizedPoints = points
+    .map((point) => ({
+      x: Math.max(roundCoordinate(point?.x), 0),
+      y: Math.max(roundCoordinate(point?.y), 0)
+    }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+
+  return normalizedPoints.length >= 3 ? { points: normalizedPoints } : null;
+}
+
+function getBoundsFromAbsolutePoints(points, map, padding = 80) {
+  if (!Array.isArray(points) || points.length < 3) {
+    return null;
+  }
+
+  const minX = Math.min(...points.map((point) => Number(point.x) || 0));
+  const minY = Math.min(...points.map((point) => Number(point.y) || 0));
+  const maxX = Math.max(...points.map((point) => Number(point.x) || 0));
+  const maxY = Math.max(...points.map((point) => Number(point.y) || 0));
+  const boundedMinX = Math.max(0, minX - padding);
+  const boundedMinY = Math.max(0, minY - padding);
+  const boundedMaxX = Math.min(Number(map?.width) || maxX + padding, maxX + padding);
+  const boundedMaxY = Math.min(Number(map?.height) || maxY + padding, maxY + padding);
+
+  return {
+    x: roundCoordinate(boundedMinX),
+    y: roundCoordinate(boundedMinY),
+    width: Math.max(roundCoordinate(boundedMaxX - boundedMinX), 1),
+    height: Math.max(roundCoordinate(boundedMaxY - boundedMinY), 1)
+  };
+}
+
 function normalizeObject(object) {
   const width = Math.max(roundCoordinate(object.width), 24);
   const height = Math.max(roundCoordinate(object.height), 24);
@@ -664,7 +698,8 @@ function buildEditorState(payload) {
       name: zone.name || normalizeLocalizedField('Новая зона'),
       color: zone.color || '#2563eb',
       sortOrder: Number(zone.sortOrder) || 0,
-      viewportJson: normalizeZoneViewport(zone.viewportJson)
+      viewportJson: normalizeZoneViewport(zone.viewportJson),
+      polygonJson: normalizeZonePolygon(zone.polygonJson)
     })),
       tables: (payload.tables || []).map((table) => ({
         ...table,
@@ -870,7 +905,7 @@ function getZoneFallbackViewport(map) {
   };
 }
 
-function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, language }) {
+function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, onDrawZonePolygon, language }) {
   const safeZones = zones || [];
 
   return (
@@ -885,6 +920,7 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, language })
 
       {safeZones.map((zone) => {
         const viewport = normalizeZoneViewport(zone.viewportJson) || getZoneFallbackViewport(map);
+        const polygon = normalizeZonePolygon(zone.polygonJson);
         const zoneName = localizeField(zone.name, language) || `Zone #${zone.id}`;
 
         return (
@@ -939,6 +975,22 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, language })
               >
                 Очистить границы зоны
               </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small field-span-2"
+                onClick={() => onDrawZonePolygon(zone.id)}
+              >
+                {polygon ? 'Перерисовать полигон зоны' : 'Нарисовать полигон зоны'}
+              </button>
+              {polygon ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small field-span-2"
+                  onClick={() => onZoneChange(zone.id, { polygonJson: null })}
+                >
+                  Очистить полигон зоны
+                </button>
+              ) : null}
             </div>
           </details>
         );
@@ -1993,11 +2045,12 @@ export default function MapEditorPage() {
   });
 
   const handleCanvasMouseDown = (e) => {
-    if (editorState.activeTool === 'POLYGON') {
+    if (editorState.activeTool === 'POLYGON' || editorState.activeTool === 'ZONE_POLYGON') {
       const point = getCanvasPoint(e, mapScale);
       setEditorState((prev) => ({
         ...prev,
         polygonDraft: {
+          zoneId: prev.polygonDraft?.zoneId || null,
           points: [...(prev.polygonDraft?.points || []), point],
           cursor: point
         }
@@ -2056,7 +2109,7 @@ export default function MapEditorPage() {
   };
 
   const handleCanvasMouseMove = (e) => {
-    if (editorState.activeTool === 'POLYGON' && editorState.polygonDraft?.points?.length) {
+    if ((editorState.activeTool === 'POLYGON' || editorState.activeTool === 'ZONE_POLYGON') && editorState.polygonDraft?.points?.length) {
       const point = getCanvasPoint(e, mapScale);
       setEditorState((prev) => ({
         ...prev,
@@ -2079,7 +2132,7 @@ export default function MapEditorPage() {
   };
 
   const handleCanvasMouseUp = () => {
-    if (editorState.activeTool === 'POLYGON') return;
+    if (editorState.activeTool === 'POLYGON' || editorState.activeTool === 'ZONE_POLYGON') return;
     if (!editorState.drawingPath) return;
 
     const p1 = editorState.drawingPath.points[0];
@@ -2116,6 +2169,17 @@ export default function MapEditorPage() {
       return;
     }
 
+    if (editorState.activeTool === 'ZONE_POLYGON') {
+      const zoneId = editorState.polygonDraft?.zoneId;
+      const polygonJson = normalizeZonePolygon({ points });
+      const viewportJson = getBoundsFromAbsolutePoints(polygonJson?.points || [], editorState.current?.map);
+      if (zoneId && polygonJson) {
+        handleZoneChange(zoneId, { polygonJson, viewportJson });
+      }
+      setEditorState((prev) => ({ ...prev, polygonDraft: null, activeTool: 'SELECT' }));
+      return;
+    }
+
     const bounds = getPolygonBounds(points);
     createObject('CUSTOM', {
       label: t('mapEditor.polygonDefault'),
@@ -2133,7 +2197,20 @@ export default function MapEditorPage() {
   }
 
   function cancelPolygonDraft() {
-    setEditorState((prev) => ({ ...prev, polygonDraft: null }));
+    setEditorState((prev) => ({ ...prev, polygonDraft: null, activeTool: prev.activeTool === 'ZONE_POLYGON' ? 'SELECT' : prev.activeTool }));
+  }
+
+  function startZonePolygonDraft(zoneId) {
+    setEditorState((prev) => ({
+      ...prev,
+      activeTool: 'ZONE_POLYGON',
+      activeTab: 'PROPERTIES',
+      polygonDraft: {
+        zoneId,
+        points: [],
+        cursor: null
+      }
+    }));
   }
 
   function syncMapAssetsFromLibrary(assets) {
@@ -2913,7 +2990,10 @@ export default function MapEditorPage() {
                 ...patch,
                 viewportJson: patch.viewportJson === undefined
                   ? zone.viewportJson
-                  : normalizeZoneViewport(patch.viewportJson)
+                  : normalizeZoneViewport(patch.viewportJson),
+                polygonJson: patch.polygonJson === undefined
+                  ? zone.polygonJson
+                  : normalizeZonePolygon(patch.polygonJson)
               }
             : zone
         )
@@ -2937,7 +3017,8 @@ export default function MapEditorPage() {
               name: normalizeLocalizedField(`Новая зона ${nextIndex}`),
               color: '#2563eb',
               sortOrder,
-              viewportJson: getZoneFallbackViewport(prev.current.map)
+              viewportJson: getZoneFallbackViewport(prev.current.map),
+              polygonJson: null
             }
           ]
         }
@@ -3330,7 +3411,8 @@ export default function MapEditorPage() {
         name: zone.name || null,
         color: zone.color || '#2563eb',
         sortOrder: Number(zone.sortOrder) || 0,
-        viewportJson: normalizeZoneViewport(zone.viewportJson)
+        viewportJson: normalizeZoneViewport(zone.viewportJson),
+        polygonJson: normalizeZonePolygon(zone.polygonJson)
       })),
       objects: stateToSave.current.objects.map((object) => ({
         id: object.id,
@@ -3766,9 +3848,13 @@ export default function MapEditorPage() {
         {editorState.loading ? <p>{t('mapEditor.loading')}</p> : null}
         {editorState.error ? <p className="error">{editorState.error}</p> : null}
         {editorState.saveMessage ? <p className="success-text">{editorState.saveMessage}</p> : null}
-        {editorState.activeTool === 'POLYGON' ? (
+        {editorState.activeTool === 'POLYGON' || editorState.activeTool === 'ZONE_POLYGON' ? (
           <div className="map-editor-draft-bar">
-            <span>{t('mapEditor.polygonHint', { count: editorState.polygonDraft?.points?.length || 0 })}</span>
+            <span>
+              {editorState.activeTool === 'ZONE_POLYGON'
+                ? `Полигон зоны: точек ${editorState.polygonDraft?.points?.length || 0}`
+                : t('mapEditor.polygonHint', { count: editorState.polygonDraft?.points?.length || 0 })}
+            </span>
             <button type="button" className="btn btn-small" onClick={finishPolygonDraft} disabled={(editorState.polygonDraft?.points?.length || 0) < 3}>
               {t('mapEditor.finishPolygon')}
             </button>
@@ -3869,7 +3955,7 @@ export default function MapEditorPage() {
                     position: 'absolute',
                     left: `${MAP_OVERFLOW_GUTTER * mapScale}px`,
                     top: `${MAP_OVERFLOW_GUTTER * mapScale}px`,
-                    cursor: ['LINE', 'POLYGON'].includes(editorState.activeTool) ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
+                    cursor: ['LINE', 'POLYGON', 'ZONE_POLYGON'].includes(editorState.activeTool) ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
                   }}
                   onMouseDown={handleCanvasMouseDown}
                   onMouseMove={handleCanvasMouseMove}
@@ -3924,6 +4010,27 @@ export default function MapEditorPage() {
                       ))}
                     </svg>
                   ) : null}
+
+                  <svg className="map-editor-zone-polygons" aria-hidden="true">
+                    {(editorState.current.zones || []).map((zone) => {
+                      const polygon = normalizeZonePolygon(zone.polygonJson);
+                      if (!polygon) {
+                        return null;
+                      }
+
+                      return (
+                        <g key={`zone-polygon-${zone.id}`}>
+                          <polygon
+                            points={pointsToSvg(polygon.points)}
+                            style={{ '--zone-color': zone.color || '#2563eb' }}
+                          />
+                          <text x={polygon.points[0].x + 8} y={polygon.points[0].y + 18}>
+                            {localizeField(zone.name, language) || `Zone #${zone.id}`}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
 
                   {(editorState.current.zones || []).map((zone) => {
                     const viewport = normalizeZoneViewport(zone.viewportJson);
@@ -4082,6 +4189,7 @@ export default function MapEditorPage() {
                         map={map}
                         onZoneChange={handleZoneChange}
                         onAddZone={addZone}
+                        onDrawZonePolygon={startZonePolygonDraft}
                         language={language}
                       />
                     </details>

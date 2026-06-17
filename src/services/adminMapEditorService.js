@@ -202,7 +202,8 @@ async function createAdminMapVariant({
           name: zone.name,
           color: zone.color,
           sortOrder: zone.sortOrder,
-          viewportJson: zone.viewportJson
+          viewportJson: zone.viewportJson,
+          polygonJson: zone.polygonJson
         }
       });
       zoneIdMap.set(zone.id, createdZone.id);
@@ -483,6 +484,7 @@ function normalizeJsonValue(value) {
 
 function normalizeZoneInput(zoneInput, existingZone = null) {
   const nextViewport = zoneInput?.viewportJson === undefined ? existingZone?.viewportJson : zoneInput.viewportJson;
+  const nextPolygon = zoneInput?.polygonJson === undefined ? existingZone?.polygonJson : zoneInput.polygonJson;
   const nextName = zoneInput?.name === undefined ? existingZone?.name : zoneInput.name;
   const nextColor = zoneInput?.color === undefined ? existingZone?.color : zoneInput.color;
   const nextSortOrder = zoneInput?.sortOrder === undefined ? existingZone?.sortOrder : zoneInput.sortOrder;
@@ -491,7 +493,8 @@ function normalizeZoneInput(zoneInput, existingZone = null) {
     name: normalizeJsonValue(nextName) || { ua: 'Нова зона', ru: 'Новая зона', en: 'New zone' },
     color: String(nextColor || '#2563eb').trim() || '#2563eb',
     sortOrder: Number.isFinite(Number(nextSortOrder)) ? Number(nextSortOrder) : 0,
-    viewportJson: normalizeJsonValue(nextViewport)
+    viewportJson: normalizeJsonValue(nextViewport),
+    polygonJson: normalizeJsonValue(nextPolygon)
   };
 }
 
@@ -600,6 +603,24 @@ function validateEditorZones(zones) {
         }
       }
     }
+
+    if (zone.polygonJson !== undefined && zone.polygonJson !== null) {
+      if (typeof zone.polygonJson !== 'object' || Array.isArray(zone.polygonJson)) {
+        return `Zone ${normalizedId} contains an invalid polygon.`;
+      }
+
+      if (!Array.isArray(zone.polygonJson.points) || zone.polygonJson.points.length < 3) {
+        return `Zone ${normalizedId} polygon must include at least 3 points.`;
+      }
+
+      for (const point of zone.polygonJson.points) {
+        const x = Number(point?.x);
+        const y = Number(point?.y);
+        if (!Number.isFinite(x) || x < 0 || !Number.isFinite(y) || y < 0) {
+          return `Zone ${normalizedId} contains an invalid polygon point.`;
+        }
+      }
+    }
   }
 
   return null;
@@ -696,7 +717,8 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
           name: true,
           color: true,
           sortOrder: true,
-          viewportJson: true
+          viewportJson: true,
+          polygonJson: true
         }
       }
     }
