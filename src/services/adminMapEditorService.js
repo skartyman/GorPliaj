@@ -1,12 +1,14 @@
-const { MapObjectType, MapStatus } = require('@prisma/client');
+const { MapObjectType, MapStatus, VenuePositionSide, VenuePositionType } = require('@prisma/client');
 const prisma = require('../lib/prisma');
 const { saveMapSnapshot } = require('./r2StorageService');
 const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
 const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];
-const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'positionType', 'positionSide'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
+const VALID_POSITION_TYPES = new Set(Object.values(VenuePositionType));
+const VALID_POSITION_SIDES = new Set(Object.values(VenuePositionSide));
 const MAP_EDITOR_INCLUDE = {
   zones: {
     orderBy: {
@@ -199,7 +201,8 @@ async function createAdminMapVariant({
           mapId: map.id,
           name: zone.name,
           color: zone.color,
-          sortOrder: zone.sortOrder
+          sortOrder: zone.sortOrder,
+          viewportJson: zone.viewportJson
         }
       });
       zoneIdMap.set(zone.id, createdZone.id);
@@ -213,6 +216,8 @@ async function createAdminMapVariant({
           zoneId: zoneIdMap.get(table.zoneId),
           name: table.name,
           code: table.code,
+          positionType: table.positionType,
+          positionSide: table.positionSide,
           photoUrl: table.photoUrl,
           seatsMin: table.seatsMin,
           seatsMax: table.seatsMax,
@@ -372,6 +377,18 @@ function normalizeTableInput(tableInput, existingTable = null) {
       continue;
     }
 
+    if (field === 'positionType') {
+      const nextPositionType = tableInput?.positionType === undefined ? existingTable?.positionType : tableInput.positionType;
+      normalized.positionType = nextPositionType ? String(nextPositionType).trim().toUpperCase() : null;
+      continue;
+    }
+
+    if (field === 'positionSide') {
+      const nextPositionSide = tableInput?.positionSide === undefined ? existingTable?.positionSide : tableInput.positionSide;
+      normalized.positionSide = nextPositionSide ? String(nextPositionSide).trim().toUpperCase() : null;
+      continue;
+    }
+
     if (field === 'name') {
       const nextValue = tableInput?.name === undefined ? existingTable?.name : tableInput?.name;
       normalized.name = normalizeJsonValue(nextValue);
@@ -446,6 +463,20 @@ function normalizeJsonValue(value) {
   return String(value).trim() || null;
 }
 
+function normalizeZoneInput(zoneInput, existingZone = null) {
+  const nextViewport = zoneInput?.viewportJson === undefined ? existingZone?.viewportJson : zoneInput.viewportJson;
+  const nextName = zoneInput?.name === undefined ? existingZone?.name : zoneInput.name;
+  const nextColor = zoneInput?.color === undefined ? existingZone?.color : zoneInput.color;
+  const nextSortOrder = zoneInput?.sortOrder === undefined ? existingZone?.sortOrder : zoneInput.sortOrder;
+
+  return {
+    name: normalizeJsonValue(nextName) || { ua: 'Нова зона', ru: 'Новая зона', en: 'New zone' },
+    color: String(nextColor || '#2563eb').trim() || '#2563eb',
+    sortOrder: Number.isFinite(Number(nextSortOrder)) ? Number(nextSortOrder) : 0,
+    viewportJson: normalizeJsonValue(nextViewport)
+  };
+}
+
 function validateEditorObjects(objects) {
   if (!Array.isArray(objects)) {
     return 'Objects payload must be an array.';
@@ -491,8 +522,65 @@ function validateEditorObjects(objects) {
         return `Object ${normalizedId} contains an invalid table id.`;
       }
 
-      if (type && type !== 'TABLE') {
-        return `Only table objects can reference a table id (${normalizedId}).`;
+    }
+  }
+
+  return null;
+}
+
+function validateEditorZones(zones) {
+  if (zones === undefined) {
+    return null;
+  }
+
+  if (!Array.isArray(zones)) {
+    return 'Zones payload must be an array.';
+  }
+
+  const uniqueIds = new Set();
+  for (const zone of zones) {
+    const rawId = zone?.id;
+    if (rawId === undefined || rawId === null || rawId === '') {
+      return 'Each zone must include an id.';
+    }
+
+    const normalizedId = String(rawId);
+    if (uniqueIds.has(normalizedId)) {
+      return `Zone ${normalizedId} is duplicated in payload.`;
+    }
+    uniqueIds.add(normalizedId);
+
+    const numericId = Number(rawId);
+    const isExistingZone = Number.isInteger(numericId) && numericId > 0;
+    if (!isExistingZone) {
+      const name = normalizeJsonValue(zone.name);
+      if (!name) {
+        return `Zone ${normalizedId} must include a name.`;
+      }
+    }
+
+    if (zone.name !== undefined && zone.name !== null && typeof zone.name !== 'string' && typeof zone.name !== 'object') {
+      return `Zone ${normalizedId} contains an invalid name.`;
+    }
+
+    if (zone.color !== undefined && zone.color !== null && typeof zone.color !== 'string') {
+      return `Zone ${normalizedId} contains an invalid color.`;
+    }
+
+    if (zone.sortOrder !== undefined && zone.sortOrder !== null && !Number.isFinite(Number(zone.sortOrder))) {
+      return `Zone ${normalizedId} contains an invalid sort order.`;
+    }
+
+    if (zone.viewportJson !== undefined && zone.viewportJson !== null) {
+      if (typeof zone.viewportJson !== 'object' || Array.isArray(zone.viewportJson)) {
+        return `Zone ${normalizedId} contains an invalid viewport.`;
+      }
+
+      for (const field of ['x', 'y', 'width', 'height']) {
+        const value = Number(zone.viewportJson[field]);
+        if (!Number.isFinite(value) || value < 0) {
+          return `Zone ${normalizedId} contains an invalid viewport ${field}.`;
+        }
       }
     }
   }
@@ -532,13 +620,27 @@ function validateEditorTables(tables) {
         return `Table ${tableId} contains an invalid zone id.`;
       }
     }
+
+    if (table.positionType !== undefined && table.positionType !== null && table.positionType !== '') {
+      const positionType = String(table.positionType).trim().toUpperCase();
+      if (!VALID_POSITION_TYPES.has(positionType)) {
+        return `Table ${tableId} contains an invalid position type.`;
+      }
+    }
+
+    if (table.positionSide !== undefined && table.positionSide !== null && table.positionSide !== '') {
+      const positionSide = String(table.positionSide).trim().toUpperCase();
+      if (!VALID_POSITION_SIDES.has(positionSide)) {
+        return `Table ${tableId} contains an invalid position side.`;
+      }
+    }
   }
 
   return null;
 }
 
-async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = []) {
-  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput);
+async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = [], zonesInput = []) {
+  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput) || validateEditorZones(zonesInput);
   if (validationError) {
     return { type: 'INVALID', message: validationError };
   }
@@ -554,13 +656,19 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
           id: true,
           photoUrl: true,
           code: true,
+          positionType: true,
+          positionSide: true,
           name: true,
           zoneId: true
         }
       },
       zones: {
         select: {
-          id: true
+          id: true,
+          name: true,
+          color: true,
+          sortOrder: true,
+          viewportJson: true
         }
       }
     }
@@ -585,6 +693,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   }
 
   const zoneIds = new Set((map.zones || []).map((zone) => zone.id));
+  const zonesById = new Map((map.zones || []).map((zone) => [zone.id, zone]));
   if ((tablesInput || []).some((table) => {
     if (table.zoneId === undefined || table.zoneId === null || table.zoneId === '') {
       return false;
@@ -593,6 +702,13 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
     return !zoneIds.has(Number(table.zoneId));
   })) {
     return { type: 'INVALID', message: 'Tables payload references an unknown zone id.' };
+  }
+
+  for (const zone of zonesInput || []) {
+    const zoneId = Number(zone.id);
+    if (Number.isInteger(zoneId) && zoneId > 0 && !zoneIds.has(zoneId)) {
+      return { type: 'INVALID', message: 'Zones payload references an unknown zone id.' };
+    }
   }
 
   const existingObjects = await prisma.mapObject.findMany({
@@ -711,6 +827,31 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
         data: {
           mapId,
           ...normalizedObject
+        }
+      })
+    );
+  }
+
+  for (const zone of zonesInput || []) {
+    const zoneId = Number(zone.id);
+    const isExistingZone = Number.isInteger(zoneId) && zoneId > 0;
+    const normalizedZone = normalizeZoneInput(zone, isExistingZone ? zonesById.get(zoneId) : null);
+
+    if (isExistingZone) {
+      operations.push(
+        prisma.zone.update({
+          where: { id: zoneId },
+          data: normalizedZone
+        })
+      );
+      continue;
+    }
+
+    operations.push(
+      prisma.zone.create({
+        data: {
+          mapId,
+          ...normalizedZone
         }
       })
     );

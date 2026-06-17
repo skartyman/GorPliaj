@@ -115,6 +115,20 @@ const CREATION_PRESETS = {
   LABEL: { width: 180, height: 60 }
 };
 
+const POSITION_TYPES = [
+  { value: '', label: 'Не задано', code: '', requiresSide: false },
+  { value: 'BUNGALOW', label: 'Бунгало', code: 'B', requiresSide: true },
+  { value: 'KROVAT', label: 'Кровать', code: 'K', requiresSide: true },
+  { value: 'PIER', label: 'Пирс', code: 'P', requiresSide: false },
+  { value: 'RESTAURANT', label: 'Ресторан', code: 'R', requiresSide: false },
+  { value: 'TERRACE', label: 'Терраса', code: 'T', requiresSide: false }
+];
+const POSITION_SIDES = [
+  { value: '', label: 'Без стороны', code: '' },
+  { value: 'LEFT', label: 'Лево', code: 'L' },
+  { value: 'RIGHT', label: 'Право', code: 'R' }
+];
+
 const ASSET_CATEGORIES = {
   SURFACES: {
     label: 'Поверхні',
@@ -125,6 +139,10 @@ const ASSET_CATEGORIES = {
       { type: 'CUSTOM', label: 'Вода', width: 320, height: 160, subType: 'POLYGON', texture: 'water', zIndex: SURFACE_Z_INDEX },
       { type: 'CUSTOM', label: 'Зелена зона', width: 220, height: 140, subType: 'POLYGON', texture: 'grass', zIndex: SURFACE_Z_INDEX }
     ]
+  },
+  BEACH: {
+    label: 'Пляж',
+    items: []
   },
   FURNITURE: {
     label: 'Меблі',
@@ -319,10 +337,29 @@ function normalizeTextureAsset(asset) {
   };
 }
 
+function getTextureDisplayName(asset, index) {
+  const fallback = `Текстура ${String(index + 1).padStart(2, '0')}`;
+  const rawName = String(asset?.name || '').trim();
+  if (!rawName) return fallback;
+
+  const cleanName = rawName
+    .replace(/\.[a-z0-9]{2,5}$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const compactName = cleanName.replace(/\s/g, '');
+  const looksGenerated = /^\d{10,}[a-f0-9]{8,}$/i.test(compactName)
+    || /^[a-f0-9]{24,}$/i.test(compactName)
+    || /^\d{13,}/.test(compactName);
+
+  return looksGenerated ? fallback : cleanName || fallback;
+}
+
 function normalizeStoredObjectAsset(asset) {
   if (!asset || asset.assetType !== 'object') return null;
+  if (asset.source === 'r2-recovery' && String(asset.key || '').startsWith('menu/')) return null;
   const normalized = normalizeObjectTemplate(asset);
-  return normalized ? { ...asset, ...normalized, assetType: 'object' } : null;
+  return normalized ? { ...asset, ...normalized, assetType: 'object', category: asset.category || '' } : null;
 }
 
 function cloneEditorSnapshot(snapshot) {
@@ -425,6 +462,13 @@ function ActionIcon({ name }) {
           <path d="M5 18h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       );
+    case 'search':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="m16 16 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -451,6 +495,21 @@ function normalizeMap(map) {
     backgroundImage: String(map.backgroundImage || '').trim(),
     backgroundColor: String(map.backgroundColor || '').trim() || '#f8fafc'
   };
+}
+
+function normalizeZoneViewport(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const viewport = {
+    x: roundCoordinate(value.x),
+    y: roundCoordinate(value.y),
+    width: Math.max(roundCoordinate(value.width), 0),
+    height: Math.max(roundCoordinate(value.height), 0)
+  };
+
+  return viewport.width > 0 && viewport.height > 0 ? viewport : null;
 }
 
 function normalizeObject(object) {
@@ -480,6 +539,87 @@ function normalizeObject(object) {
       ...(svgUrl ? { svgUrl } : {})
     }
   };
+}
+
+function getPositionTypeConfig(positionType) {
+  return POSITION_TYPES.find((item) => item.value === positionType) || POSITION_TYPES[0];
+}
+
+function getPositionSideConfig(positionSide) {
+  return POSITION_SIDES.find((item) => item.value === positionSide) || POSITION_SIDES[0];
+}
+
+function parsePositionCode(code) {
+  const normalized = String(code || '').trim().toUpperCase();
+  const sidedMatch = normalized.match(/^(L|R)(B|K)-(\d+)$/);
+  if (sidedMatch) {
+    const [, sideCode, typeCode, number] = sidedMatch;
+    return {
+      positionType: typeCode === 'B' ? 'BUNGALOW' : 'KROVAT',
+      positionSide: sideCode === 'L' ? 'LEFT' : 'RIGHT',
+      number: Number(number) || 0
+    };
+  }
+
+  const simpleMatch = normalized.match(/^(P|R|T)-(\d+)$/);
+  if (simpleMatch) {
+    const [, typeCode, number] = simpleMatch;
+    const typeMap = {
+      P: 'PIER',
+      R: 'RESTAURANT',
+      T: 'TERRACE'
+    };
+    return {
+      positionType: typeMap[typeCode] || '',
+      positionSide: '',
+      number: Number(number) || 0
+    };
+  }
+
+  return { positionType: '', positionSide: '', number: 0 };
+}
+
+function inferPositionSettings(object, table = null) {
+  const meta = object?.metaJson && typeof object.metaJson === 'object' ? object.metaJson : {};
+  const parsed = parsePositionCode(table?.code || meta.tableCode);
+  const subType = String(meta.subType || '').toUpperCase();
+  return {
+    positionType: meta.positionType || parsed.positionType || (subType === 'BED' ? 'KROVAT' : ''),
+    positionSide: meta.positionSide || parsed.positionSide || ''
+  };
+}
+
+function buildPositionCodePrefix(positionType, positionSide) {
+  const typeConfig = getPositionTypeConfig(positionType);
+  if (!typeConfig.code) {
+    return '';
+  }
+
+  if (!typeConfig.requiresSide) {
+    return typeConfig.code;
+  }
+
+  const sideConfig = getPositionSideConfig(positionSide);
+  return sideConfig.code ? `${sideConfig.code}${typeConfig.code}` : '';
+}
+
+function getNextPositionCode(positionType, positionSide, tables, excludeTableId = null) {
+  const prefix = buildPositionCodePrefix(positionType, positionSide);
+  if (!prefix) {
+    return '';
+  }
+
+  const matcher = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+  const maxNumber = (tables || []).reduce((max, table) => {
+    if (excludeTableId && Number(table.id) === Number(excludeTableId)) {
+      return max;
+    }
+
+    const match = String(table.code || '').trim().match(matcher);
+    return match ? Math.max(max, Number(match[1]) || 0) : max;
+  }, 0);
+
+  return `${prefix}-${maxNumber + 1}`;
 }
 
 function rectsOverlap(a, b, gap = 8) {
@@ -517,10 +657,18 @@ function buildEditorState(payload) {
 
   return {
     map,
-    zones: payload.zones || [],
+    zones: (payload.zones || []).map((zone) => ({
+      ...zone,
+      name: zone.name || normalizeLocalizedField('Новая зона'),
+      color: zone.color || '#2563eb',
+      sortOrder: Number(zone.sortOrder) || 0,
+      viewportJson: normalizeZoneViewport(zone.viewportJson)
+    })),
       tables: (payload.tables || []).map((table) => ({
         ...table,
         code: String(table.code || '').trim(),
+        positionType: String(table.positionType || '').trim(),
+        positionSide: String(table.positionSide || '').trim(),
         name: table.name,
         photoUrl: String(table.photoUrl || '').trim()
       })),
@@ -706,6 +854,92 @@ function MapSettings({ map, onMapFieldChange, t }) {
   );
 }
 
+function getZoneFallbackViewport(map) {
+  return {
+    x: 0,
+    y: 0,
+    width: Math.min(480, map?.width || 480),
+    height: Math.min(320, map?.height || 320)
+  };
+}
+
+function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, language }) {
+  const safeZones = zones || [];
+
+  return (
+    <div className="zone-viewport-settings">
+      <button type="button" className="btn btn-secondary btn-small zone-add-button" onClick={onAddZone}>
+        Добавить зону
+      </button>
+
+      {!safeZones.length ? (
+        <p className="muted small">Зоны еще не созданы для этой карты.</p>
+      ) : null}
+
+      {safeZones.map((zone) => {
+        const viewport = normalizeZoneViewport(zone.viewportJson) || getZoneFallbackViewport(map);
+        const zoneName = localizeField(zone.name, language) || `Zone #${zone.id}`;
+
+        return (
+          <details key={zone.id} className="zone-viewport-card">
+            <summary>
+              <strong>{zoneName}</strong>
+              <span className="muted small">
+                {zone.viewportJson ? `${viewport.x}, ${viewport.y} · ${viewport.width}×${viewport.height}` : 'границы не заданы'}
+              </span>
+            </summary>
+            <div className="editor-form-grid">
+              <label className="field-span-2">
+                Название зоны
+                <input
+                  type="text"
+                  value={zoneName}
+                  placeholder="Например: Левая сторона"
+                  onChange={(event) => onZoneChange(zone.id, {
+                    name: normalizeLocalizedField(event.target.value)
+                  })}
+                />
+              </label>
+              <label>
+                Цвет
+                <input
+                  type="color"
+                  value={zone.color || '#2563eb'}
+                  onChange={(event) => onZoneChange(zone.id, { color: event.target.value })}
+                />
+              </label>
+              {['x', 'y', 'width', 'height'].map((field) => (
+                <label key={field}>
+                  {field.toUpperCase()}
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={viewport[field]}
+                    onChange={(event) => onZoneChange(zone.id, {
+                      viewportJson: {
+                        ...viewport,
+                        [field]: Number(event.target.value) || 0
+                      }
+                    })}
+                  />
+                </label>
+              ))}
+              <button
+                type="button"
+                className="btn btn-secondary btn-small field-span-2"
+                onClick={() => onZoneChange(zone.id, { viewportJson: null })}
+              >
+                Очистить границы зоны
+              </button>
+            </div>
+          </details>
+        );
+      })}
+    </div>
+  );
+}
+
 function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFieldChange, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
@@ -714,6 +948,11 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
   const table = selectedObject.tableId ? tableMap.get(selectedObject.tableId) : null;
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const isLocked = Boolean(selectedObject.metaJson?.isLocked);
+  const inferredPosition = inferPositionSettings(selectedObject, table);
+  const positionType = table?.positionType || inferredPosition.positionType;
+  const positionSide = table?.positionSide || inferredPosition.positionSide;
+  const positionTypeConfig = getPositionTypeConfig(positionType);
+  const suggestedPositionCode = getNextPositionCode(positionType, positionSide, tables, table?.id);
 
   const uploadFileToField = async (event, field) => {
     const file = event.target.files?.[0];
@@ -882,31 +1121,70 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, tables, onFiel
           </div>
         ) : null}
 
-        {selectedObject.type === 'TABLE' ? (
-          <>
+        <div className="inspector-section" style={{ marginBottom: '16px' }}>
+          <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+            Позиция бронирования
+          </h5>
+          <div className="editor-form-grid">
+            {!selectedObject.tableId ? (
+              <p className="muted small field-span-2">
+                У объекта пока нет позиции бронирования. Тип и код доступны после привязки объекта к позиции.
+              </p>
+            ) : null}
+
             <label>
-              {t('mapEditor.fields.tableId')}
-              <select value={selectedObject.tableId || ''} onChange={(event) => onFieldChange('tableId', event.target.value)}>
-                <option value="">{t('mapEditor.unassignedTable')}</option>
-                {tables.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.code || localizeField(item.name, language)}
-                  </option>
+              Тип
+              <select
+                value={positionType}
+                onChange={(event) => onFieldChange('positionType', event.target.value)}
+                disabled={!selectedObject.tableId}
+              >
+                {POSITION_TYPES.map((item) => (
+                  <option key={item.value || 'none'} value={item.value}>{item.label}</option>
                 ))}
               </select>
             </label>
 
             <label>
-              Номер столу
+              Сторона
+              <select
+                value={positionSide}
+                onChange={(event) => onFieldChange('positionSide', event.target.value)}
+                disabled={!selectedObject.tableId || !positionTypeConfig.requiresSide}
+              >
+                {POSITION_SIDES.map((item) => (
+                  <option key={item.value || 'none'} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Код позиции
               <input
                 type="text"
                 value={table?.code || ''}
-                placeholder="Номер у закладі"
-                onChange={(event) => onFieldChange('tableCode', event.target.value)}
+                placeholder={suggestedPositionCode || 'LB-1'}
+                onChange={(event) => onFieldChange('tableCode', event.target.value.toUpperCase())}
                 disabled={!selectedObject.tableId}
               />
             </label>
 
+            <label>
+              Следующий код
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => onFieldChange('generatePositionCode', suggestedPositionCode)}
+                disabled={!selectedObject.tableId || !suggestedPositionCode}
+              >
+                {suggestedPositionCode || 'Выберите тип'}
+              </button>
+            </label>
+          </div>
+        </div>
+
+        {selectedObject.type === 'TABLE' ? (
+          <>
             <label>
               Назва столу
               <input
@@ -1381,23 +1659,55 @@ function LayerManager
 }
 
 function TextureLibrary({ textureAssets, selectedObject, onUpload, onApply, onDelete, t }) {
+  const [search, setSearch] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const visibleAssets = textureAssets
+    .map((asset, index) => ({ asset, displayName: getTextureDisplayName(asset, index) }))
+    .filter(({ asset, displayName }) => {
+      if (!normalizedSearch) return true;
+      return `${displayName} ${asset.name || ''}`.toLocaleLowerCase().includes(normalizedSearch);
+    });
+  const renderedAssets = showAll || normalizedSearch ? visibleAssets : visibleAssets.slice(0, 8);
+
   return (
     <div className="texture-library">
       <div className="texture-library-head">
         <div>
-          <strong>{t('mapEditor.texturesTitle')}</strong>
+          <div className="texture-library-title-row">
+            <strong>{t('mapEditor.texturesTitle')}</strong>
+            <span className="texture-count">{textureAssets.length}</span>
+          </div>
           <p className="muted small">{t('mapEditor.texturesDescription')}</p>
         </div>
         <label className="btn btn-secondary btn-small texture-upload-button">
-          {t('mapEditor.uploadTexture')}
+          <ActionIcon name="upload" />
+          <span>{t('mapEditor.uploadTexture')}</span>
           <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={onUpload} />
         </label>
       </div>
 
+      {textureAssets.length > 8 ? (
+        <label className="texture-search">
+          <ActionIcon name="search" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Знайти текстуру"
+          />
+        </label>
+      ) : null}
+
       {textureAssets.length ? (
-        <div className="texture-grid">
-          {textureAssets.map((asset) => (
-            <div key={asset.id} className="texture-item">
+        <>
+          <div className="texture-grid">
+          {renderedAssets.map(({ asset, displayName }) => (
+            <div
+              key={asset.id}
+              className={`texture-item ${selectedObject?.metaJson?.textureUrl === asset.url ? 'active' : ''}`}
+              title={asset.name || displayName}
+            >
               <button
                 type="button"
                 className="texture-preview"
@@ -1405,16 +1715,33 @@ function TextureLibrary({ textureAssets, selectedObject, onUpload, onApply, onDe
                 onClick={() => onApply(asset.url)}
                 disabled={!selectedObject}
                 title={selectedObject ? t('mapEditor.applyTexture') : t('mapEditor.noSelection')}
-              />
+              >
+                {selectedObject?.metaJson?.textureUrl === asset.url ? <span className="texture-applied-mark">✓</span> : null}
+              </button>
               <div className="texture-item-meta">
-                <span>{asset.name}</span>
-                <button type="button" className="btn btn-secondary btn-small" onClick={() => onDelete(asset.id)}>
-                  {t('mapEditor.deleteTexture')}
+                <span>{displayName}</span>
+                <button
+                  type="button"
+                  className="texture-delete-btn"
+                  onClick={() => {
+                    if (window.confirm(`Видалити «${displayName}»?`)) onDelete(asset.id);
+                  }}
+                  aria-label={`${t('mapEditor.deleteTexture')}: ${displayName}`}
+                  title={t('mapEditor.deleteTexture')}
+                >
+                  <ActionIcon name="delete" />
                 </button>
               </div>
             </div>
           ))}
-        </div>
+          </div>
+          {!renderedAssets.length ? <p className="muted small texture-empty">Нічого не знайдено.</p> : null}
+          {!normalizedSearch && visibleAssets.length > 8 ? (
+            <button type="button" className="texture-show-more" onClick={() => setShowAll((current) => !current)}>
+              {showAll ? 'Згорнути' : `Показати всі (${visibleAssets.length})`}
+            </button>
+          ) : null}
+        </>
       ) : (
         <p className="muted small">{t('mapEditor.noTextures')}</p>
       )}
@@ -1625,6 +1952,7 @@ export default function MapEditorPage() {
     activeTab: 'PROPERTIES',
     activeTool: 'SELECT',
     activeCategory: 'SURFACES',
+    inspectorOpen: window.innerWidth > 1100,
     mapManagementOpen: false,
     drawingPath: null,
     polygonDraft: null
@@ -2012,26 +2340,12 @@ export default function MapEditorPage() {
     () => objects.filter((object) => editorState.selectedObjectIds.includes(object.id)),
     [objects, editorState.selectedObjectIds]
   );
-  const derivedObjectAssets = useMemo(() => {
-    const templates = objects
-      .map((object) => buildTemplateFromObject(object))
-      .filter(Boolean);
-    const byKey = new Map();
-
-    for (const template of templates) {
-      byKey.set(getTemplateKey(template), template);
-    }
-
-    return [...byKey.values()];
-  }, [objects]);
   const assetCategories = useMemo(() => {
     const byKey = new Map();
 
-    for (const template of [...customObjectAssets, ...derivedObjectAssets]) {
+    for (const template of customObjectAssets) {
       byKey.set(getTemplateKey(template), template);
     }
-
-    const customItems = [...byKey.values()];
 
     const categories = Object.fromEntries(
       Object.entries(ASSET_CATEGORIES).map(([key, category]) => [
@@ -2046,18 +2360,27 @@ export default function MapEditorPage() {
       ])
     );
 
-    if (!customItems.length) {
-      return categories;
+    const uncategorized = [];
+    for (const item of byKey.values()) {
+      const categoryKey = String(item.category || '').toUpperCase();
+      if (!categories[categoryKey]) {
+        uncategorized.push(item);
+        continue;
+      }
+
+      const itemKey = getTemplateKey(item);
+      const existingIndex = categories[categoryKey].items.findIndex((candidate) => getTemplateKey(candidate) === itemKey);
+      if (existingIndex >= 0) {
+        categories[categoryKey].items[existingIndex] = { ...categories[categoryKey].items[existingIndex], ...item };
+      } else {
+        categories[categoryKey].items.push(item);
+      }
     }
 
-    return {
-      MY_OBJECTS: {
-        label: 'Мої об’єкти',
-        items: customItems
-      },
-      ...categories
-    };
-  }, [customObjectAssets, derivedObjectAssets]);
+    return uncategorized.length
+      ? { ...categories, OTHER: { label: 'Інше', items: uncategorized } }
+      : categories;
+  }, [customObjectAssets]);
   const hasChanges = useMemo(() => {
     if (!editorState.original || !editorState.current) {
       return false;
@@ -2156,7 +2479,16 @@ export default function MapEditorPage() {
       ...prev,
       selectedObjectId: nextIds[0] || null,
       selectedObjectIds: nextIds,
-      activeTab: options.activeTab || prev.activeTab
+      activeTab: options.activeTab || prev.activeTab,
+      inspectorOpen: options.openInspector ?? prev.inspectorOpen
+    }));
+  }
+
+  function openInspector(activeTab = editorState.activeTab) {
+    setEditorState((prev) => ({
+      ...prev,
+      activeTab,
+      inspectorOpen: true
     }));
   }
 
@@ -2401,6 +2733,64 @@ export default function MapEditorPage() {
       return;
     }
 
+    if (field === 'positionType' || field === 'positionSide' || field === 'generatePositionCode') {
+      if (!selectedObject.tableId) {
+        return;
+      }
+
+      updateCurrent((prev) => {
+        const currentTable = prev.current.tables.find((table) => table.id === selectedObject.tableId);
+        const inferred = inferPositionSettings(selectedObject, currentTable);
+        const requestedType = field === 'positionType' ? String(value || '') : (currentTable?.positionType || inferred.positionType);
+        const typeConfig = getPositionTypeConfig(requestedType);
+        const requestedSide = typeConfig.requiresSide
+          ? (field === 'positionSide' ? String(value || '') : (currentTable?.positionSide || inferred.positionSide || 'LEFT'))
+          : '';
+        const generatedCode = field === 'generatePositionCode'
+          ? String(value || '')
+          : getNextPositionCode(requestedType, requestedSide, prev.current.tables, selectedObject.tableId);
+
+        const next = {
+          current: {
+            ...prev.current,
+            tables: prev.current.tables.map((table) =>
+              table.id === selectedObject.tableId
+                ? {
+                    ...table,
+                    positionType: requestedType || null,
+                    positionSide: requestedSide || null,
+                    code: generatedCode || table.code || null
+                  }
+                : table
+            ),
+            objects: prev.current.objects.map((object) =>
+              object.id === selectedObject.id
+                ? {
+                    ...object,
+                    metaJson: {
+                      ...(object.metaJson || {}),
+                      positionType: requestedType || '',
+                      positionSide: requestedSide || ''
+                    }
+                  }
+                : object
+            )
+          }
+        };
+
+        if (options.saveAfterChange) {
+          pendingSaveRef.current = {
+            ...prev,
+            ...next
+          };
+        }
+
+        return next;
+      });
+
+      return;
+    }
+
     updateObject(selectedObject.id, (object) => {
       if (field === 'label') {
         // Мы редактируем UA версию через текстовое поле
@@ -2472,6 +2862,49 @@ export default function MapEditorPage() {
     }));
   }
 
+  function handleZoneChange(zoneId, patch) {
+    updateCurrent((prev) => ({
+      current: {
+        ...prev.current,
+        zones: prev.current.zones.map((zone) =>
+          String(zone.id) === String(zoneId)
+            ? {
+                ...zone,
+                ...patch,
+                viewportJson: patch.viewportJson === undefined
+                  ? zone.viewportJson
+                  : normalizeZoneViewport(patch.viewportJson)
+              }
+            : zone
+        )
+      }
+    }));
+  }
+
+  function addZone() {
+    updateCurrent((prev) => {
+      const zones = prev.current.zones || [];
+      const nextIndex = zones.length + 1;
+      const sortOrder = Math.max(0, ...zones.map((zone) => Number(zone.sortOrder) || 0)) + 1;
+
+      return {
+        current: {
+          ...prev.current,
+          zones: [
+            ...zones,
+            {
+              id: `tmp-zone-${Date.now()}`,
+              name: normalizeLocalizedField(`Новая зона ${nextIndex}`),
+              color: '#2563eb',
+              sortOrder,
+              viewportJson: getZoneFallbackViewport(prev.current.map)
+            }
+          ]
+        }
+      };
+    });
+  }
+
   function handleObjectMouseDown(objectId, event) {
     if (event.button !== 0) {
       return;
@@ -2489,7 +2922,7 @@ export default function MapEditorPage() {
 
   function handleObjectContextMenu(objectId, event) {
     event.preventDefault();
-    setSelection([objectId], { activeTab: 'PROPERTIES' });
+    setSelection([objectId], { activeTab: 'PROPERTIES', openInspector: true });
   }
 
   function beginDragGroup(objectId, position) {
@@ -2783,8 +3216,17 @@ export default function MapEditorPage() {
       tables: stateToSave.current.tables.map((table) => ({
         id: table.id,
         code: table.code || null,
+        positionType: table.positionType || null,
+        positionSide: table.positionSide || null,
         name: table.name || null,
         photoUrl: table.photoUrl || null
+      })),
+      zones: stateToSave.current.zones.map((zone) => ({
+        id: zone.id,
+        name: zone.name || null,
+        color: zone.color || '#2563eb',
+        sortOrder: Number(zone.sortOrder) || 0,
+        viewportJson: normalizeZoneViewport(zone.viewportJson)
       })),
       objects: stateToSave.current.objects.map((object) => ({
         id: object.id,
@@ -3034,8 +3476,8 @@ export default function MapEditorPage() {
           <div className="hero-inline-note">{t('mapEditor.editorNote')}</div>
         </section>
 
-        <div className="map-editor-toolbar" style={{ marginBottom: '16px' }}>
-          <div className="map-editor-toolbar-group">
+        <div className="map-editor-toolbar">
+          <div className="map-editor-toolbar-group map-editor-toolbar-main">
             <button type="button" className="btn" onClick={saveChanges} disabled={!hasChanges || editorState.saving || editorState.loading}>
               {editorState.saving ? t('mapEditor.saving') : t('mapEditor.save')}
             </button>
@@ -3068,7 +3510,7 @@ export default function MapEditorPage() {
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setEditorState((prev) => ({ ...prev, activeTab: 'ASSETS' }))}
+              onClick={() => openInspector('ASSETS')}
               disabled={editorState.loading}
             >
               {t('mapEditor.addObjects')}
@@ -3106,7 +3548,7 @@ export default function MapEditorPage() {
             </div>
           </div>
 
-          <div className="map-editor-toolbar-group">
+          <div className="map-editor-toolbar-group map-editor-toolbar-meta">
             {map && (
                <div className="map-meta muted" style={{ margin: 0 }}>
                {t('mapEditor.meta', {
@@ -3233,7 +3675,7 @@ export default function MapEditorPage() {
         ) : null}
 
         {!editorState.loading && editorState.current ? (
-          <div className="map-editor-v2">
+          <div className={`map-editor-v2 ${editorState.inspectorOpen ? 'inspector-open' : 'inspector-collapsed'}`}>
             <aside className="map-editor-tools">
               <button 
                 className={`tool-button ${editorState.activeTool === 'SELECT' ? 'active' : ''}`}
@@ -3272,7 +3714,7 @@ export default function MapEditorPage() {
               
               <button 
                 className={`tool-button ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
-                onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
+                onClick={() => openInspector('ASSETS')}
               >
                 <i className="icon-assets">A</i>
                 <span>{t('mapEditor.tabs.assets')}</span>
@@ -3281,6 +3723,22 @@ export default function MapEditorPage() {
 
             <main className="map-editor-viewport">
               <SVGDefinitions />
+              <button
+                type="button"
+                className={`map-editor-inspector-toggle ${editorState.inspectorOpen ? 'is-open' : ''}`}
+                onClick={() => setEditorState((prev) => ({ ...prev, inspectorOpen: !prev.inspectorOpen }))}
+                aria-label={editorState.inspectorOpen ? 'Закрити панель' : 'Відкрити панель'}
+                title={editorState.inspectorOpen ? 'Закрити панель' : 'Відкрити панель'}
+              >
+                <span aria-hidden="true">{editorState.inspectorOpen ? '×' : '☰'}</span>
+                <span className="map-editor-inspector-toggle-label">
+                  {editorState.activeTab === 'PROPERTIES'
+                    ? t('mapEditor.tabs.properties')
+                    : editorState.activeTab === 'LAYERS'
+                      ? t('mapEditor.tabs.layers')
+                      : t('mapEditor.tabs.assets')}
+                </span>
+              </button>
               <div
                 className="map-editor-canvas-container"
                 ref={canvasContainerRef}
@@ -3363,6 +3821,29 @@ export default function MapEditorPage() {
                     </svg>
                   ) : null}
 
+                  {(editorState.current.zones || []).map((zone) => {
+                    const viewport = normalizeZoneViewport(zone.viewportJson);
+                    if (!viewport) {
+                      return null;
+                    }
+
+                    return (
+                      <div
+                        key={`zone-viewport-${zone.id}`}
+                        className="map-editor-zone-viewport"
+                        style={{
+                          left: viewport.x,
+                          top: viewport.y,
+                          width: viewport.width,
+                          height: viewport.height,
+                          borderColor: zone.color || '#2563eb'
+                        }}
+                      >
+                        <span>{localizeField(zone.name, language) || `Zone #${zone.id}`}</span>
+                      </div>
+                    );
+                  })}
+
                   {renderObjects.map((object) => {
                     return (
                       <Rnd
@@ -3412,28 +3893,48 @@ export default function MapEditorPage() {
               </div>
             </main>
 
+            {editorState.inspectorOpen ? (
+              <button
+                type="button"
+                className="map-editor-inspector-backdrop"
+                onClick={() => setEditorState((prev) => ({ ...prev, inspectorOpen: false }))}
+                aria-label="Закрити панель"
+              />
+            ) : null}
+
             <aside className="map-editor-inspector">
-              <div className="inspector-tabs">
+              <div className="map-editor-inspector-head">
+                <div className="inspector-tabs">
                 <button
                   type="button"
                   className={`inspector-tab ${editorState.activeTab === 'PROPERTIES' ? 'active' : ''}`}
-                  onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'PROPERTIES' }))}
+                  onClick={() => openInspector('PROPERTIES')}
                 >
                   {t('mapEditor.tabs.properties')}
                 </button>
                 <button
                   type="button"
                   className={`inspector-tab ${editorState.activeTab === 'LAYERS' ? 'active' : ''}`}
-                  onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'LAYERS' }))}
+                  onClick={() => openInspector('LAYERS')}
                 >
                   {t('mapEditor.tabs.layers')}
                 </button>
                 <button
                   type="button"
                   className={`inspector-tab ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
-                  onClick={() => setEditorState(prev => ({ ...prev, activeTab: 'ASSETS' }))}
+                  onClick={() => openInspector('ASSETS')}
                 >
                   {t('mapEditor.tabs.assets')}
+                </button>
+                </div>
+                <button
+                  type="button"
+                  className="map-editor-inspector-close"
+                  onClick={() => setEditorState((prev) => ({ ...prev, inspectorOpen: false }))}
+                  aria-label="Закрити панель"
+                  title="Закрити панель"
+                >
+                  ×
                 </button>
               </div>
 
@@ -3463,6 +3964,21 @@ export default function MapEditorPage() {
                       </summary>
                       <MapSettings map={map} onMapFieldChange={handleMapFieldChange} t={t} />
                     </details>
+                    <details className="map-settings-accordion">
+                      <summary>
+                        <div>
+                          <strong>Зоны карты</strong>
+                          <span className="muted small">Задайте границы зон для быстрого увеличения на карте.</span>
+                        </div>
+                      </summary>
+                      <ZoneViewportSettings
+                        zones={editorState.current.zones}
+                        map={map}
+                        onZoneChange={handleZoneChange}
+                        onAddZone={addZone}
+                        language={language}
+                      />
+                    </details>
                   </>
                 )}
 
@@ -3488,12 +4004,12 @@ export default function MapEditorPage() {
                       t={t}
                     />
 
-                    <div className="category-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+                    <div className="asset-category-tabs">
                       {Object.keys(assetCategories).map(catKey => (
                         <button
                           type="button"
                           key={catKey}
-                          className={`btn btn-small ${editorState.activeCategory === catKey ? 'btn-primary' : 'btn-secondary'}`}
+                          className={`asset-category-tab ${editorState.activeCategory === catKey ? 'active' : ''}`}
                           onClick={() => setEditorState(prev => ({ ...prev, activeCategory: catKey }))}
                         >
                           {assetCategories[catKey].label}
@@ -3502,17 +4018,17 @@ export default function MapEditorPage() {
                     </div>
                     
                     <div className="asset-library">
-                      {(assetCategories[editorState.activeCategory] || assetCategories.SURFACES).items.map((item, idx) => (
-                        <button key={idx} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
+                      {(assetCategories[editorState.activeCategory] || assetCategories.SURFACES).items.map((item) => (
+                        <button key={getTemplateKey(item)} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
                           <div className="asset-preview">
                             {item.svgUrl || item.textureUrl || item.url ? (
-                              <img src={item.svgUrl || item.textureUrl || item.url} alt="" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+                              <img src={item.svgUrl || item.textureUrl || item.url} alt="" />
                             ) : item.subType && SVG_TEMPLATES[item.subType] ? (
-                              <svg viewBox="0 0 100 100" style={{ width: '30px', height: '30px' }}>
+                              <svg viewBox="0 0 100 100">
                                 {SVG_TEMPLATES[item.subType]}
                               </svg>
                             ) : (
-                              <div className={`editor-object-badge ${item.type.toLowerCase()}`} style={{ width: '30px', height: '20px' }} />
+                              <div className={`editor-object-badge ${item.type.toLowerCase()}`} />
                             )}
                           </div>
                           <span className="asset-label">{item.label}</span>
