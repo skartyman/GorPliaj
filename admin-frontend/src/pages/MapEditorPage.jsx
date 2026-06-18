@@ -1220,7 +1220,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
           <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
             Позиция бронирования
           </h5>
-          <div className="editor-form-grid">
+          <div className="editor-form-grid booking-position-grid">
             {!selectedObject.tableId ? (
               <div className="field-span-2">
                 <p className="muted small">
@@ -1290,11 +1290,11 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
               />
             </label>
 
-            <label>
+            <label className="next-position-code-field">
               Следующий код
               <button
                 type="button"
-                className="btn btn-secondary btn-small"
+                className="btn btn-secondary btn-small position-code-button"
                 onClick={() => onFieldChange('generatePositionCode', suggestedPositionCode)}
                 disabled={!selectedObject.tableId || !suggestedPositionCode}
               >
@@ -1338,7 +1338,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
               />
             </label>
 
-            <label className="editor-toggle-field">
+            <label className="editor-toggle-field inline-toggle-field">
               <span>Доступно для брони</span>
               <input
                 type="checkbox"

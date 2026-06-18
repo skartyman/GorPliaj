@@ -1141,6 +1141,34 @@ textarea { resize: vertical; min-height: 96px; }
 .editor-form-grid > .field-span-2 { grid-column: 1 / -1; }
 .editor-form-grid input, .editor-form-grid select, .editor-form-grid textarea { width: 100%; min-width: 0; }
 .editor-form-grid textarea { resize: vertical; }
+.booking-position-grid { align-items: end; }
+.booking-position-grid > label { display: grid; gap: 6px; align-content: end; color: var(--wood-dark); font-size: 12px; font-weight: 700; line-height: 1.2; }
+.booking-position-grid input,
+.booking-position-grid select,
+.booking-position-grid .position-code-button {
+  min-height: 36px;
+  border-radius: 10px;
+}
+.booking-position-grid .position-code-button {
+  width: 100%;
+  justify-content: center;
+  padding-inline: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.booking-position-grid .next-position-code-field { min-width: 0; }
+.booking-position-grid .inline-toggle-field {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  color: var(--wood-dark);
+}
+.booking-position-grid .inline-toggle-field span { min-width: 0; line-height: 1.15; overflow-wrap: anywhere; }
+.booking-position-grid .inline-toggle-field input { width: 16px; height: 16px; min-height: 16px; flex: 0 0 16px; }
 .zone-viewport-settings { display: grid; gap: 10px; }
 .zone-add-button { justify-self: stretch; }
 .zone-viewport-card { border: 1px solid var(--border-light); border-radius: var(--radius-btn); background: var(--bg-card); overflow: hidden; }
