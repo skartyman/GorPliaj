@@ -617,15 +617,20 @@ function buildPositionCodePrefix(positionType, positionSide) {
   return sideConfig.code ? `${sideConfig.code}${typeConfig.code}` : '';
 }
 
-function getNextPositionCode(positionType, positionSide, tables, excludeTableId = null) {
+function getNextPositionCode(positionType, positionSide, tables, excludeTableId = null, zoneId = null) {
   const prefix = buildPositionCodePrefix(positionType, positionSide);
   if (!prefix) {
     return '';
   }
 
   const matcher = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+  const normalizedZoneId = zoneId === null || zoneId === undefined || zoneId === '' ? null : Number(zoneId);
   const maxNumber = (tables || []).reduce((max, table) => {
     if (excludeTableId && Number(table.id) === Number(excludeTableId)) {
+      return max;
+    }
+
+    if (normalizedZoneId && Number(table.zoneId) !== normalizedZoneId) {
       return max;
     }
 
@@ -634,6 +639,51 @@ function getNextPositionCode(positionType, positionSide, tables, excludeTableId 
   }, 0);
 
   return `${prefix}-${maxNumber + 1}`;
+}
+
+function isPointInPolygon(point, points) {
+  if (!point || !Array.isArray(points) || points.length < 3) {
+    return false;
+  }
+
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+    const xi = Number(points[i].x) || 0;
+    const yi = Number(points[i].y) || 0;
+    const xj = Number(points[j].x) || 0;
+    const yj = Number(points[j].y) || 0;
+    const intersects = ((yi > point.y) !== (yj > point.y)) &&
+      (point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1) + xi);
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function isPointInViewport(point, viewport) {
+  const rect = normalizeZoneViewport(viewport);
+  if (!point || !rect) {
+    return false;
+  }
+
+  return point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height;
+}
+
+function findZoneForObject(object, zones) {
+  const point = {
+    x: (Number(object?.x) || 0) + (Number(object?.width) || 0) / 2,
+    y: (Number(object?.y) || 0) + (Number(object?.height) || 0) / 2
+  };
+
+  return (zones || []).find((zone) => {
+    const polygon = normalizeZonePolygon(zone.polygonJson);
+    return polygon ? isPointInPolygon(point, polygon.points) : false;
+  }) || (zones || []).find((zone) => isPointInViewport(point, zone.viewportJson)) || null;
 }
 
 function rectsOverlap(a, b, gap = 8) {
@@ -996,7 +1046,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
   const positionType = table?.positionType || inferredPosition.positionType;
   const positionSide = table?.positionSide || inferredPosition.positionSide;
   const positionTypeConfig = getPositionTypeConfig(positionType);
-  const suggestedPositionCode = getNextPositionCode(positionType, positionSide, tables, table?.id);
+  const suggestedPositionCode = getNextPositionCode(positionType, positionSide, tables, table?.id, table?.zoneId);
   const persistedZones = (zones || []).filter((item) => Number.isInteger(Number(item.id)) && Number(item.id) > 0);
 
   const uploadFileToField = async (event, field) => {
@@ -1250,6 +1300,52 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
               >
                 {suggestedPositionCode || 'Выберите тип'}
               </button>
+            </label>
+
+            <label>
+              Мин. гостей
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={table?.seatsMin ?? 1}
+                onChange={(event) => onFieldChange('tableSeatsMin', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label>
+              Макс. гостей
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={table?.seatsMax ?? 4}
+                onChange={(event) => onFieldChange('tableSeatsMax', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label>
+              Депозит
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={table?.deposit ?? 0}
+                onChange={(event) => onFieldChange('tableDeposit', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label className="editor-toggle-field">
+              <span>Доступно для брони</span>
+              <input
+                type="checkbox"
+                checked={table?.isBookable ?? false}
+                onChange={(event) => onFieldChange('tableIsBookable', event.target.checked)}
+                disabled={!selectedObject.tableId}
+              />
             </label>
           </div>
         </div>
@@ -2714,9 +2810,16 @@ export default function MapEditorPage() {
           {
             ...cloneEditorSnapshot(object),
             id: `tmp-${Date.now()}-${objectIdRef.current + index + 1}`,
+            tableId: null,
             x: object.x + shift,
             y: object.y + shift,
-            zIndex: Number(object.zIndex) + index + 1
+            zIndex: Number(object.zIndex) + index + 1,
+            metaJson: {
+              ...(object.metaJson || {}),
+              tableCode: '',
+              positionType: '',
+              positionSide: ''
+            }
           },
           prev.current.map
         )
@@ -2793,12 +2896,25 @@ export default function MapEditorPage() {
       return;
     }
 
-    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableZoneId') {
+    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableZoneId' || field === 'tableSeatsMin' || field === 'tableSeatsMax' || field === 'tableDeposit' || field === 'tableIsBookable') {
       if (!selectedObject.tableId) {
         return;
       }
 
       updateCurrent((prev) => {
+        const currentTable = prev.current.tables.find((table) => table.id === selectedObject.tableId);
+        const nextZoneId = field === 'tableZoneId'
+          ? (value === '' ? null : Number(value))
+          : currentTable?.zoneId;
+        const nextCode = field === 'tableZoneId'
+          ? getNextPositionCode(
+              currentTable?.positionType,
+              currentTable?.positionSide,
+              prev.current.tables,
+              selectedObject.tableId,
+              nextZoneId
+            )
+          : null;
         const next = {
           current: {
             ...prev.current,
@@ -2809,7 +2925,11 @@ export default function MapEditorPage() {
                     ...(field === 'tablePhotoUrl' ? { photoUrl: String(value) } : {}),
                     ...(field === 'tableCode' ? { code: String(value).trim() } : {}),
                     ...(field === 'tableName' ? { name: normalizeLocalizedField(value) } : {}),
-                    ...(field === 'tableZoneId' ? { zoneId: value === '' ? null : Number(value) } : {})
+                    ...(field === 'tableZoneId' ? { zoneId: nextZoneId, code: nextCode || table.code || null } : {}),
+                    ...(field === 'tableSeatsMin' ? { seatsMin: Math.max(1, Number(value) || 1) } : {}),
+                    ...(field === 'tableSeatsMax' ? { seatsMax: Math.max(1, Number(value) || 1) } : {}),
+                    ...(field === 'tableDeposit' ? { deposit: Math.max(0, Number(value) || 0) } : {}),
+                    ...(field === 'tableIsBookable' ? { isBookable: Boolean(value) } : {})
                   }
                 : table
             )
@@ -2849,7 +2969,7 @@ export default function MapEditorPage() {
           : '';
         const generatedCode = field === 'generatePositionCode'
           ? String(value || '')
-          : getNextPositionCode(requestedType, requestedSide, prev.current.tables, selectedObject.tableId);
+          : getNextPositionCode(requestedType, requestedSide, prev.current.tables, selectedObject.tableId, currentTable?.zoneId);
 
         const next = {
           current: {
@@ -3017,7 +3137,10 @@ export default function MapEditorPage() {
 
     updateCurrent((prev) => {
       const zones = prev.current.zones || [];
-      const defaultZone = zones.find((zone) => Number.isInteger(Number(zone.id)) && Number(zone.id) > 0);
+      const detectedZone = findZoneForObject(selectedObject, zones);
+      const defaultZone = detectedZone && Number.isInteger(Number(detectedZone.id)) && Number(detectedZone.id) > 0
+        ? detectedZone
+        : zones.find((zone) => Number.isInteger(Number(zone.id)) && Number(zone.id) > 0);
       if (!defaultZone) {
         return {};
       }
@@ -3027,7 +3150,7 @@ export default function MapEditorPage() {
       const positionType = inferred.positionType || (selectedObject.type === 'TABLE' ? 'RESTAURANT' : '');
       const typeConfig = getPositionTypeConfig(positionType);
       const positionSide = typeConfig.requiresSide ? (inferred.positionSide || 'LEFT') : '';
-      const code = getNextPositionCode(positionType, positionSide, prev.current.tables);
+      const code = getNextPositionCode(positionType, positionSide, prev.current.tables, null, defaultZone.id);
       const displayName = code || localizeField(selectedObject.label, language) || 'Новая позиция';
 
       return {
@@ -3305,9 +3428,16 @@ export default function MapEditorPage() {
         {
           ...cloneEditorSnapshot(object),
           id: `tmp-${Date.now()}-${objectIdRef.current + index + 1}`,
+          tableId: null,
           x: object.x + 24,
           y: object.y + 24,
-          zIndex: baseZIndex + index
+          zIndex: baseZIndex + index,
+          metaJson: {
+            ...(object.metaJson || {}),
+            tableCode: '',
+            positionType: '',
+            positionSide: ''
+          }
         },
         prev.current.map
       ));
