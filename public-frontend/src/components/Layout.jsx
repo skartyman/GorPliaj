@@ -50,6 +50,10 @@ export default function Layout() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
+
   const brandName = localizeField(settings?.title, locale) || 'GorPliaj';
   const logoUrl = settings?.logoUrl || '/icons/Logo.png';
   const isEn = locale === 'en';
@@ -67,6 +71,8 @@ export default function Layout() {
   const contactsTitle = localizedCopy({ ua: 'Контакти', ru: 'Контакты', en: 'Contacts' }, locale);
   const findUsTitle = localizedCopy({ ua: 'Як знайти заклад', ru: 'Как найти заведение', en: 'How to find us' }, locale);
   const rightsText = localizedCopy({ ua: 'Усі права захищені', ru: 'Все права защищены', en: 'All rights reserved' }, locale);
+  const privacyLinkText = localizedCopy({ ua: 'Політика конфіденційності', ru: 'Политика конфиденциальности', en: 'Privacy Policy' }, locale);
+  const paymentReturnsLinkText = localizedCopy({ ua: 'Умови оплати і повернення', ru: 'Условия оплаты и возврата', en: 'Payment and Refund Terms' }, locale);
   const workingHoursText = settings?.workingHours?.mon?.open
     ? localizedCopy({
         ua: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Нд ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
@@ -209,9 +215,10 @@ export default function Layout() {
           </div>
 
           <div className="footer-bottom">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="footer-legal-links">
               <span>© {new Date().getFullYear()} {brandName}</span>
-              <NavLink to="/privacy" style={{ color: 'inherit', fontSize: '0.8rem', opacity: 0.8 }}>{t('privacyTitle')}</NavLink>
+              <NavLink to="/privacy">{privacyLinkText}</NavLink>
+              <NavLink to="/payment-returns">{paymentReturnsLinkText}</NavLink>
             </div>
             <span>{rightsText}</span>
           </div>

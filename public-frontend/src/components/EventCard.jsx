@@ -7,19 +7,48 @@ export default function EventCard({ event, featured = false }) {
   const { locale } = useLocale();
   const title = localizeField(event.title, locale);
   const shortDescription = localizeField(event.shortDescription, locale);
+  const eventDate = formatEventDateRange(
+    event.startAt,
+    event.endAt,
+    locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU')
+  );
+  const summary = shortDescription || localizedCopy({
+    ua: 'Вечірня програма, музика та атмосфера біля моря.',
+    ru: 'Вечерняя программа, музыка и атмосфера у моря.',
+    en: 'An evening program, music and a beachside atmosphere.'
+  }, locale);
+  const dateLabel = localizedCopy({
+    ua: 'Дата',
+    ru: 'Дата',
+    en: 'Date'
+  }, locale);
+  const detailsLabel = localizedCopy({
+    ua: 'Детальніше',
+    ru: 'Подробнее',
+    en: 'Details'
+  }, locale);
+  const spotlightLabel = localizedCopy({
+    ua: 'Рекомендація сезону',
+    ru: 'Рекомендация сезона',
+    en: 'Season pick'
+  }, locale);
 
   return (
     <article className={`event-card${featured ? ' featured' : ''}`}>
       <Link to={`/events/${event.slug}`} className="media-link">
-        <img src={event.posterImage || '/icons/lebedi.jpg'} alt={title} loading="lazy" />
-        <div className="event-overlay">
-          <p className="event-date">{formatEventDateRange(event.startAt, event.endAt, locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU'))}</p>
+        <div className="event-card-media">
+          <img src={event.posterImage || '/icons/lebedi.jpg'} alt={title} loading="lazy" />
+          {featured && <span className="event-pill">{spotlightLabel}</span>}
+        </div>
+        <div className="event-card-body">
+          <p className="event-date">
+            <span>{dateLabel}</span>
+            {eventDate}
+          </p>
           <h3>{title}</h3>
-          {shortDescription && <p className="muted" style={{ fontSize: '0.85rem', margin: '6px 0 12px' }}>{shortDescription}</p>}
+          <p className="event-summary">{summary}</p>
           <div className="event-actions">
-            <span className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '8px 16px' }}>
-              {localizedCopy({ ua: 'Детальніше', ru: 'Подробнее', en: 'Details' }, locale)}
-            </span>
+            <span className="event-link">{detailsLabel}</span>
           </div>
         </div>
       </Link>

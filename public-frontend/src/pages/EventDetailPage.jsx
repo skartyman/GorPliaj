@@ -1,15 +1,27 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { eventsApi } from '../lib/api';
 import { formatEventDateRange } from '../lib/events';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
+import { sanitizeRichText } from '../lib/richText';
 
 export default function EventDetailPage() {
   const { locale } = useLocale();
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
   const [state, setState] = useState({ loading: true, error: '', event: null });
+  const [sales, setSales] = useState({ loading: false, error: '', ticketTypes: [] });
+  const [orderForm, setOrderForm] = useState({
+    ticketTypeId: '',
+    quantity: 1,
+    customerName: '',
+    customerEmail: '',
+    customerPhone: ''
+  });
+  const [orderResult, setOrderResult] = useState(null);
+  const [orderStatus, setOrderStatus] = useState(null);
   const c = (values) => localizedCopy(values, locale);
   const metaTitle = localizeField(state.event?.title, locale);
   const metaDescription = localizeField(state.event?.shortDescription, locale);
@@ -23,6 +35,72 @@ export default function EventDetailPage() {
       .catch(() => setState({ loading: false, error: c({ ua: 'Не вдалося завантажити подію.', ru: 'Не удалось загрузить событие.', en: 'Failed to load event.' }), event: null }));
   }, [slug, locale]);
 
+  useEffect(() => {
+    if (!slug || !state.event || !['TICKETS', 'BOTH'].includes(state.event.ctaType)) return;
+    setSales((current) => ({ ...current, loading: true, error: '' }));
+    eventsApi.ticketTypes(slug)
+      .then((result) => {
+        const ticketTypes = Array.isArray(result.ticketTypes) ? result.ticketTypes : [];
+        setSales({ loading: false, error: '', ticketTypes });
+        setOrderForm((current) => ({ ...current, ticketTypeId: current.ticketTypeId || String(ticketTypes[0]?.id || '') }));
+      })
+      .catch((error) => setSales({ loading: false, error: error.message, ticketTypes: [] }));
+  }, [slug, state.event]);
+
+  useEffect(() => {
+    if (!orderResult?.orderNumber || !orderResult?.downloadToken) return undefined;
+
+    let cancelled = false;
+    async function refreshStatus() {
+      try {
+        const result = await eventsApi.ticketOrderStatus(orderResult.orderNumber, orderResult.downloadToken);
+        if (!cancelled) setOrderStatus(result);
+      } catch {}
+    }
+
+    refreshStatus();
+    const interval = window.setInterval(refreshStatus, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [orderResult]);
+
+  useEffect(() => {
+    const orderNumber = searchParams.get('ticket_order');
+    const downloadToken = searchParams.get('token');
+    if (!orderNumber || !downloadToken) return;
+    setOrderResult((current) => current || {
+      orderNumber,
+      downloadToken,
+      amount: null,
+      currency: 'UAH',
+      paymentUrl: null
+    });
+  }, [searchParams]);
+
+  async function submitTicketOrder(event) {
+    event.preventDefault();
+    setSales((current) => ({ ...current, loading: true, error: '' }));
+    setOrderResult(null);
+    setOrderStatus(null);
+    try {
+      const result = await eventsApi.createTicketOrder(slug, {
+        customerName: orderForm.customerName,
+        customerEmail: orderForm.customerEmail,
+        customerPhone: orderForm.customerPhone,
+        items: [{
+          ticketTypeId: Number(orderForm.ticketTypeId),
+          quantity: Number(orderForm.quantity)
+        }]
+      });
+      setOrderResult(result.order);
+      setSales((current) => ({ ...current, loading: false }));
+    } catch (error) {
+      setSales((current) => ({ ...current, loading: false, error: error.message }));
+    }
+  }
+
   if (state.loading) {
     return <div className="state-msg">{c({ ua: 'Завантаження події...', ru: 'Загрузка события...', en: 'Loading event...' })}</div>;
   }
@@ -35,32 +113,129 @@ export default function EventDetailPage() {
   const title = localizeField(event.title, locale);
   const shortDescription = localizeField(event.shortDescription, locale);
   const fullDescription = localizeField(event.fullDescription, locale);
+  const fullDescriptionHtml = sanitizeRichText(fullDescription);
+  const paymentUrl = orderStatus?.paymentUrl || orderResult?.paymentUrl;
 
   return (
     <>
-      <Link to="/events" className="text-link" style={{ display: 'inline-block', marginBottom: 24 }}>
+      <Link to="/events" className="text-link event-back-link">
         ← {c({ ua: 'Назад до афіші', ru: 'Назад к афише', en: 'Back to events' })}
       </Link>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 400px) 1fr', gap: 32, alignItems: 'start' }}>
-        <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-          <img src={event.posterImage || '/icons/lebedi.jpg'} alt={title} style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover' }} />
+      <div className="event-detail-layout">
+        <div className="event-detail-poster">
+          <img src={event.posterImage || '/icons/lebedi.jpg'} alt={title} />
         </div>
-        <div>
+        <div className="event-detail-content">
           <p className="event-date">{formatEventDateRange(event.startAt, event.endAt, locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU'))}</p>
-          <h1 style={{ marginTop: 8 }}>{title}</h1>
-          <p className="muted" style={{ marginTop: 12, lineHeight: 1.6 }}>{shortDescription}</p>
-          {fullDescription && <p style={{ lineHeight: 1.7, marginTop: 16 }}>{fullDescription}</p>}
-          <div className="btn-group" style={{ marginTop: 28 }}>
-            <Link className="btn btn-primary" to={`/booking?event=${event.slug}`}>
-              {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
-            </Link>
+          <h1>{title}</h1>
+          <p className="muted event-detail-lead">{shortDescription}</p>
+          {fullDescriptionHtml ? (
+            <div
+              className="event-rich-text"
+              dangerouslySetInnerHTML={{ __html: fullDescriptionHtml }}
+            />
+          ) : null}
+          <div className="btn-group event-detail-actions">
+            {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
+              <Link className="btn btn-primary" to={`/booking?event=${event.slug}`}>
+                {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
+              </Link>
+            ) : null}
             {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl ? (
               <a className="btn btn-secondary" href={event.ticketUrl} target="_blank" rel="noreferrer">
                 {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
               </a>
             ) : null}
+            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && !event.ticketUrl ? (
+              <a className="btn btn-secondary" href="#tickets">
+                {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
+              </a>
+            ) : null}
           </div>
+
+          {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
+            <div id="tickets" className="ticket-purchase-panel">
+              {sales.loading && !sales.ticketTypes.length ? (
+                <div className="state-msg">
+                  {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
+                </div>
+              ) : null}
+              {!sales.loading && !sales.ticketTypes.length && !sales.error ? (
+                <div className="state-msg">
+                  {c({
+                    ua: 'Продаж квитків для цієї події ще не відкритий.',
+                    ru: 'Продажа билетов для этого события еще не открыта.',
+                    en: 'Ticket sales for this event are not open yet.'
+                  })}
+                </div>
+              ) : null}
+              {sales.ticketTypes.length ? (
+            <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
+              <div className="form-group ticket-form-head">
+                <h2>{c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy a ticket' })}</h2>
+              </div>
+              <div className="form-group">
+                <label>{c({ ua: 'Тариф', ru: 'Тариф', en: 'Ticket type' })}</label>
+                <select className="form-input" value={orderForm.ticketTypeId} onChange={(e) => setOrderForm({ ...orderForm, ticketTypeId: e.target.value })} required>
+                  {sales.ticketTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {localizeField(type.name, locale)} · {type.price} {type.currency} ({type.available})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
+                <input className="form-input" type="number" min="1" max="20" required value={orderForm.quantity} onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>{c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}</label>
+                <input className="form-input" required value={orderForm.customerName} onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input className="form-input" type="email" required value={orderForm.customerEmail} onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })} />
+              </div>
+              <div className="form-group ticket-form-full">
+                <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
+                <input className="form-input" value={orderForm.customerPhone} onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })} />
+              </div>
+              <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading}>
+                {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаём...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
+              </button>
+            </form>
+              ) : null}
+            </div>
+          ) : null}
+          {sales.error ? <div className="state-msg state-error event-inline-state">{sales.error}</div> : null}
+          {orderResult ? (
+            <div className="state-msg state-success event-inline-state ticket-result-panel">
+              <p>
+                {orderStatus?.status === 'PAID'
+                  ? c({
+                    ua: `Замовлення ${orderResult.orderNumber} оплачено. Квитки надіслані на email.`,
+                    ru: `Заказ ${orderResult.orderNumber} оплачен. Билеты отправлены на email.`,
+                    en: `Order ${orderResult.orderNumber} is paid. Tickets were sent by email.`
+                  })
+                  : c({
+                    ua: `Замовлення ${orderResult.orderNumber} створено. Очікуємо підтвердження оплати.`,
+                    ru: `Заказ ${orderResult.orderNumber} создан. Ожидаем подтверждения оплаты.`,
+                    en: `Order ${orderResult.orderNumber} was created. Waiting for payment confirmation.`
+                  })}
+              </p>
+              {orderStatus?.downloadUrl ? (
+                <a className="btn btn-primary" href={orderStatus.downloadUrl}>
+                  {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
+                </a>
+              ) : null}
+              {orderStatus?.status !== 'PAID' && paymentUrl ? (
+                <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
+                  {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </>

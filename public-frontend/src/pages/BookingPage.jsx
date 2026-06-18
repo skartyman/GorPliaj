@@ -1,6 +1,6 @@
-import { Link, useSearchParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { bookingsApi, mapApi } from '../lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { bookingsApi, eventsApi, mapApi } from '../lib/api';
 import { getPublicMapData } from '../lib/map';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
@@ -21,17 +21,36 @@ function parseObjectMeta(metaJson) {
   }
 }
 
+function toDateOnly(value) {
+  if (!value) return '';
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function money(value, currency = 'UAH') {
+  return `${Number(value || 0).toFixed(0)} ${currency}`;
+}
+
 export default function BookingPage() {
   const { t, locale } = useLocale();
   const [searchParams] = useSearchParams();
   const today = new Date().toISOString().slice(0, 10);
+  const eventSlug = searchParams.get('event') || '';
+  const returnedReservationCode = searchParams.get('reservation') || '';
+  const returnedReservationToken = searchParams.get('t') || '';
+
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [mapName, setMapName] = useState('');
   const [tableOptions, setTableOptions] = useState([]);
   const [selectedObjectName, setSelectedObjectName] = useState('');
   const [selectedObjectMeta, setSelectedObjectMeta] = useState({});
+  const [paymentUrl, setPaymentUrl] = useState('');
+  const [reservationAccess, setReservationAccess] = useState(null);
+  const [reservationStatus, setReservationStatus] = useState(null);
+  const [eventInfo, setEventInfo] = useState(null);
+  const [ticketTypes, setTicketTypes] = useState([]);
   const [selected, setSelected] = useState({
     mapId: Number(searchParams.get('mapId') || '0'),
     zoneId: Number(searchParams.get('zoneId') || '0'),
@@ -44,14 +63,37 @@ export default function BookingPage() {
     timeFrom: searchParams.get('timeFrom') || '12:00',
     customerName: '',
     customerPhone: '',
+    customerEmail: '',
     commentCustomer: ''
   });
   const c = (values) => localizedCopy(values, locale);
+
   useMeta(`${t('bookingTitle')} · GorPliaj`, c({
-    ua: 'Онлайн-бронювання столів.',
-    ru: 'Онлайн-бронирование столов.',
+    ua: 'Онлайн-бронювання столу.',
+    ru: 'Онлайн-бронирование стола.',
     en: 'Online table booking.'
   }));
+
+  useEffect(() => {
+    if (!eventSlug) return;
+
+    let ignore = false;
+    Promise.all([
+      eventsApi.bySlug(eventSlug).catch(() => null),
+      eventsApi.ticketTypes(eventSlug).catch(() => ({ ticketTypes: [] }))
+    ]).then(([event, tickets]) => {
+      if (ignore) return;
+      setEventInfo(event);
+      setTicketTypes(Array.isArray(tickets?.ticketTypes) ? tickets.ticketTypes : []);
+      if (event?.startAt && !searchParams.get('date')) {
+        setForm((current) => ({ ...current, date: toDateOnly(event.startAt) }));
+      }
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [eventSlug]);
 
   useEffect(() => {
     async function loadMap() {
@@ -95,40 +137,96 @@ export default function BookingPage() {
     loadMap();
   }, [form.date, form.guests, form.timeFrom]);
 
+  useEffect(() => {
+    if (!returnedReservationCode || !returnedReservationToken) return;
+
+    setReservationAccess({ ticketCode: returnedReservationCode, token: returnedReservationToken });
+    bookingsApi.status(returnedReservationCode, returnedReservationToken)
+      .then((result) => {
+        setReservationStatus(result);
+        if (result.downloadUrl) {
+          setSuccessMessage(c({ ua: 'Оплату підтверджено. PDF бронювання готовий.', ru: 'Оплата подтверждена. PDF бронирования готов.', en: 'Payment confirmed. Booking PDF is ready.' }));
+        } else {
+          setSuccessMessage(c({ ua: 'Повернулися з оплати. Очікуємо підтвердження платежу.', ru: 'Вернулись из оплаты. Ожидаем подтверждение платежа.', en: 'Returned from payment. Waiting for payment confirmation.' }));
+        }
+      })
+      .catch((error) => setErrorMessage(error.message));
+  }, [returnedReservationCode, returnedReservationToken]);
+
+  const selectedTable = useMemo(
+    () => tableOptions.find((table) => table.id === Number(selected.tableId)),
+    [selected.tableId, tableOptions]
+  );
+
+  const entryTicketType = useMemo(() => {
+    if (!eventInfo?.startAt || toDateOnly(eventInfo.startAt) !== form.date) return null;
+    return ticketTypes[0] || null;
+  }, [eventInfo, form.date, ticketTypes]);
+
+  const paymentPreview = useMemo(() => {
+    const tableDeposit = Number(selectedTable?.deposit || 0);
+    const objectDeposit = Number(selectedObjectMeta.depositAmount || 0);
+    const depositAmount = tableDeposit > 0 ? tableDeposit : objectDeposit;
+    const entryTicketPrice = Number(entryTicketType?.price || 0);
+    const entryTicketsAmount = entryTicketPrice > 0 ? entryTicketPrice * Number(form.guests || 0) : 0;
+    return {
+      depositAmount,
+      entryTicketPrice,
+      entryTicketsAmount,
+      totalAmount: depositAmount + entryTicketsAmount,
+      currency: entryTicketType?.currency || 'UAH'
+    };
+  }, [selectedObjectMeta.depositAmount, selectedTable, entryTicketType, form.guests]);
+
   async function submitBooking(event) {
     event.preventDefault();
     if (!selected.tableId || !selected.mapId || !selected.zoneId) {
-      setErrorMessage(c({ ua: 'Перед відправленням оберіть стіл на карті.', ru: 'Перед отправкой выберите стол на карте.', en: 'Please select a table before submitting.' }));
+      setErrorMessage(c({ ua: 'Перед відправленням оберіть стіл.', ru: 'Перед отправкой выберите стол.', en: 'Please select a table before submitting.' }));
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     setErrorMessage('');
     setSuccessMessage('');
+    setPaymentUrl('');
+    setReservationStatus(null);
 
     try {
       const objectNote = selected.objectId && selectedObjectName ? `Object: ${selectedObjectName} (#${selected.objectId})` : '';
       const commentCustomer = [objectNote, form.commentCustomer].filter(Boolean).join('\n\n');
-
-      await bookingsApi.create({
+      const result = await bookingsApi.create({
         tableId: selected.tableId,
         mapId: selected.mapId,
         zoneId: selected.zoneId,
         customerName: form.customerName,
         customerPhone: form.customerPhone,
+        customerEmail: form.customerEmail,
         guests: form.guests,
         reservationDate: form.date,
         timeFrom: form.timeFrom,
         timeTo: '23:00',
         objectId: selected.objectId || undefined,
+        eventSlug: eventSlug || undefined,
         commentCustomer
       });
 
-      setSuccessMessage(c({ ua: 'Заявку на бронювання створено. Менеджер звʼяжеться з вами.', ru: 'Заявка на бронирование создана. Менеджер свяжется с вами.', en: 'Booking request created. Manager will contact you.' }));
+      setPaymentUrl(result.paymentUrl || '');
+      setReservationAccess(result.access || null);
+      setSuccessMessage(result.paymentUrl
+        ? c({
+          ua: 'Бронювання створено. Завершіть оплату, щоб закріпити позицію.',
+          ru: 'Бронирование создано. Завершите оплату, чтобы закрепить позицию.',
+          en: 'Booking created. Complete the payment to secure it.'
+        })
+        : c({
+          ua: 'Заявку на бронювання створено. Оплата не потрібна.',
+          ru: 'Заявка на бронирование создана. Оплата не требуется.',
+          en: 'Booking request created. No payment is required.'
+        }));
     } catch (error) {
       setErrorMessage(error.message || c({ ua: 'Не вдалося створити бронювання.', ru: 'Не удалось создать бронирование.', en: 'Failed to create booking.' }));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
@@ -136,16 +234,29 @@ export default function BookingPage() {
     <>
       <div className="section-header">
         <div>
-          <h1>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Book a table' })}</h1>
-          <p className="muted">{c({ ua: 'Оберіть вільний стіл і надішліть заявку на бронювання.', ru: 'Выберите свободный стол и отправьте заявку на бронирование.', en: 'Select a free table and submit a booking request.' })}</p>
+          <h1>{c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Book a table' })}</h1>
+          <p className="muted">
+            {c({
+              ua: 'Бронювання столу безкоштовне. Якщо для позиції задано депозит, він оплачується онлайн і враховується у фінальному чеку в закладі.',
+              ru: 'Бронь стола бесплатная. Если для позиции задан депозит, он оплачивается онлайн и учитывается в финальном чеке в заведении.',
+              en: 'Table booking is free. If a deposit is configured for the position, it is paid online and credited toward your final venue bill.'
+            })}
+          </p>
         </div>
       </div>
 
-      {searchParams.get('event') && (
-        <p style={{ background: 'rgba(201,168,108,0.1)', padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginBottom: 24 }}>
-          {c({ ua: 'Бронювання для події', ru: 'Бронирование для события', en: 'Booking for event' })}: <strong>{searchParams.get('event')}</strong>
-        </p>
-      )}
+      {eventSlug ? (
+        <div className="booking-object-summary" style={{ marginBottom: 24 }}>
+          <p className="muted" style={{ margin: 0 }}>
+            {c({ ua: 'Бронювання для події', ru: 'Бронирование для события', en: 'Booking for event' })}: <strong>{localizeField(eventInfo?.title, locale) || eventSlug}</strong>
+          </p>
+          {entryTicketType ? (
+            <p className="muted" style={{ margin: 0 }}>
+              {c({ ua: 'У день події до депозиту додаються вхідні квитки', ru: 'В день события к депозиту добавляются входные билеты', en: 'On the event day, entry tickets are added to the deposit' })}: {form.guests} x {money(entryTicketType.price, entryTicketType.currency)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <form onSubmit={submitBooking} className="form-grid">
         <div className="form-group">
@@ -167,13 +278,10 @@ export default function BookingPage() {
           {selected.objectId && selectedObjectName ? (
             <div className="booking-object-summary">
               <p className="muted" style={{ margin: 0 }}>
-                Selected object: <strong>{selectedObjectName}</strong>
+                {c({ ua: 'Обраний обʼєкт', ru: 'Выбранный объект', en: 'Selected object' })}: <strong>{selectedObjectName}</strong>
               </p>
               {selectedObjectMeta.price !== '' && selectedObjectMeta.price !== null && selectedObjectMeta.price !== undefined ? (
-                <p className="muted" style={{ margin: 0 }}>Price: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}</p>
-              ) : null}
-              {selectedObjectMeta.depositRequired || selectedObjectMeta.depositAmount ? (
-                <p className="muted" style={{ margin: 0 }}>Deposit: {selectedObjectMeta.depositAmount || 'required'} {selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}</p>
+                <p className="muted" style={{ margin: 0 }}>{c({ ua: 'Ціна', ru: 'Цена', en: 'Price' })}: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}</p>
               ) : null}
             </div>
           ) : null}
@@ -193,7 +301,7 @@ export default function BookingPage() {
             {!tableOptions.length ? <option value="">{c({ ua: 'Немає вільних столів під ці параметри', ru: 'Нет свободных столов под эти параметры', en: 'No free tables for these parameters' })}</option> : null}
             {tableOptions.map((table) => (
               <option key={table.id} value={table.id}>
-                {localizeField(table.name, locale) || table.code} ({table.seatsMin}-{table.seatsMax} {c({ ua: 'місць', ru: 'мест', en: 'seats' })})
+                {localizeField(table.name, locale) || table.code} ({table.seatsMin}-{table.seatsMax} {c({ ua: 'місць', ru: 'мест', en: 'seats' })}) · {Number(table.deposit || 0) > 0 ? money(table.deposit) : c({ ua: 'без депозиту', ru: 'без депозита', en: 'no deposit' })}
               </option>
             ))}
           </select>
@@ -210,14 +318,75 @@ export default function BookingPage() {
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label>Email</label>
+          <input type="email" className="form-input" value={form.customerEmail} required={paymentPreview.totalAmount > 0} onChange={(event) => setForm((current) => ({ ...current, customerEmail: event.target.value }))} />
+        </div>
+
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <div className="booking-object-summary">
+            <p className="muted" style={{ margin: 0 }}>
+              <strong>{c({ ua: 'До оплати зараз', ru: 'К оплате сейчас', en: 'Due now' })}: {money(paymentPreview.totalAmount, paymentPreview.currency)}</strong>
+            </p>
+            <p className="muted" style={{ margin: 0 }}>
+              {c({ ua: 'Депозит позиції', ru: 'Депозит позиции', en: 'Position deposit' })}: {paymentPreview.depositAmount > 0 ? money(paymentPreview.depositAmount, paymentPreview.currency) : c({ ua: 'не задано', ru: 'не задан', en: 'not configured' })}
+            </p>
+            {paymentPreview.entryTicketsAmount > 0 ? (
+              <p className="muted" style={{ margin: 0 }}>
+                {c({ ua: 'Вхідні квитки', ru: 'Входные билеты', en: 'Entry tickets' })}: {form.guests} x {money(paymentPreview.entryTicketPrice, paymentPreview.currency)} = {money(paymentPreview.entryTicketsAmount, paymentPreview.currency)}
+              </p>
+            ) : null}
+            {paymentPreview.depositAmount > 0 ? (
+              <p className="muted" style={{ margin: 0 }}>
+                {c({
+                  ua: 'Депозит не є окремою платою: його буде враховано у фінальному чеку в закладі.',
+                  ru: 'Депозит не является отдельной платой: он будет учтен в финальном чеке в заведении.',
+                  en: 'The deposit is not a separate fee: it is credited toward your final venue bill.'
+                })}
+              </p>
+            ) : (
+              <p className="muted" style={{ margin: 0 }}>
+                {c({
+                  ua: 'Для цієї позиції депозит не встановлено, тому бронювання столу безкоштовне.',
+                  ru: 'Для этой позиции депозит не установлен, поэтому бронь бесплатная.',
+                  en: 'No deposit is configured for this position, so the booking is free.'
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           <label>{c({ ua: 'Коментар', ru: 'Комментарий', en: 'Comment' })}</label>
           <textarea className="form-input" rows="3" value={form.commentCustomer} onChange={(event) => setForm((current) => ({ ...current, commentCustomer: event.target.value }))} />
         </div>
 
         <div className="btn-group">
-          <button type="submit" className="btn btn-primary" disabled={loading || !tableOptions.length}>
-            {c({ ua: 'Надіслати заявку', ru: 'Отправить заявку', en: 'Submit request' })}
+          <button type="submit" className="btn btn-primary" disabled={loading || submitting || !tableOptions.length}>
+            {submitting
+              ? c({ ua: 'Створюємо бронювання...', ru: 'Создаем бронирование...', en: 'Creating booking...' })
+              : paymentPreview.totalAmount > 0
+                ? c({ ua: 'Оформити та оплатити', ru: 'Оформить и оплатить', en: 'Book and pay' })
+                : c({ ua: 'Забронювати без оплати', ru: 'Забронировать без оплаты', en: 'Book without payment' })}
           </button>
+          {paymentUrl ? (
+            <a className="btn btn-primary" href={paymentUrl}>
+              {c({ ua: 'Перейти до оплати', ru: 'Перейти к оплате', en: 'Go to payment' })}
+            </a>
+          ) : null}
+          {reservationStatus?.downloadUrl ? (
+            <a className="btn btn-secondary" href={reservationStatus.downloadUrl}>
+              {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
+            </a>
+          ) : null}
+          {!reservationStatus?.downloadUrl && reservationAccess?.ticketCode && reservationAccess?.token ? (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => bookingsApi.status(reservationAccess.ticketCode, reservationAccess.token).then(setReservationStatus).catch((error) => setErrorMessage(error.message))}
+            >
+              {c({ ua: 'Перевірити оплату', ru: 'Проверить оплату', en: 'Check payment' })}
+            </button>
+          ) : null}
         </div>
 
         {loading && <div className="state-msg">{c({ ua: 'Оновлюємо дані...', ru: 'Обновляем данные...', en: 'Updating data...' })}</div>}

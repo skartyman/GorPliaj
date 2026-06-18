@@ -30,7 +30,15 @@ export const contentApi = {
 
 export const eventsApi = {
   list: (includePast = true) => request(`/events?includePast=${includePast ? '1' : '0'}`),
-  bySlug: (slug) => request(`/events/${encodeURIComponent(slug)}`)
+  bySlug: (slug) => request(`/events/${encodeURIComponent(slug)}`),
+  ticketTypes: (slug) => request(`/events/${encodeURIComponent(slug)}/ticket-types`),
+  createTicketOrder: (slug, payload) =>
+    request(`/events/${encodeURIComponent(slug)}/ticket-orders`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  ticketOrderStatus: (orderNumber, token) =>
+    request(`/ticket-orders/${encodeURIComponent(orderNumber)}/status?token=${encodeURIComponent(token)}`)
 };
 
 export const menuApi = {
@@ -54,7 +62,9 @@ export const bookingsApi = {
     request('/reservations', {
       method: 'POST',
       body: JSON.stringify(payload)
-    })
+    }),
+  status: (ticketCode, token) =>
+    request(`/reservations/${encodeURIComponent(ticketCode)}/status?t=${encodeURIComponent(token)}`)
 };
 
 export const settingsApi = {
