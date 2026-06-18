@@ -34,6 +34,7 @@ function buildTicketHtml({ ticketCode, customerName, customerPhone, reservationD
   const fromStr = formatTime(timeFrom);
   const toStr = formatTime(timeTo);
   const isPaid = paymentStatus === 'PAID' || status === 'PAID';
+  const appBaseUrl = process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev';
 
   return `
 <!DOCTYPE html>
@@ -94,7 +95,7 @@ function buildTicketHtml({ ticketCode, customerName, customerPhone, reservationD
             </td>
           </tr>
         </table>
-        <p style="font-size:11px;color:#bbbbbb;margin-top:16px;">ГоРПляж Beach Resort • От raда, Одеса • https://gorpliaj.fly.dev</p>
+        <p style="font-size:11px;color:#bbbbbb;margin-top:16px;">ГоРПляж Beach Resort • Отрада, Одеса • ${appBaseUrl}</p>
       </td>
     </tr>
   </table>
@@ -102,7 +103,7 @@ function buildTicketHtml({ ticketCode, customerName, customerPhone, reservationD
 </html>`;
 }
 
-async function sendTicketEmail({ to, ticketCode, customerName, customerPhone, reservationDate, timeFrom, timeTo, guests, tableName, zoneName, qrDataUrl, verifyUrl, status, paymentStatus }) {
+async function sendTicketEmail({ to, ticketCode, customerName, customerPhone, reservationDate, timeFrom, timeTo, guests, tableName, zoneName, eventTitle, depositAmount, totalPaid, qrDataUrl, verifyUrl, status, paymentStatus }) {
   if (!isMailConfigured()) {
     console.log(`[mail] Not configured. Would send ticket ${ticketCode} to ${to}`);
     return { sent: false, reason: 'mail_not_configured' };
@@ -121,7 +122,7 @@ async function sendTicketEmail({ to, ticketCode, customerName, customerPhone, re
 
   try {
     const pdfBuffer = await generateTicketPdf({
-      ticketCode, customerName, customerPhone, guests, reservationDate, timeFrom, timeTo, tableName, zoneName, status, paymentStatus, verifyUrl
+      ticketCode, customerName, customerPhone, guests, reservationDate, timeFrom, timeTo, tableName, zoneName, eventTitle, depositAmount, totalPaid, status, paymentStatus, verifyUrl
     });
     attachments.push({
       filename: `gorpliaj-ticket-${ticketCode.toLowerCase()}.pdf`,

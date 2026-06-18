@@ -3,6 +3,7 @@ const {
   getAdminStatus,
   loginAdmin,
   getAdminMe,
+  changeAdminPassword,
   logoutAdmin,
   getAdminReservations,
   getAdminReservationById,
@@ -73,6 +74,19 @@ const {
   updateUser,
   deleteUser
 } = require('../../controllers/adminUserController');
+const {
+  listTicketTypes,
+  createTicketType,
+  updateTicketType,
+  deleteTicketType,
+  createOrder,
+  listOrders,
+  getOrder,
+  updateOrderStatus,
+  listTickets,
+  verifyTicket,
+  useTicket
+} = require('../../controllers/adminTicketSalesController');
 
 const router = express.Router();
 
@@ -80,6 +94,7 @@ router.get('/status', getAdminStatus);
 
 router.post('/auth/login', rateLimiter, loginAdmin);
 router.get('/auth/me', requireAdminAuth, getAdminMe);
+router.patch('/auth/password', requireAdminAuth, changeAdminPassword);
 router.post('/auth/logout', requireAdminAuth, logoutAdmin);
 
 router.get('/reservations', requireAdminAuth, requirePermission('reservations:view'), getAdminReservations);
@@ -114,6 +129,19 @@ router.get('/events/:id', requireAdminAuth, requirePermission('events:view'), ge
 router.post('/events', requireAdminAuth, requirePermission('events:create'), createAdminEvent);
 router.patch('/events/:id', requireAdminAuth, requirePermission('events:update'), updateAdminEvent);
 router.delete('/events/:id', requireAdminAuth, requirePermission('events:delete'), deleteAdminEvent);
+router.get('/events/:eventId/ticket-types', requireAdminAuth, requirePermission('tickets:view'), listTicketTypes);
+router.post('/events/:eventId/ticket-types', requireAdminAuth, requirePermission('tickets:manage'), createTicketType);
+router.patch('/ticket-types/:id', requireAdminAuth, requirePermission('tickets:manage'), updateTicketType);
+router.delete('/ticket-types/:id', requireAdminAuth, requirePermission('tickets:manage'), deleteTicketType);
+
+router.get('/ticket-orders', requireAdminAuth, requirePermission('tickets:view'), listOrders);
+router.post('/ticket-orders', requireAdminAuth, requirePermission('tickets:manage'), createOrder);
+router.get('/ticket-orders/:id', requireAdminAuth, requirePermission('tickets:view'), getOrder);
+router.patch('/ticket-orders/:id/status', requireAdminAuth, requirePermission('tickets:manage'), updateOrderStatus);
+
+router.get('/tickets', requireAdminAuth, requirePermission('tickets:view'), listTickets);
+router.get('/tickets/verify/:code', requireAdminAuth, requirePermission('tickets:verify'), verifyTicket);
+router.post('/tickets/verify/:code/use', requireAdminAuth, requirePermission('tickets:verify'), useTicket);
 
 router.get('/news', requireAdminAuth, requirePermission('news:view'), getAdminNews);
 router.get('/news/:id', requireAdminAuth, requirePermission('news:view'), getAdminNewsById);

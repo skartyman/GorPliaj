@@ -14,6 +14,7 @@ function generateTicketSignature(ticketCode, reservationDate) {
 function verifyTicketSignature(ticketCode, reservationDate, signature) {
   if (!ticketCode || !reservationDate || !signature) return false;
   const expected = generateTicketSignature(ticketCode, reservationDate);
+  if (String(signature).length !== expected.length) return false;
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 

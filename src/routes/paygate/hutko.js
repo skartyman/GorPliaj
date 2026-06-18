@@ -58,15 +58,31 @@ router.post('/callback', async (req, res) => {
   }
 });
 
-router.get('/return', (req, res) => {
+function handleReturn(req, res) {
   const orderId = req.query.order_id || '';
   const status = req.query.order_status || '';
+  const kind = req.query.kind || '';
+  const returnTo = typeof req.query.return_to === 'string' && req.query.return_to.startsWith('/')
+    ? req.query.return_to
+    : '/events';
+
+  if (kind === 'ticket' || kind === 'reservation') {
+    const query = new URLSearchParams({
+      payment_status: String(status || ''),
+      order_id: String(orderId || '')
+    });
+    const separator = returnTo.includes('?') ? '&' : '?';
+    return res.redirect(`${returnTo}${separator}${query.toString()}`);
+  }
 
   if (status === 'approved') {
     return res.redirect(`/admin/payments?success=1&order_id=${encodeURIComponent(orderId)}`);
   }
 
   return res.redirect(`/admin/payments?status=${encodeURIComponent(status)}&order_id=${encodeURIComponent(orderId)}`);
-});
+}
+
+router.get('/return', handleReturn);
+router.post('/return', handleReturn);
 
 module.exports = router;

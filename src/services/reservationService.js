@@ -14,15 +14,21 @@ function createReservation(payload) {
     tableId,
     mapId,
     zoneId,
+    eventId,
     customerName,
     customerPhone,
+    customerEmail,
     guests,
     reservationDate,
     timeFrom,
     timeTo,
     commentCustomer,
+    commentAdmin,
     depositRequired,
-    depositAmount
+    depositAmount,
+    status,
+    source,
+    ticketCode
   } = payload;
 
   return prisma.reservation.create({
@@ -30,15 +36,47 @@ function createReservation(payload) {
       tableId,
       mapId,
       zoneId,
+      eventId: eventId || null,
       customerName,
       customerPhone,
+      customerEmail: customerEmail || null,
       guests,
       reservationDate,
       timeFrom,
       timeTo,
       commentCustomer: commentCustomer || null,
+      commentAdmin: commentAdmin || null,
       depositRequired: Boolean(depositRequired),
-      depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount
+      depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount,
+      status: status || undefined,
+      source: source || undefined,
+      ticketCode: ticketCode || undefined
+    },
+    include: {
+      table: { select: { id: true, code: true, name: true, deposit: true } },
+      zone: { select: { id: true, name: true } },
+      event: { select: { id: true, slug: true, title: true, startAt: true } },
+      payment: true
+    }
+  });
+}
+
+function getReservationTable({ tableId, mapId, zoneId }) {
+  return prisma.venueTable.findFirst({
+    where: {
+      id: tableId,
+      mapId,
+      zoneId,
+      isActive: true,
+      isBookable: true
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      deposit: true,
+      seatsMin: true,
+      seatsMax: true
     }
   });
 }
@@ -56,6 +94,52 @@ function getReservationObject({ objectId, mapId, tableId }) {
       label: true,
       metaJson: true,
       tableId: true
+    }
+  });
+}
+
+function getPublicEventWithEntryTicket(slug) {
+  return prisma.event.findFirst({
+    where: {
+      slug,
+      status: 'PUBLISHED',
+      ctaType: { in: ['TICKETS', 'BOTH'] }
+    },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      startAt: true,
+      endAt: true,
+      ticketTypes: {
+        where: {
+          isActive: true
+        },
+        orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        take: 1,
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          currency: true,
+          capacity: true,
+          soldCount: true,
+          salesStart: true,
+          salesEnd: true
+        }
+      }
+    }
+  });
+}
+
+function getPublicReservationByTicketCode(ticketCode) {
+  return prisma.reservation.findUnique({
+    where: { ticketCode },
+    include: {
+      table: { select: { id: true, code: true, name: true } },
+      zone: { select: { id: true, name: true } },
+      event: { select: { id: true, slug: true, title: true, startAt: true } },
+      payment: true
     }
   });
 }
@@ -184,7 +268,10 @@ async function deleteReservation(id) {
 module.exports = {
   getReservations,
   createReservation,
+  getReservationTable,
   getReservationObject,
+  getPublicEventWithEntryTicket,
+  getPublicReservationByTicketCode,
   findReservationConflict,
   getMapAvailability,
   updateReservationStatus,
