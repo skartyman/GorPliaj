@@ -1081,9 +1081,51 @@ h3 {
 }
 
 .public-map-shell {
+  position: relative;
   border-radius: 0;
   overflow: hidden;
   background: #1a1a1e;
+}
+
+.public-map-zone-tabs {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  z-index: 12;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 150px 8px 2px;
+  scrollbar-width: thin;
+}
+
+.public-map-zone-tab {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f1712;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.public-map-zone-tab:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.public-map-zone-tab.active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #1f1712;
+  box-shadow: 0 10px 24px rgba(201, 168, 108, 0.28);
 }
 
 .public-map-viewport {

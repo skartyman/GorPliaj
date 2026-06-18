@@ -372,6 +372,7 @@ export default function MapPage() {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
+  const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -480,6 +481,48 @@ export default function MapPage() {
     tableFitsGuests(selectedObjectTable)
   );
 
+  const zoneFocusItems = useMemo(() => {
+    const zones = state.result?.map?.zones || [];
+    if (!zones.length) {
+      return [];
+    }
+
+    const boundsByZoneId = new Map();
+    renderObjects.forEach((object) => {
+      const table = object.tableId ? tableById.get(object.tableId) : null;
+      const meta = parseMetaJson(object.metaJson);
+      const zoneId = table?.zoneId || meta.zoneId;
+      if (!zoneId) {
+        return;
+      }
+
+      boundsByZoneId.set(zoneId, expandBounds(boundsByZoneId.get(zoneId), object));
+    });
+
+    return zones
+      .map((zone) => {
+        const bounds =
+          parseZonePolygonBounds(zone.polygonJson, mapDimensions) ||
+          parseZoneViewport(zone.viewportJson, mapDimensions) ||
+          padBounds(boundsByZoneId.get(zone.id), mapDimensions);
+
+        if (!bounds) {
+          return null;
+        }
+
+        return {
+          zone,
+          bounds: {
+            x: bounds.x + mapRenderFrame.offsetX,
+            y: bounds.y + mapRenderFrame.offsetY,
+            width: bounds.width,
+            height: bounds.height
+          }
+        };
+      })
+      .filter(Boolean);
+  }, [mapDimensions, mapRenderFrame.offsetX, mapRenderFrame.offsetY, renderObjects, state.result?.map?.zones, tableById]);
+
   const canInteractWithMap = Boolean(state.result && transform.initial);
   const resetTransform = transform.initial || {
     scale: 1,
@@ -521,6 +564,32 @@ export default function MapPage() {
     const localY = pivotY ?? rect.height / 2;
     const anchored = zoomAroundViewportPoint(localX, localY, boundedScale, transform.scale, transform.translateX, transform.translateY);
     applyTransform(boundedScale, anchored.translateX, anchored.translateY);
+  }
+
+  function fitWholeMap() {
+    setActiveZoneFocusId('all');
+    applyTransform(resetTransform.scale, resetTransform.translateX, resetTransform.translateY);
+  }
+
+  function focusZoneBounds(zoneId, bounds) {
+    if (!bounds || !viewportRef.current) {
+      return;
+    }
+
+    const rect = viewportRef.current.getBoundingClientRect();
+    const width = Math.max(Number(bounds.width) || 0, 1);
+    const height = Math.max(Number(bounds.height) || 0, 1);
+    const padding = isMobileViewport ? 28 : 54;
+    const availableWidth = Math.max(rect.width - padding * 2, 1);
+    const availableHeight = Math.max(rect.height - padding * 2, 1);
+    const nextScale = clamp(Math.min(availableWidth / width, availableHeight / height), transform.minScale, transform.maxScale);
+    const centerX = (Number(bounds.x) || 0) + width / 2;
+    const centerY = (Number(bounds.y) || 0) + height / 2;
+    const nextX = rect.width / 2 - centerX * nextScale;
+    const nextY = rect.height / 2 - centerY * nextScale;
+
+    setActiveZoneFocusId(String(zoneId));
+    applyTransform(nextScale, nextX, nextY);
   }
 
   function selectTable(tableId) {
@@ -642,7 +711,7 @@ export default function MapPage() {
             <button
               type="button"
               className="btn btn-secondary map-control-btn map-control-btn-reset"
-              onClick={() => applyTransform(resetTransform.scale, resetTransform.translateX, resetTransform.translateY)}
+              onClick={fitWholeMap}
               disabled={!canInteractWithMap}
             >
               {t('mapFit')}
@@ -651,6 +720,29 @@ export default function MapPage() {
           </div>
 
           <div className={`public-map-shell ${isDragging ? 'is-dragging' : ''}`}>
+            {zoneFocusItems.length ? (
+              <div className="public-map-zone-tabs" aria-label="Map zones">
+                <button
+                  type="button"
+                  className={`public-map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
+                  onClick={fitWholeMap}
+                  aria-pressed={activeZoneFocusId === 'all'}
+                >
+                  Вся карта
+                </button>
+                {zoneFocusItems.map(({ zone, bounds }) => (
+                  <button
+                    key={zone.id}
+                    type="button"
+                    className={`public-map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
+                    onClick={() => focusZoneBounds(zone.id, bounds)}
+                    aria-pressed={activeZoneFocusId === String(zone.id)}
+                  >
+                    {zoneDisplayName(zone, locale) || `Zone #${zone.id}`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div
               className="public-map-viewport"
               ref={viewportRef}
