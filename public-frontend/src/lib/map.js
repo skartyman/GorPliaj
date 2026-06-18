@@ -165,6 +165,7 @@ export async function getPublicMapData(mapApi, params = {}) {
           name: table.name || `Table ${index + 1}`,
           seatsMin: table.seatsMin || 2,
           seatsMax: table.seatsMax || 4,
+          deposit: Number(table.deposit || 0),
           x: toPercentCoordinate(table.x ?? mapObject?.x, mapData.width),
           y: toPercentCoordinate(table.y ?? mapObject?.y, mapData.height),
           isBookable: table.isBookable ?? true,

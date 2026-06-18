@@ -4,7 +4,7 @@ const contentService = require('../services/contentService');
 const eventService = require('../services/eventService');
 const { normalizeLocalizedField } = require('../utils/localization');
 
-const LOCALIZED_SETTINGS_FIELDS = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'footerText', 'address'];
+const LOCALIZED_SETTINGS_FIELDS = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'aboutTitle', 'aboutText', 'footerText', 'address'];
 
 function normalizeSettings(settings) {
   if (!settings) return {};

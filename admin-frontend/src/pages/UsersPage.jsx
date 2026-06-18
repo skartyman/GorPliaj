@@ -1,15 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
+import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 
 const VALID_ROLES = ['seo_smm', 'hostess', 'admin', 'manager', 'owner'];
 const ADMIN_ROLES = ['admin', 'manager', 'owner'];
 
 export default function UsersPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useAdminI18n();
   const [users, setUsers] = useState([]);
@@ -23,13 +22,11 @@ export default function UsersPage() {
     setLoading(true);
     setError('');
     try {
-      const { response } = await apiRequest('/api/admin/users');
+      const { response, body } = await apiRequest('/api/admin/users');
       if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users);
+        setUsers(body.users);
       } else {
-        const errData = await response.json().catch(() => null);
-        setError(errData?.message || t('common.loadFailed'));
+        setError(body.message || t('common.loadFailed'));
       }
     } catch {
       setError(t('common.loadFailed'));
@@ -44,7 +41,7 @@ export default function UsersPage() {
     e.preventDefault();
     setError('');
     try {
-      const { response } = await apiRequest('/api/admin/users', {
+      const { response, body } = await apiRequest('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -54,8 +51,7 @@ export default function UsersPage() {
         setForm({ email: '', password: '', role: 'admin' });
         fetchUsers();
       } else {
-        const errData = await response.json().catch(() => null);
-        setError(errData?.message || t('common.failed'));
+        setError(body.message || t('common.failed'));
       }
     } catch {
       setError(t('common.failed'));
@@ -65,7 +61,7 @@ export default function UsersPage() {
   async function handleUpdate(id, data) {
     setError('');
     try {
-      const { response } = await apiRequest(`/api/admin/users/${id}`, {
+      const { response, body } = await apiRequest(`/api/admin/users/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -74,8 +70,7 @@ export default function UsersPage() {
         setEditingId(null);
         fetchUsers();
       } else {
-        const errData = await response.json().catch(() => null);
-        setError(errData?.message || t('common.failed'));
+        setError(body.message || t('common.failed'));
       }
     } catch {
       setError(t('common.failed'));
@@ -86,12 +81,11 @@ export default function UsersPage() {
     if (!confirm(t('users.confirmDelete'))) return;
     setError('');
     try {
-      const { response } = await apiRequest(`/api/admin/users/${id}`, { method: 'DELETE' });
+      const { response, body } = await apiRequest(`/api/admin/users/${id}`, { method: 'DELETE' });
       if (response.ok || response.status === 204) {
         fetchUsers();
       } else {
-        const errData = await response.json().catch(() => null);
-        setError(errData?.message || t('common.failed'));
+        setError(body.message || t('common.failed'));
       }
     } catch {
       setError(t('common.failed'));
@@ -100,19 +94,26 @@ export default function UsersPage() {
 
   if (!ADMIN_ROLES.includes(user?.role)) {
     return (
-      <PageContainer title={t('users.title')}>
-        <p className="card">{t('common.noAccess')}</p>
-      </PageContainer>
+      <AdminLayout>
+        <PageContainer title={t('users.title')}>
+          <p className="card">{t('common.noAccess')}</p>
+        </PageContainer>
+      </AdminLayout>
     );
   }
 
   if (loading) {
-    return <PageContainer title={t('users.title')}><p className="card">{t('common.loading')}</p></PageContainer>;
+    return (
+      <AdminLayout>
+        <PageContainer title={t('users.title')}><p className="card">{t('common.loading')}</p></PageContainer>
+      </AdminLayout>
+    );
   }
 
   return (
-    <PageContainer title={t('users.title')}>
-      {error && <div className="status-pill status-error" style={{ marginBottom: 12 }}>{error}</div>}
+    <AdminLayout>
+      <PageContainer title={t('users.title')}>
+        {error && <div className="status-pill status-error" style={{ marginBottom: 12 }}>{error}</div>}
 
       <div style={{ marginBottom: 16 }}>
         <button className="btn btn-primary" onClick={() => setShowCreate((prev) => !prev)}>
@@ -196,6 +197,7 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
-    </PageContainer>
+      </PageContainer>
+    </AdminLayout>
   );
 }

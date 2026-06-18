@@ -51,7 +51,7 @@ function fromDateTimeLocal(value) {
 }
 
 export default function EventsPage() {
-  const { language } = useAdminI18n();
+  const { t, language } = useAdminI18n();
   const [viewMode, setViewMode] = useState('table');
   const [state, setState] = useState({ loading: true, error: '', events: [] });
   const [form, setForm] = useState(DEFAULT_FORM);
@@ -69,10 +69,22 @@ export default function EventsPage() {
     return { total, published, featured };
   }, [state.events]);
 
+  const editLabel = language === 'ua' ? 'Редагувати' : language === 'en' ? 'Edit' : 'Редактировать';
+  const ticketTariffsLabel = language === 'ua'
+    ? 'Тарифи квитків'
+    : language === 'en'
+      ? 'Ticket tariffs'
+      : 'Тарифы билетов';
+
   const publicPreviewHref = useMemo(() => {
     if (!editId || !form.slug) return '';
     return `/events/${form.slug}`;
   }, [editId, form.slug]);
+
+  const ticketSalesHref = useMemo(() => {
+    if (!editId) return '/admin/ticket-sales';
+    return `/admin/ticket-sales?eventId=${encodeURIComponent(editId)}`;
+  }, [editId]);
 
   async function loadEvents() {
     setState((current) => ({ ...current, loading: true, error: '' }));
@@ -243,7 +255,7 @@ export default function EventsPage() {
       label: t('eventsAdmin.columns.actions'),
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('eventsAdmin.form.fields.title')}</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{editLabel}</button>
           <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>{t('eventsAdmin.form.delete')}</button>
         </div>
       )
@@ -292,6 +304,8 @@ export default function EventsPage() {
         {!state.loading && viewMode === 'calendar' ? (
           <CalendarView
             items={state.events.map((event) => ({
+              id: event.id,
+              event,
               date: event.startAt,
               title: localizeField(event.title, language),
               color: event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'neutral' : 'danger',
@@ -306,16 +320,29 @@ export default function EventsPage() {
                   <span className={`status-pill ${event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'neutral' : 'danger'}`}>
                     {event.status}
                   </span>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-secondary"
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      startEdit(event);
+                    }}
+                  >
+                    {editLabel}
+                  </button>
                 </div>
               )
             }))}
+            onItemClick={(item) => {
+              if (item?.event) startEdit(item.event);
+            }}
             onDateClick={(date) => {
               const match = state.events.find((e) => {
                 const d = new Date(e.startAt);
                 return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() && d.getDate() === date.getDate();
               });
               if (match) {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                startEdit(match);
               }
             }}
           />
@@ -435,6 +462,11 @@ export default function EventsPage() {
               {publicPreviewHref ? (
                 <a className="btn btn-secondary" href={publicPreviewHref} target="_blank" rel="noreferrer">
                   Open public page
+                </a>
+              ) : null}
+              {['TICKETS', 'BOTH'].includes(form.ctaType) ? (
+                <a className="btn btn-secondary" href={ticketSalesHref}>
+                  {ticketTariffsLabel}
                 </a>
               ) : null}
             </div>

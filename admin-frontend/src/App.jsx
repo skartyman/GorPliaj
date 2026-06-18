@@ -14,6 +14,7 @@ import ReservationsPage from './pages/ReservationsPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
 import TicketVerificationPage from './pages/TicketVerificationPage';
+import TicketSalesPage from './pages/TicketSalesPage';
 import AdminInstallPrompt from './components/AdminInstallPrompt';
 
 function ProtectedPage({ children }) {
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/admin/map-editor" element={<ProtectedPage><MapEditorPage /></ProtectedPage>} />
         <Route path="/admin/menu" element={<ProtectedPage><MenuEditorPage /></ProtectedPage>} />
         <Route path="/admin/events" element={<ProtectedPage><EventsPage /></ProtectedPage>} />
+        <Route path="/admin/ticket-sales" element={<ProtectedPage><TicketSalesPage /></ProtectedPage>} />
         <Route path="/admin/news" element={<ProtectedPage><NewsPage /></ProtectedPage>} />
         <Route path="/admin/payments" element={<ProtectedPage><PaymentsPage /></ProtectedPage>} />
         <Route path="/admin/verify-ticket" element={<ProtectedPage><TicketVerificationPage /></ProtectedPage>} />

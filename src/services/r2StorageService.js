@@ -3,7 +3,7 @@ const path = require('path');
 const { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
 const { R2_CONFIG, isR2Configured } = require('../config/env');
 
-const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu', 'map-objects']);
+const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu', 'map-objects', 'settings']);
 const MAP_ASSET_LIBRARY_KEY = 'map-objects/_asset-library.json';
 const MAP_ASSET_TYPES = new Set(['texture', 'object']);
 const SUPPORTED_MIME_TYPES = new Map([
@@ -217,6 +217,27 @@ async function saveMapAsset(asset) {
   };
 }
 
+async function replaceMapAssetLibrary(assets) {
+  if (!isR2Configured) {
+    return {
+      type: 'NOT_CONFIGURED',
+      message: 'Image upload storage is not configured.'
+    };
+  }
+
+  const library = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    assets: (Array.isArray(assets) ? assets : [])
+      .map(normalizeMapAsset)
+      .filter(Boolean)
+      .slice(0, 300)
+  };
+
+  await putJsonObject(MAP_ASSET_LIBRARY_KEY, library);
+  return { type: 'SUCCESS', library };
+}
+
 async function deleteObjectByKey(key) {
   const normalizedKey = String(key || '').trim();
   if (!normalizedKey || !isR2Configured) {
@@ -254,7 +275,12 @@ async function deleteMapAsset(assetId) {
   };
 
   await putJsonObject(MAP_ASSET_LIBRARY_KEY, nextLibrary);
-  await deleteObjectByKey(asset.key);
+  const keyStillReferenced = Boolean(
+    asset.key && nextLibrary.assets.some((item) => item.key === asset.key)
+  );
+  if (!keyStillReferenced) {
+    await deleteObjectByKey(asset.key);
+  }
 
   return {
     type: 'SUCCESS',
@@ -335,6 +361,7 @@ module.exports = {
   deleteMapAsset,
   getMapAssetLibrary,
   isMimeTypeAllowed,
+  replaceMapAssetLibrary,
   saveMapSnapshot,
   saveMapAsset,
   uploadImage

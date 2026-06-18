@@ -103,6 +103,46 @@ function logoutAdmin(req, res) {
   });
 }
 
+async function changeAdminPassword(req, res) {
+  try {
+    const adminId = Number(req.adminAuth.sub);
+    const currentPassword = String(req.body.currentPassword || '');
+    const nextPassword = String(req.body.nextPassword || '');
+    const confirmPassword = String(req.body.confirmPassword || '');
+
+    if (!currentPassword || !nextPassword || !confirmPassword) {
+      return res.status(400).json({ message: 'Current password, new password, and confirmation are required.' });
+    }
+
+    if (nextPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters long.' });
+    }
+
+    if (nextPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'New password confirmation does not match.' });
+    }
+
+    const result = await adminAuthService.changeAdminPassword({
+      adminId,
+      currentPassword,
+      nextPassword
+    });
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(401).json({ message: 'Unauthorized admin access.' });
+    }
+
+    if (result.type === 'INVALID_CURRENT_PASSWORD') {
+      return res.status(400).json({ message: 'Current password is incorrect.' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[adminController.changeAdminPassword] Failed to change password.', error);
+    return res.status(500).json({ message: 'Unable to change password.' });
+  }
+}
+
 async function getAdminReservations(req, res) {
   try {
     const reservations = await adminReservationService.getAdminReservations();
@@ -336,7 +376,8 @@ async function updateAdminMapEditor(req, res) {
       id,
       req.body.objects,
       req.body.map || {},
-      Array.isArray(req.body.tables) ? req.body.tables : []
+      Array.isArray(req.body.tables) ? req.body.tables : [],
+      Array.isArray(req.body.zones) ? req.body.zones : []
     );
 
     if (result.type === 'NOT_FOUND') {
@@ -541,6 +582,7 @@ module.exports = {
   loginAdmin,
   getAdminMe,
   logoutAdmin,
+  changeAdminPassword,
   getAdminReservations,
   getAdminReservationById,
   updateAdminReservationStatus,

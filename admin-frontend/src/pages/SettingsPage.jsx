@@ -5,6 +5,32 @@ import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const IMAGE_UPLOAD_ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml';
+
+function UploadableUrlField({ label, value, placeholder = 'https://...', hint, uploading, onChange, onUpload }) {
+  return (
+    <div className="form-group">
+      <label>{label}</label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'center' }}>
+        <input value={value || ''} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+        <label className="btn btn-secondary btn-small field-upload-button">
+          {uploading ? 'Загрузка...' : 'Загрузить'}
+          <input
+            type="file"
+            accept={IMAGE_UPLOAD_ACCEPT}
+            style={{ display: 'none' }}
+            disabled={uploading}
+            onChange={(event) => {
+              onUpload(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
+        </label>
+      </div>
+      {hint ? <p className="muted" style={{ fontSize: '0.8rem' }}>{hint}</p> : null}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { t } = useAdminI18n();
@@ -12,6 +38,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState(null);
   const [savingStatus, setSavingStatus] = useState({});
   const [translating, setTranslating] = useState({});
+  const [uploadingField, setUploadingField] = useState(null);
 
   useEffect(() => {
     apiRequest('/api/admin/settings').then(res => {
@@ -19,6 +46,8 @@ export default function SettingsPage() {
       // Инициализируем JSON поля, если они пустые
       if (!data.heroTitle) data.heroTitle = { ua: '', ru: '', en: '' };
       if (!data.heroSubtitle) data.heroSubtitle = { ua: '', ru: '', en: '' };
+      if (!data.aboutTitle) data.aboutTitle = { ua: '', ru: '', en: '' };
+      if (!data.aboutText) data.aboutText = { ua: '', ru: '', en: '' };
       if (!data.address) data.address = { ua: '', ru: '', en: '' };
       
       setForm(data);
@@ -68,6 +97,34 @@ export default function SettingsPage() {
     }
   };
 
+  const uploadImageToField = async (field, file) => {
+    if (!file || uploadingField) return;
+
+    setUploadingField(field);
+
+    try {
+      const payload = new FormData();
+      payload.append('image', file);
+      payload.append('folder', 'settings');
+
+      const { response, body } = await apiRequest('/api/admin/uploads/image', {
+        method: 'POST',
+        body: payload
+      });
+
+      if (!response.ok) {
+        alert(body.message || 'Не удалось загрузить файл');
+        return;
+      }
+
+      setForm((current) => ({ ...current, [field]: body.url || '' }));
+    } catch (err) {
+      alert('Не удалось загрузить файл');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
   if (loading) return <AdminLayout>Завантаження...</AdminLayout>;
 
   return (
@@ -106,6 +163,45 @@ export default function SettingsPage() {
             
             <button className="btn btn-primary" onClick={() => updateField('hero', { heroTitle: form.heroTitle, heroSubtitle: form.heroSubtitle })}>
               {savingStatus.hero ? 'Зберігаємо...' : 'Зберегти блок Hero'}
+            </button>
+          </div>
+        </PageCard>
+
+        <PageCard title="Сторінка «Про нас»">
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div className="form-group">
+              <label>Заголовок сторінки (UA/RU/EN)</label>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <input value={form.aboutTitle?.ua || ''} onChange={e => setForm({...form, aboutTitle: {...form.aboutTitle, ua: e.target.value}})} placeholder="Заголовок UA" />
+                <input value={form.aboutTitle?.ru || ''} onChange={e => setForm({...form, aboutTitle: {...form.aboutTitle, ru: e.target.value}})} placeholder="Заголовок RU" />
+                <input value={form.aboutTitle?.en || ''} onChange={e => setForm({...form, aboutTitle: {...form.aboutTitle, en: e.target.value}})} placeholder="Заголовок EN" />
+              </div>
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslate('aboutTitle')} disabled={translating.aboutTitle} style={{ marginTop: 8 }}>
+                {translating.aboutTitle ? 'Перекладаємо...' : 'Автопереклад з UA'}
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label>Опис закладу (UA/RU/EN)</label>
+              <textarea value={form.aboutText?.ua || ''} onChange={e => setForm({...form, aboutText: {...form.aboutText, ua: e.target.value}})} placeholder="Текст UA" rows="5" />
+              <textarea value={form.aboutText?.ru || ''} onChange={e => setForm({...form, aboutText: {...form.aboutText, ru: e.target.value}})} placeholder="Текст RU" rows="5" />
+              <textarea value={form.aboutText?.en || ''} onChange={e => setForm({...form, aboutText: {...form.aboutText, en: e.target.value}})} placeholder="Текст EN" rows="5" />
+              <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslate('aboutText')} disabled={translating.aboutText} style={{ marginTop: 8 }}>
+                {translating.aboutText ? 'Перекладаємо...' : 'Автопереклад з UA'}
+              </button>
+            </div>
+
+            <UploadableUrlField
+              label="Фото / обкладинка сторінки"
+              value={form.aboutImageUrl}
+              uploading={uploadingField === 'aboutImageUrl'}
+              onChange={(value) => setForm({ ...form, aboutImageUrl: value })}
+              onUpload={(file) => uploadImageToField('aboutImageUrl', file)}
+              hint="Можна залишити порожнім, тоді сторінка використає логотип або стандартний фон."
+            />
+
+            <button className="btn btn-primary" onClick={() => updateField('about', { aboutTitle: form.aboutTitle, aboutText: form.aboutText, aboutImageUrl: form.aboutImageUrl })}>
+              {savingStatus.about ? 'Зберігаємо...' : 'Зберегти сторінку «Про нас»'}
             </button>
           </div>
         </PageCard>

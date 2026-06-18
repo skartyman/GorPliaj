@@ -5,7 +5,7 @@ const { NodeHttpHandler } = require('@smithy/node-http-handler');
 const { R2_CONFIG, isR2Configured } = require('../src/config/env');
 const { MAP_ASSET_LIBRARY_KEY } = require('../src/services/r2StorageService');
 
-const DEFAULT_SCAN_PREFIXES = ['map-objects/', 'menu/'];
+const DEFAULT_SCAN_PREFIXES = ['map-objects/'];
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
 const TEXTURE_HINTS = [
   'texture',

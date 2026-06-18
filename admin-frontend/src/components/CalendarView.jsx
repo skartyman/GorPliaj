@@ -55,7 +55,7 @@ function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export default function CalendarView({ items = [], onDateClick }) {
+export default function CalendarView({ items = [], onDateClick, onItemClick }) {
   const { locale } = useAdminI18n();
   const today = useMemo(() => new Date(), []);
   const todayKey = dateKey(today);
@@ -148,7 +148,20 @@ export default function CalendarView({ items = [], onDateClick }) {
           </h4>
           <div className="calendar-detail-list">
             {selectedItems.map((item, i) => (
-              <div key={i} className="calendar-detail-item">
+              <div
+                key={i}
+                className={`calendar-detail-item ${onItemClick ? 'is-clickable' : ''}`}
+                onClick={() => onItemClick?.(item)}
+                role={onItemClick ? 'button' : undefined}
+                tabIndex={onItemClick ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!onItemClick) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onItemClick(item);
+                  }
+                }}
+              >
                 {item.renderItem ? item.renderItem() : <span>{item.title || 'Item'}</span>}
               </div>
             ))}

@@ -912,9 +912,9 @@ export default function MapPage() {
                   Price: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}
                 </p>
               ) : null}
-              {selectedObjectMeta.depositRequired || selectedObjectMeta.depositAmount ? (
+              {selectedObjectTable?.deposit || selectedObjectMeta.depositRequired || selectedObjectMeta.depositAmount ? (
                 <p className="muted">
-                  Deposit: {selectedObjectMeta.depositAmount || 'required'} {selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}
+                  Deposit: {selectedObjectTable?.deposit || selectedObjectMeta.depositAmount || 'required'} {selectedObjectTable?.deposit || selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}
                 </p>
               ) : null}
               {selectedObjectTable ? (

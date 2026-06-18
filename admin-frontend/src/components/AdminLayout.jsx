@@ -16,9 +16,11 @@ function IconSettings() { return <svg viewBox="0 0 24 24" fill="none" stroke="cu
 function IconUsers() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>; }
 function IconTicket() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>; }
 function IconHamburger() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>; }
+function IconBack() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>; }
 function IconChevronLeft() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>; }
 function IconChevronRight() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>; }
 function IconLogout() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
+function IconKey() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="14.5" r="5.5"/><path d="M12 10l8-8"/><path d="M16 6l2 2"/><path d="M18 4l2 2"/></svg>; }
 
 const ALL_NAV_ITEMS = [
   { to: '/admin/dashboard', labelKey: 'nav.dashboard', icon: IconDashboard, roles: ['*'] },
@@ -27,6 +29,7 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/map', labelKey: 'nav.map', icon: IconMap, roles: ['*'] },
   { to: '/admin/menu', labelKey: 'nav.menu', icon: IconMenu, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/events', labelKey: 'nav.events', icon: IconEvents, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
+  { to: '/admin/ticket-sales', labelKey: 'nav.ticketSales', icon: IconTicket, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/news', labelKey: 'nav.news', icon: IconNews, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
   { to: '/admin/payments', labelKey: 'nav.payments', icon: IconPayments, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/verify-ticket', labelKey: 'nav.verifyTicket', icon: IconTicket, roles: ['hostess', 'admin', 'manager', 'owner'] },
@@ -47,8 +50,11 @@ function pageTitle(pathname, t) {
 export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [openSidebar, setOpenSidebar] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', nextPassword: '', confirmPassword: '' });
+  const [passwordState, setPasswordState] = useState({ saving: false, error: '', success: '' });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const path = window.location.pathname;
     return path.startsWith('/admin/map-editor') || path === '/admin/map';
@@ -66,11 +72,50 @@ export default function AdminLayout({ children }) {
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
+    setUser(null);
     navigate('/admin/login');
+  }
+
+  function onBack() {
+    if (window.history.length > 1 && location.pathname !== '/admin/dashboard') {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/admin/dashboard');
   }
 
   function onNavSelect() {
     setOpenSidebar(false);
+  }
+
+  function openPasswordModal() {
+    setPasswordForm({ currentPassword: '', nextPassword: '', confirmPassword: '' });
+    setPasswordState({ saving: false, error: '', success: '' });
+    setPasswordModalOpen(true);
+    setOpenSidebar(false);
+  }
+
+  async function submitPasswordChange(event) {
+    event.preventDefault();
+    setPasswordState({ saving: true, error: '', success: '' });
+
+    const { response, body } = await apiRequest('/api/admin/auth/password', {
+      method: 'PATCH',
+      body: JSON.stringify(passwordForm)
+    });
+
+    if (!response.ok) {
+      setPasswordState({
+        saving: false,
+        error: body.message || 'Не удалось изменить пароль.',
+        success: ''
+      });
+      return;
+    }
+
+    setPasswordForm({ currentPassword: '', nextPassword: '', confirmPassword: '' });
+    setPasswordState({ saving: false, error: '', success: 'Пароль изменен.' });
   }
 
   return (
@@ -108,6 +153,12 @@ export default function AdminLayout({ children }) {
             );
           })}
         </nav>
+        <div className="sidebar-footer">
+          <button type="button" className="nav-link nav-action" onClick={openPasswordModal}>
+            <IconKey />
+            <span>Изменить пароль</span>
+          </button>
+        </div>
       </aside>
 
       <div className="content-area">
@@ -115,6 +166,9 @@ export default function AdminLayout({ children }) {
           <div className="topbar-left">
             <button type="button" className="icon-btn mobile-only" onClick={() => setOpenSidebar((prev) => !prev)} aria-label="Toggle menu">
               <IconHamburger />
+            </button>
+            <button type="button" className="icon-btn admin-back-btn" onClick={onBack} aria-label="Назад" title="Назад">
+              <IconBack />
             </button>
             <button
               type="button"
@@ -129,13 +183,71 @@ export default function AdminLayout({ children }) {
           </div>
           <div className="topbar-right">
             <span className="topbar-role">{user?.role ? t(`roles.${user.role}`) : ''}</span>
-            <button type="button" className="btn btn-logout" onClick={onLogout}>
-              <IconLogout /> {t('common.logout')}
+            <button type="button" className="btn btn-logout" onClick={onLogout} aria-label={t('common.logout')} title={t('common.logout')}>
+              <IconLogout />
+              <span className="btn-logout-label">{t('common.logout')}</span>
             </button>
           </div>
         </header>
         <main className="content">{children}</main>
       </div>
+      {passwordModalOpen ? (
+        <div className="admin-modal-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !passwordState.saving) setPasswordModalOpen(false);
+        }}>
+          <form className="admin-modal-card password-modal-card" onSubmit={submitPasswordChange}>
+            <div className="admin-modal-head">
+              <div>
+                <h2>Изменить пароль</h2>
+                <p className="muted">Аккаунт: {user?.email}</p>
+              </div>
+              <button type="button" className="icon-btn" onClick={() => setPasswordModalOpen(false)} disabled={passwordState.saving} aria-label="Закрыть">
+                ×
+              </button>
+            </div>
+            <label className="form-field">
+              <span>Текущий пароль</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={passwordForm.currentPassword}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="form-field">
+              <span>Новый пароль</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                value={passwordForm.nextPassword}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, nextPassword: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="form-field">
+              <span>Повторите новый пароль</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                value={passwordForm.confirmPassword}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                required
+              />
+            </label>
+            {passwordState.error ? <p className="state-msg state-error">{passwordState.error}</p> : null}
+            {passwordState.success ? <p className="state-msg state-success">{passwordState.success}</p> : null}
+            <div className="admin-modal-actions">
+              <button type="button" className="btn" onClick={() => setPasswordModalOpen(false)} disabled={passwordState.saving}>Отмена</button>
+              <button type="submit" className="btn btn-primary" disabled={passwordState.saving}>
+                {passwordState.saving ? 'Сохраняем...' : 'Сохранить пароль'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }

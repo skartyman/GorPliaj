@@ -100,7 +100,7 @@ async function listMapAssets(req, res) {
 
     if (!library.assets.length && req.query.recover !== '0') {
       try {
-        await recoverMapAssetsFromR2(['map-objects', 'menu']);
+        await recoverMapAssetsFromR2(['map-objects']);
         library = await getMapAssetLibrary();
       } catch (recoveryError) {
         console.error('[adminUploadController.listMapAssets] Failed to recover map assets from R2.', recoveryError);

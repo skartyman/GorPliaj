@@ -545,6 +545,9 @@ export default function MapPage() {
     priceUnit: 'UAH',
     depositRequired: false,
     depositAmount: '',
+    seatsMin: 1,
+    seatsMax: 4,
+    isBookable: true,
     photoUrl: ''
   });
   const objectManagementRef = useRef(null);
@@ -759,8 +762,11 @@ export default function MapPage() {
       tableCode: selectedObject.table?.code || selectedObject.meta?.tableCode || '',
       price: selectedObject.meta?.price ?? '',
       priceUnit: selectedObject.meta?.priceUnit || 'UAH',
-      depositRequired: Boolean(selectedObject.meta?.depositRequired),
-      depositAmount: selectedObject.meta?.depositAmount ?? '',
+      depositRequired: Number(selectedObject.table?.deposit || selectedObject.meta?.depositAmount || 0) > 0,
+      depositAmount: selectedObject.table?.deposit ?? selectedObject.meta?.depositAmount ?? '',
+      seatsMin: selectedObject.table?.seatsMin ?? 1,
+      seatsMax: selectedObject.table?.seatsMax ?? 4,
+      isBookable: selectedObject.table?.isBookable ?? true,
       photoUrl: selectedObject.meta?.photoUrl || ''
     });
   }, [selectedObject]);
@@ -843,7 +849,12 @@ export default function MapPage() {
         zoneId: table.zoneId,
         code: table.code || null,
         name: table.name || null,
-        photoUrl: table.photoUrl || null
+        photoUrl: table.photoUrl || null,
+        seatsMin: table.seatsMin ?? 1,
+        seatsMax: table.seatsMax ?? 4,
+        deposit: table.deposit ?? 0,
+        isActive: table.isActive ?? true,
+        isBookable: table.isBookable ?? true
       })),
       objects: nextObjects.map((object) => ({
         id: object.id,
@@ -944,7 +955,11 @@ export default function MapPage() {
       return {
         ...table,
         zoneId: normalizedZoneId || table.zoneId,
-        code: normalizedTableCode || table.code || null
+        code: normalizedTableCode || table.code || null,
+        seatsMin: Number(form.seatsMin) || table.seatsMin || 1,
+        seatsMax: Number(form.seatsMax) || table.seatsMax || 4,
+        deposit: form.depositRequired ? Math.max(0, Number(form.depositAmount) || 0) : 0,
+        isBookable: Boolean(form.isBookable)
       };
     });
     const nextObjects = (state.mapData?.objects || []).map((object) => {
@@ -962,8 +977,6 @@ export default function MapPage() {
           tableCode: normalizedTableCode,
           price: normalizeMetaValue(form.price),
           priceUnit: form.priceUnit || 'UAH',
-          depositRequired: Boolean(form.depositRequired),
-          depositAmount: normalizeMetaValue(form.depositAmount),
           photoUrl: form.photoUrl || ''
         }
       };
@@ -1298,13 +1311,25 @@ export default function MapPage() {
                     Валюта
                     <input type="text" value={selectedObjectForm.priceUnit} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, priceUnit: event.target.value }))} />
                   </label>
+                  <label>
+                    Мин. гостей
+                    <input type="number" min="1" step="1" value={selectedObjectForm.seatsMin} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, seatsMin: event.target.value }))} />
+                  </label>
+                  <label>
+                    Макс. гостей
+                    <input type="number" min="1" step="1" value={selectedObjectForm.seatsMax} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, seatsMax: event.target.value }))} />
+                  </label>
+                  <label className="checkbox-label inline">
+                    <input type="checkbox" checked={selectedObjectForm.isBookable} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, isBookable: event.target.checked }))} />
+                    Доступно для брони
+                  </label>
                   <label className="checkbox-label inline">
                     <input type="checkbox" checked={selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositRequired: event.target.checked }))} />
                     Потрібна застава
                   </label>
                   <label>
                     Сума застави
-                    <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
+                    <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} disabled={!selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
                   </label>
                   <label className="object-admin-form-wide">
                     URL фото
