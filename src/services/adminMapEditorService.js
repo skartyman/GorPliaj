@@ -4,11 +4,13 @@ const { saveMapSnapshot } = require('./r2StorageService');
 const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
-const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];
-const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'positionType', 'positionSide', 'seatsMin', 'seatsMax', 'deposit', 'isActive', 'isBookable'];
+const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor', 'usageMode'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'bookingKind', 'positionType', 'positionSide', 'serviceName', 'serviceDescription', 'sortOrder', 'seatsMin', 'seatsMax', 'deposit', 'isActive', 'isBookable'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 const VALID_POSITION_TYPES = new Set(Object.values(VenuePositionType));
 const VALID_POSITION_SIDES = new Set(Object.values(VenuePositionSide));
+const VALID_MAP_USAGE_MODES = new Set(['DAY', 'EVENING', 'EVENT']);
+const VALID_BOOKING_KINDS = new Set(['TABLE', 'BEACH']);
 const MAP_EDITOR_INCLUDE = {
   zones: {
     orderBy: {
@@ -34,6 +36,7 @@ const MAP_LIST_SELECT = {
   slug: true,
   description: true,
   status: true,
+  usageMode: true,
   isDefault: true,
   width: true,
   height: true,
@@ -104,6 +107,7 @@ async function createAdminMapVariant({
   name,
   slug,
   description,
+  usageMode = 'DAY',
   sourceMapId = null,
   creationMode = 'clone',
   width = null,
@@ -119,6 +123,9 @@ async function createAdminMapVariant({
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
   const normalizedDescription = String(description || '').trim() || null;
+  const normalizedUsageMode = VALID_MAP_USAGE_MODES.has(String(usageMode || '').trim().toUpperCase())
+    ? String(usageMode || '').trim().toUpperCase()
+    : 'DAY';
 
   if (!normalizedName) {
     return { type: 'INVALID', message: 'Map name is required.' };
@@ -186,6 +193,7 @@ async function createAdminMapVariant({
         slug: normalizedSlug,
         description: normalizedDescription,
         status: sourceMap?.status || MapStatus.DRAFT,
+        usageMode: sourceMap?.usageMode || normalizedUsageMode,
         isDefault: Boolean(makeDefault),
         width: sourceMap?.width || blankWidth,
         height: sourceMap?.height || blankHeight,
@@ -217,9 +225,13 @@ async function createAdminMapVariant({
           zoneId: zoneIdMap.get(table.zoneId),
           name: table.name,
           code: table.code,
+          bookingKind: table.bookingKind || 'TABLE',
           positionType: table.positionType,
           positionSide: table.positionSide,
           photoUrl: table.photoUrl,
+          serviceName: table.serviceName || null,
+          serviceDescription: table.serviceDescription || null,
+          sortOrder: table.sortOrder || 0,
           seatsMin: table.seatsMin,
           seatsMax: table.seatsMax,
           deposit: table.deposit,
@@ -358,6 +370,12 @@ function normalizeMapInput(mapInput) {
 
     if (field === 'backgroundImage' || field === 'backgroundColor') {
       normalized[field] = String(mapInput?.[field] ?? '').trim() || null;
+      continue;
+    }
+
+    if (field === 'usageMode') {
+      const value = String(mapInput?.usageMode ?? '').trim().toUpperCase();
+      normalized.usageMode = VALID_MAP_USAGE_MODES.has(value) ? value : 'DAY';
     }
   }
 
@@ -384,6 +402,13 @@ function normalizeTableInput(tableInput, existingTable = null) {
       continue;
     }
 
+    if (field === 'bookingKind') {
+      const nextBookingKind = tableInput?.bookingKind === undefined ? existingTable?.bookingKind : tableInput.bookingKind;
+      const bookingKind = String(nextBookingKind || '').trim().toUpperCase() || 'TABLE';
+      normalized.bookingKind = VALID_BOOKING_KINDS.has(bookingKind) ? bookingKind : 'TABLE';
+      continue;
+    }
+
     if (field === 'positionSide') {
       const nextPositionSide = tableInput?.positionSide === undefined ? existingTable?.positionSide : tableInput.positionSide;
       normalized.positionSide = nextPositionSide ? String(nextPositionSide).trim().toUpperCase() : null;
@@ -393,6 +418,12 @@ function normalizeTableInput(tableInput, existingTable = null) {
     if (field === 'name') {
       const nextValue = tableInput?.name === undefined ? existingTable?.name : tableInput?.name;
       normalized.name = normalizeJsonValue(nextValue);
+      continue;
+    }
+
+    if (field === 'serviceName' || field === 'serviceDescription') {
+      const nextValue = tableInput?.[field] === undefined ? existingTable?.[field] : tableInput?.[field];
+      normalized[field] = normalizeJsonValue(nextValue);
       continue;
     }
 
@@ -406,6 +437,12 @@ function normalizeTableInput(tableInput, existingTable = null) {
       const fallback = field === 'seatsMin' ? 1 : 4;
       const value = Number(tableInput?.[field] ?? existingTable?.[field] ?? fallback);
       normalized[field] = Number.isFinite(value) ? Math.max(1, Math.round(value)) : fallback;
+      continue;
+    }
+
+    if (field === 'sortOrder') {
+      const value = Number(tableInput?.sortOrder ?? existingTable?.sortOrder ?? 0);
+      normalized.sortOrder = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
       continue;
     }
 
@@ -672,6 +709,13 @@ function validateEditorTables(tables) {
       }
     }
 
+    if (table.bookingKind !== undefined && table.bookingKind !== null && table.bookingKind !== '') {
+      const bookingKind = String(table.bookingKind).trim().toUpperCase();
+      if (!VALID_BOOKING_KINDS.has(bookingKind)) {
+        return `Table ${normalizedId} contains an invalid booking kind.`;
+      }
+    }
+
     if (table.positionSide !== undefined && table.positionSide !== null && table.positionSide !== '') {
       const positionSide = String(table.positionSide).trim().toUpperCase();
       if (!VALID_POSITION_SIDES.has(positionSide)) {
@@ -695,15 +739,20 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
       id: true,
       width: true,
       height: true,
+      usageMode: true,
       tables: {
         select: {
           id: true,
           photoUrl: true,
           code: true,
+          bookingKind: true,
           positionType: true,
           positionSide: true,
           name: true,
+          serviceName: true,
+          serviceDescription: true,
           zoneId: true,
+          sortOrder: true,
           seatsMin: true,
           seatsMax: true,
           deposit: true,

@@ -1,4 +1,5 @@
 const reservationService = require('../services/reservationService');
+const bookableUnitService = require('../services/bookableUnitService');
 const hutkoService = require('../services/hutkoService');
 const { generateTicketCode } = require('../utils/ticket');
 const { buildVerifyUrl, generateTicketSignature, verifyTicketSignature } = require('../utils/ticketSignature');
@@ -30,6 +31,18 @@ function localizeJson(value) {
   return value.ua || value.ru || value.en || '';
 }
 
+function getBookingPositionName(table) {
+  return localizeJson(table?.serviceName) || localizeJson(table?.name) || table?.code || '';
+}
+
+function getBookingPositionLabel(table, bookingKind) {
+  if ((bookingKind || table?.bookingKind) === 'BEACH') {
+    return 'beach position';
+  }
+
+  return 'table';
+}
+
 function toDateOnly(value) {
   return new Date(value).toISOString().slice(0, 10);
 }
@@ -51,9 +64,6 @@ async function getReservations(req, res) {
 
 function hasMissingRequiredFields(body) {
   const requiredFields = [
-    'tableId',
-    'mapId',
-    'zoneId',
     'customerName',
     'customerPhone',
     'guests',
@@ -61,7 +71,10 @@ function hasMissingRequiredFields(body) {
     'timeFrom'
   ];
 
-  return requiredFields.some((field) => !body[field]);
+  const hasLegacySelection = body.tableId && body.mapId && body.zoneId;
+  const hasBookableUnitSelection = body.bookableUnitId;
+
+  return requiredFields.some((field) => !body[field]) || (!hasLegacySelection && !hasBookableUnitSelection);
 }
 
 function getDepositFromObject(object) {
@@ -103,10 +116,10 @@ function buildPaymentComment({ depositAmount, entryBreakdown, totalAmount }) {
   const lines = [];
 
   if (depositAmount > 0) {
-    lines.push(`Table deposit paid online: ${depositAmount} UAH.`);
+    lines.push(`Booking deposit paid online: ${depositAmount} UAH.`);
     lines.push('Important: this deposit is included in the final bill at the venue.');
   } else {
-    lines.push('Table booking is free: no table deposit was configured for this position.');
+    lines.push('Booking is free: no deposit was configured for this position.');
   }
 
   lines.push(`Total online payment: ${totalAmount} UAH.`);
@@ -142,7 +155,7 @@ function buildReservationPdfPayload(reservation) {
     reservationDate: reservation.reservationDate,
     timeFrom: reservation.timeFrom,
     timeTo: reservation.timeTo,
-    tableName: reservation.table?.name || reservation.table?.code || '',
+    tableName: getBookingPositionName(reservation.table),
     zoneName: reservation.zone?.name || '',
     eventTitle: localizeJson(reservation.event?.title),
     depositAmount,
@@ -180,29 +193,55 @@ async function createReservation(req, res) {
       return res.status(400).json({ message: 'Start time must be before venue closing time.' });
     }
 
-    const tableId = Number(req.body.tableId);
-    const mapId = Number(req.body.mapId);
-    const zoneId = Number(req.body.zoneId);
+    let tableId = Number(req.body.tableId);
+    let mapId = Number(req.body.mapId);
+    let zoneId = Number(req.body.zoneId);
+    let bookingKind = normalizeText(req.body.bookingKind).toUpperCase() || 'TABLE';
+    let bookableUnit = null;
+
+    if (req.body.bookableUnitId) {
+      bookableUnit = await bookableUnitService.getReservationUnit({
+        bookableUnitId: req.body.bookableUnitId,
+        mapId
+      });
+
+      if (!bookableUnit) {
+        return res.status(400).json({ message: 'Selected booking option is not available.' });
+      }
+
+      tableId = Number(bookableUnit.tableId);
+      mapId = Number(bookableUnit.mapId);
+      zoneId = Number(bookableUnit.zoneId);
+      bookingKind = bookableUnit.bookingKind || bookingKind;
+    }
+
     const table = await reservationService.getReservationTable({ tableId, mapId, zoneId });
     if (!table) {
-      return res.status(400).json({ message: 'Selected table is not available for booking.' });
+      return res.status(400).json({ message: 'Selected booking position is not available.' });
     }
 
     if (guests < table.seatsMin || guests > table.seatsMax) {
-      return res.status(400).json({ message: 'Guest count does not match the selected table capacity.' });
+      return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
     }
 
     const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
     if (conflict) {
-      return res.status(409).json({ message: 'This table is already booked for the selected time.' });
+      return res.status(409).json({ message: 'This position is already booked for the selected time.' });
     }
 
-    const objectId = Number(req.body.objectId || 0);
+    const objectId = Number(req.body.objectId || bookableUnit?.objectId || 0);
     const tableDeposit = Number(table.deposit || 0);
     let deposit = {
       depositRequired: tableDeposit > 0,
       depositAmount: tableDeposit > 0 ? tableDeposit : null
     };
+    if (bookableUnit?.depositAmount > 0) {
+      deposit = {
+        depositRequired: true,
+        depositAmount: Number(bookableUnit.depositAmount)
+      };
+    }
+
     if (objectId) {
       const reservationObject = await reservationService.getReservationObject({ objectId, mapId, tableId });
       if (!reservationObject) {
@@ -241,6 +280,7 @@ async function createReservation(req, res) {
       reservationDate,
       timeFrom,
       timeTo,
+      bookingKind,
       commentCustomer,
       commentAdmin: paymentComment,
       depositRequired: depositAmount > 0,
@@ -253,11 +293,13 @@ async function createReservation(req, res) {
     const access = buildPublicReservationAccess(reservation);
     let checkout = null;
     if (totalAmount > 0) {
+      const positionName = getBookingPositionName(table) || `${getBookingPositionLabel(table, bookingKind)} ${table.code || table.id}`;
+      const bookingLabel = getBookingPositionLabel(table, bookingKind);
       const returnTo = `/booking?reservation=${encodeURIComponent(access.ticketCode)}&t=${encodeURIComponent(access.token)}${eventSlug ? `&event=${encodeURIComponent(eventSlug)}` : ''}`;
       checkout = await hutkoService.createCheckoutSession({
         reservationId: reservation.id,
         amount: totalAmount,
-        description: `GorPliaj table ${table.code || table.id}: deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
+        description: `GorPliaj ${bookingLabel} ${positionName}: deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
         currency: entryBreakdown?.currency || 'UAH',
         customerEmail,
         customerPhone: req.body.customerPhone,
@@ -286,7 +328,7 @@ async function createReservation(req, res) {
         eventTitle: entryBreakdown?.eventTitle || '',
         totalAmount,
         currency: entryBreakdown?.currency || 'UAH',
-        note: 'The table deposit is included in the final bill at the venue.'
+        note: 'The booking deposit is included in the final bill at the venue.'
       }
     });
   } catch (error) {
@@ -322,7 +364,9 @@ async function getPublicReservationStatus(req, res) {
         paymentAmount: fresh.payment ? Number(fresh.payment.amount || 0) : null,
         customerName: fresh.customerName,
         guests: fresh.guests,
-        tableName: fresh.table?.name || fresh.table?.code || '',
+        tableName: getBookingPositionName(fresh.table),
+        bookingKind: fresh.bookingKind || fresh.table?.bookingKind || 'TABLE',
+        positionType: fresh.table?.positionType || null,
         zoneName: fresh.zone?.name || '',
         reservationDate: fresh.reservationDate,
         timeFrom: fresh.timeFrom
@@ -353,7 +397,7 @@ async function downloadPublicReservationPdf(req, res) {
 
     const pdf = await generateTicketPdf(buildReservationPdfPayload(reservation));
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="gorpliaj-table-${ticketCode.toLowerCase()}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="gorpliaj-booking-${ticketCode.toLowerCase()}.pdf"`);
     return res.send(pdf);
   } catch (error) {
     console.error('[reservationController.downloadPublicReservationPdf] Failed.', error);

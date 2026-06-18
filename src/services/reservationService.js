@@ -15,6 +15,7 @@ function createReservation(payload) {
     mapId,
     zoneId,
     eventId,
+    bookingKind,
     customerName,
     customerPhone,
     customerEmail,
@@ -37,6 +38,7 @@ function createReservation(payload) {
       mapId,
       zoneId,
       eventId: eventId || null,
+      bookingKind: bookingKind || undefined,
       customerName,
       customerPhone,
       customerEmail: customerEmail || null,
@@ -53,7 +55,7 @@ function createReservation(payload) {
       ticketCode: ticketCode || undefined
     },
     include: {
-      table: { select: { id: true, code: true, name: true, deposit: true } },
+      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, deposit: true } },
       zone: { select: { id: true, name: true } },
       event: { select: { id: true, slug: true, title: true, startAt: true } },
       payment: true
@@ -74,6 +76,9 @@ function getReservationTable({ tableId, mapId, zoneId }) {
       id: true,
       code: true,
       name: true,
+      serviceName: true,
+      bookingKind: true,
+      positionType: true,
       deposit: true,
       seatsMin: true,
       seatsMax: true
@@ -136,7 +141,7 @@ function getPublicReservationByTicketCode(ticketCode) {
   return prisma.reservation.findUnique({
     where: { ticketCode },
     include: {
-      table: { select: { id: true, code: true, name: true } },
+      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true } },
       zone: { select: { id: true, name: true } },
       event: { select: { id: true, slug: true, title: true, startAt: true } },
       payment: true

@@ -1,6 +1,25 @@
 const contentService = require('../services/contentService');
+const bookableUnitService = require('../services/bookableUnitService');
 const reservationService = require('../services/reservationService');
 const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+
+async function listPublicMaps(req, res) {
+  try {
+    const usageMode = String(req.query.usageMode || '').trim().toUpperCase() || null;
+    const bookingKind = String(req.query.bookingKind || '').trim().toUpperCase() || null;
+    const guests = Number(req.query.guests || 0);
+    const maps = await bookableUnitService.listPublicBookingMaps({
+      usageMode,
+      bookingKind,
+      guests
+    });
+
+    return res.json({ maps });
+  } catch (error) {
+    console.error('[mapController.listPublicMaps] Failed to load booking maps.', error);
+    return res.status(500).json({ message: 'Failed to load booking maps.' });
+  }
+}
 
 async function getDefaultMap(req, res) {
   try {
@@ -72,8 +91,52 @@ async function getMapAvailability(req, res) {
   }
 }
 
+async function getMapBookableUnits(req, res) {
+  try {
+    const mapId = Number(req.params.mapId);
+    const { date, timeFrom, guests, bookingKind, zoneId } = req.query;
+
+    if (!mapId || !date || !timeFrom) {
+      return res.status(400).json({ message: 'Required parameters: mapId, date, timeFrom.' });
+    }
+
+    const reservationDate = new Date(`${date}T00:00:00`);
+    const dateTimeFrom = toDateTime(date, timeFrom);
+    const dateTimeTo = getClosingDateTime(date);
+
+    if (
+      Number.isNaN(reservationDate.getTime())
+      || Number.isNaN(dateTimeFrom.getTime())
+      || Number.isNaN(dateTimeTo.getTime())
+    ) {
+      return res.status(400).json({ message: 'Invalid date or time.' });
+    }
+
+    const result = await bookableUnitService.getMapBookableUnits({
+      mapId,
+      reservationDate,
+      timeFrom: dateTimeFrom,
+      timeTo: dateTimeTo,
+      guests: Number(guests || 0),
+      bookingKind: String(bookingKind || '').trim().toUpperCase() || null,
+      zoneId: Number(zoneId || 0) || null
+    });
+
+    if (!result) {
+      return res.status(404).json({ message: 'Map not found.' });
+    }
+
+    return res.json(result);
+  } catch (error) {
+    console.error('[mapController.getMapBookableUnits] Failed to load bookable units.', error);
+    return res.status(500).json({ message: 'Failed to load bookable units.' });
+  }
+}
+
 module.exports = {
+  listPublicMaps,
   getDefaultMap,
   getMapById,
-  getMapAvailability
+  getMapAvailability,
+  getMapBookableUnits
 };

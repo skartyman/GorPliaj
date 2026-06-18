@@ -28,10 +28,19 @@ const SURFACE_PRESETS = [
   { key: 'SEA', label: 'Sea area', objectType: 'CUSTOM', objectLabel: 'Sea', width: 360, height: 180 }
 ];
 const MAP_VARIANT_PRESETS = [
-  { key: 'DAY', name: 'Day seating', slugPrefix: 'day-seating', description: 'Main daytime seating map' },
-  { key: 'NIGHT', name: 'Night seating', slugPrefix: 'night-seating', description: 'Evening/night layout map' },
-  { key: 'EVENT', name: 'Event layout', slugPrefix: 'event-layout', description: 'Event-focused layout' },
-  { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones' }
+  { key: 'DAY', name: 'Day seating', slugPrefix: 'day-seating', description: 'Main daytime seating map', usageMode: 'DAY' },
+  { key: 'NIGHT', name: 'Night seating', slugPrefix: 'night-seating', description: 'Evening/night layout map', usageMode: 'EVENING' },
+  { key: 'EVENT', name: 'Event layout', slugPrefix: 'event-layout', description: 'Event-focused layout', usageMode: 'EVENT' },
+  { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones', usageMode: 'EVENT' }
+];
+const MAP_USAGE_MODE_OPTIONS = [
+  { value: 'DAY', label: 'Денна карта' },
+  { value: 'EVENING', label: 'Вечірня карта' },
+  { value: 'EVENT', label: 'Івент-карта' }
+];
+const BOOKING_KIND_OPTIONS = [
+  { value: 'TABLE', label: 'Стіл / посадка' },
+  { value: 'BEACH', label: 'Пляжна послуга' }
 ];
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
 const TEXTURE_CHOICES = [
@@ -493,7 +502,8 @@ function normalizeMap(map) {
     width: Math.max(roundCoordinate(map.width), 100),
     height: Math.max(roundCoordinate(map.height), 100),
     backgroundImage: String(map.backgroundImage || '').trim(),
-    backgroundColor: String(map.backgroundColor || '').trim() || '#f8fafc'
+    backgroundColor: String(map.backgroundColor || '').trim() || '#f8fafc',
+    usageMode: String(map.usageMode || 'DAY').trim().toUpperCase() || 'DAY'
   };
 }
 
@@ -732,10 +742,14 @@ function buildEditorState(payload) {
       tables: (payload.tables || []).map((table) => ({
         ...table,
         code: String(table.code || '').trim(),
+        bookingKind: String(table.bookingKind || 'TABLE').trim().toUpperCase(),
         positionType: String(table.positionType || '').trim(),
         positionSide: String(table.positionSide || '').trim(),
         name: table.name,
+        serviceName: table.serviceName || null,
+        serviceDescription: table.serviceDescription || null,
         photoUrl: String(table.photoUrl || '').trim(),
+        sortOrder: Number(table.sortOrder) || 0,
         seatsMin: Number(table.seatsMin) || 1,
         seatsMax: Number(table.seatsMax) || 4,
         deposit: Number(table.deposit) || 0,
@@ -913,6 +927,15 @@ function MapSettings({ map, onMapFieldChange, t }) {
               onChange={uploadBackgroundImage}
             />
           </div>
+        </label>
+
+        <label>
+          <span>Режим карти</span>
+          <select value={map.usageMode || 'DAY'} onChange={(event) => onMapFieldChange('usageMode', event.target.value)}>
+            {MAP_USAGE_MODE_OPTIONS.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
         </label>
 
         <label>
@@ -1254,6 +1277,19 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
             </label>
 
             <label>
+              Тип брони
+              <select
+                value={table?.bookingKind || 'TABLE'}
+                onChange={(event) => onFieldChange('tableBookingKind', event.target.value)}
+                disabled={!selectedObject.tableId}
+              >
+                {BOOKING_KIND_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
               Тип
               <select
                 value={positionType}
@@ -1327,6 +1363,18 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
             </label>
 
             <label>
+              Порядок
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={table?.sortOrder ?? 0}
+                onChange={(event) => onFieldChange('tableSortOrder', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label>
               Депозит
               <input
                 type="number"
@@ -1359,6 +1407,28 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
                 value={localizeField(table?.name, language) || ''}
                 placeholder="Наприклад: Бунгало"
                 onChange={(event) => onFieldChange('tableName', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label>
+              Назва послуги / позиції
+              <input
+                type="text"
+                value={localizeField(table?.serviceName, language) || ''}
+                placeholder="Наприклад: Бунгало біля моря"
+                onChange={(event) => onFieldChange('tableServiceName', event.target.value)}
+                disabled={!selectedObject.tableId}
+              />
+            </label>
+
+            <label className="field-span-2">
+              Опис послуги
+              <input
+                type="text"
+                value={localizeField(table?.serviceDescription, language) || ''}
+                placeholder="Короткий опис для картки бронювання"
+                onChange={(event) => onFieldChange('tableServiceDescription', event.target.value)}
                 disabled={!selectedObject.tableId}
               />
             </label>
@@ -2896,7 +2966,7 @@ export default function MapEditorPage() {
       return;
     }
 
-    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableZoneId' || field === 'tableSeatsMin' || field === 'tableSeatsMax' || field === 'tableDeposit' || field === 'tableIsBookable') {
+    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableServiceName' || field === 'tableServiceDescription' || field === 'tableBookingKind' || field === 'tableSortOrder' || field === 'tableZoneId' || field === 'tableSeatsMin' || field === 'tableSeatsMax' || field === 'tableDeposit' || field === 'tableIsBookable') {
       if (!selectedObject.tableId) {
         return;
       }
@@ -2925,6 +2995,10 @@ export default function MapEditorPage() {
                     ...(field === 'tablePhotoUrl' ? { photoUrl: String(value) } : {}),
                     ...(field === 'tableCode' ? { code: String(value).trim() } : {}),
                     ...(field === 'tableName' ? { name: normalizeLocalizedField(value) } : {}),
+                    ...(field === 'tableServiceName' ? { serviceName: normalizeLocalizedField(value) } : {}),
+                    ...(field === 'tableServiceDescription' ? { serviceDescription: normalizeLocalizedField(value) } : {}),
+                    ...(field === 'tableBookingKind' ? { bookingKind: String(value || 'TABLE').trim().toUpperCase() || 'TABLE' } : {}),
+                    ...(field === 'tableSortOrder' ? { sortOrder: Math.max(0, Number(value) || 0) } : {}),
                     ...(field === 'tableZoneId' ? { zoneId: nextZoneId, code: nextCode || table.code || null } : {}),
                     ...(field === 'tableSeatsMin' ? { seatsMin: Math.max(1, Number(value) || 1) } : {}),
                     ...(field === 'tableSeatsMax' ? { seatsMax: Math.max(1, Number(value) || 1) } : {}),
@@ -3163,9 +3237,13 @@ export default function MapEditorPage() {
               zoneId: Number(defaultZone.id),
               name: normalizeLocalizedField(displayName),
               code: code || null,
+              bookingKind: positionType === 'BUNGALOW' || positionType === 'KROVAT' || positionType === 'PIER' ? 'BEACH' : 'TABLE',
               positionType: positionType || null,
               positionSide: positionSide || null,
+              serviceName: normalizeLocalizedField(displayName),
+              serviceDescription: null,
               photoUrl: '',
+              sortOrder: prev.current.tables.length,
               seatsMin: 1,
               seatsMax: 4,
               deposit: 0,
@@ -3504,16 +3582,21 @@ export default function MapEditorPage() {
         width: stateToSave.current.map.width,
         height: stateToSave.current.map.height,
         backgroundImage: stateToSave.current.map.backgroundImage || null,
-        backgroundColor: stateToSave.current.map.backgroundColor || null
+        backgroundColor: stateToSave.current.map.backgroundColor || null,
+        usageMode: stateToSave.current.map.usageMode || 'DAY'
       },
       tables: stateToSave.current.tables.map((table) => ({
         id: table.id,
         zoneId: table.zoneId || null,
         code: table.code || null,
+        bookingKind: table.bookingKind || 'TABLE',
         positionType: table.positionType || null,
         positionSide: table.positionSide || null,
         name: table.name || null,
+        serviceName: table.serviceName || null,
+        serviceDescription: table.serviceDescription || null,
         photoUrl: table.photoUrl || null,
+        sortOrder: table.sortOrder ?? 0,
         seatsMin: table.seatsMin ?? 1,
         seatsMax: table.seatsMax ?? 4,
         deposit: table.deposit ?? 0,
@@ -3636,6 +3719,7 @@ export default function MapEditorPage() {
       name: baseName, // Бэкенд обернет это в {ua, ru, en}
       slug: baseSlug,
       description: String(editorState.newMapDescription || '').trim() || preset.description,
+      usageMode: preset.usageMode || 'DAY',
       creationMode,
       sourceMapId: creationMode === 'clone' ? editorState.selectedMapId : null,
       width: currentMap?.width || 1600,

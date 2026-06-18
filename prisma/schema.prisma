@@ -23,6 +23,7 @@ model Map {
   slug            String        @unique
   description     Json?
   status          MapStatus     @default(DRAFT)
+  usageMode       MapUsageMode  @default(DAY)
   isDefault       Boolean       @default(false)
   width           Int
   height          Int
@@ -37,6 +38,7 @@ model Map {
 
   @@index([status])
   @@index([isDefault])
+  @@index([usageMode])
 }
 
 model Zone {
@@ -62,14 +64,18 @@ model VenueTable {
   zoneId       Int
   name         Json
   code         String?
+  bookingKind  BookingKind   @default(TABLE)
   positionType VenuePositionType?
   positionSide VenuePositionSide?
   photoUrl     String?
+  serviceName  Json?
+  serviceDescription Json?
   seatsMin     Int
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
   isActive     Boolean       @default(true)
   isBookable   Boolean       @default(true)
+  sortOrder    Int           @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
@@ -80,6 +86,8 @@ model VenueTable {
 
   @@index([mapId])
   @@index([zoneId])
+  @@index([bookingKind])
+  @@index([sortOrder])
 }
 
 model MapObject {
@@ -113,6 +121,7 @@ model Reservation {
   mapId           Int
   zoneId          Int
   eventId         Int?
+  bookingKind     BookingKind       @default(TABLE)
   customerName    String
   customerPhone   String
   customerEmail   String?
@@ -147,6 +156,7 @@ model Reservation {
   @@index([reservationDate])
   @@index([tableId, reservationDate])
   @@index([status])
+  @@index([bookingKind])
 }
 
 model TableHold {
@@ -210,6 +220,7 @@ model Event {
   status           EventStatus   @default(DRAFT)
   isFeatured       Boolean       @default(false)
   ctaType          EventCtaType  @default(BOOKING)
+  preferredMapUsageMode MapUsageMode?
   ticketUrl        String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -223,6 +234,7 @@ model Event {
   @@index([status])
   @@index([startAt])
   @@index([isFeatured])
+  @@index([preferredMapUsageMode])
 }
 
 model TicketType {
@@ -398,6 +410,17 @@ enum MapStatus {
   DRAFT
   ACTIVE
   ARCHIVED
+}
+
+enum MapUsageMode {
+  DAY
+  EVENING
+  EVENT
+}
+
+enum BookingKind {
+  TABLE
+  BEACH
 }
 
 enum ReservationStatus {

@@ -18,9 +18,11 @@ router.get('/ticket-orders/:orderNumber/status', publicTicketSalesController.get
 router.get('/ticket-orders/:orderNumber/pdf', publicTicketSalesController.downloadTicketOrderPdf);
 router.get('/news', publicController.getNews);
 router.get('/settings', publicController.getSettings);
+router.get('/maps', mapController.listPublicMaps);
 router.get('/maps/default', mapController.getDefaultMap);
 router.get('/maps/:mapId', mapController.getMapById);
 router.get('/maps/:mapId/availability', mapController.getMapAvailability);
+router.get('/maps/:mapId/bookable-units', mapController.getMapBookableUnits);
 
 router.get('/reservations/:ticketCode/status', reservationController.getPublicReservationStatus);
 router.get('/reservations/:ticketCode/pdf', reservationController.downloadPublicReservationPdf);

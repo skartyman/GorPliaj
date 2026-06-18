@@ -11,8 +11,84 @@ import { parseReservationMeta } from '../lib/reservationMeta';
 
 const KANBAN_STATUS_ORDER = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'HELD', 'SEATED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
-function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language, dateLocale }) {
+function pickLabel(language, labels) {
+  return labels[language] || labels.ua || labels.ru || labels.en || '';
+}
+
+function getBookingKindLabel(bookingKind, language) {
+  if (bookingKind === 'BEACH') {
+    return pickLabel(language, {
+      ua: 'Пляжна послуга',
+      ru: 'Пляжная услуга',
+      en: 'Beach service'
+    });
+  }
+
+  return pickLabel(language, {
+    ua: 'Стіл',
+    ru: 'Стол',
+    en: 'Table'
+  });
+}
+
+function getUsageModeLabel(usageMode, language) {
+  if (usageMode === 'EVENING') {
+    return pickLabel(language, {
+      ua: 'Вечір',
+      ru: 'Вечер',
+      en: 'Evening'
+    });
+  }
+
+  if (usageMode === 'EVENT') {
+    return pickLabel(language, {
+      ua: 'Подія',
+      ru: 'Событие',
+      en: 'Event'
+    });
+  }
+
+  return pickLabel(language, {
+    ua: 'День',
+    ru: 'День',
+    en: 'Day'
+  });
+}
+
+function getPositionTypeLabel(positionType, language) {
+  const labels = {
+    TABLE: { ua: 'Стіл', ru: 'Стол', en: 'Table' },
+    SUNBED: { ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' },
+    BUNGALOW: { ua: 'Бунгало', ru: 'Бунгало', en: 'Bungalow' },
+    KROVAT: { ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' },
+    PIER: { ua: 'Пірс', ru: 'Пирс', en: 'Pier' }
+  };
+
+  return labels[positionType] ? pickLabel(language, labels[positionType]) : '';
+}
+
+function getReservationUnitName(reservation, language) {
+  return (
+    localizeField(reservation.table?.serviceName, language)
+    || reservation.table?.code
+    || localizeField(reservation.table?.name, language)
+    || '—'
+  );
+}
+
+function getReservationModePlace(reservation, language, t) {
   const meta = parseReservationMeta(reservation.commentCustomer);
+  const modeLabel = reservation.map?.usageMode
+    ? getUsageModeLabel(reservation.map.usageMode, language)
+    : (meta.mode ? t(`reservationMeta.mode.${meta.mode}`) : '—');
+  const placeLabel = reservation.table?.positionType
+    ? getPositionTypeLabel(reservation.table.positionType, language)
+    : (reservation.bookingKind ? getBookingKindLabel(reservation.bookingKind, language) : (meta.place ? t(`reservationMeta.place.${meta.place}`) : '—'));
+
+  return `${modeLabel} / ${placeLabel}`;
+}
+
+function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language, dateLocale }) {
   const actions = {
     PENDING: [
       { label: t('reservations.actions.confirm'), status: 'CONFIRMED', className: 'btn btn-small' },
@@ -43,7 +119,7 @@ function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language, 
         </div>
         <div className="kanban-card-row">
           <span className="muted">{t('reservations.columns.tableZone')}:</span>
-          <span>{reservation.table?.code || localizeField(reservation.table?.name, language) || '—'} / {localizeField(reservation.zone?.name, language) || '—'}</span>
+          <span>{getReservationUnitName(reservation, language)} / {localizeField(reservation.zone?.name, language) || '—'}</span>
         </div>
         <div className="kanban-card-row">
           <span className="muted">{t('reservations.columns.dateTime')}:</span>
@@ -51,7 +127,7 @@ function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language, 
         </div>
         <div className="kanban-card-row">
           <span className="muted">{t('reservations.columns.modePlace')}:</span>
-          <span>{meta.mode ? t(`reservationMeta.mode.${meta.mode}`) : '—'} / {meta.place ? t(`reservationMeta.place.${meta.place}`) : '—'}</span>
+          <span>{getReservationModePlace(reservation, language, t)}</span>
         </div>
       </div>
       {actions.length > 0 ? (
@@ -172,9 +248,14 @@ export default function ReservationsPage() {
         reservation.id,
         reservation.customerName,
         reservation.customerPhone,
+        reservation.bookingKind,
         reservation.table?.code,
         localizeField(reservation.table?.name, language),
+        localizeField(reservation.table?.serviceName, language),
         localizeField(reservation.zone?.name, language),
+        localizeField(reservation.map?.name, language),
+        reservation.map?.usageMode,
+        reservation.table?.positionType,
         parseReservationMeta(reservation.commentCustomer).mode,
         parseReservationMeta(reservation.commentCustomer).place
       ]
@@ -252,7 +333,7 @@ export default function ReservationsPage() {
     {
       key: 'table',
       label: t('reservations.columns.tableZone'),
-      render: (reservation) => `${reservation.table?.code || localizeField(reservation.table?.name, language) || '—'} / ${localizeField(reservation.zone?.name, language) || '—'}`
+      render: (reservation) => `${getReservationUnitName(reservation, language)} / ${localizeField(reservation.zone?.name, language) || '—'}`
     },
     {
       key: 'guests',
@@ -262,12 +343,7 @@ export default function ReservationsPage() {
     {
       key: 'modePlace',
       label: t('reservations.columns.modePlace'),
-      render: (reservation) => {
-        const meta = parseReservationMeta(reservation.commentCustomer);
-        const modeLabel = meta.mode ? t(`reservationMeta.mode.${meta.mode}`) : '—';
-        const placeLabel = meta.place ? t(`reservationMeta.place.${meta.place}`) : '—';
-        return `${modeLabel} / ${placeLabel}`;
-      }
+      render: (reservation) => getReservationModePlace(reservation, language, t)
     },
     { key: 'status', label: t('reservations.columns.status'), render: (reservation) => <StatusPill status={reservation.status} /> },
     {

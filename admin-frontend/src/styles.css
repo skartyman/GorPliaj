@@ -910,6 +910,23 @@ textarea { resize: vertical; min-height: 96px; }
   border-radius: 12px;
   background: var(--bg-card);
 }
+.booking-admin-panel {
+  margin: 12px 0;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg-card) 84%, #f5efe2 16%);
+}
+.booking-admin-form {
+  margin-top: 12px;
+}
+.booking-admin-actions {
+  justify-content: flex-end;
+}
+.success-message {
+  color: #166534;
+  margin: 8px 0 0;
+}
 .object-admin-details > summary, .object-reservation-list > summary {
   cursor: pointer; padding: 10px 12px; font-weight: 700; color: var(--text-secondary);
 }

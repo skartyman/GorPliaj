@@ -291,6 +291,7 @@ async function createAdminMapVariant(req, res) {
       name: req.body?.name,
       slug: req.body?.slug,
       description: req.body?.description,
+      usageMode: req.body?.usageMode,
       sourceMapId: req.body?.sourceMapId,
       creationMode: req.body?.creationMode,
       width: req.body?.width,
@@ -441,39 +442,48 @@ async function createAdminReservation(req, res) {
     const tableId = Number(body.tableId);
     const mapId = Number(body.mapId);
     const zoneId = Number(body.zoneId);
+    const table = await reservationService.getReservationTable({ tableId, mapId, zoneId });
+
+    if (!table) {
+      return res.status(400).json({ message: 'Selected booking position is not available.' });
+    }
+
+    if (guests < table.seatsMin || guests > table.seatsMax) {
+      return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
+    }
 
     const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
     if (conflict) {
-      return res.status(409).json({ message: 'Table is already booked for this time.' });
+      return res.status(409).json({ message: 'This booking position is already reserved for this time.' });
     }
 
     const ticketCode = generateTicketCode();
+    const requestedBookingKind = String(body.bookingKind || '').trim().toUpperCase();
+    const bookingKind = requestedBookingKind || table.bookingKind || 'TABLE';
+    const depositAmount = body.depositRequired
+      ? Math.max(0, Number(body.depositAmount) || Number(table.deposit || 0))
+      : 0;
 
-    const reservation = await prisma.reservation.create({
-      data: {
-        tableId,
-        mapId,
-        zoneId,
-        eventId: body.eventId ? Number(body.eventId) : null,
-        customerName: body.customerName,
-        customerPhone: body.customerPhone,
-        customerEmail: body.customerEmail || null,
-        guests,
-        reservationDate,
-        timeFrom,
-        timeTo,
-        source: source || undefined,
-        ticketCode,
-        commentCustomer: body.commentCustomer || null,
-        commentAdmin: body.commentAdmin || null,
-        depositRequired: Boolean(body.depositRequired),
-        depositAmount: body.depositAmount ? Number(body.depositAmount) : null,
-        status: body.status || 'PENDING'
-      },
-      include: {
-        table: { select: { id: true, name: true, code: true } },
-        zone: { select: { id: true, name: true } }
-      }
+    const reservation = await reservationService.createReservation({
+      tableId,
+      mapId,
+      zoneId,
+      eventId: body.eventId ? Number(body.eventId) : null,
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
+      customerEmail: body.customerEmail || null,
+      guests,
+      reservationDate,
+      timeFrom,
+      timeTo,
+      bookingKind,
+      commentCustomer: body.commentCustomer || null,
+      commentAdmin: body.commentAdmin || null,
+      depositRequired: depositAmount > 0,
+      depositAmount: depositAmount > 0 ? depositAmount : null,
+      status: body.status || 'PENDING',
+      source: source || undefined,
+      ticketCode
     });
 
     return res.status(201).json({ reservation });

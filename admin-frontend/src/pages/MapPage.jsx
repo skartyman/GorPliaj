@@ -18,6 +18,25 @@ function getDateKey(value = new Date()) {
   return value.toISOString().slice(0, 10);
 }
 
+function getRoundedTimeKey(value = new Date()) {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() + 30);
+  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
+  return getTimeKey(date);
+}
+
+function getPositionDisplayName(table, language, fallback = '—') {
+  return localizeField(table?.serviceName, language) || table?.code || localizeField(table?.name, language) || fallback;
+}
+
+function getBookingKindBadgeLabel(bookingKind, language) {
+  if (bookingKind === 'BEACH') {
+    return language === 'en' ? 'Beach' : (language === 'ru' ? 'Пляж' : 'Пляж');
+  }
+
+  return language === 'en' ? 'Table' : (language === 'ru' ? 'Стол' : 'Стіл');
+}
+
 function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTableIds) {
   if (!table?.isActive || !table?.isBookable) {
     return 'UNAVAILABLE';
@@ -537,6 +556,13 @@ export default function MapPage() {
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
   const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
+  const [bookingFormState, setBookingFormState] = useState({
+    open: false,
+    saving: false,
+    error: '',
+    success: '',
+    form: null
+  });
   const [selectedObjectForm, setSelectedObjectForm] = useState({
     zoneId: '',
     tableId: '',
@@ -811,10 +837,63 @@ export default function MapPage() {
     }));
   }
 
+  function buildBookingForm(table) {
+    return {
+      tableId: table.id,
+      mapId: state.mapData?.map?.id || table.mapId || '',
+      zoneId: table.zoneId || '',
+      bookingKind: table.bookingKind || 'TABLE',
+      customerName: '',
+      customerPhone: '',
+      customerEmail: '',
+      guests: table.seatsMin || 1,
+      reservationDate: getDateKey(),
+      timeFrom: getRoundedTimeKey(),
+      timeTo: '',
+      source: 'WALK_IN',
+      status: 'PENDING',
+      commentCustomer: '',
+      commentAdmin: '',
+      depositRequired: Number(table.deposit || 0) > 0,
+      depositAmount: Number(table.deposit || 0) > 0 ? Number(table.deposit || 0) : ''
+    };
+  }
+
   const onBookTable = (table) => {
-    // future booking flow callback
-    console.info('booking hook', table);
+    if (!table) {
+      return;
+    }
+
+    setBookingFormState({
+      open: true,
+      saving: false,
+      error: '',
+      success: '',
+      form: buildBookingForm(table)
+    });
   };
+
+  function closeBookingForm() {
+    setBookingFormState((current) => ({
+      ...current,
+      open: false,
+      saving: false,
+      error: '',
+      success: ''
+    }));
+  }
+
+  function updateBookingForm(field, value) {
+    setBookingFormState((current) => ({
+      ...current,
+      error: '',
+      success: '',
+      form: {
+        ...(current.form || {}),
+        [field]: value
+      }
+    }));
+  }
 
   function focusWholeMap() {
     setActiveZoneFocusId('all');
@@ -1024,6 +1103,54 @@ export default function MapPage() {
       reservations: prev.reservations.map((reservation) =>
         reservation.id === id ? { ...reservation, status: result.body?.reservation?.status || status } : reservation
       )
+    }));
+  }
+
+  async function submitBookingForm(event) {
+    event.preventDefault();
+
+    if (!bookingFormState.form) {
+      return;
+    }
+
+    setBookingFormState((current) => ({
+      ...current,
+      saving: true,
+      error: '',
+      success: ''
+    }));
+
+    const payload = {
+      ...bookingFormState.form,
+      guests: Number(bookingFormState.form.guests),
+      depositRequired: Boolean(bookingFormState.form.depositRequired),
+      depositAmount: bookingFormState.form.depositRequired ? Number(bookingFormState.form.depositAmount || 0) : 0
+    };
+
+    const result = await apiRequest('/api/admin/reservations', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    if (!result.response.ok) {
+      setBookingFormState((current) => ({
+        ...current,
+        saving: false,
+        error: result.body?.message || 'Unable to create reservation.'
+      }));
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      reservations: result.body?.reservation ? [result.body.reservation, ...prev.reservations] : prev.reservations
+    }));
+
+    setBookingFormState((current) => ({
+      ...current,
+      saving: false,
+      success: 'Бронь створено.',
+      open: false
     }));
   }
 
@@ -1340,6 +1467,113 @@ export default function MapPage() {
                     <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadSelectedObjectPhoto} />
                   </label>
                 </div>
+
+                {selectedObject.table?.isBookable ? (
+                  <div className="booking-admin-panel">
+                    <div className="table-sheet-head">
+                      <div>
+                        <span className="eyebrow">Ручна бронь</span>
+                        <h4>{getPositionDisplayName(selectedObject.table, language)}</h4>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          if (bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id) {
+                            closeBookingForm();
+                            return;
+                          }
+
+                          onBookTable(selectedObject.table);
+                        }}
+                      >
+                        {bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id ? 'Скасувати' : 'Створити бронь'}
+                      </button>
+                    </div>
+
+                    <div className="details-grid compact table-sheet-grid">
+                      <div className="detail-row"><span className="muted">Тип</span><strong>{getBookingKindBadgeLabel(selectedObject.table?.bookingKind, language)}</strong></div>
+                      <div className="detail-row"><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedObject.table?.zoneId)?.name, language) || '—'}</strong></div>
+                      <div className="detail-row"><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedObject.table?.seatsMin || '—'}-{selectedObject.table?.seatsMax || '—'}</strong></div>
+                      <div className="detail-row"><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedObject.table?.deposit || '—'}</strong></div>
+                    </div>
+
+                    {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
+                    {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
+
+                    {bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id ? (
+                      <form className="object-admin-form booking-admin-form" onSubmit={submitBookingForm}>
+                        <label>
+                          Ім'я гостя
+                          <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} />
+                        </label>
+                        <label>
+                          Телефон
+                          <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} />
+                        </label>
+                        <label>
+                          Email
+                          <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} />
+                        </label>
+                        <label>
+                          Гостей
+                          <input type="number" min={selectedObject.table?.seatsMin || 1} max={selectedObject.table?.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} />
+                        </label>
+                        <label>
+                          Дата
+                          <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} />
+                        </label>
+                        <label>
+                          Початок
+                          <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} />
+                        </label>
+                        <label>
+                          Кінець
+                          <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} />
+                        </label>
+                        <label>
+                          Джерело
+                          <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)}>
+                            <option value="WALK_IN">Walk-in</option>
+                            <option value="PHONE">Phone</option>
+                            <option value="INSTAGRAM">Instagram</option>
+                            <option value="FACEBOOK">Facebook</option>
+                            <option value="WEB">Web</option>
+                          </select>
+                        </label>
+                        <label>
+                          Статус
+                          <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)}>
+                            <option value="PENDING">Pending</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                          </select>
+                        </label>
+                        <label className="checkbox-label inline">
+                          <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} />
+                          Є депозит
+                        </label>
+                        <label>
+                          Сума депозиту
+                          <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
+                        </label>
+                        <label className="object-admin-form-wide">
+                          Коментар гостя
+                          <textarea rows="3" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)} />
+                        </label>
+                        <label className="object-admin-form-wide">
+                          Коментар адміністратора
+                          <textarea rows="3" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} />
+                        </label>
+                        <div className="actions booking-admin-actions object-admin-form-wide">
+                          <button type="button" className="btn btn-secondary" onClick={closeBookingForm}>Скасувати</button>
+                          <button type="submit" className="btn" disabled={bookingFormState.saving}>
+                            {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <details className="object-admin-details">
                   <summary>Технічні дані</summary>
