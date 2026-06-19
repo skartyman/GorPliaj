@@ -243,6 +243,18 @@ async function deleteAdminEvent(id) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) return { type: 'NOT_FOUND' };
 
+  const [ticketOrdersCount, ticketsCount] = await Promise.all([
+    prisma.ticketOrder.count({ where: { eventId: id } }),
+    prisma.ticket.count({ where: { eventId: id } })
+  ]);
+
+  if (ticketOrdersCount > 0 || ticketsCount > 0) {
+    return {
+      type: 'INVALID',
+      message: 'Cannot delete this event because it already has ticket sales or issued tickets. Archive it instead or remove the related ticket data first.'
+    };
+  }
+
   await prisma.event.delete({ where: { id } });
   return { type: 'SUCCESS' };
 }

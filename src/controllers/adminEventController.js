@@ -83,6 +83,10 @@ async function deleteAdminEvent(req, res) {
       return res.status(404).json({ message: 'Event not found.' });
     }
 
+    if (result.type === 'INVALID') {
+      return res.status(409).json({ message: result.message });
+    }
+
     return res.json({ success: true });
   } catch (error) {
     console.error('[adminEventController.deleteAdminEvent] Failed to delete event.', error);
