@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { eventsApi } from '../lib/api';
 import { formatEventDateRange } from '../lib/events';
 import { localizedCopy, localizeField } from '../lib/i18n';
@@ -7,13 +7,29 @@ import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { sanitizeRichText } from '../lib/richText';
 
+function formatSessionRange(session, locale) {
+  if (!session?.startsAt) return '';
+  const formatLocale = locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU');
+  const start = new Date(session.startsAt);
+  const end = new Date(session.endsAt);
+  const datePart = start.toLocaleDateString(formatLocale, {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+  const startTime = start.toLocaleTimeString(formatLocale, { hour: '2-digit', minute: '2-digit' });
+  const endTime = end.toLocaleTimeString(formatLocale, { hour: '2-digit', minute: '2-digit' });
+  return `${datePart}, ${startTime} - ${endTime}`;
+}
+
 export default function EventDetailPage() {
   const { locale } = useLocale();
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const [state, setState] = useState({ loading: true, error: '', event: null });
-  const [sales, setSales] = useState({ loading: false, error: '', ticketTypes: [] });
+  const [sales, setSales] = useState({ loading: false, error: '', ticketTypes: [], sessions: [] });
   const [orderForm, setOrderForm] = useState({
+    eventSessionId: '',
     ticketTypeId: '',
     quantity: 1,
     customerName: '',
@@ -41,10 +57,17 @@ export default function EventDetailPage() {
     eventsApi.ticketTypes(slug)
       .then((result) => {
         const ticketTypes = Array.isArray(result.ticketTypes) ? result.ticketTypes : [];
-        setSales({ loading: false, error: '', ticketTypes });
-        setOrderForm((current) => ({ ...current, ticketTypeId: current.ticketTypeId || String(ticketTypes[0]?.id || '') }));
+        const sessions = Array.isArray(result.sessions) ? result.sessions : [];
+        const defaultSessionId = sessions[0] ? String(sessions[0].id) : '';
+        const defaultTypes = ticketTypes.filter((type) => String(type.eventSessionId || '') === defaultSessionId);
+        setSales({ loading: false, error: '', ticketTypes, sessions });
+        setOrderForm((current) => ({
+          ...current,
+          eventSessionId: current.eventSessionId || defaultSessionId,
+          ticketTypeId: current.ticketTypeId || String(defaultTypes[0]?.id || ticketTypes[0]?.id || '')
+        }));
       })
-      .catch((error) => setSales({ loading: false, error: error.message, ticketTypes: [] }));
+      .catch((error) => setSales({ loading: false, error: error.message, ticketTypes: [], sessions: [] }));
   }, [slug, state.event]);
 
   useEffect(() => {
@@ -79,6 +102,17 @@ export default function EventDetailPage() {
     });
   }, [searchParams]);
 
+  const visibleTicketTypes = useMemo(() => {
+    if (!sales.sessions.length) return sales.ticketTypes;
+    return sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(orderForm.eventSessionId || ''));
+  }, [sales.sessions, sales.ticketTypes, orderForm.eventSessionId]);
+
+  useEffect(() => {
+    if (!visibleTicketTypes.length) return;
+    if (visibleTicketTypes.some((type) => String(type.id) === String(orderForm.ticketTypeId))) return;
+    setOrderForm((current) => ({ ...current, ticketTypeId: String(visibleTicketTypes[0].id) }));
+  }, [visibleTicketTypes, orderForm.ticketTypeId]);
+
   async function submitTicketOrder(event) {
     event.preventDefault();
     setSales((current) => ({ ...current, loading: true, error: '' }));
@@ -86,6 +120,7 @@ export default function EventDetailPage() {
     setOrderStatus(null);
     try {
       const result = await eventsApi.createTicketOrder(slug, {
+        eventSessionId: orderForm.eventSessionId ? Number(orderForm.eventSessionId) : null,
         customerName: orderForm.customerName,
         customerEmail: orderForm.customerEmail,
         customerPhone: orderForm.customerPhone,
@@ -131,10 +166,7 @@ export default function EventDetailPage() {
           <h1>{title}</h1>
           <p className="muted event-detail-lead">{shortDescription}</p>
           {fullDescriptionHtml ? (
-            <div
-              className="event-rich-text"
-              dangerouslySetInnerHTML={{ __html: fullDescriptionHtml }}
-            />
+            <div className="event-rich-text" dangerouslySetInnerHTML={{ __html: fullDescriptionHtml }} />
           ) : null}
           <div className="btn-group event-detail-actions">
             {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
@@ -165,46 +197,63 @@ export default function EventDetailPage() {
                 <div className="state-msg">
                   {c({
                     ua: 'Продаж квитків для цієї події ще не відкритий.',
-                    ru: 'Продажа билетов для этого события еще не открыта.',
+                    ru: 'Продажа билетов для этого события ещё не открыта.',
                     en: 'Ticket sales for this event are not open yet.'
                   })}
                 </div>
               ) : null}
               {sales.ticketTypes.length ? (
-            <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
-              <div className="form-group ticket-form-head">
-                <h2>{c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy a ticket' })}</h2>
-              </div>
-              <div className="form-group">
-                <label>{c({ ua: 'Тариф', ru: 'Тариф', en: 'Ticket type' })}</label>
-                <select className="form-input" value={orderForm.ticketTypeId} onChange={(e) => setOrderForm({ ...orderForm, ticketTypeId: e.target.value })} required>
-                  {sales.ticketTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {localizeField(type.name, locale)} · {type.price} {type.currency} ({type.available})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
-                <input className="form-input" type="number" min="1" max="20" required value={orderForm.quantity} onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>{c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}</label>
-                <input className="form-input" required value={orderForm.customerName} onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input className="form-input" type="email" required value={orderForm.customerEmail} onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })} />
-              </div>
-              <div className="form-group ticket-form-full">
-                <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
-                <input className="form-input" value={orderForm.customerPhone} onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })} />
-              </div>
-              <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading}>
-                {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаём...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
-              </button>
-            </form>
+                <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
+                  <div className="form-group ticket-form-head">
+                    <h2>{c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy a ticket' })}</h2>
+                  </div>
+                  {sales.sessions.length ? (
+                    <div className="form-group">
+                      <label>{c({ ua: 'Дата події', ru: 'Дата события', en: 'Event date' })}</label>
+                      <select
+                        className="form-input"
+                        value={orderForm.eventSessionId}
+                        onChange={(event) => setOrderForm({ ...orderForm, eventSessionId: event.target.value, ticketTypeId: '' })}
+                        required
+                      >
+                        {sales.sessions.map((session) => (
+                          <option key={session.id} value={session.id}>
+                            {localizeField(session.name, locale) || formatSessionRange(session, locale)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className="form-group">
+                    <label>{c({ ua: 'Тариф', ru: 'Тариф', en: 'Ticket type' })}</label>
+                    <select className="form-input" value={orderForm.ticketTypeId} onChange={(event) => setOrderForm({ ...orderForm, ticketTypeId: event.target.value })} required>
+                      {visibleTicketTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {localizeField(type.name, locale)} · {type.price} {type.currency} ({type.available})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
+                    <input className="form-input" type="number" min="1" max="20" required value={orderForm.quantity} onChange={(event) => setOrderForm({ ...orderForm, quantity: event.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>{c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}</label>
+                    <input className="form-input" required value={orderForm.customerName} onChange={(event) => setOrderForm({ ...orderForm, customerName: event.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input className="form-input" type="email" required value={orderForm.customerEmail} onChange={(event) => setOrderForm({ ...orderForm, customerEmail: event.target.value })} />
+                  </div>
+                  <div className="form-group ticket-form-full">
+                    <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
+                    <input className="form-input" value={orderForm.customerPhone} onChange={(event) => setOrderForm({ ...orderForm, customerPhone: event.target.value })} />
+                  </div>
+                  <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading || !visibleTicketTypes.length}>
+                    {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаём...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
+                  </button>
+                </form>
               ) : null}
             </div>
           ) : null}

@@ -248,6 +248,7 @@ model Event {
   reservations     Reservation[]
   tableHolds       TableHold[]
   tableOverrides   VenueTableOverride[]
+  sessions         EventSession[]
   ticketTypes      TicketType[]
   ticketOrders     TicketOrder[]
   tickets          Ticket[]
@@ -259,9 +260,30 @@ model Event {
   @@index([preferredMapUsageMode])
 }
 
+model EventSession {
+  id        Int       @id @default(autoincrement())
+  eventId    Int
+  name       Json?
+  startsAt   DateTime
+  endsAt     DateTime
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypes TicketType[]
+  ticketOrders TicketOrder[]
+  tickets    Ticket[]
+
+  @@index([eventId])
+  @@index([startsAt])
+  @@index([sortOrder])
+}
+
 model TicketType {
   id          Int      @id @default(autoincrement())
   eventId     Int
+  eventSessionId Int?
   name        Json
   description Json?
   price       Decimal  @db.Decimal(10, 2)
@@ -275,9 +297,11 @@ model TicketType {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventSession EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
   tickets     Ticket[]
 
   @@index([eventId])
+  @@index([eventSessionId])
   @@index([isActive])
   @@index([sortOrder])
 }
@@ -285,6 +309,7 @@ model TicketType {
 model TicketOrder {
   id            Int               @id @default(autoincrement())
   eventId       Int
+  eventSessionId Int?
   orderNumber   String            @unique
   downloadToken String            @unique
   customerName  String
@@ -299,10 +324,12 @@ model TicketOrder {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   event         Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  eventSession  EventSession?     @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
   payment       Payment?
   tickets       Ticket[]
 
   @@index([eventId])
+  @@index([eventSessionId])
   @@index([status])
   @@index([customerEmail])
   @@index([createdAt])
@@ -312,6 +339,7 @@ model Ticket {
   id           Int          @id @default(autoincrement())
   orderId      Int
   eventId      Int
+  eventSessionId Int?
   ticketTypeId Int
   code         String       @unique
   status       TicketStatus @default(RESERVED)
@@ -324,11 +352,13 @@ model Ticket {
   updatedAt    DateTime     @updatedAt
   order        TicketOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   event        Event        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  eventSession EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
   ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
   scans        TicketScan[]
 
   @@index([orderId])
   @@index([eventId])
+  @@index([eventSessionId])
   @@index([ticketTypeId])
   @@index([status])
 }

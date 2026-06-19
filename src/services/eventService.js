@@ -15,7 +15,6 @@ function normalizeOptionalText(value) {
 }
 
 function slugify(value) {
-  // Для слагификации берем UA версию, если это объект
   const text = (value && typeof value === 'object') ? (value.ua || value.en || '') : value;
   return normalizeText(text)
     .toLowerCase()
@@ -37,6 +36,11 @@ function normalizeBoolean(value, fallback = false) {
     if (['false', '0', 'no', 'off'].includes(normalized)) return false;
   }
   return fallback;
+}
+
+function normalizeSortOrder(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : 0;
 }
 
 function toAdminEvent(event) {
@@ -71,6 +75,20 @@ function toPublicEvent(event) {
     isFeatured: event.isFeatured,
     ctaType: event.ctaType,
     ticketUrl: event.ticketUrl || ''
+  };
+}
+
+function toEventSession(session) {
+  return {
+    id: session.id,
+    eventId: session.eventId,
+    name: normalizeLocalizedField(session.name),
+    startsAt: session.startsAt,
+    endsAt: session.endsAt,
+    sortOrder: session.sortOrder,
+    isActive: session.isActive,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt
   };
 }
 
@@ -259,6 +277,103 @@ async function deleteAdminEvent(id) {
   return { type: 'SUCCESS' };
 }
 
+async function listEventSessions(eventId) {
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
+  if (!event) return { type: 'NOT_FOUND', message: 'Event not found.' };
+
+  const rows = await prisma.eventSession.findMany({
+    where: { eventId },
+    orderBy: [{ sortOrder: 'asc' }, { startsAt: 'asc' }, { id: 'asc' }]
+  });
+
+  return { type: 'SUCCESS', sessions: rows.map(toEventSession) };
+}
+
+async function createEventSession(eventId, input) {
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
+  if (!event) return { type: 'NOT_FOUND', message: 'Event not found.' };
+
+  const startsAt = normalizeDate(input.startsAt);
+  const endsAt = normalizeDate(input.endsAt);
+  const timeError = validateTimeRange(startsAt, endsAt);
+  if (timeError) return { type: 'INVALID', message: timeError };
+
+  const row = await prisma.eventSession.create({
+    data: {
+      eventId,
+      name: input.name ? await autoTranslateObject(input.name) : null,
+      startsAt,
+      endsAt,
+      sortOrder: normalizeSortOrder(input.sortOrder),
+      isActive: normalizeBoolean(input.isActive, true)
+    }
+  });
+
+  return { type: 'SUCCESS', session: toEventSession(row) };
+}
+
+async function updateEventSession(id, input) {
+  const existing = await prisma.eventSession.findUnique({ where: { id } });
+  if (!existing) return { type: 'NOT_FOUND', message: 'Event session not found.' };
+
+  const nextStartsAt = Object.prototype.hasOwnProperty.call(input, 'startsAt')
+    ? normalizeDate(input.startsAt)
+    : existing.startsAt;
+  const nextEndsAt = Object.prototype.hasOwnProperty.call(input, 'endsAt')
+    ? normalizeDate(input.endsAt)
+    : existing.endsAt;
+  const timeError = validateTimeRange(nextStartsAt, nextEndsAt);
+  if (timeError) return { type: 'INVALID', message: timeError };
+
+  const data = {
+    startsAt: nextStartsAt,
+    endsAt: nextEndsAt
+  };
+
+  if (Object.prototype.hasOwnProperty.call(input, 'name')) {
+    data.name = input.name ? await autoTranslateObject(input.name) : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'sortOrder')) {
+    data.sortOrder = normalizeSortOrder(input.sortOrder);
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'isActive')) {
+    data.isActive = normalizeBoolean(input.isActive, existing.isActive);
+  }
+
+  const row = await prisma.eventSession.update({
+    where: { id },
+    data
+  });
+
+  return { type: 'SUCCESS', session: toEventSession(row) };
+}
+
+async function deleteEventSession(id) {
+  const existing = await prisma.eventSession.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          ticketTypes: true,
+          ticketOrders: true,
+          tickets: true
+        }
+      }
+    }
+  });
+  if (!existing) return { type: 'NOT_FOUND', message: 'Event session not found.' };
+
+  if (existing._count.ticketOrders > 0 || existing._count.tickets > 0) {
+    return {
+      type: 'CONFLICT',
+      message: 'Event session cannot be deleted because tickets or orders already exist for it.'
+    };
+  }
+
+  await prisma.eventSession.delete({ where: { id } });
+  return { type: 'SUCCESS' };
+}
+
 async function listPublicEvents({ includePast = false, limit } = {}) {
   const now = new Date();
   const events = await prisma.event.findMany({
@@ -290,6 +405,10 @@ module.exports = {
   createAdminEvent,
   updateAdminEvent,
   deleteAdminEvent,
+  listEventSessions,
+  createEventSession,
+  updateEventSession,
+  deleteEventSession,
   listPublicEvents,
   getPublicEventBySlug
 };

@@ -33,9 +33,10 @@ async function getOrderForDelivery(orderId) {
     where: { id: orderId },
     include: {
       event: true,
+      eventSession: true,
       tickets: {
         orderBy: { id: 'asc' },
-        include: { ticketType: true }
+        include: { ticketType: { include: { eventSession: true } }, eventSession: true }
       }
     }
   });

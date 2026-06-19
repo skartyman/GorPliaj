@@ -23,6 +23,11 @@ function normalizeDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function parseOptionalId(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 function generateOrderNumber() {
   return `GPO-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 }
@@ -35,19 +40,34 @@ function generateDownloadToken() {
   return crypto.randomBytes(24).toString('hex');
 }
 
+function toEventSession(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    eventId: row.eventId,
+    name: normalizeLocalizedField(row.name),
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    sortOrder: row.sortOrder,
+    isActive: row.isActive
+  };
+}
+
 function toTicketType(row) {
   return {
     ...row,
     name: normalizeLocalizedField(row.name),
     description: normalizeLocalizedField(row.description),
-    price: Number(row.price)
+    price: Number(row.price),
+    eventSession: toEventSession(row.eventSession)
   };
 }
 
 function toTicket(row) {
   return {
     ...row,
-    ticketType: row.ticketType ? toTicketType(row.ticketType) : undefined
+    ticketType: row.ticketType ? toTicketType(row.ticketType) : undefined,
+    eventSession: toEventSession(row.eventSession || row.ticketType?.eventSession)
   };
 }
 
@@ -56,6 +76,7 @@ function toOrder(row) {
     ...row,
     amount: Number(row.amount),
     payment: row.payment ? { ...row.payment, amount: Number(row.payment.amount) } : null,
+    eventSession: toEventSession(row.eventSession),
     tickets: Array.isArray(row.tickets) ? row.tickets.map(toTicket) : []
   };
 }
@@ -71,10 +92,26 @@ async function deliverOrderIfPaid(order) {
   }
 }
 
+async function ensureEventSessionBelongsToEvent(eventId, eventSessionId) {
+  if (!eventSessionId) return null;
+  const session = await prisma.eventSession.findFirst({
+    where: { id: eventSessionId, eventId }
+  });
+  return session || null;
+}
+
 async function listTicketTypes(eventId) {
   const rows = await prisma.ticketType.findMany({
     where: { eventId },
-    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }]
+    orderBy: [
+      { eventSession: { sortOrder: 'asc' } },
+      { eventSession: { startsAt: 'asc' } },
+      { sortOrder: 'asc' },
+      { id: 'asc' }
+    ],
+    include: {
+      eventSession: true
+    }
   });
   return rows.map(toTicketType);
 }
@@ -99,9 +136,16 @@ async function createTicketType(eventId, input) {
     return { type: 'INVALID', message: 'Sales end cannot be earlier than sales start.' };
   }
 
+  const eventSessionId = parseOptionalId(input.eventSessionId);
+  if (eventSessionId) {
+    const session = await ensureEventSessionBelongsToEvent(eventId, eventSessionId);
+    if (!session) return { type: 'INVALID', message: 'Event session is invalid.' };
+  }
+
   const row = await prisma.ticketType.create({
     data: {
       eventId,
+      eventSessionId,
       name,
       description: input.description ? await autoTranslateObject(input.description) : null,
       price,
@@ -111,6 +155,9 @@ async function createTicketType(eventId, input) {
       salesEnd,
       isActive: input.isActive !== false,
       sortOrder: Number.isInteger(Number(input.sortOrder)) ? Number(input.sortOrder) : 0
+    },
+    include: {
+      eventSession: true
     }
   });
   return { type: 'SUCCESS', ticketType: toTicketType(row) };
@@ -146,6 +193,14 @@ async function updateTicketType(id, input) {
   if (Object.prototype.hasOwnProperty.call(input, 'sortOrder')) data.sortOrder = Number(input.sortOrder) || 0;
   if (Object.prototype.hasOwnProperty.call(input, 'salesStart')) data.salesStart = normalizeDate(input.salesStart);
   if (Object.prototype.hasOwnProperty.call(input, 'salesEnd')) data.salesEnd = normalizeDate(input.salesEnd);
+  if (Object.prototype.hasOwnProperty.call(input, 'eventSessionId')) {
+    const eventSessionId = parseOptionalId(input.eventSessionId);
+    if (eventSessionId) {
+      const session = await ensureEventSessionBelongsToEvent(existing.eventId, eventSessionId);
+      if (!session) return { type: 'INVALID', message: 'Event session is invalid.' };
+    }
+    data.eventSessionId = eventSessionId;
+  }
 
   const nextStart = Object.prototype.hasOwnProperty.call(data, 'salesStart') ? data.salesStart : existing.salesStart;
   const nextEnd = Object.prototype.hasOwnProperty.call(data, 'salesEnd') ? data.salesEnd : existing.salesEnd;
@@ -153,7 +208,13 @@ async function updateTicketType(id, input) {
     return { type: 'INVALID', message: 'Sales end cannot be earlier than sales start.' };
   }
 
-  const row = await prisma.ticketType.update({ where: { id }, data });
+  const row = await prisma.ticketType.update({
+    where: { id },
+    data,
+    include: {
+      eventSession: true
+    }
+  });
   return { type: 'SUCCESS', ticketType: toTicketType(row) };
 }
 
@@ -178,6 +239,7 @@ async function createOrder(input) {
     return { type: 'INVALID', message: 'Event, customer name, email and ticket items are required.' };
   }
 
+  const requestedSessionId = parseOptionalId(input.eventSessionId);
   const quantities = new Map();
   for (const item of items) {
     const ticketTypeId = Number(item.ticketTypeId);
@@ -191,15 +253,26 @@ async function createOrder(input) {
   try {
     const order = await prisma.$transaction(async (tx) => {
       const types = await tx.ticketType.findMany({
-        where: { id: { in: [...quantities.keys()] }, eventId, isActive: true }
+        where: { id: { in: [...quantities.keys()] }, eventId, isActive: true },
+        include: {
+          eventSession: true
+        }
       });
       if (types.length !== quantities.size) throw new Error('INVALID_TICKET_TYPES');
+
+      const sessionIds = [...new Set(types.map((type) => type.eventSessionId || null))];
+      if (sessionIds.length > 1) throw new Error('MIXED_SESSIONS');
+      const eventSessionId = sessionIds[0] || null;
+      if (requestedSessionId && requestedSessionId !== eventSessionId) throw new Error('SESSION_MISMATCH');
+
       if (input.enforceSalesWindow) {
         const now = new Date();
         const closedType = types.find((type) =>
           (type.salesStart && type.salesStart > now) || (type.salesEnd && type.salesEnd < now)
         );
         if (closedType) throw new Error('SALES_CLOSED');
+        const inactiveSession = types.find((type) => type.eventSession && !type.eventSession.isActive);
+        if (inactiveSession) throw new Error('SESSION_INACTIVE');
       }
 
       const currencies = new Set(types.map((type) => type.currency));
@@ -222,6 +295,7 @@ async function createOrder(input) {
       const created = await tx.ticketOrder.create({
         data: {
           eventId,
+          eventSessionId,
           orderNumber: generateOrderNumber(),
           downloadToken: generateDownloadToken(),
           customerName,
@@ -236,6 +310,7 @@ async function createOrder(input) {
             create: types.flatMap((type) =>
               Array.from({ length: quantities.get(type.id) }, () => ({
                 eventId,
+                eventSessionId,
                 ticketTypeId: type.id,
                 code: generateTicketCode(),
                 status: input.status === 'PAID' ? 'VALID' : 'RESERVED',
@@ -248,8 +323,14 @@ async function createOrder(input) {
         },
         include: {
           event: true,
+          eventSession: true,
           payment: true,
-          tickets: { include: { ticketType: true } }
+          tickets: {
+            include: {
+              eventSession: true,
+              ticketType: { include: { eventSession: true } }
+            }
+          }
         }
       });
 
@@ -262,6 +343,9 @@ async function createOrder(input) {
     if (error.message === 'INVALID_TICKET_TYPES') return { type: 'INVALID', message: 'One or more ticket types are unavailable.' };
     if (error.message === 'SALES_CLOSED') return { type: 'CONFLICT', message: 'Ticket sales are closed.' };
     if (error.message === 'MIXED_CURRENCIES') return { type: 'INVALID', message: 'All ticket types in an order must use the same currency.' };
+    if (error.message === 'MIXED_SESSIONS') return { type: 'INVALID', message: 'Tickets from different event dates cannot be mixed in one order.' };
+    if (error.message === 'SESSION_MISMATCH') return { type: 'INVALID', message: 'Selected event date does not match the ticket type.' };
+    if (error.message === 'SESSION_INACTIVE') return { type: 'CONFLICT', message: 'Ticket sales for the selected event date are not active.' };
     if (error.message.startsWith('SOLD_OUT:')) return { type: 'CONFLICT', message: 'Not enough tickets are available.' };
     throw error;
   }
@@ -319,8 +403,14 @@ async function listOrders(filters = {}) {
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: {
       event: true,
+      eventSession: true,
       payment: true,
-      tickets: { include: { ticketType: true } }
+      tickets: {
+        include: {
+          eventSession: true,
+          ticketType: { include: { eventSession: true } }
+        }
+      }
     }
   });
   return rows.map(toOrder);
@@ -331,8 +421,15 @@ async function getOrder(id) {
     where: { id },
     include: {
       event: true,
+      eventSession: true,
       payment: true,
-      tickets: { include: { ticketType: true, scans: { orderBy: { scannedAt: 'desc' } } } }
+      tickets: {
+        include: {
+          eventSession: true,
+          ticketType: { include: { eventSession: true } },
+          scans: { orderBy: { scannedAt: 'desc' } }
+        }
+      }
     }
   });
   return row ? toOrder(row) : null;
@@ -400,8 +497,14 @@ async function updateOrderStatus(id, status) {
       },
       include: {
         event: true,
+        eventSession: true,
         payment: true,
-        tickets: { include: { ticketType: true } }
+        tickets: {
+          include: {
+            eventSession: true,
+            ticketType: { include: { eventSession: true } }
+          }
+        }
       }
     });
   });
@@ -420,8 +523,13 @@ async function listTickets(filters = {}) {
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: {
       event: true,
+      eventSession: true,
       order: true,
-      ticketType: true
+      ticketType: {
+        include: {
+          eventSession: true
+        }
+      }
     }
   });
   return rows.map(toTicket);
@@ -432,8 +540,13 @@ async function verifyTicket(code) {
     where: { code: normalizeText(code).toUpperCase() },
     include: {
       event: true,
+      eventSession: true,
       order: true,
-      ticketType: true,
+      ticketType: {
+        include: {
+          eventSession: true
+        }
+      },
       scans: { orderBy: { scannedAt: 'desc' }, take: 10 }
     }
   });
@@ -455,7 +568,12 @@ async function useTicket(code, adminUserId) {
     const updated = await tx.ticket.update({
       where: { id: ticket.id },
       data: { status: 'USED', usedAt: new Date() },
-      include: { event: true, order: true, ticketType: true }
+      include: {
+        event: true,
+        eventSession: true,
+        order: true,
+        ticketType: { include: { eventSession: true } }
+      }
     });
     await tx.ticketScan.create({
       data: { ticketId: ticket.id, adminUserId, result: 'ACCEPTED' }

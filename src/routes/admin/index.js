@@ -43,7 +43,11 @@ const {
   getAdminEventById,
   createAdminEvent,
   updateAdminEvent,
-  deleteAdminEvent
+  deleteAdminEvent,
+  listAdminEventSessions,
+  createAdminEventSession,
+  updateAdminEventSession,
+  deleteAdminEventSession
 } = require('../../controllers/adminEventController');
 const {
   getAdminPayments,
@@ -137,6 +141,10 @@ router.get('/events/:id', requireAdminAuth, requirePermission('events:view'), ge
 router.post('/events', requireAdminAuth, requirePermission('events:create'), createAdminEvent);
 router.patch('/events/:id', requireAdminAuth, requirePermission('events:update'), updateAdminEvent);
 router.delete('/events/:id', requireAdminAuth, requirePermission('events:delete'), deleteAdminEvent);
+router.get('/events/:eventId/sessions', requireAdminAuth, requirePermission('events:view'), listAdminEventSessions);
+router.post('/events/:eventId/sessions', requireAdminAuth, requirePermission('events:update'), createAdminEventSession);
+router.patch('/event-sessions/:id', requireAdminAuth, requirePermission('events:update'), updateAdminEventSession);
+router.delete('/event-sessions/:id', requireAdminAuth, requirePermission('events:update'), deleteAdminEventSession);
 router.get('/events/:eventId/ticket-types', requireAdminAuth, requirePermission('tickets:view'), listTicketTypes);
 router.post('/events/:eventId/ticket-types', requireAdminAuth, requirePermission('tickets:manage'), createTicketType);
 router.patch('/ticket-types/:id', requireAdminAuth, requirePermission('tickets:manage'), updateTicketType);

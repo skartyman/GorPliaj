@@ -386,6 +386,7 @@ export default function TicketVerificationPage() {
                 </div>
               </div>
               <div><strong>Подія:</strong> {localizeField(saleTicket.event?.title, language)}</div>
+              {saleTicket.eventSession ? <div><strong>Дата:</strong> {formatDate(saleTicket.eventSession.startsAt)} {formatTime(saleTicket.eventSession.startsAt)} - {formatTime(saleTicket.eventSession.endsAt)}</div> : null}
               <div><strong>Тариф:</strong> {localizeField(saleTicket.ticketType?.name, language)}</div>
               <div><strong>{t('verifyTicket.guest')}:</strong> {saleTicket.holderName || saleTicket.order?.customerName || '—'}</div>
               <div><strong>Email:</strong> {saleTicket.holderEmail || saleTicket.order?.customerEmail || '—'}</div>

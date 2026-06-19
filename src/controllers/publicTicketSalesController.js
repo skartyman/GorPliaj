@@ -11,7 +11,20 @@ function isSalesOpen(ticketType, now) {
   if (!ticketType.isActive || ticketType.soldCount >= ticketType.capacity) return false;
   if (ticketType.salesStart && ticketType.salesStart > now) return false;
   if (ticketType.salesEnd && ticketType.salesEnd < now) return false;
+  if (ticketType.eventSession && !ticketType.eventSession.isActive) return false;
   return true;
+}
+
+function toSession(session) {
+  if (!session) return null;
+  return {
+    id: session.id,
+    name: normalizeLocalizedField(session.name),
+    startsAt: session.startsAt,
+    endsAt: session.endsAt,
+    sortOrder: session.sortOrder,
+    isActive: session.isActive
+  };
 }
 
 async function getEventTicketTypes(req, res) {
@@ -29,14 +42,40 @@ async function getEventTicketTypes(req, res) {
         slug: true,
         title: true,
         startAt: true,
+        sessions: {
+          where: { isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { startsAt: 'asc' }, { id: 'asc' }]
+        },
         ticketTypes: {
-          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }]
+          orderBy: [
+            { eventSession: { sortOrder: 'asc' } },
+            { eventSession: { startsAt: 'asc' } },
+            { sortOrder: 'asc' },
+            { id: 'asc' }
+          ],
+          include: {
+            eventSession: true
+          }
         }
       }
     });
     if (!event) return res.status(404).json({ message: 'Event ticket sales are not available.' });
 
     const now = new Date();
+    const ticketTypes = event.ticketTypes
+      .filter((type) => isSalesOpen(type, now))
+      .map((type) => ({
+        id: type.id,
+        eventSessionId: type.eventSessionId || null,
+        eventSession: toSession(type.eventSession),
+        name: normalizeLocalizedField(type.name),
+        description: normalizeLocalizedField(type.description),
+        price: Number(type.price),
+        currency: type.currency,
+        available: Math.max(0, type.capacity - type.soldCount),
+        salesEnd: type.salesEnd
+      }));
+
     return res.json({
       event: {
         id: event.id,
@@ -44,15 +83,8 @@ async function getEventTicketTypes(req, res) {
         title: normalizeLocalizedField(event.title),
         startAt: event.startAt
       },
-      ticketTypes: event.ticketTypes.filter((type) => isSalesOpen(type, now)).map((type) => ({
-        id: type.id,
-        name: normalizeLocalizedField(type.name),
-        description: normalizeLocalizedField(type.description),
-        price: Number(type.price),
-        currency: type.currency,
-        available: Math.max(0, type.capacity - type.soldCount),
-        salesEnd: type.salesEnd
-      }))
+      sessions: event.sessions.map(toSession),
+      ticketTypes
     });
   } catch (error) {
     console.error('[publicTicketSales.getEventTicketTypes] Failed.', error);
@@ -76,6 +108,7 @@ async function createTicketOrder(req, res) {
 
     const result = await ticketSalesService.createOrder({
       eventId: event.id,
+      eventSessionId: req.body?.eventSessionId,
       customerName: req.body?.customerName,
       customerEmail: req.body?.customerEmail,
       customerPhone: req.body?.customerPhone,

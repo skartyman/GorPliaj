@@ -17,6 +17,14 @@ function formatDate(value) {
   });
 }
 
+function getTicketDateLabel(order, ticket) {
+  const session = ticket.eventSession || order.eventSession;
+  if (session?.startsAt) {
+    return formatDate(session.startsAt);
+  }
+  return formatDate(order.event.startAt);
+}
+
 async function generateTicketOrderPdf(order) {
   const document = new PDFDocument({ size: 'A5', margin: 32, autoFirstPage: false });
   const chunks = [];
@@ -49,7 +57,7 @@ async function generateTicketOrderPdf(order) {
     document.fillColor('#5c3a1e').fontSize(18)
       .text(eventTitle, 48, 112, { align: 'center', width: document.page.width - 96 });
     document.font('Helvetica').fontSize(11)
-      .text(formatDate(order.event.startAt), 48, 142, { align: 'center', width: document.page.width - 96 });
+      .text(getTicketDateLabel(order, ticket), 48, 142, { align: 'center', width: document.page.width - 96 });
 
     document.image(qr, (document.page.width - 150) / 2, 175, { width: 150 });
     document.fillColor('#c89241').font('Helvetica-Bold').fontSize(18)
@@ -59,6 +67,7 @@ async function generateTicketOrderPdf(order) {
     const details = [
       `Order: ${order.orderNumber}`,
       `Type: ${localizedText(ticket.ticketType?.name) || '-'}`,
+      `Date: ${getTicketDateLabel(order, ticket)}`,
       `Holder: ${ticket.holderName || order.customerName}`,
       `Status: ${ticket.status}`
     ];

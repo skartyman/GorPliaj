@@ -153,7 +153,6 @@ function getPublicEventWithEntryTicket(slug) {
           isActive: true
         },
         orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-        take: 1,
         select: {
           id: true,
           name: true,
@@ -162,7 +161,16 @@ function getPublicEventWithEntryTicket(slug) {
           capacity: true,
           soldCount: true,
           salesStart: true,
-          salesEnd: true
+          salesEnd: true,
+          eventSessionId: true,
+          eventSession: {
+            select: {
+              id: true,
+              startsAt: true,
+              endsAt: true,
+              isActive: true
+            }
+          }
         }
       }
     }

@@ -87,9 +87,15 @@ function getDepositFromObject(object) {
 }
 
 function getEventEntryBreakdown(event, reservationDate, guests) {
-  if (!event || !isSameBookingDay(event.startAt, reservationDate)) return null;
+  if (!event) return null;
 
-  const ticketType = event.ticketTypes?.[0];
+  const matchingSessionTicket = event.ticketTypes?.find((ticketType) =>
+    ticketType.eventSession?.isActive && isSameBookingDay(ticketType.eventSession.startsAt, reservationDate)
+  );
+  const fallbackTicket = isSameBookingDay(event.startAt, reservationDate)
+    ? event.ticketTypes?.find((ticketType) => !ticketType.eventSessionId)
+    : null;
+  const ticketType = matchingSessionTicket || fallbackTicket;
   if (!ticketType) return null;
   const now = new Date();
   if (ticketType.salesStart && ticketType.salesStart > now) return null;
@@ -263,7 +269,11 @@ async function createReservation(req, res) {
     }
 
     const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests);
-    if (event && isSameBookingDay(event.startAt, reservationDate) && !entryBreakdown) {
+    const eventMatchesReservationDay = event && (
+      isSameBookingDay(event.startAt, reservationDate)
+      || event.ticketTypes?.some((ticketType) => ticketType.eventSession?.isActive && isSameBookingDay(ticketType.eventSession.startsAt, reservationDate))
+    );
+    if (eventMatchesReservationDay && !entryBreakdown) {
       return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });
     }
     const depositAmount = Number(deposit.depositAmount);
