@@ -48,7 +48,15 @@ export default function EventDetailPage() {
     eventsApi
       .bySlug(slug)
       .then((event) => setState({ loading: false, error: '', event }))
-      .catch(() => setState({ loading: false, error: c({ ua: 'Не вдалося завантажити подію.', ru: 'Не удалось загрузить событие.', en: 'Failed to load event.' }), event: null }));
+      .catch(() => setState({
+        loading: false,
+        error: c({
+          ua: 'Не вдалося завантажити подію.',
+          ru: 'Не удалось загрузить событие.',
+          en: 'Failed to load event.'
+        }),
+        event: null
+      }));
   }, [slug, locale]);
 
   useEffect(() => {
@@ -60,6 +68,7 @@ export default function EventDetailPage() {
         const sessions = Array.isArray(result.sessions) ? result.sessions : [];
         const defaultSessionId = sessions[0] ? String(sessions[0].id) : '';
         const defaultTypes = ticketTypes.filter((type) => String(type.eventSessionId || '') === defaultSessionId);
+
         setSales({ loading: false, error: '', ticketTypes, sessions });
         setOrderForm((current) => ({
           ...current,
@@ -93,6 +102,7 @@ export default function EventDetailPage() {
     const orderNumber = searchParams.get('ticket_order');
     const downloadToken = searchParams.get('token');
     if (!orderNumber || !downloadToken) return;
+
     setOrderResult((current) => current || {
       orderNumber,
       downloadToken,
@@ -107,6 +117,13 @@ export default function EventDetailPage() {
     return sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(orderForm.eventSessionId || ''));
   }, [sales.sessions, sales.ticketTypes, orderForm.eventSessionId]);
 
+  const selectedTicketType = useMemo(() => {
+    if (!visibleTicketTypes.length) return null;
+    return visibleTicketTypes.find((type) => String(type.id) === String(orderForm.ticketTypeId)) || visibleTicketTypes[0];
+  }, [visibleTicketTypes, orderForm.ticketTypeId]);
+
+  const hasTicketTypeChoice = visibleTicketTypes.length > 1;
+
   useEffect(() => {
     if (!visibleTicketTypes.length) return;
     if (visibleTicketTypes.some((type) => String(type.id) === String(orderForm.ticketTypeId))) return;
@@ -115,9 +132,12 @@ export default function EventDetailPage() {
 
   async function submitTicketOrder(event) {
     event.preventDefault();
+    if (!selectedTicketType) return;
+
     setSales((current) => ({ ...current, loading: true, error: '' }));
     setOrderResult(null);
     setOrderStatus(null);
+
     try {
       const result = await eventsApi.createTicketOrder(slug, {
         eventSessionId: orderForm.eventSessionId ? Number(orderForm.eventSessionId) : null,
@@ -125,7 +145,7 @@ export default function EventDetailPage() {
         customerEmail: orderForm.customerEmail,
         customerPhone: orderForm.customerPhone,
         items: [{
-          ticketTypeId: Number(orderForm.ticketTypeId),
+          ticketTypeId: Number(selectedTicketType.id),
           quantity: Number(orderForm.quantity)
         }]
       });
@@ -197,7 +217,7 @@ export default function EventDetailPage() {
                 <div className="state-msg">
                   {c({
                     ua: 'Продаж квитків для цієї події ще не відкритий.',
-                    ru: 'Продажа билетов для этого события ещё не открыта.',
+                    ru: 'Продажа билетов для этого события еще не открыта.',
                     en: 'Ticket sales for this event are not open yet.'
                   })}
                 </div>
@@ -213,7 +233,15 @@ export default function EventDetailPage() {
                       <select
                         className="form-input"
                         value={orderForm.eventSessionId}
-                        onChange={(event) => setOrderForm({ ...orderForm, eventSessionId: event.target.value, ticketTypeId: '' })}
+                        onChange={(eventValue) => {
+                          const nextSessionId = eventValue.target.value;
+                          const nextTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(nextSessionId || ''));
+                          setOrderForm({
+                            ...orderForm,
+                            eventSessionId: nextSessionId,
+                            ticketTypeId: String(nextTypes[0]?.id || '')
+                          });
+                        }}
                         required
                       >
                         {sales.sessions.map((session) => (
@@ -224,34 +252,72 @@ export default function EventDetailPage() {
                       </select>
                     </div>
                   ) : null}
-                  <div className="form-group">
-                    <label>{c({ ua: 'Тариф', ru: 'Тариф', en: 'Ticket type' })}</label>
-                    <select className="form-input" value={orderForm.ticketTypeId} onChange={(event) => setOrderForm({ ...orderForm, ticketTypeId: event.target.value })} required>
-                      {visibleTicketTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {localizeField(type.name, locale)} · {type.price} {type.currency} ({type.available})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {hasTicketTypeChoice ? (
+                    <div className="form-group">
+                      <label>{c({ ua: 'Варіант квитка', ru: 'Вариант билета', en: 'Ticket option' })}</label>
+                      <select
+                        className="form-input"
+                        value={orderForm.ticketTypeId}
+                        onChange={(eventValue) => setOrderForm({ ...orderForm, ticketTypeId: eventValue.target.value })}
+                        required
+                      >
+                        {visibleTicketTypes.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {localizeField(type.name, locale)} - {type.price} {type.currency}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : selectedTicketType ? (
+                    <div className="form-group">
+                      <label>{c({ ua: 'Квиток', ru: 'Билет', en: 'Ticket' })}</label>
+                      <div className="ticket-type-summary">
+                        <strong>{localizeField(selectedTicketType.name, locale)}</strong>
+                        <span>{selectedTicketType.price} {selectedTicketType.currency}</span>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="form-group">
                     <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
-                    <input className="form-input" type="number" min="1" max="20" required value={orderForm.quantity} onChange={(event) => setOrderForm({ ...orderForm, quantity: event.target.value })} />
+                    <input
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      max="20"
+                      required
+                      value={orderForm.quantity}
+                      onChange={(eventValue) => setOrderForm({ ...orderForm, quantity: eventValue.target.value })}
+                    />
                   </div>
                   <div className="form-group">
-                    <label>{c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}</label>
-                    <input className="form-input" required value={orderForm.customerName} onChange={(event) => setOrderForm({ ...orderForm, customerName: event.target.value })} />
+                    <label>{c({ ua: "Ім'я", ru: 'Имя', en: 'Name' })}</label>
+                    <input
+                      className="form-input"
+                      required
+                      value={orderForm.customerName}
+                      onChange={(eventValue) => setOrderForm({ ...orderForm, customerName: eventValue.target.value })}
+                    />
                   </div>
                   <div className="form-group">
                     <label>Email</label>
-                    <input className="form-input" type="email" required value={orderForm.customerEmail} onChange={(event) => setOrderForm({ ...orderForm, customerEmail: event.target.value })} />
+                    <input
+                      className="form-input"
+                      type="email"
+                      required
+                      value={orderForm.customerEmail}
+                      onChange={(eventValue) => setOrderForm({ ...orderForm, customerEmail: eventValue.target.value })}
+                    />
                   </div>
                   <div className="form-group ticket-form-full">
                     <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
-                    <input className="form-input" value={orderForm.customerPhone} onChange={(event) => setOrderForm({ ...orderForm, customerPhone: event.target.value })} />
+                    <input
+                      className="form-input"
+                      value={orderForm.customerPhone}
+                      onChange={(eventValue) => setOrderForm({ ...orderForm, customerPhone: eventValue.target.value })}
+                    />
                   </div>
-                  <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading || !visibleTicketTypes.length}>
-                    {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаём...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
+                  <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading || !selectedTicketType}>
+                    {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаем...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
                   </button>
                 </form>
               ) : null}
@@ -263,7 +329,7 @@ export default function EventDetailPage() {
               <p>
                 {orderStatus?.status === 'PAID'
                   ? c({
-                    ua: `Замовлення ${orderResult.orderNumber} оплачено. Квитки надіслані на email.`,
+                    ua: `Замовлення ${orderResult.orderNumber} оплачено. Квитки надіслано на email.`,
                     ru: `Заказ ${orderResult.orderNumber} оплачен. Билеты отправлены на email.`,
                     en: `Order ${orderResult.orderNumber} is paid. Tickets were sent by email.`
                   })

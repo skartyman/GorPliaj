@@ -1428,6 +1428,19 @@ h3 {
   width: 100%;
 }
 
+.ticket-type-summary {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ticket-type-summary span {
+  color: var(--text-secondary);
+}
+
 .event-inline-state {
   margin-top: 16px;
 }
