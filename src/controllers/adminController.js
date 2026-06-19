@@ -639,6 +639,7 @@ async function verifyAdminReservation(req, res) {
         arrivedGuests: reservation.arrivedGuests,
         table: reservation.table,
         zone: reservation.zone,
+        depositAmount: reservation.depositAmount || null,
         paymentStatus: reservation.payment?.status || null,
         paymentAmount: reservation.payment?.amount || null,
         paidAt: reservation.payment?.paidAt || null

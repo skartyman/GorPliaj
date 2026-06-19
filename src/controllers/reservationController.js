@@ -2,7 +2,14 @@ const reservationService = require('../services/reservationService');
 const bookableUnitService = require('../services/bookableUnitService');
 const hutkoService = require('../services/hutkoService');
 const { generateTicketCode } = require('../utils/ticket');
-const { buildVerifyUrl, generateTicketSignature, verifyTicketSignature } = require('../utils/ticketSignature');
+const {
+  buildVerifyUrl,
+  buildReservationStatusUrl,
+  buildReservationPdfUrl,
+  buildDepositVerifyUrl,
+  generateTicketSignature,
+  verifyTicketSignature
+} = require('../utils/ticketSignature');
 const { generateTicketPdf } = require('../services/ticketPdfService');
 const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
 
@@ -171,7 +178,10 @@ function buildReservationPdfPayload(reservation) {
     entryTicketPrice: entryTicketsAmount > 0 && reservation.guests ? entryTicketsAmount / reservation.guests : 0,
     status: reservation.status,
     paymentStatus: reservation.payment?.status || null,
-    verifyUrl: buildVerifyUrl(reservation.ticketCode, reservation.reservationDate)
+    verifyUrl: buildVerifyUrl(reservation.ticketCode, reservation.reservationDate),
+    statusUrl: buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate),
+    downloadUrl: buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate),
+    depositVerifyUrl: depositAmount > 0 ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate) : null
   };
 }
 
@@ -380,6 +390,8 @@ async function getPublicReservationStatus(req, res) {
         status: fresh.status,
         paymentStatus: fresh.payment?.status || null,
         paymentAmount: fresh.payment ? Number(fresh.payment.amount || 0) : null,
+        depositAmount: Number(fresh.depositAmount || 0),
+        entryTicketsAmount: Math.max(Number(fresh.payment?.amount || 0) - Number(fresh.depositAmount || 0), 0),
         customerName: fresh.customerName,
         guests: fresh.guests,
         tableName: getBookingPositionName(fresh.table),

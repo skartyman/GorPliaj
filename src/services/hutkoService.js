@@ -2,7 +2,7 @@ const https = require('https');
 const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
 const { sendTicketEmail } = require('./emailService');
-const { buildVerifyUrl } = require('../utils/ticketSignature');
+const { buildVerifyUrl, buildReservationStatusUrl, buildReservationPdfUrl, buildDepositVerifyUrl } = require('../utils/ticketSignature');
 const QRCode = require('qrcode');
 
 function postToHutko(path, data) {
@@ -372,6 +372,11 @@ async function processCallback(payload) {
 
       if (reservation && reservation.customerEmail) {
         const verifyUrl = buildVerifyUrl(reservation.ticketCode, reservation.reservationDate);
+        const statusUrl = buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate);
+        const downloadUrl = buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate);
+        const depositQrUrl = Number(reservation.depositAmount || 0) > 0
+          ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate)
+          : null;
         const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
 
         await sendTicketEmail({
@@ -388,8 +393,12 @@ async function processCallback(payload) {
           eventTitle: reservation.event?.title || null,
           depositAmount: reservation.depositAmount,
           totalPaid: reservation.payment?.amount || payment.amount,
+          entryTicketsAmount: Math.max(Number((reservation.payment?.amount || payment.amount) || 0) - Number(reservation.depositAmount || 0), 0),
           qrDataUrl,
           verifyUrl,
+          statusUrl,
+          downloadUrl,
+          depositQrUrl,
           status: 'PAID',
           paymentStatus: 'PAID'
         });
