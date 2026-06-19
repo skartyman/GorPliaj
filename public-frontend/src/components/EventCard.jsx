@@ -6,17 +6,11 @@ import { useLocale } from '../state/locale';
 export default function EventCard({ event, featured = false }) {
   const { locale } = useLocale();
   const title = localizeField(event.title, locale);
-  const shortDescription = localizeField(event.shortDescription, locale);
   const eventDate = formatEventDateRange(
     event.startAt,
     event.endAt,
     locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU')
   );
-  const summary = shortDescription || localizedCopy({
-    ua: 'Вечірня програма, музика та атмосфера біля моря.',
-    ru: 'Вечерняя программа, музыка и атмосфера у моря.',
-    en: 'An evening program, music and a beachside atmosphere.'
-  }, locale);
   const dateLabel = localizedCopy({
     ua: 'Дата',
     ru: 'Дата',
@@ -32,26 +26,55 @@ export default function EventCard({ event, featured = false }) {
     ru: 'Рекомендация сезона',
     en: 'Season pick'
   }, locale);
+  const buyTicketLabel = localizedCopy({
+    ua: 'Купити квиток',
+    ru: 'Купить билет',
+    en: 'Buy ticket'
+  }, locale);
+  const bookTableLabel = localizedCopy({
+    ua: 'Забронювати стіл',
+    ru: 'Забронировать стол',
+    en: 'Book a table'
+  }, locale);
 
   return (
     <article className={`event-card${featured ? ' featured' : ''}`}>
       <Link to={`/events/${event.slug}`} className="media-link">
         <div className="event-card-media">
           <img src={event.posterImage || '/icons/lebedi.jpg'} alt={title} loading="lazy" />
-          {featured && <span className="event-pill">{spotlightLabel}</span>}
-        </div>
-        <div className="event-card-body">
-          <p className="event-date">
-            <span>{dateLabel}</span>
-            {eventDate}
-          </p>
-          <h3>{title}</h3>
-          <p className="event-summary">{summary}</p>
-          <div className="event-actions">
-            <span className="event-link">{detailsLabel}</span>
-          </div>
+          {featured ? <span className="event-pill">{spotlightLabel}</span> : null}
         </div>
       </Link>
+      <div className="event-card-body">
+        <p className="event-date">
+          <span>{dateLabel}</span>
+          {eventDate}
+        </p>
+        <h3>
+          <Link to={`/events/${event.slug}`} className="event-title-link">{title}</Link>
+        </h3>
+        <div className="event-actions">
+          {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
+            event.ticketUrl ? (
+              <a className="btn btn-secondary event-action-btn" href={event.ticketUrl} target="_blank" rel="noreferrer">
+                {buyTicketLabel}
+              </a>
+            ) : (
+              <Link className="btn btn-secondary event-action-btn" to={`/events/${event.slug}#tickets`}>
+                {buyTicketLabel}
+              </Link>
+            )
+          ) : null}
+          {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
+            <Link className="btn btn-primary event-action-btn" to={`/booking?event=${event.slug}`}>
+              {bookTableLabel}
+            </Link>
+          ) : null}
+        </div>
+        <div className="event-actions event-actions-secondary">
+          <Link to={`/events/${event.slug}`} className="event-link">{detailsLabel}</Link>
+        </div>
+      </div>
     </article>
   );
 }
