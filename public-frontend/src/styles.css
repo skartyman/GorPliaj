@@ -660,6 +660,14 @@ h3 {
   padding: 28px;
 }
 
+.event-featured-summary {
+  margin: -2px 0 6px;
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
 .event-date {
   display: grid;
   gap: 6px;
@@ -2382,6 +2390,11 @@ h3 {
 
   .event-card.featured .event-card-body {
     padding: 18px 16px;
+  }
+
+  .event-featured-summary {
+    font-size: 0.92rem;
+    line-height: 1.65;
   }
 
   .info-grid {

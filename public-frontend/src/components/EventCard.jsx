@@ -6,11 +6,17 @@ import { useLocale } from '../state/locale';
 export default function EventCard({ event, featured = false }) {
   const { locale } = useLocale();
   const title = localizeField(event.title, locale);
+  const shortDescription = localizeField(event.shortDescription, locale);
   const eventDate = formatEventDateRange(
     event.startAt,
     event.endAt,
     locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU')
   );
+  const featuredSummary = shortDescription || localizedCopy({
+    ua: 'Музика, атмосфера вечора, коктейлі та бронювання найкращих місць біля моря.',
+    ru: 'Музыка, атмосфера вечера, коктейли и бронирование лучших мест у моря.',
+    en: 'Music, evening atmosphere, cocktails, and the best seaside spots to book.'
+  }, locale);
   const dateLabel = localizedCopy({
     ua: 'Дата',
     ru: 'Дата',
@@ -54,6 +60,9 @@ export default function EventCard({ event, featured = false }) {
           <h3>
             <Link to={`/events/${event.slug}`} className="event-title-link">{title}</Link>
           </h3>
+        ) : null}
+        {featured ? (
+          <p className="event-featured-summary">{featuredSummary}</p>
         ) : null}
         <div className="event-actions">
           {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
