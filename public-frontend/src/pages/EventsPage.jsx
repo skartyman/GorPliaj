@@ -22,14 +22,14 @@ export default function EventsPage() {
   const gridEvents = featuredEvent ? state.events.filter((event) => event.id !== featuredEvent.id) : [];
   const localeCode = locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU');
   const heroTitle = localizedCopy({
-    ua: 'Вечори, концерти та special nights',
-    ru: 'Вечера, концерты и special nights',
-    en: 'Evenings, concerts and special nights'
+    ua: 'Вечори біля моря',
+    ru: 'Вечера у моря',
+    en: 'Seaside evenings'
   }, locale);
   const heroLead = localizedCopy({
-    ua: 'Афіша отримала чіткіший ритм: головний акцент на найближчій події, більше повітря між блоками та спокійніша сітка для перегляду.',
-    ru: 'Афиша получила более понятный ритм: главный акцент на ближайшем событии, больше воздуха между блоками и спокойная сетка для просмотра.',
-    en: 'The lineup now has a clearer rhythm: one strong highlight up top, more breathing room, and a cleaner grid below.'
+    ua: 'Концерти, вечірки та живі події Горпляжу. Обирайте найближчий вечір, бронюйте стіл або переходьте одразу до квитків.',
+    ru: 'Концерты, вечеринки и живые события Горпляжа. Выбирайте ближайший вечер, бронируйте стол или сразу переходите к билетам.',
+    en: 'Concerts, parties, and live moments at GorPliaj. Pick your next evening, book a table, or go straight to tickets.'
   }, locale);
   const featuredLabel = localizedCopy({
     ua: 'Найближча подія',
@@ -64,10 +64,10 @@ export default function EventsPage() {
   const featuredDateLabel = featuredEvent
     ? formatEventDateRange(featuredEvent.startAt, featuredEvent.endAt, localeCode)
     : localizedCopy({
-        ua: 'Скоро анонсуємо нові дати',
-        ru: 'Скоро анонсируем новые даты',
-        en: 'New dates will be announced soon'
-      }, locale);
+      ua: 'Скоро анонсуємо нові дати',
+      ru: 'Скоро анонсируем новые даты',
+      en: 'New dates will be announced soon'
+    }, locale);
   const featuredTitle = featuredEvent ? localizeField(featuredEvent.title, locale) : '';
   const featuredDescription = featuredEvent
     ? localizeField(featuredEvent.shortDescription, locale) || heroLead
