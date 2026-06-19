@@ -1283,6 +1283,20 @@ textarea { resize: vertical; min-height: 96px; }
 .menu-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
 .menu-admin-list-grid { align-items: start; }
 .admin-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin-form-grid > .field-span-2,
+.admin-form-grid > label.field-span-2 { grid-column: 1 / -1; }
+.reservation-management-grid { display: grid; gap: 16px; margin-top: 16px; }
+.reservation-management-panel { padding: 18px; }
+.reservation-management-forms { display: grid; gap: 16px; margin-top: 12px; }
+.reservation-management-forms .admin-form-grid { align-items: start; }
+.reservation-management-forms .admin-form-grid > label,
+.reservation-management-forms .admin-form-grid > .field-span-2 { min-width: 0; }
+.reservation-management-forms input,
+.reservation-management-forms select,
+.reservation-management-forms textarea { width: 100%; min-width: 0; }
+.reservation-management-forms textarea { resize: vertical; }
+.reservation-management-panel .field-span-2 { grid-column: 1 / -1; }
+.reservation-management-panel input[type="file"] { display: none; }
 .admin-form-span-2 { grid-column: 1 / -1; }
 .checkbox-row { display: flex; gap: 10px; align-items: center; margin-bottom: 0; font-size: 14px; }
 .checkbox-row input { width: 18px; height: 18px; margin: 0; }

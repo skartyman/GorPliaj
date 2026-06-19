@@ -94,7 +94,7 @@ async function getMapAvailability(req, res) {
 async function getMapBookableUnits(req, res) {
   try {
     const mapId = Number(req.params.mapId);
-    const { date, timeFrom, guests, bookingKind, zoneId } = req.query;
+    const { date, timeFrom, guests, bookingKind, zoneId, eventId } = req.query;
 
     if (!mapId || !date || !timeFrom) {
       return res.status(400).json({ message: 'Required parameters: mapId, date, timeFrom.' });
@@ -119,7 +119,8 @@ async function getMapBookableUnits(req, res) {
       timeTo: dateTimeTo,
       guests: Number(guests || 0),
       bookingKind: String(bookingKind || '').trim().toUpperCase() || null,
-      zoneId: Number(zoneId || 0) || null
+      zoneId: Number(zoneId || 0) || null,
+      eventId: Number(eventId || 0) || null
     });
 
     if (!result) {

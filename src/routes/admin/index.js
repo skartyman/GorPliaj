@@ -6,7 +6,11 @@ const {
   changeAdminPassword,
   logoutAdmin,
   getAdminReservations,
+  getAdminReservationPositions,
   getAdminReservationById,
+  updateAdminReservationPosition,
+  upsertAdminReservationPositionOverride,
+  deleteAdminReservationPositionOverride,
   updateAdminReservationStatus,
   deleteAdminReservation,
   createAdminReservation,
@@ -98,6 +102,10 @@ router.patch('/auth/password', requireAdminAuth, changeAdminPassword);
 router.post('/auth/logout', requireAdminAuth, logoutAdmin);
 
 router.get('/reservations', requireAdminAuth, requirePermission('reservations:view'), getAdminReservations);
+router.get('/reservation-positions', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationPositions);
+router.patch('/reservation-positions/:tableId', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationPosition);
+router.put('/reservation-positions/:tableId/override', requireAdminAuth, requirePermission('reservations:update'), upsertAdminReservationPositionOverride);
+router.delete('/reservation-positions/:tableId/override', requireAdminAuth, requirePermission('reservations:update'), deleteAdminReservationPositionOverride);
 router.get('/reservations/verify/:ticketCode', requireAdminAuth, requirePermission('reservations:verify'), verifyAdminReservation);
 router.get('/reservations/:id', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationById);
 router.post('/reservations', requireAdminAuth, createAdminReservation);

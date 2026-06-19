@@ -198,11 +198,15 @@ async function createReservation(req, res) {
     let zoneId = Number(req.body.zoneId);
     let bookingKind = normalizeText(req.body.bookingKind).toUpperCase() || 'TABLE';
     let bookableUnit = null;
+    const eventSlug = normalizeText(req.body.eventSlug);
+    const event = eventSlug ? await reservationService.getPublicEventWithEntryTicket(eventSlug) : null;
 
     if (req.body.bookableUnitId) {
       bookableUnit = await bookableUnitService.getReservationUnit({
         bookableUnitId: req.body.bookableUnitId,
-        mapId
+        mapId,
+        reservationDate,
+        eventId: event?.id || null
       });
 
       if (!bookableUnit) {
@@ -215,12 +219,18 @@ async function createReservation(req, res) {
       bookingKind = bookableUnit.bookingKind || bookingKind;
     }
 
-    const table = await reservationService.getReservationTable({ tableId, mapId, zoneId });
+    const table = await reservationService.getReservationTable({
+      tableId,
+      mapId,
+      zoneId,
+      reservationDate,
+      eventId: event?.id || null
+    });
     if (!table) {
       return res.status(400).json({ message: 'Selected booking position is not available.' });
     }
 
-    if (guests < table.seatsMin || guests > table.seatsMax) {
+    if (!reservationService.matchesGuestCapacity(table, guests)) {
       return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
     }
 
@@ -252,8 +262,6 @@ async function createReservation(req, res) {
       }
     }
 
-    const eventSlug = normalizeText(req.body.eventSlug);
-    const event = eventSlug ? await reservationService.getPublicEventWithEntryTicket(eventSlug) : null;
     const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests);
     if (event && isSameBookingDay(event.startAt, reservationDate) && !entryBreakdown) {
       return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });

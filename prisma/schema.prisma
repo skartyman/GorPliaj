@@ -83,11 +83,32 @@ model VenueTable {
   mapObjects   MapObject[]
   reservations Reservation[]
   tableHolds   TableHold[]
+  overrides    VenueTableOverride[]
 
   @@index([mapId])
   @@index([zoneId])
   @@index([bookingKind])
   @@index([sortOrder])
+}
+
+model VenueTableOverride {
+  id         Int       @id @default(autoincrement())
+  tableId     Int
+  eventId     Int?
+  ruleDate    DateTime?
+  deposit     Decimal?  @db.Decimal(10, 2)
+  isActive    Boolean?
+  isBookable  Boolean?
+  photoUrl    String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  table       VenueTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  event       Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([tableId])
+  @@index([eventId])
+  @@index([ruleDate])
 }
 
 model MapObject {
@@ -226,6 +247,7 @@ model Event {
   updatedAt        DateTime      @updatedAt
   reservations     Reservation[]
   tableHolds       TableHold[]
+  tableOverrides   VenueTableOverride[]
   ticketTypes      TicketType[]
   ticketOrders     TicketOrder[]
   tickets          Ticket[]

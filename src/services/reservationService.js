@@ -1,5 +1,21 @@
 const prisma = require('../lib/prisma');
+const venueTableOverrideService = require('./venueTableOverrideService');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
+
+function matchesGuestCapacity(target, guests) {
+  const normalizedGuests = Number(guests || 0);
+  if (!Number.isFinite(normalizedGuests) || normalizedGuests <= 0) {
+    return false;
+  }
+
+  const min = Number(target?.seatsMin || 1);
+  const max = Number(target?.seatsMax || min || 1);
+  const resolvedMax = Number.isFinite(max) && max > 0
+    ? Math.max(max, Number.isFinite(min) && min > 0 ? min : 1)
+    : (Number.isFinite(min) && min > 0 ? min : 1);
+
+  return normalizedGuests <= resolvedMax;
+}
 
 function getReservations() {
   return prisma.reservation.findMany({
@@ -63,14 +79,12 @@ function createReservation(payload) {
   });
 }
 
-function getReservationTable({ tableId, mapId, zoneId }) {
-  return prisma.venueTable.findFirst({
+async function getReservationTable({ tableId, mapId, zoneId, reservationDate = null, eventId = null }) {
+  const table = await prisma.venueTable.findFirst({
     where: {
       id: tableId,
       mapId,
-      zoneId,
-      isActive: true,
-      isBookable: true
+      zoneId
     },
     select: {
       id: true,
@@ -80,10 +94,28 @@ function getReservationTable({ tableId, mapId, zoneId }) {
       bookingKind: true,
       positionType: true,
       deposit: true,
+      photoUrl: true,
       seatsMin: true,
-      seatsMax: true
+      seatsMax: true,
+      isActive: true,
+      isBookable: true
     }
   });
+
+  if (!table) {
+    return null;
+  }
+
+  const effectiveTable = await venueTableOverrideService.getEffectiveTable(table, {
+    reservationDate,
+    eventId
+  });
+
+  if (!effectiveTable?.isActive || !effectiveTable?.isBookable) {
+    return null;
+  }
+
+  return effectiveTable;
 }
 
 function getReservationObject({ objectId, mapId, tableId }) {
@@ -277,6 +309,7 @@ module.exports = {
   getReservationObject,
   getPublicEventWithEntryTicket,
   getPublicReservationByTicketCode,
+  matchesGuestCapacity,
   findReservationConflict,
   getMapAvailability,
   updateReservationStatus,

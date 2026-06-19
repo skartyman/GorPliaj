@@ -2,6 +2,7 @@ const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
 const adminMapEditorService = require('../services/adminMapEditorService');
 const reservationService = require('../services/reservationService');
+const venueTableOverrideService = require('../services/venueTableOverrideService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
 const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
@@ -150,6 +151,102 @@ async function getAdminReservations(req, res) {
   } catch (error) {
     console.error('[adminController.getAdminReservations] Failed to get reservations.', error);
     return res.status(500).json({ message: 'Unable to load reservations.' });
+  }
+}
+
+async function getAdminReservationPositions(req, res) {
+  try {
+    const result = await venueTableOverrideService.listReservationPositionsManagement({
+      reservationDate: req.query.date ? String(req.query.date) : '',
+      eventId: req.query.eventId ? Number(req.query.eventId) : null,
+      mapId: req.query.mapId ? Number(req.query.mapId) : null,
+      zoneId: req.query.zoneId ? Number(req.query.zoneId) : null,
+      search: req.query.search ? String(req.query.search) : ''
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error('[adminController.getAdminReservationPositions] Failed to load reservation positions.', error);
+    return res.status(500).json({ message: 'Unable to load reservation positions.' });
+  }
+}
+
+async function updateAdminReservationPosition(req, res) {
+  try {
+    const result = await venueTableOverrideService.updateTableBaseSettings({
+      tableId: req.params.tableId,
+      patch: req.body || {}
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      table: result.table
+    });
+  } catch (error) {
+    console.error('[adminController.updateAdminReservationPosition] Failed to update reservation position.', error);
+    return res.status(500).json({ message: 'Unable to update reservation position.' });
+  }
+}
+
+async function upsertAdminReservationPositionOverride(req, res) {
+  try {
+    const result = await venueTableOverrideService.upsertTableOverride({
+      tableId: req.params.tableId,
+      scope: {
+        eventId: req.body?.eventId,
+        ruleDate: req.body?.ruleDate
+      },
+      patch: req.body || {}
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.status(result.type === 'CREATED' ? 201 : 200).json({
+      success: true,
+      override: result.override
+    });
+  } catch (error) {
+    console.error('[adminController.upsertAdminReservationPositionOverride] Failed to save reservation position override.', error);
+    return res.status(500).json({ message: 'Unable to save reservation position override.' });
+  }
+}
+
+async function deleteAdminReservationPositionOverride(req, res) {
+  try {
+    const result = await venueTableOverrideService.deleteTableOverride({
+      tableId: req.params.tableId,
+      scope: {
+        eventId: req.query.eventId,
+        ruleDate: req.query.ruleDate
+      }
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[adminController.deleteAdminReservationPositionOverride] Failed to delete reservation position override.', error);
+    return res.status(500).json({ message: 'Unable to delete reservation position override.' });
   }
 }
 
@@ -442,13 +539,19 @@ async function createAdminReservation(req, res) {
     const tableId = Number(body.tableId);
     const mapId = Number(body.mapId);
     const zoneId = Number(body.zoneId);
-    const table = await reservationService.getReservationTable({ tableId, mapId, zoneId });
+    const table = await reservationService.getReservationTable({
+      tableId,
+      mapId,
+      zoneId,
+      reservationDate,
+      eventId: body.eventId ? Number(body.eventId) : null
+    });
 
     if (!table) {
       return res.status(400).json({ message: 'Selected booking position is not available.' });
     }
 
-    if (guests < table.seatsMin || guests > table.seatsMax) {
+    if (!reservationService.matchesGuestCapacity(table, guests)) {
       return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
     }
 
@@ -594,7 +697,11 @@ module.exports = {
   logoutAdmin,
   changeAdminPassword,
   getAdminReservations,
+  getAdminReservationPositions,
   getAdminReservationById,
+  updateAdminReservationPosition,
+  upsertAdminReservationPositionOverride,
+  deleteAdminReservationPositionOverride,
   updateAdminReservationStatus,
   deleteAdminReservation,
   createAdminReservation,

@@ -1,6 +1,8 @@
 const { MapStatus } = require('@prisma/client');
 const prisma = require('../lib/prisma');
 const reservationService = require('./reservationService');
+const venueTableOverrideService = require('./venueTableOverrideService');
+const { localizeField, normalizeLocalizedField } = require('../utils/localization');
 
 const BEACH_POSITION_TYPES = new Set(['BUNGALOW', 'KROVAT', 'PIER']);
 const EVENING_USAGE_KEYWORDS = ['night', 'evening', 'event', 'concert'];
@@ -18,6 +20,48 @@ function parseMeta(metaJson) {
 function localizeJson(value) {
   if (!value || typeof value !== 'object') return String(value || '');
   return value.uk || value.ua || value.ru || value.en || '';
+}
+
+function normalizeLocalizedValue(value) {
+  return normalizeLocalizedField(value);
+}
+
+function pickLocalizedValue(...values) {
+  for (const value of values) {
+    if (localizeField(value, 'ua')) {
+      return normalizeLocalizedValue(value);
+    }
+  }
+
+  return normalizeLocalizedValue('');
+}
+
+function buildPhotoGroupKey(table, objectMeta = {}) {
+  const bookingKind = inferBookingKind(table, objectMeta);
+  const positionType = String(table?.positionType || objectMeta.positionType || '').trim().toUpperCase();
+  const localizedName = localizeField(
+    pickLocalizedValue(table?.serviceName, table?.name, objectMeta.label || ''),
+    'ua'
+  ).toLowerCase();
+  const seatsMax = Number(table?.seatsMax || objectMeta.capacityMax || table?.seatsMin || objectMeta.capacityMin || 0);
+
+  if (bookingKind === 'BEACH') {
+    if (positionType === 'BUNGALOW') return 'BEACH:BUNGALOW';
+    if (positionType === 'KROVAT') return 'BEACH:KROVAT';
+    if (positionType === 'PIER') return 'BEACH:PIER';
+    return `BEACH:${positionType || 'DEFAULT'}`;
+  }
+
+  if (localizedName.includes('кальян')) return 'TABLE:HOOKAH';
+  if (localizedName.includes('терас') || localizedName.includes('террас')) return 'TABLE:TERRACE';
+  if (localizedName.includes('пірс') || localizedName.includes('пирс')) return 'TABLE:PIER';
+  if (localizedName.includes('бунгало')) return 'TABLE:BUNGALOW';
+  if (positionType === 'TERRACE') return 'TABLE:TERRACE';
+  if (positionType === 'PIER') return 'TABLE:PIER';
+  if (positionType === 'BUNGALOW') return 'TABLE:BUNGALOW';
+  if (seatsMax >= 6) return 'TABLE:SEATS_6';
+  if (seatsMax > 0) return `TABLE:SEATS_${seatsMax}`;
+  return `TABLE:${positionType || 'DEFAULT'}`;
 }
 
 function inferMapUsageMode(map) {
@@ -58,6 +102,7 @@ function buildBookableUnit(table, linkedObject) {
   const bookingKind = inferBookingKind(table, meta);
   const seatsMin = Number(table.seatsMin || meta.capacityMin || 1);
   const seatsMax = Number(table.seatsMax || meta.capacityMax || seatsMin || 1);
+  const photoGroupKey = buildPhotoGroupKey(table, meta);
 
   return {
     id: `table:${table.id}`,
@@ -69,8 +114,8 @@ function buildBookableUnit(table, linkedObject) {
     positionType: table.positionType || linkedObject?.type || null,
     side: table.positionSide || null,
     code: table.code || null,
-    name: table.serviceName || table.name,
-    label: linkedObject?.label || table.name,
+    name: pickLocalizedValue(table.serviceName, table.name),
+    label: pickLocalizedValue(linkedObject?.label, table.name),
     photoUrl: getUnitPhotoUrl(table, meta),
     seatsMin,
     seatsMax,
@@ -79,8 +124,11 @@ function buildBookableUnit(table, linkedObject) {
     depositAmount: depositAmount > 0 ? depositAmount : 0,
     priceLabel: meta.price ? `${meta.price} ${meta.priceUnit || 'UAH'}` : null,
     features: Array.isArray(meta.features) ? meta.features : [],
-    description: table.serviceDescription || meta.description || null,
+    description: localizeField(table.serviceDescription, 'ua') || localizeField(meta.description, 'ua')
+      ? pickLocalizedValue(table.serviceDescription, meta.description || '')
+      : null,
     meta,
+    photoGroupKey,
     isActive: table.isActive !== false,
     isBookable: table.isBookable !== false,
     sortOrder: Number(table.sortOrder || 0),
@@ -91,7 +139,7 @@ function buildBookableUnit(table, linkedObject) {
 function filterUnitForGuests(unit, guests) {
   const normalizedGuests = Number(guests || 0);
   if (!normalizedGuests) return true;
-  return normalizedGuests >= Number(unit.seatsMin || 1) && normalizedGuests <= Number(unit.seatsMax || unit.seatsMin || 1);
+  return reservationService.matchesGuestCapacity(unit, normalizedGuests);
 }
 
 async function loadActiveMaps() {
@@ -127,12 +175,26 @@ function buildUnitsFromMap(map) {
       .map((object) => [object.tableId, object])
   );
 
-  return map.tables
+  const units = map.tables
     .map((table) => buildBookableUnit(table, objectByTableId.get(table.id)))
+    .map((unit, _, allUnits) => {
+      if (unit.photoUrl || !unit.photoGroupKey) {
+        return unit;
+      }
+
+      const representative = allUnits.find((candidate) => candidate.photoGroupKey === unit.photoGroupKey && candidate.photoUrl);
+      return {
+        ...unit,
+        photoUrl: representative?.photoUrl || null
+      };
+    })
+    .map(({ photoGroupKey, ...unit }) => unit)
     .sort((left, right) => {
       if (left.sortOrder !== right.sortOrder) return left.sortOrder - right.sortOrder;
       return String(left.code || left.id).localeCompare(String(right.code || right.id));
     });
+
+  return units;
 }
 
 async function listPublicBookingMaps({ usageMode, bookingKind, guests }) {
@@ -148,7 +210,7 @@ async function listPublicBookingMaps({ usageMode, bookingKind, guests }) {
       return {
         id: map.id,
         slug: map.slug,
-        name: map.name,
+        name: normalizeLocalizedValue(map.name),
         description: map.description,
         width: map.width,
         height: map.height,
@@ -163,7 +225,7 @@ async function listPublicBookingMaps({ usageMode, bookingKind, guests }) {
         },
         zones: map.zones.map((zone) => ({
           id: zone.id,
-          name: zone.name,
+          name: normalizeLocalizedValue(zone.name),
           color: zone.color,
           sortOrder: zone.sortOrder,
           unitCount: units.filter((unit) => unit.zoneId === zone.id).length
@@ -176,7 +238,7 @@ async function listPublicBookingMaps({ usageMode, bookingKind, guests }) {
     });
 }
 
-async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, guests, bookingKind, zoneId }) {
+async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, guests, bookingKind, zoneId, eventId = null }) {
   const id = Number(mapId);
   if (!Number.isInteger(id) || id <= 0) return null;
 
@@ -210,9 +272,20 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
     timeTo
   });
 
+  const overridesByTableId = await venueTableOverrideService.findApplicableOverrides({
+    tableIds: map.tables.map((table) => table.id),
+    reservationDate,
+    eventId
+  });
+  const effectiveTables = map.tables.map((table) => venueTableOverrideService.applyOverrideToTable(table, overridesByTableId.get(table.id) || null));
+  const effectiveMap = {
+    ...map,
+    tables: effectiveTables
+  };
+
   const busy = new Set(availability.busyTableIds || []);
   const held = new Set(availability.heldTableIds || []);
-  const units = buildUnitsFromMap(map)
+  const units = buildUnitsFromMap(effectiveMap)
     .map((unit) => ({
       ...unit,
       status: !unit.isActive || !unit.isBookable
@@ -233,13 +306,13 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
     map: {
       id: map.id,
       slug: map.slug,
-      name: map.name,
+      name: normalizeLocalizedValue(map.name),
       description: map.description,
       usageMode: inferMapUsageMode(map)
     },
     zones: map.zones.map((zone) => ({
       id: zone.id,
-      name: zone.name,
+      name: normalizeLocalizedValue(zone.name),
       color: zone.color,
       sortOrder: zone.sortOrder,
       availableCount: units.filter((unit) => unit.zoneId === zone.id && unit.status === 'free').length,
@@ -249,7 +322,7 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
   };
 }
 
-async function getReservationUnit({ bookableUnitId, mapId }) {
+async function getReservationUnit({ bookableUnitId, mapId, reservationDate = null, eventId = null }) {
   const [prefix, rawId] = String(bookableUnitId || '').split(':');
   if (prefix !== 'table') return null;
 
@@ -260,9 +333,7 @@ async function getReservationUnit({ bookableUnitId, mapId }) {
   const table = await prisma.venueTable.findFirst({
     where: {
       id: tableId,
-      ...(normalizedMapId > 0 ? { mapId: normalizedMapId } : {}),
-      isActive: true,
-      isBookable: true
+      ...(normalizedMapId > 0 ? { mapId: normalizedMapId } : {})
     },
     include: {
       mapObjects: {
@@ -276,7 +347,16 @@ async function getReservationUnit({ bookableUnitId, mapId }) {
   });
 
   if (!table) return null;
-  const unit = buildBookableUnit(table, table.mapObjects[0] || null);
+
+  const effectiveTable = await venueTableOverrideService.getEffectiveTable(table, {
+    reservationDate,
+    eventId
+  });
+  if (!effectiveTable?.isActive || !effectiveTable?.isBookable) {
+    return null;
+  }
+
+  const unit = buildBookableUnit(effectiveTable, table.mapObjects[0] || null);
   return {
     ...unit,
     id: bookableUnitId
