@@ -318,6 +318,11 @@ export default function BookingPage() {
           ru: 'Заявка на бронирование создана. Оплата не требуется.',
           en: 'Booking request created. No payment is required.'
         }));
+
+      if (result.paymentUrl) {
+        window.location.assign(result.paymentUrl);
+        return;
+      }
     } catch (error) {
       setErrorMessage(error.message || c({
         ua: 'Не вдалося створити бронювання.',
