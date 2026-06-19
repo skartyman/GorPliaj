@@ -67,8 +67,13 @@ export default function AdminLayout({ children }) {
   useEffect(() => {
     if (isMapFullscreen) {
       setSidebarCollapsed(true);
+      return;
     }
-  }, [isMapFullscreen]);
+
+    if (window.innerWidth <= 960) {
+      setSidebarCollapsed(false);
+    }
+  }, [isMapFullscreen, location.pathname]);
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
