@@ -50,9 +50,11 @@ export default function EventCard({ event, featured = false }) {
           <span>{dateLabel}</span>
           {eventDate}
         </p>
-        <h3>
-          <Link to={`/events/${event.slug}`} className="event-title-link">{title}</Link>
-        </h3>
+        {!featured ? (
+          <h3>
+            <Link to={`/events/${event.slug}`} className="event-title-link">{title}</Link>
+          </h3>
+        ) : null}
         <div className="event-actions">
           {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
             event.ticketUrl ? (
