@@ -378,6 +378,7 @@ export default function MapPage() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null });
   const viewportRef = useRef(null);
+  const focusedFromQueryRef = useRef('');
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
@@ -389,6 +390,8 @@ export default function MapPage() {
   const timeFrom = searchParams.get('timeFrom') || '12:00';
   const guests = Number(searchParams.get('guests') || '0');
   const mapId = searchParams.get('mapId') || '';
+  const focusTableId = Number(searchParams.get('tableId') || '0');
+  const focusObjectId = Number(searchParams.get('objectId') || '0');
   const draft = searchParams.get('draft') === '1';
   const mapDimensions = useMemo(() => ({
     width: state.result?.map?.width || 1200,
@@ -592,17 +595,22 @@ export default function MapPage() {
     applyTransform(nextScale, nextX, nextY);
   }
 
+  function centerOnObject(object) {
+    if (!viewportRef.current || !object) return;
+    const center = getObjectCenter(object);
+    const rect = viewportRef.current.getBoundingClientRect();
+    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * transform.scale;
+    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - (center.y + mapRenderFrame.offsetY) * transform.scale;
+    applyTransform(transform.scale, targetX, targetY);
+  }
+
   function selectTable(tableId) {
     setSelectedTableId(tableId);
     setSelectedObjectId(null);
     if (!viewportRef.current || !state.result) return;
     const selectedObject = state.result.map.objects.find((item) => item.tableId === tableId);
     if (!selectedObject) return;
-    const center = getObjectCenter(selectedObject);
-    const rect = viewportRef.current.getBoundingClientRect();
-    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * transform.scale;
-    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - (center.y + mapRenderFrame.offsetY) * transform.scale;
-    applyTransform(transform.scale, targetX, targetY);
+    centerOnObject(selectedObject);
   }
 
   function tableFitsGuests(table) {
@@ -617,7 +625,34 @@ export default function MapPage() {
 
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
+    centerOnObject(object);
   }
+
+  useEffect(() => {
+    if (!state.result || !transform.initial) return;
+
+    const focusKey = `${state.result.map.id}:${focusTableId || 0}:${focusObjectId || 0}`;
+    if (focusedFromQueryRef.current === focusKey) {
+      return;
+    }
+
+    if (focusObjectId > 0) {
+      const targetObject = renderObjects.find((object) => object.id === focusObjectId);
+      if (targetObject) {
+        focusedFromQueryRef.current = focusKey;
+        selectObject(targetObject);
+        return;
+      }
+    }
+
+    if (focusTableId > 0) {
+      const targetTable = tableById.get(focusTableId);
+      if (targetTable) {
+        focusedFromQueryRef.current = focusKey;
+        selectTable(targetTable.id);
+      }
+    }
+  }, [focusObjectId, focusTableId, renderObjects, state.result, tableById, transform.initial]);
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;

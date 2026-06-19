@@ -54,6 +54,7 @@ export default function BookingPage() {
     zoneId: Number(searchParams.get('zoneId') || '0'),
     bookableUnitId: searchParams.get('bookableUnitId') || ''
   });
+  const [selectedTypeKey, setSelectedTypeKey] = useState('');
   const [form, setForm] = useState({
     date: searchParams.get('date') || today,
     guests: Number(searchParams.get('guests') || '2'),
@@ -265,6 +266,101 @@ export default function BookingPage() {
     return bookingKindTitle(bookingKind);
   }
 
+  const unitTypeGroups = useMemo(() => {
+    const groups = new Map();
+
+    filteredUnits.forEach((unit) => {
+      const key = [
+        unit.bookingKind || '',
+        String(unit.positionType || '').toUpperCase(),
+        Number(unit.seatsMin || 0),
+        Number(unit.seatsMax || 0)
+      ].join('::');
+      const existing = groups.get(key);
+
+      if (existing) {
+        existing.units.push(unit);
+        if (!existing.representative.photoUrl && unit.photoUrl) {
+          existing.representative = unit;
+        }
+        return;
+      }
+
+      const seatsMin = Number(unit.seatsMin || 0);
+      const seatsMax = Number(unit.seatsMax || 0);
+      const seatsLabel = seatsMin > 0 && seatsMax > 0
+        ? (seatsMin === seatsMax ? `${seatsMax}` : `${seatsMin}-${seatsMax}`)
+        : '';
+      const baseLabel = positionTypeLabel(unit.positionType);
+
+      groups.set(key, {
+        key,
+        label: seatsLabel ? `${baseLabel} · ${seatsLabel}` : baseLabel,
+        representative: unit,
+        units: [unit]
+      });
+    });
+
+    return Array.from(groups.values()).sort((left, right) => left.label.localeCompare(right.label, locale));
+  }, [filteredUnits, locale]);
+
+  const selectedType = useMemo(
+    () => unitTypeGroups.find((group) => group.key === selectedTypeKey) || null,
+    [selectedTypeKey, unitTypeGroups]
+  );
+
+  useEffect(() => {
+    if (!unitTypeGroups.length) {
+      setSelectedTypeKey('');
+      return;
+    }
+
+    setSelectedTypeKey((current) => {
+      if (current && unitTypeGroups.some((group) => group.key === current)) {
+        return current;
+      }
+
+      return unitTypeGroups[0].key;
+    });
+  }, [unitTypeGroups]);
+
+  useEffect(() => {
+    if (!selectedType) {
+      return;
+    }
+
+    setSelected((current) => {
+      if (current.bookableUnitId && selectedType.units.some((unit) => unit.id === current.bookableUnitId)) {
+        return current;
+      }
+
+      const preferredUnit = selectedType.units.find((unit) => unit.status === 'free') || selectedType.units[0];
+      return {
+        ...current,
+        bookableUnitId: preferredUnit?.id || ''
+      };
+    });
+  }, [selectedType]);
+
+  function buildMapPreviewHref(unit) {
+    const params = new URLSearchParams({
+      date: form.date,
+      timeFrom: form.timeFrom,
+      guests: String(form.guests),
+      mapId: String(selected.mapId)
+    });
+
+    if (unit?.tableId) {
+      params.set('tableId', String(unit.tableId));
+    }
+
+    if (unit?.objectId) {
+      params.set('objectId', String(unit.objectId));
+    }
+
+    return `/map-preview?${params.toString()}`;
+  }
+
   async function submitBooking(event) {
     event.preventDefault();
     if (!selectedUnit) {
@@ -383,6 +479,49 @@ export default function BookingPage() {
               );
             })}
           </div>
+          {selectedType ? (
+            <div className="booking-variants-panel">
+              <div className="booking-variants-head">
+                <div>
+                  <span className="eyebrow">{c({ ua: '5. Варіанти типу', ru: '5. Варианты типа', en: '5. Type variants' })}</span>
+                  <strong>{selectedType.label}</strong>
+                </div>
+                <span className="booking-variants-count">
+                  {selectedType.units.length} {c({ ua: 'позицій', ru: 'позиций', en: 'positions' })}
+                </span>
+              </div>
+              <div className="booking-variants-list">
+                {selectedType.units.map((unit) => {
+                  const localizedName = getUnitDisplayName(unit, locale);
+                  const isActive = selected.bookableUnitId === unit.id;
+                  return (
+                    <article key={unit.id} className={`booking-variant-row${isActive ? ' active' : ''}`}>
+                      <div className="booking-variant-copy">
+                        <strong>{unit.code || localizedName}</strong>
+                        <span>{localizedName}</span>
+                        <span>{unitStatusLabel(unit.status)} · {Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
+                      </div>
+                      <div className="booking-variant-actions">
+                        <Link className="btn btn-secondary btn-small" to={buildMapPreviewHref(unit)}>
+                          {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
+                        </Link>
+                        <button
+                          type="button"
+                          className={`btn btn-small ${isActive ? 'btn-primary' : 'btn-secondary'}`}
+                          disabled={unit.status !== 'free'}
+                          onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
+                        >
+                          {isActive
+                            ? c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })
+                            : c({ ua: 'Обрати', ru: 'Выбрать', en: 'Select' })}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="form-group">
@@ -464,34 +603,36 @@ export default function BookingPage() {
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           <label>{c({ ua: '4. Вільні варіанти', ru: '4. Свободные варианты', en: '4. Available options' })}</label>
           <div className="booking-unit-grid">
-            {filteredUnits.map((unit) => {
-              const localizedName = getUnitDisplayName(unit, locale);
+            {unitTypeGroups.map((group) => {
+              const localizedName = group.label;
+              const representative = group.representative;
               return (
                 <button
-                  key={unit.id}
+                  key={group.key}
                   type="button"
-                  className={`booking-unit-card${selected.bookableUnitId === unit.id ? ' active' : ''}`}
-                  disabled={unit.status !== 'free'}
-                  onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
+                  className={`booking-unit-card${selectedTypeKey === group.key ? ' active' : ''}`}
+                  onClick={() => setSelectedTypeKey(group.key)}
                 >
                   <div className="booking-unit-card-media">
-                    {unit.photoUrl ? (
-                      <img src={unit.photoUrl} alt={localizedName} />
+                    {representative.photoUrl ? (
+                      <img src={representative.photoUrl} alt={localizedName} />
                     ) : (
                       <div className="booking-unit-card-fallback">{localizedName}</div>
                     )}
-                    <span className={`booking-unit-status status-${unit.status}`}>{unitStatusLabel(unit.status)}</span>
+                    <span className="booking-unit-status status-free">
+                      {group.units.filter((unit) => unit.status === 'free').length} {c({ ua: 'варіантів', ru: 'вариантов', en: 'options' })}
+                    </span>
                   </div>
                   <div className="booking-unit-card-body">
                     <strong>{localizedName}</strong>
-                    <span>{unit.code || positionTypeLabel(unit.positionType)}</span>
-                    <span>{Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
-                    <span>{unit.depositAmount > 0 ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(unit.depositAmount)}` : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}</span>
+                    <span>{group.units.slice(0, 3).map((item) => item.code).filter(Boolean).join(', ')}{group.units.length > 3 ? '...' : ''}</span>
+                    <span>{Number(representative.seatsMin)}-{Number(representative.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
+                    <span>{representative.depositAmount > 0 ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(representative.depositAmount)}` : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}</span>
                   </div>
                 </button>
               );
             })}
-            {!unitsState.loading && !filteredUnits.length ? (
+            {!unitsState.loading && !unitTypeGroups.length ? (
               <div className="state-msg">
                 {c({
                   ua: 'У цій зоні немає доступних позицій під обрані параметри.',
@@ -501,6 +642,49 @@ export default function BookingPage() {
               </div>
             ) : null}
           </div>
+          {selectedType ? (
+            <div className="booking-variants-panel">
+              <div className="booking-variants-head">
+                <div>
+                  <span className="eyebrow">{c({ ua: '5. Варіанти типу', ru: '5. Варианты типа', en: '5. Type variants' })}</span>
+                  <strong>{selectedType.label}</strong>
+                </div>
+                <span className="booking-variants-count">
+                  {selectedType.units.length} {c({ ua: 'позицій', ru: 'позиций', en: 'positions' })}
+                </span>
+              </div>
+              <div className="booking-variants-list">
+                {selectedType.units.map((unit) => {
+                  const localizedName = getUnitDisplayName(unit, locale);
+                  const isActive = selected.bookableUnitId === unit.id;
+                  return (
+                    <article key={unit.id} className={`booking-variant-row${isActive ? ' active' : ''}`}>
+                      <div className="booking-variant-copy">
+                        <strong>{unit.code || localizedName}</strong>
+                        <span>{localizedName}</span>
+                        <span>{unitStatusLabel(unit.status)} · {Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
+                      </div>
+                      <div className="booking-variant-actions">
+                        <Link className="btn btn-secondary btn-small" to={buildMapPreviewHref(unit)}>
+                          {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
+                        </Link>
+                        <button
+                          type="button"
+                          className={`btn btn-small ${isActive ? 'btn-primary' : 'btn-secondary'}`}
+                          disabled={unit.status !== 'free'}
+                          onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
+                        >
+                          {isActive
+                            ? c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })
+                            : c({ ua: 'Обрати', ru: 'Выбрать', en: 'Select' })}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
