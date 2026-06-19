@@ -106,6 +106,77 @@ function getAvailabilityLabel(position, language) {
   return pickLabel(language, { ua: 'Доступно', ru: 'Доступно', en: 'Available' });
 }
 
+function getPositionTypeGroupLabel(position, language) {
+  const bookingKindLabel = getBookingKindLabel(position?.bookingKind, language);
+  const positionTypeLabel = getPositionTypeLabel(position?.positionType, language);
+  const fallbackTypeLabel = pickLabel(language, { ua: 'Тип', ru: 'Тип', en: 'Type' });
+  const seatsMin = Number(position?.seatsMin || 0);
+  const seatsMax = Number(position?.seatsMax || 0);
+
+  if (seatsMin > 0 && seatsMax > 0) {
+    if (seatsMin === seatsMax) {
+      return `${bookingKindLabel} · ${positionTypeLabel || fallbackTypeLabel} · ${seatsMax}`;
+    }
+
+    return `${bookingKindLabel} · ${positionTypeLabel || fallbackTypeLabel} · ${seatsMin}-${seatsMax}`;
+  }
+
+  return `${bookingKindLabel} · ${positionTypeLabel || fallbackTypeLabel}`;
+}
+
+function buildPositionTypeKey(position) {
+  return [
+    position?.map?.id || '',
+    position?.zone?.id || '',
+    position?.bookingKind || '',
+    position?.positionType || '',
+    position?.seatsMin || '',
+    position?.seatsMax || ''
+  ].join('::');
+}
+
+function buildPositionTypeGroups(positions, language) {
+  const groups = new Map();
+
+  for (const position of positions || []) {
+    const key = buildPositionTypeKey(position);
+    const name = getPositionTypeGroupLabel(position, language);
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.positions.push(position);
+      existing.codes.push(position.code || `#${position.id}`);
+      existing.positionIds.push(position.id);
+      existing.reservationStats.activeCount += Number(position.reservationStats?.activeCount || 0);
+      existing.reservationStats.confirmedCount += Number(position.reservationStats?.confirmedCount || 0);
+      existing.reservationStats.pendingCount += Number(position.reservationStats?.pendingCount || 0);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      label: name,
+      bookingKind: position.bookingKind,
+      positionType: position.positionType,
+      seatsMin: position.seatsMin,
+      seatsMax: position.seatsMax,
+      map: position.map,
+      zone: position.zone,
+      representative: position,
+      positions: [position],
+      positionIds: [position.id],
+      codes: [position.code || `#${position.id}`],
+      reservationStats: {
+        activeCount: Number(position.reservationStats?.activeCount || 0),
+        confirmedCount: Number(position.reservationStats?.confirmedCount || 0),
+        pendingCount: Number(position.reservationStats?.pendingCount || 0)
+      }
+    });
+  }
+
+  return Array.from(groups.values()).sort((left, right) => left.label.localeCompare(right.label, language));
+}
+
 function getDateLocale(language) {
   return language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
 }
@@ -265,6 +336,7 @@ export default function ReservationsPage() {
   const [managementMapId, setManagementMapId] = useState('');
   const [managementZoneId, setManagementZoneId] = useState('');
   const [managementEventId, setManagementEventId] = useState('');
+  const [selectedTypeKey, setSelectedTypeKey] = useState('');
   const [selectedPositionId, setSelectedPositionId] = useState(null);
   const [baseForm, setBaseForm] = useState({ deposit: 0, isActive: true, isBookable: true, photoUrl: '' });
   const [overrideForm, setOverrideForm] = useState({ enabled: false, deposit: 0, isActive: true, isBookable: true, photoUrl: '', note: '' });
@@ -328,13 +400,6 @@ export default function ReservationsPage() {
           events: Array.isArray(body.events) ? body.events : [],
           scope: body.scope || { reservationDate: dateFilter || today, eventId: managementEventId ? Number(managementEventId) : null }
         });
-        setSelectedPositionId((current) => {
-          if (current && nextPositions.some((position) => position.id === current)) {
-            return current;
-          }
-
-          return nextPositions[0]?.id || null;
-        });
       })
       .catch(() => {
         if (!cancelled) {
@@ -347,10 +412,58 @@ export default function ReservationsPage() {
     };
   }, [dateFilter, managementEventId, managementMapId, managementZoneId, managementSearch, today]);
 
-  const selectedPosition = useMemo(
-    () => managementState.positions.find((position) => position.id === selectedPositionId) || null,
-    [managementState.positions, selectedPositionId]
+  const positionTypeGroups = useMemo(
+    () => buildPositionTypeGroups(managementState.positions, language),
+    [managementState.positions, language]
   );
+
+  const selectedType = useMemo(
+    () => positionTypeGroups.find((group) => group.key === selectedTypeKey) || null,
+    [positionTypeGroups, selectedTypeKey]
+  );
+
+  const selectedPosition = useMemo(
+    () => {
+      if (!selectedType) {
+        return managementState.positions.find((position) => position.id === selectedPositionId) || null;
+      }
+
+      return selectedType.positions.find((position) => position.id === selectedPositionId)
+        || selectedType.positions[0]
+        || null;
+    },
+    [managementState.positions, selectedPositionId, selectedType]
+  );
+
+  useEffect(() => {
+    if (!positionTypeGroups.length) {
+      setSelectedTypeKey('');
+      setSelectedPositionId(null);
+      return;
+    }
+
+    setSelectedTypeKey((current) => {
+      if (current && positionTypeGroups.some((group) => group.key === current)) {
+        return current;
+      }
+
+      return positionTypeGroups[0].key;
+    });
+  }, [positionTypeGroups]);
+
+  useEffect(() => {
+    if (!selectedType) {
+      return;
+    }
+
+    setSelectedPositionId((current) => {
+      if (current && selectedType.positions.some((position) => position.id === current)) {
+        return current;
+      }
+
+      return selectedType.positions[0]?.id || null;
+    });
+  }, [selectedType]);
 
   useEffect(() => {
     if (!selectedPosition) {
@@ -459,13 +572,6 @@ export default function ReservationsPage() {
       maps: Array.isArray(body.maps) ? body.maps : [],
       events: Array.isArray(body.events) ? body.events : [],
       scope: body.scope || { reservationDate: dateFilter || today, eventId: managementEventId ? Number(managementEventId) : null }
-    });
-    setSelectedPositionId((current) => {
-      if (current && nextPositions.some((position) => position.id === current)) {
-        return current;
-      }
-
-      return nextPositions[0]?.id || null;
     });
     return true;
   }
@@ -672,48 +778,48 @@ export default function ReservationsPage() {
 
   const managementColumns = [
     {
-      key: 'position',
-      label: 'Position',
-      render: (position) => (
+      key: 'positionType',
+      label: 'Type',
+      render: (group) => (
         <div>
           <button
             type="button"
-            className={`btn btn-small ${selectedPositionId === position.id ? '' : 'btn-secondary'}`}
-            onClick={() => setSelectedPositionId(position.id)}
+            className={`btn btn-small ${selectedTypeKey === group.key ? '' : 'btn-secondary'}`}
+            onClick={() => setSelectedTypeKey(group.key)}
           >
-            {getPositionDisplayName(position, language)}
+            {group.label}
           </button>
-          <div className="muted small">{getBookingKindLabel(position.bookingKind, language)}</div>
+          <div className="muted small">{getBookingKindLabel(group.bookingKind, language)} · {group.positions.length} pcs</div>
         </div>
       )
     },
     {
       key: 'mapZone',
       label: 'Map / zone',
-      render: (position) => `${localizeField(position.map?.name, language) || '—'} / ${localizeField(position.zone?.name, language) || '—'}`
+      render: (group) => `${localizeField(group.map?.name, language) || '—'} / ${localizeField(group.zone?.name, language) || '—'}`
     },
     {
       key: 'capacity',
       label: 'Capacity',
-      render: (position) => `${position.seatsMin || '—'}-${position.seatsMax || '—'}`
+      render: (group) => `${group.seatsMin || '—'}-${group.seatsMax || '—'}`
     },
     {
       key: 'effective',
       label: 'Effective',
-      render: (position) => (
+      render: (group) => (
         <div>
-          <div>{getAvailabilityLabel(position, language)}</div>
-          <div className="muted small">Deposit: {Number(position.effective?.deposit || 0)}</div>
+          <div>{getAvailabilityLabel(group.representative, language)}</div>
+          <div className="muted small">Deposit: {Number(group.representative.effective?.deposit || 0)}</div>
         </div>
       )
     },
     {
       key: 'reservations',
       label: 'Bookings',
-      render: (position) => (
+      render: (group) => (
         <div>
-          <div>{position.reservationStats?.activeCount || 0}</div>
-          <div className="muted small">Confirmed: {position.reservationStats?.confirmedCount || 0}</div>
+          <div>{group.reservationStats?.activeCount || 0}</div>
+          <div className="muted small">Confirmed: {group.reservationStats?.confirmedCount || 0}</div>
         </div>
       )
     }
@@ -902,19 +1008,35 @@ export default function ReservationsPage() {
           {managementState.error ? <p className="error">{managementState.error}</p> : null}
           {!managementState.loading && !managementState.error ? (
             <>
-              <DataTable columns={managementColumns} rows={managementState.positions} emptyText="No positions in this scope." />
+              <DataTable columns={managementColumns} rows={positionTypeGroups} emptyText="No position types in this scope." />
 
               {selectedPosition ? (
                 <div className="reservation-management-grid">
                   <article className="panel-card reservation-management-panel">
                     <div className="panel-card-head">
                       <div>
-                        <span className="eyebrow">Selected position</span>
-                        <h3 className="panel-section-title">{getPositionDisplayName(selectedPosition, language)}</h3>
+                        <span className="eyebrow">Selected type</span>
+                        <h3 className="panel-section-title">{selectedType?.label || getPositionDisplayName(selectedPosition, language)}</h3>
                         <p className="muted">{localizeField(selectedPosition.map?.name, language) || '—'} / {localizeField(selectedPosition.zone?.name, language) || '—'}</p>
                       </div>
                       <StatusPill status={selectedPosition.effective?.isBookable && selectedPosition.effective?.isActive ? 'CONFIRMED' : 'CANCELLED'} />
                     </div>
+
+                    {selectedType && selectedType.positions.length > 1 ? (
+                      <div className="admin-form-grid">
+                        <label className="field-span-2">
+                          Specific position
+                          <select value={selectedPositionId || ''} onChange={(event) => setSelectedPositionId(Number(event.target.value))}>
+                            {selectedType.positions.map((position) => (
+                              <option key={position.id} value={position.id}>
+                                {position.code || `#${position.id}`} · {getAvailabilityLabel(position, language)}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="muted">Codes in type: {selectedType.codes.join(', ')}</span>
+                        </label>
+                      </div>
+                    ) : null}
 
                     <div className="details-grid compact table-sheet-grid">
                       <div className="detail-row"><span className="muted">Kind</span><strong>{getBookingKindLabel(selectedPosition.bookingKind, language)}</strong></div>
