@@ -9,7 +9,7 @@ primary_region = 'fra'
 [build]
 
 [deploy]
-  release_command = "PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=true npx prisma migrate deploy"
+  release_command = "/bin/sh -c 'PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=true npx prisma migrate deploy'"
 
 [http_service]
   internal_port = 8080
