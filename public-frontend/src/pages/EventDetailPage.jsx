@@ -249,9 +249,14 @@ export default function EventDetailPage() {
                       })}
                     </p>
                   </div>
-                  <Link className="btn btn-primary" to={bookingUrl}>
-                    {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
-                  </Link>
+                  <div className="event-booking-promo-actions">
+                    <Link className="btn btn-primary" to={bookingUrl}>
+                      {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
+                    </Link>
+                    <Link className="btn btn-secondary" to="/menu">
+                      {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
+                    </Link>
+                  </div>
                 </div>
               ) : null}
               {sales.loading && !sales.ticketTypes.length ? (
@@ -404,6 +409,9 @@ export default function EventDetailPage() {
                   {c({ ua: 'Забронювати стіл на цю подію', ru: 'Забронировать стол на это событие', en: 'Book a table for this event' })}
                 </Link>
               ) : null}
+              <Link className="btn btn-secondary" to="/menu">
+                {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
+              </Link>
               {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
                 <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
                   {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}

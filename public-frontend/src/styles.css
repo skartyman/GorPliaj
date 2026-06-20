@@ -1465,6 +1465,12 @@ h3 {
   text-transform: uppercase;
 }
 
+.event-booking-promo-actions {
+  display: grid;
+  gap: 10px;
+  min-width: 220px;
+}
+
 .ticket-order-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 22px;
