@@ -38,6 +38,7 @@ export default function EventDetailPage() {
   });
   const [orderResult, setOrderResult] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
+  const [justCreatedOrder, setJustCreatedOrder] = useState(false);
   const c = (values) => localizedCopy(values, locale);
   const metaTitle = localizeField(state.event?.title, locale);
   const metaDescription = localizeField(state.event?.shortDescription, locale);
@@ -103,6 +104,7 @@ export default function EventDetailPage() {
     const downloadToken = searchParams.get('token');
     if (!orderNumber || !downloadToken) return;
 
+    setJustCreatedOrder(false);
     setOrderResult((current) => current || {
       orderNumber,
       downloadToken,
@@ -161,8 +163,13 @@ export default function EventDetailPage() {
           quantity: Number(orderForm.quantity)
         }]
       });
+      setJustCreatedOrder(true);
       setOrderResult(result.order);
       setSales((current) => ({ ...current, loading: false }));
+      if (result.order?.paymentUrl) {
+        window.location.assign(result.order.paymentUrl);
+        return;
+      }
     } catch (error) {
       setSales((current) => ({ ...current, loading: false, error: error.message }));
     }
@@ -365,7 +372,7 @@ export default function EventDetailPage() {
                   {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
                 </a>
               ) : null}
-              {orderStatus?.status !== 'PAID' && paymentUrl ? (
+              {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
                 <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
                   {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}
                 </a>
