@@ -44,7 +44,7 @@ FROM base
 ENV NODE_ENV="production"
 
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y openssl && \
+    apt-get install --no-install-recommends -y openssl fonts-dejavu-core && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app /app
