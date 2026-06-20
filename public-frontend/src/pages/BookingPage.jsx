@@ -102,6 +102,7 @@ export default function BookingPage() {
   const [paymentUrl, setPaymentUrl] = useState('');
   const [reservationAccess, setReservationAccess] = useState(null);
   const [reservationStatus, setReservationStatus] = useState(null);
+  const [bookingMenuPromptOpen, setBookingMenuPromptOpen] = useState(false);
   const [eventInfo, setEventInfo] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
 
@@ -272,17 +273,10 @@ export default function BookingPage() {
     bookingsApi.status(returnedReservationCode, returnedReservationToken)
       .then((result) => {
         setReservationStatus(result);
-        setSuccessMessage(result.downloadUrl
-          ? c({
-            ua: 'Оплату підтверджено. PDF бронювання готовий.',
-            ru: 'Оплата подтверждена. PDF бронирования готов.',
-            en: 'Payment confirmed. Booking PDF is ready.'
-          })
-          : c({
-            ua: 'Повернулися з оплати. Очікуємо підтвердження платежу.',
-            ru: 'Вернулись из оплаты. Ожидаем подтверждения платежа.',
-            en: 'Returned from payment. Waiting for payment confirmation.'
-          }));
+        setSuccessMessage('');
+        if (result.reservation?.paymentStatus === 'PAID') {
+          setBookingMenuPromptOpen(true);
+        }
       })
       .catch((error) => setErrorMessage(error.message));
   }, [returnedReservationCode, returnedReservationToken, locale]);
@@ -949,6 +943,36 @@ export default function BookingPage() {
               {c({ ua: 'Код бронювання', ru: 'Код бронирования', en: 'Booking code' })}: <strong>{reservationAccess.ticketCode}</strong>
             </p>
           ) : null}
+        </div>
+      ) : null}
+
+      {bookingMenuPromptOpen && reservationStatus?.reservation?.paymentStatus === 'PAID' ? (
+        <div className="guest-modal-backdrop" role="presentation" onClick={() => setBookingMenuPromptOpen(false)}>
+          <div className="guest-modal" role="dialog" aria-modal="true" aria-labelledby="booking-menu-title" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="guest-modal-close" onClick={() => setBookingMenuPromptOpen(false)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>
+              ×
+            </button>
+            <span className="guest-modal-kicker">{c({ ua: 'Бронювання готове', ru: 'Бронирование готово', en: 'Booking is ready' })}</span>
+            <h2 id="booking-menu-title">
+              {c({
+                ua: 'Стіл заброньовано. Можна спокійно перейти до меню.',
+                ru: 'Стол забронирован. Теперь можно спокойно перейти к меню.',
+                en: 'Your table is booked. You can move on to the menu.'
+              })}
+            </h2>
+            <p>
+              {c({
+                ua: 'Перегляньте страви та напої заздалегідь, щоб швидше визначитися на місці.',
+                ru: 'Посмотрите блюда и напитки заранее, чтобы быстрее определиться на месте.',
+                en: 'Browse the food and drinks in advance so it is easier to decide on site.'
+              })}
+            </p>
+            <div className="guest-modal-actions">
+              <Link className="btn btn-primary" to="/menu" onClick={() => setBookingMenuPromptOpen(false)}>
+                {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
+              </Link>
+            </div>
+          </div>
         </div>
       ) : null}
     </>

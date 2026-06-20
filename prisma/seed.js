@@ -126,8 +126,8 @@ async function main() {
   const map = await prisma.map.upsert({
     where: { slug: 'main-venue' },
     update: {
-      name: jsonStr('Main venue map', 'Main venue map', 'Main venue map'),
-      description: jsonStr('Main booking map for GorPliaj', 'Main booking map for GorPliaj', 'Main booking map for GorPliaj'),
+      name: jsonStr('ÐÑÐ½Ð¾Ð²Ð½Ð° ÐºÐ°ÑÑÐ° Ð·Ð°ÐºÐ»Ð°Ð´Ñ', 'ÐÑÐ½Ð¾Ð²Ð½Ð°Ñ ÐºÐ°ÑÑÐ° Ð·Ð°Ð²ÐµÐ´ÐµÐ½Ð¸Ñ', 'Main venue map'),
+      description: jsonStr('ÐÐµÐ½Ð½Ð° ÐºÐ°ÑÑÐ° Ð´Ð»Ñ Ð±ÑÐ¾Ð½ÑÐ²Ð°Ð½Ð½Ñ ÑÑÐ¾Ð»ÑÐ² Ñ Ð¿Ð»ÑÐ¶Ð½Ð¾Ð³Ð¾ Ð²ÑÐ´Ð¿Ð¾ÑÐ¸Ð½ÐºÑ', 'ÐÐ½ÐµÐ²Ð½Ð°Ñ ÐºÐ°ÑÑÐ° Ð´Ð»Ñ Ð±ÑÐ¾Ð½Ð¸ÑÐ¾Ð²Ð°Ð½Ð¸Ñ ÑÑÐ¾Ð»Ð¾Ð² Ð¸ Ð¿Ð»ÑÐ¶Ð½Ð¾Ð³Ð¾ Ð¾ÑÐ´ÑÑÐ°', 'Day map for table bookings and beach leisure'),
       status: MapStatus.ACTIVE,
       usageMode: MapUsageMode.DAY,
       isDefault: true,
@@ -136,9 +136,9 @@ async function main() {
       backgroundColor: '#0f172a',
     },
     create: {
-      name: jsonStr('Main venue map', 'Main venue map', 'Main venue map'),
+      name: jsonStr('ÐÑÐ½Ð¾Ð²Ð½Ð° ÐºÐ°ÑÑÐ° Ð·Ð°ÐºÐ»Ð°Ð´Ñ', 'ÐÑÐ½Ð¾Ð²Ð½Ð°Ñ ÐºÐ°ÑÑÐ° Ð·Ð°Ð²ÐµÐ´ÐµÐ½Ð¸Ñ', 'Main venue map'),
       slug: 'main-venue',
-      description: jsonStr('Main booking map for GorPliaj', 'Main booking map for GorPliaj', 'Main booking map for GorPliaj'),
+      description: jsonStr('ÐÐµÐ½Ð½Ð° ÐºÐ°ÑÑÐ° Ð´Ð»Ñ Ð±ÑÐ¾Ð½ÑÐ²Ð°Ð½Ð½Ñ ÑÑÐ¾Ð»ÑÐ² Ñ Ð¿Ð»ÑÐ¶Ð½Ð¾Ð³Ð¾ Ð²ÑÐ´Ð¿Ð¾ÑÐ¸Ð½ÐºÑ', 'ÐÐ½ÐµÐ²Ð½Ð°Ñ ÐºÐ°ÑÑÐ° Ð´Ð»Ñ Ð±ÑÐ¾Ð½Ð¸ÑÐ¾Ð²Ð°Ð½Ð¸Ñ ÑÑÐ¾Ð»Ð¾Ð² Ð¸ Ð¿Ð»ÑÐ¶Ð½Ð¾Ð³Ð¾ Ð¾ÑÐ´ÑÑÐ°', 'Day map for table bookings and beach leisure'),
       status: MapStatus.ACTIVE,
       usageMode: MapUsageMode.DAY,
       isDefault: true,
@@ -150,29 +150,29 @@ async function main() {
 
   const zones = {
     beach: await upsertZone(map.id, 'beach', {
-      name: jsonStr('Пляж', 'Пляж', 'Beach'),
+      name: jsonStr('Öåíòð ïëÿæó', 'Öåíòð ïëÿæà', 'Beach center'),
       color: '#F4A261',
       sortOrder: 1,
     }),
     lounge: await upsertZone(map.id, 'lounge', {
-      name: jsonStr('Лаунж', 'Лаунж', 'Lounge'),
+      name: jsonStr('Òåðàñà', 'Òåððàñà', 'Terrace'),
       color: '#2A9D8F',
       sortOrder: 2,
     }),
     vip: await upsertZone(map.id, 'vip', {
-      name: jsonStr('VIP', 'VIP', 'VIP'),
+      name: jsonStr('Ðåñòîðàí', 'Ðåñòîðàí', 'Restaurant'),
       color: '#6A4C93',
       sortOrder: 3,
     }),
   };
 
   const tables = [
-    { zoneKey: 'beach', name: jsonStr('Столик 1', 'Столик 1', 'Table 1'), code: 'B-01', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 140, y: 640 },
-    { zoneKey: 'beach', name: jsonStr('Столик 2', 'Столик 2', 'Table 2'), code: 'B-02', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 300, y: 640 },
-    { zoneKey: 'beach', name: jsonStr('Сімейний', 'Семейный', 'Family'), code: 'B-03', seatsMin: 4, seatsMax: 6, deposit: '700.00', photoUrl: null, x: 470, y: 640 },
-    { zoneKey: 'lounge', name: jsonStr('Кутовий', 'Угловой', 'Corner'), code: 'L-01', seatsMin: 2, seatsMax: 4, deposit: '600.00', photoUrl: null, x: 640, y: 470 },
-    { zoneKey: 'lounge', name: jsonStr('Центральний', 'Центральный', 'Center'), code: 'L-02', seatsMin: 4, seatsMax: 6, deposit: '800.00', photoUrl: null, x: 820, y: 470 },
-    { zoneKey: 'lounge', name: jsonStr('Софа', 'Софа', 'Sofa'), code: 'L-03', seatsMin: 4, seatsMax: 8, deposit: '1000.00', photoUrl: null, x: 1000, y: 470 },
+    { zoneKey: 'beach', name: jsonStr('Ð¡ÑÐ¾Ð»Ð¸Ðº 1', 'Ð¡ÑÐ¾Ð»Ð¸Ðº 1', 'Table 1'), code: 'B-01', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 140, y: 640 },
+    { zoneKey: 'beach', name: jsonStr('Ð¡ÑÐ¾Ð»Ð¸Ðº 2', 'Ð¡ÑÐ¾Ð»Ð¸Ðº 2', 'Table 2'), code: 'B-02', seatsMin: 2, seatsMax: 4, deposit: '500.00', photoUrl: null, x: 300, y: 640 },
+    { zoneKey: 'beach', name: jsonStr('Ð¡ÑÐ¼ÐµÐ¹Ð½Ð¸Ð¹', 'Ð¡ÐµÐ¼ÐµÐ¹Ð½ÑÐ¹', 'Family'), code: 'B-03', seatsMin: 4, seatsMax: 6, deposit: '700.00', photoUrl: null, x: 470, y: 640 },
+    { zoneKey: 'lounge', name: jsonStr('ÐÑÑÐ¾Ð²Ð¸Ð¹', 'Ð£Ð³Ð»Ð¾Ð²Ð¾Ð¹', 'Corner'), code: 'L-01', seatsMin: 2, seatsMax: 4, deposit: '600.00', photoUrl: null, x: 640, y: 470 },
+    { zoneKey: 'lounge', name: jsonStr('Ð¦ÐµÐ½ÑÑÐ°Ð»ÑÐ½Ð¸Ð¹', 'Ð¦ÐµÐ½ÑÑÐ°Ð»ÑÐ½ÑÐ¹', 'Center'), code: 'L-02', seatsMin: 4, seatsMax: 6, deposit: '800.00', photoUrl: null, x: 820, y: 470 },
+    { zoneKey: 'lounge', name: jsonStr('Ð¡Ð¾ÑÐ°', 'Ð¡Ð¾ÑÐ°', 'Sofa'), code: 'L-03', seatsMin: 4, seatsMax: 8, deposit: '1000.00', photoUrl: null, x: 1000, y: 470 },
     { zoneKey: 'vip', name: jsonStr('VIP Gold 1', 'VIP Gold 1', 'VIP Gold 1'), code: 'V-01', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1220, y: 240 },
     { zoneKey: 'vip', name: jsonStr('VIP Gold 2', 'VIP Gold 2', 'VIP Gold 2'), code: 'V-02', seatsMin: 4, seatsMax: 6, deposit: '1200.00', photoUrl: null, x: 1380, y: 240 },
     { zoneKey: 'vip', name: jsonStr('VIP Platinum', 'VIP Platinum', 'VIP Platinum'), code: 'V-03', seatsMin: 6, seatsMax: 10, deposit: '1800.00', photoUrl: null, x: 1300, y: 420 },
@@ -211,7 +211,7 @@ async function main() {
   const staticObjects = [
     {
       type: MapObjectType.BAR,
-      label: jsonStr('Головний бар', 'Главный бар', 'Main Bar'),
+      label: jsonStr('ÐÐ¾Ð»Ð¾Ð²Ð½Ð¸Ð¹ Ð±Ð°Ñ', 'ÐÐ»Ð°Ð²Ð½ÑÐ¹ Ð±Ð°Ñ', 'Main Bar'),
       x: 720,
       y: 120,
       width: 260,
@@ -219,7 +219,7 @@ async function main() {
     },
     {
       type: MapObjectType.STAGE,
-      label: jsonStr('Літня сцена', 'Летняя сцена', 'Summer Stage'),
+      label: jsonStr('ÐÑÑÐ½Ñ ÑÑÐµÐ½Ð°', 'ÐÐµÑÐ½ÑÑ ÑÑÐµÐ½Ð°', 'Summer Stage'),
       x: 300,
       y: 110,
       width: 280,
@@ -227,7 +227,7 @@ async function main() {
     },
     {
       type: MapObjectType.ENTRANCE,
-      label: jsonStr('Головний вхід', 'Главный вход', 'Main Entrance'),
+      label: jsonStr('ÐÐ¾Ð»Ð¾Ð²Ð½Ð¸Ð¹ Ð²ÑÑÐ´', 'ÐÐ»Ð°Ð²Ð½ÑÐ¹ Ð²ÑÐ¾Ð´', 'Main Entrance'),
       x: 40,
       y: 360,
       width: 100,
@@ -243,7 +243,7 @@ async function main() {
     },
     {
       type: MapObjectType.STAIRS,
-      label: jsonStr('Сходи до моря', 'Лестница к морю', 'Sea View Stairs'),
+      label: jsonStr('Ð¡ÑÐ¾Ð´Ð¸ Ð´Ð¾ Ð¼Ð¾ÑÑ', 'ÐÐµÑÑÐ½Ð¸ÑÐ° Ðº Ð¼Ð¾ÑÑ', 'Sea View Stairs'),
       x: 1180,
       y: 620,
       width: 120,
@@ -251,7 +251,7 @@ async function main() {
     },
     {
       type: MapObjectType.PATH,
-      label: jsonStr('Головна алея', 'Главная аллея', 'Main Walkway'),
+      label: jsonStr('ÐÐ¾Ð»Ð¾Ð²Ð½Ð° Ð°Ð»ÐµÑ', 'ÐÐ»Ð°Ð²Ð½Ð°Ñ Ð°Ð»Ð»ÐµÑ', 'Main Walkway'),
       x: 120,
       y: 760,
       width: 1220,
@@ -281,13 +281,13 @@ async function main() {
     title: jsonStr('Sunset DJ Session', 'Sunset DJ Session', 'Sunset DJ Session'),
     slug: 'sunset-dj-session',
     shortDescription: jsonStr(
-      'П\'ятничний захід на заході сонця на пляжній терасі.',
-      'Пятничное мероприятие на закате на пляжной террасе.',
+      'Ð\'ÑÑÐ½Ð¸ÑÐ½Ð¸Ð¹ Ð·Ð°ÑÑÐ´ Ð½Ð° Ð·Ð°ÑÐ¾Ð´Ñ ÑÐ¾Ð½ÑÑ Ð½Ð° Ð¿Ð»ÑÐ¶Ð½ÑÐ¹ ÑÐµÑÐ°ÑÑ.',
+      'ÐÑÑÐ½Ð¸ÑÐ½Ð¾Ðµ Ð¼ÐµÑÐ¾Ð¿ÑÐ¸ÑÑÐ¸Ðµ Ð½Ð° Ð·Ð°ÐºÐ°ÑÐµ Ð½Ð° Ð¿Ð»ÑÐ¶Ð½Ð¾Ð¹ ÑÐµÑÑÐ°ÑÐµ.',
       'Friday sunset set on the beach terrace.'
     ),
     fullDescription: jsonStr(
-      'Живий DJ-сет з фірмовими коктейлями, пляжним настроєм і вечірнім небом у GorPliaj.',
-      'Живой DJ-сет с фирменными коктейлями, пляжным настроением и вечерним небом в GorPliaj.',
+      'ÐÐ¸Ð²Ð¸Ð¹ DJ-ÑÐµÑ Ð· ÑÑÑÐ¼Ð¾Ð²Ð¸Ð¼Ð¸ ÐºÐ¾ÐºÑÐµÐ¹Ð»ÑÐ¼Ð¸, Ð¿Ð»ÑÐ¶Ð½Ð¸Ð¼ Ð½Ð°ÑÑÑÐ¾ÑÐ¼ Ñ Ð²ÐµÑÑÑÐ½ÑÐ¼ Ð½ÐµÐ±Ð¾Ð¼ Ñ GorPliaj.',
+      'ÐÐ¸Ð²Ð¾Ð¹ DJ-ÑÐµÑ Ñ ÑÐ¸ÑÐ¼ÐµÐ½Ð½ÑÐ¼Ð¸ ÐºÐ¾ÐºÑÐµÐ¹Ð»ÑÐ¼Ð¸, Ð¿Ð»ÑÐ¶Ð½ÑÐ¼ Ð½Ð°ÑÑÑÐ¾ÐµÐ½Ð¸ÐµÐ¼ Ð¸ Ð²ÐµÑÐµÑÐ½Ð¸Ð¼ Ð½ÐµÐ±Ð¾Ð¼ Ð² GorPliaj.',
       'Live DJ set with signature cocktails, beach lounge mood, and evening skyline at GorPliaj.'
     ),
     posterImage: '/icons/photo_2026-03-22_18-51-11.jpg',
@@ -303,13 +303,13 @@ async function main() {
     title: jsonStr('Family Beach Weekend', 'Family Beach Weekend', 'Family Beach Weekend'),
     slug: 'family-beach-weekend',
     shortDescription: jsonStr(
-      'Вікенд сімейних заходів біля моря.',
-      'Выходные семейных мероприятий у моря.',
+      'ÐÑÐºÐµÐ½Ð´ ÑÑÐ¼ÐµÐ¹Ð½Ð¸Ñ Ð·Ð°ÑÐ¾Ð´ÑÐ² Ð±ÑÐ»Ñ Ð¼Ð¾ÑÑ.',
+      'ÐÑÑÐ¾Ð´Ð½ÑÐµ ÑÐµÐ¼ÐµÐ¹Ð½ÑÑ Ð¼ÐµÑÐ¾Ð¿ÑÐ¸ÑÑÐ¸Ð¹ Ñ Ð¼Ð¾ÑÑ.',
       'Weekend family-friendly activities by the sea.'
     ),
     fullDescription: jsonStr(
-      'Дитячі активності, сімейне меню та затишні зони для візитів у денний час.',
-      'Детские активности, семейное меню и уютные зоны для дневных визитов.',
+      'ÐÐ¸ÑÑÑÑ Ð°ÐºÑÐ¸Ð²Ð½Ð¾ÑÑÑ, ÑÑÐ¼ÐµÐ¹Ð½Ðµ Ð¼ÐµÐ½Ñ ÑÐ° Ð·Ð°ÑÐ¸ÑÐ½Ñ Ð·Ð¾Ð½Ð¸ Ð´Ð»Ñ Ð²ÑÐ·Ð¸ÑÑÐ² Ñ Ð´ÐµÐ½Ð½Ð¸Ð¹ ÑÐ°Ñ.',
+      'ÐÐµÑÑÐºÐ¸Ðµ Ð°ÐºÑÐ¸Ð²Ð½Ð¾ÑÑÐ¸, ÑÐµÐ¼ÐµÐ¹Ð½Ð¾Ðµ Ð¼ÐµÐ½Ñ Ð¸ ÑÑÑÐ½ÑÐµ Ð·Ð¾Ð½Ñ Ð´Ð»Ñ Ð´Ð½ÐµÐ²Ð½ÑÑ Ð²Ð¸Ð·Ð¸ÑÐ¾Ð².',
       'Kids activities, family menu offers, and relaxed seating zones for weekend daytime visits.'
     ),
     posterImage: '/icons/lebedi.jpg',
@@ -348,3 +348,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

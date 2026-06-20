@@ -39,6 +39,7 @@ export default function EventDetailPage() {
   const [orderResult, setOrderResult] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
   const [justCreatedOrder, setJustCreatedOrder] = useState(false);
+  const [ticketUpsellOpen, setTicketUpsellOpen] = useState(false);
   const c = (values) => localizedCopy(values, locale);
   const metaTitle = localizeField(state.event?.title, locale);
   const metaDescription = localizeField(state.event?.shortDescription, locale);
@@ -98,6 +99,12 @@ export default function EventDetailPage() {
       window.clearInterval(interval);
     };
   }, [orderResult]);
+
+  useEffect(() => {
+    if (orderStatus?.status === 'PAID') {
+      setTicketUpsellOpen(true);
+    }
+  }, [orderStatus?.status]);
 
   useEffect(() => {
     const orderNumber = searchParams.get('ticket_order');
@@ -228,37 +235,6 @@ export default function EventDetailPage() {
 
           {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
             <div id="tickets" className="ticket-purchase-panel">
-              {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
-                <div className="event-booking-promo">
-                  <div>
-                    <span className="event-booking-promo-kicker">
-                      {c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Table booking' })}
-                    </span>
-                    <h2>
-                      {c({
-                        ua: 'Йдете на подію? Одразу забронюйте стіл, щоб провести вечір у своєму ритмі.',
-                        ru: 'Идете на событие? Сразу забронируйте стол, чтобы провести вечер без суеты.',
-                        en: 'Going to the event? Book your table right away for a smoother evening.'
-                      })}
-                    </h2>
-                    <p>
-                      {c({
-                        ua: 'Відкриємо бронювання саме для цієї події: тільки вечірні столи, без пляжних послуг і зайвих кроків.',
-                        ru: 'Откроем бронь именно для этого события: только вечерние столы, без пляжных услуг и лишних шагов.',
-                        en: 'This opens booking for this event only: evening tables, no beach options, and fewer extra steps.'
-                      })}
-                    </p>
-                  </div>
-                  <div className="event-booking-promo-actions">
-                    <Link className="btn btn-primary" to={bookingUrl}>
-                      {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
-                    </Link>
-                    <Link className="btn btn-secondary" to="/menu">
-                      {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
               {sales.loading && !sales.ticketTypes.length ? (
                 <div className="state-msg">
                   {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
@@ -386,32 +362,11 @@ export default function EventDetailPage() {
           {sales.error ? <div className="state-msg state-error event-inline-state">{sales.error}</div> : null}
           {orderResult ? (
             <div className="state-msg state-success event-inline-state ticket-result-panel">
-              <p>
-                {orderStatus?.status === 'PAID'
-                  ? c({
-                    ua: `Замовлення ${orderResult.orderNumber} оплачено. Квитки надіслано на email.`,
-                    ru: `Заказ ${orderResult.orderNumber} оплачен. Билеты отправлены на email.`,
-                    en: `Order ${orderResult.orderNumber} is paid. Tickets were sent by email.`
-                  })
-                  : c({
-                    ua: `Замовлення ${orderResult.orderNumber} створено. Очікуємо підтвердження оплати.`,
-                    ru: `Заказ ${orderResult.orderNumber} создан. Ожидаем подтверждения оплаты.`,
-                    en: `Order ${orderResult.orderNumber} was created. Waiting for payment confirmation.`
-                  })}
-              </p>
               {orderStatus?.downloadUrl ? (
                 <a className="btn btn-primary" href={orderStatus.downloadUrl}>
                   {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
                 </a>
               ) : null}
-              {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
-                <Link className="btn btn-secondary" to={bookingUrl}>
-                  {c({ ua: 'Забронювати стіл на цю подію', ru: 'Забронировать стол на это событие', en: 'Book a table for this event' })}
-                </Link>
-              ) : null}
-              <Link className="btn btn-secondary" to="/menu">
-                {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
-              </Link>
               {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
                 <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
                   {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}
@@ -421,6 +376,41 @@ export default function EventDetailPage() {
           ) : null}
         </div>
       </div>
+
+      {ticketUpsellOpen && orderStatus?.status === 'PAID' ? (
+        <div className="guest-modal-backdrop" role="presentation" onClick={() => setTicketUpsellOpen(false)}>
+          <div className="guest-modal" role="dialog" aria-modal="true" aria-labelledby="ticket-upsell-title" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="guest-modal-close" onClick={() => setTicketUpsellOpen(false)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>
+              ×
+            </button>
+            <span className="guest-modal-kicker">{c({ ua: 'Квитки готові', ru: 'Билеты готовы', en: 'Tickets are ready' })}</span>
+            <h2 id="ticket-upsell-title">
+              {c({
+                ua: 'Квитки вже у вас. Хочете одразу забронювати стіл на цей вечір?',
+                ru: 'Билеты уже у вас. Хотите сразу забронировать стол на этот вечер?',
+                en: 'Your tickets are ready. Would you like to book a table for the evening?'
+              })}
+            </h2>
+            <p>
+              {c({
+                ua: 'Можна одразу перейти до бронювання саме для цієї події або спочатку переглянути меню.',
+                ru: 'Можно сразу перейти к бронированию именно для этого события или сначала посмотреть меню.',
+                en: 'You can jump straight to event booking or browse the menu first.'
+              })}
+            </p>
+            <div className="guest-modal-actions">
+              {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
+                <Link className="btn btn-primary" to={bookingUrl} onClick={() => setTicketUpsellOpen(false)}>
+                  {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
+                </Link>
+              ) : null}
+              <Link className="btn btn-secondary" to="/menu" onClick={() => setTicketUpsellOpen(false)}>
+                {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
