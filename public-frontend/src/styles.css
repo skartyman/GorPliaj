@@ -1723,6 +1723,29 @@ h3 {
   background: var(--bg-secondary);
 }
 
+.booking-flow-note {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 16px 18px;
+  border: 1px solid rgba(201, 168, 108, 0.26);
+  border-radius: var(--radius);
+  background: rgba(201, 168, 108, 0.08);
+}
+
+.booking-flow-note strong {
+  font-size: 0.95rem;
+}
+
+.booking-flow-note span {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.booking-event-panel {
+  margin-bottom: 20px;
+}
+
 .booking-selected-panel {
   display: grid;
   gap: 14px;

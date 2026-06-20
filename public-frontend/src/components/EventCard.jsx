@@ -71,7 +71,7 @@ export default function EventCard({ event, featured = false }) {
                 {buyTicketLabel}
               </a>
             ) : (
-              <Link className="btn btn-secondary event-action-btn" to={`/events/${event.slug}#tickets`}>
+              <Link className="btn btn-secondary event-action-btn" to={`/events/${event.slug}?focus=tickets#tickets`}>
                 {buyTicketLabel}
               </Link>
             )

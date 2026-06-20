@@ -2,12 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingsApi, eventsApi, mapApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
-import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
+import { useLocale } from '../state/locale';
 
 function toDateOnly(value) {
   if (!value) return '';
   return new Date(value).toISOString().slice(0, 10);
+}
+
+function toTimeOnly(value) {
+  if (!value) return '';
+  return new Date(value).toISOString().slice(11, 16);
 }
 
 function money(value, currency = 'UAH') {
@@ -18,21 +23,40 @@ function getUnitDisplayName(unit, locale) {
   return localizeField(unit?.name, locale) || localizeField(unit?.label, locale) || unit?.code || unit?.id || '';
 }
 
+const BOOKING_FLOW_OPTIONS = [
+  {
+    value: 'STANDARD',
+    copy: {
+      ua: { title: 'Просто бронювання', body: 'Окремо бронюємо стіл або пляжний відпочинок без привʼязки до події.' },
+      ru: { title: 'Обычная бронь', body: 'Отдельно бронируем стол или пляжный отдых без привязки к событию.' },
+      en: { title: 'Regular booking', body: 'Book a table or beach leisure without linking it to an event.' }
+    }
+  },
+  {
+    value: 'EVENT',
+    copy: {
+      ua: { title: 'Бронь на подію', body: 'Спочатку обираємо подію, а далі бронюємо тільки вечірні столи.' },
+      ru: { title: 'Бронь на событие', body: 'Сначала выбираем событие, а дальше бронируем только вечерние столы.' },
+      en: { title: 'Event booking', body: 'Choose an event first, then book evening tables only.' }
+    }
+  }
+];
+
 const BOOKING_KIND_OPTIONS = [
   {
     value: 'TABLE',
     copy: {
-      ua: { title: 'Стіл', body: 'Ресторан, тераса, вечірні посадки та події.' },
-      ru: { title: 'Стол', body: 'Ресторан, терраса, вечерние посадки и события.' },
-      en: { title: 'Table', body: 'Restaurant, terrace, evening seating and events.' }
+      ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірні посадки.' },
+      ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерние посадки.' },
+      en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening seating.' }
     }
   },
   {
     value: 'BEACH',
     copy: {
-      ua: { title: 'Пляжний відпочинок', body: 'Бунгало, ліжка та інші пляжні послуги.' },
-      ru: { title: 'Пляжный отдых', body: 'Бунгало, кровати и другие пляжные услуги.' },
-      en: { title: 'Beach leisure', body: 'Bungalows, beds and other beach services.' }
+      ua: { title: 'Пляж', body: 'Бунгало, ліжка та інші пляжні послуги.' },
+      ru: { title: 'Пляж', body: 'Бунгало, кровати и другие пляжные услуги.' },
+      en: { title: 'Beach', body: 'Bungalows, daybeds, and other beach services.' }
     }
   }
 ];
@@ -40,15 +64,21 @@ const BOOKING_KIND_OPTIONS = [
 export default function BookingPage() {
   const { locale } = useLocale();
   const [searchParams] = useSearchParams();
+  const c = (values) => localizedCopy(values, locale);
   const today = new Date().toISOString().slice(0, 10);
-  const eventSlug = searchParams.get('event') || '';
+
+  const lockedEventSlug = searchParams.get('event') || '';
   const returnedReservationCode = searchParams.get('reservation') || '';
   const returnedReservationToken = searchParams.get('t') || '';
-  const c = (values) => localizedCopy(values, locale);
+  const flowFromQuery = searchParams.get('flow') === 'EVENT' ? 'EVENT' : 'STANDARD';
+  const lockedToEvent = Boolean(lockedEventSlug);
 
-  const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'BEACH' ? 'BEACH' : 'TABLE');
+  const [bookingFlow, setBookingFlow] = useState(lockedToEvent ? 'EVENT' : flowFromQuery);
+  const [selectedEventSlug, setSelectedEventSlug] = useState(lockedEventSlug);
+  const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'BEACH' && !lockedToEvent ? 'BEACH' : 'TABLE');
   const [mapsState, setMapsState] = useState({ loading: true, error: '', maps: [] });
   const [unitsState, setUnitsState] = useState({ loading: false, error: '', map: null, zones: [], units: [] });
+  const [eventOptionsState, setEventOptionsState] = useState({ loading: false, error: '', events: [] });
   const [selected, setSelected] = useState({
     mapId: Number(searchParams.get('mapId') || '0'),
     zoneId: Number(searchParams.get('zoneId') || '0'),
@@ -75,45 +105,98 @@ export default function BookingPage() {
   const [eventInfo, setEventInfo] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
 
-  const usageMode = eventSlug ? 'EVENING' : 'DAY';
+  const activeEventSlug = bookingFlow === 'EVENT' ? (lockedEventSlug || selectedEventSlug) : '';
+  const resolvedBookingKind = bookingFlow === 'EVENT' ? 'TABLE' : bookingKind;
+  const usageMode = activeEventSlug ? 'EVENING' : 'DAY';
+  const canLoadMaps = bookingFlow === 'STANDARD' || Boolean(activeEventSlug);
 
   useMeta(
-    bookingKind === 'BEACH'
-      ? `${c({ ua: 'Бронювання пляжного відпочинку', ru: 'Бронирование пляжного отдыха', en: 'Book beach leisure' })} · GorPliaj`
+    resolvedBookingKind === 'BEACH'
+      ? `${c({ ua: 'Бронювання пляжу', ru: 'Бронирование пляжа', en: 'Book beach leisure' })} · GorPliaj`
       : `${c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Book a table' })} · GorPliaj`,
     c({
-      ua: 'Оберіть формат відпочинку, зону, вільну позицію та перейдіть до оплати.',
-      ru: 'Выберите формат отдыха, зону, свободную позицию и перейдите к оплате.',
-      en: 'Choose a booking type, zone, free position and continue to payment.'
+      ua: 'Оберіть сценарій, зону, вільну позицію та перейдіть до оплати.',
+      ru: 'Выберите сценарий, зону, свободную позицию и перейдите к оплате.',
+      en: 'Choose a booking flow, zone, available position, and continue to payment.'
     })
   );
 
   useEffect(() => {
-    if (!eventSlug) return;
+    if (lockedToEvent || bookingFlow !== 'EVENT') {
+      return;
+    }
+
+    let cancelled = false;
+    setEventOptionsState((current) => ({ ...current, loading: true, error: '' }));
+
+    eventsApi.list(false)
+      .then((events) => {
+        if (cancelled) return;
+        const availableEvents = Array.isArray(events)
+          ? events.filter((event) => ['BOOKING', 'BOTH'].includes(event.ctaType))
+          : [];
+        setEventOptionsState({ loading: false, error: '', events: availableEvents });
+        if (!selectedEventSlug && availableEvents[0]?.slug) {
+          setSelectedEventSlug(availableEvents[0].slug);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setEventOptionsState({ loading: false, error: error.message, events: [] });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingFlow, lockedToEvent, selectedEventSlug]);
+
+  useEffect(() => {
+    if (bookingFlow !== 'EVENT') return;
+    if (bookingKind !== 'TABLE') {
+      setBookingKind('TABLE');
+    }
+  }, [bookingFlow, bookingKind]);
+
+  useEffect(() => {
+    if (!activeEventSlug) {
+      setEventInfo(null);
+      setTicketTypes([]);
+      return;
+    }
 
     let ignore = false;
     Promise.all([
-      eventsApi.bySlug(eventSlug).catch(() => null),
-      eventsApi.ticketTypes(eventSlug).catch(() => ({ ticketTypes: [] }))
+      eventsApi.bySlug(activeEventSlug).catch(() => null),
+      eventsApi.ticketTypes(activeEventSlug).catch(() => ({ ticketTypes: [] }))
     ]).then(([event, tickets]) => {
       if (ignore) return;
       setEventInfo(event);
       setTicketTypes(Array.isArray(tickets?.ticketTypes) ? tickets.ticketTypes : []);
       if (event?.startAt && !searchParams.get('date')) {
-        setForm((current) => ({ ...current, date: toDateOnly(event.startAt) }));
+        setForm((current) => ({
+          ...current,
+          date: toDateOnly(event.startAt),
+          timeFrom: current.timeFrom === '12:00' ? toTimeOnly(event.startAt) || current.timeFrom : current.timeFrom
+        }));
       }
     });
 
     return () => {
       ignore = true;
     };
-  }, [eventSlug, searchParams]);
+  }, [activeEventSlug, searchParams]);
 
   useEffect(() => {
+    if (!canLoadMaps) {
+      setMapsState({ loading: false, error: '', maps: [] });
+      setSelected((current) => ({ ...current, mapId: 0, zoneId: 0, bookableUnitId: '' }));
+      return;
+    }
+
     let cancelled = false;
     setMapsState({ loading: true, error: '', maps: [] });
 
-    mapApi.list({ usageMode, bookingKind, guests: form.guests })
+    mapApi.list({ usageMode, bookingKind: resolvedBookingKind, guests: form.guests })
       .then((result) => {
         if (cancelled) return;
         const maps = Array.isArray(result?.maps) ? result.maps : [];
@@ -135,7 +218,7 @@ export default function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [usageMode, bookingKind, form.guests]);
+  }, [canLoadMaps, usageMode, resolvedBookingKind, form.guests]);
 
   useEffect(() => {
     if (!selected.mapId) {
@@ -150,7 +233,7 @@ export default function BookingPage() {
       date: form.date,
       timeFrom: form.timeFrom,
       guests: form.guests,
-      bookingKind
+      bookingKind: resolvedBookingKind
     })
       .then((result) => {
         if (cancelled) return;
@@ -180,7 +263,7 @@ export default function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [selected.mapId, form.date, form.timeFrom, form.guests, bookingKind]);
+  }, [selected.mapId, form.date, form.timeFrom, form.guests, resolvedBookingKind]);
 
   useEffect(() => {
     if (!returnedReservationCode || !returnedReservationToken) return;
@@ -189,19 +272,17 @@ export default function BookingPage() {
     bookingsApi.status(returnedReservationCode, returnedReservationToken)
       .then((result) => {
         setReservationStatus(result);
-        if (result.downloadUrl) {
-          setSuccessMessage(c({
+        setSuccessMessage(result.downloadUrl
+          ? c({
             ua: 'Оплату підтверджено. PDF бронювання готовий.',
             ru: 'Оплата подтверждена. PDF бронирования готов.',
             en: 'Payment confirmed. Booking PDF is ready.'
-          }));
-        } else {
-          setSuccessMessage(c({
+          })
+          : c({
             ua: 'Повернулися з оплати. Очікуємо підтвердження платежу.',
-            ru: 'Вернулись из оплаты. Ожидаем подтверждение платежа.',
+            ru: 'Вернулись из оплаты. Ожидаем подтверждения платежа.',
             en: 'Returned from payment. Waiting for payment confirmation.'
           }));
-        }
       })
       .catch((error) => setErrorMessage(error.message));
   }, [returnedReservationCode, returnedReservationToken, locale]);
@@ -263,7 +344,7 @@ export default function BookingPage() {
     if (type === 'KROVAT') return c({ ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' });
     if (type === 'PIER') return c({ ua: 'Пірс', ru: 'Пирс', en: 'Pier' });
     if (type === 'SUNBED') return c({ ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' });
-    return bookingKindTitle(bookingKind);
+    return bookingKindTitle(resolvedBookingKind);
   }
 
   const unitTypeGroups = useMemo(() => {
@@ -302,7 +383,7 @@ export default function BookingPage() {
     });
 
     return Array.from(groups.values()).sort((left, right) => left.label.localeCompare(right.label, locale));
-  }, [filteredUnits, locale]);
+  }, [filteredUnits, locale, resolvedBookingKind]);
 
   const selectedType = useMemo(
     () => unitTypeGroups.find((group) => group.key === selectedTypeKey) || null,
@@ -319,15 +400,12 @@ export default function BookingPage() {
       if (current && unitTypeGroups.some((group) => group.key === current)) {
         return current;
       }
-
       return unitTypeGroups[0].key;
     });
   }, [unitTypeGroups]);
 
   useEffect(() => {
-    if (!selectedType) {
-      return;
-    }
+    if (!selectedType) return;
 
     setSelected((current) => {
       if (current.bookableUnitId && selectedType.units.some((unit) => unit.id === current.bookableUnitId)) {
@@ -350,19 +428,15 @@ export default function BookingPage() {
       mapId: String(selected.mapId)
     });
 
-    if (unit?.tableId) {
-      params.set('tableId', String(unit.tableId));
-    }
-
-    if (unit?.objectId) {
-      params.set('objectId', String(unit.objectId));
-    }
+    if (unit?.tableId) params.set('tableId', String(unit.tableId));
+    if (unit?.objectId) params.set('objectId', String(unit.objectId));
 
     return `/map-preview?${params.toString()}`;
   }
 
   async function submitBooking(event) {
     event.preventDefault();
+
     if (!selectedUnit) {
       setErrorMessage(c({
         ua: 'Спочатку оберіть вільну позицію.',
@@ -371,6 +445,7 @@ export default function BookingPage() {
       }));
       return;
     }
+
     if (!form.agreeRules || !form.agreePrivacy) {
       setErrorMessage(c({
         ua: 'Потрібно погодитися з правилами та політикою.',
@@ -390,7 +465,7 @@ export default function BookingPage() {
       const result = await bookingsApi.create({
         mapId: selected.mapId,
         bookableUnitId: selectedUnit.id,
-        bookingKind,
+        bookingKind: resolvedBookingKind,
         customerName: form.customerName,
         customerPhone: form.customerPhone,
         customerEmail: form.customerEmail,
@@ -398,7 +473,7 @@ export default function BookingPage() {
         reservationDate: form.date,
         timeFrom: form.timeFrom,
         commentCustomer: form.commentCustomer,
-        eventSlug: eventSlug || undefined
+        eventSlug: activeEventSlug || undefined
       });
 
       setPaymentUrl(result.paymentUrl || '');
@@ -430,47 +505,72 @@ export default function BookingPage() {
     }
   }
 
-  const pageTitle = bookingKind === 'BEACH'
-    ? c({ ua: 'Пляжний відпочинок', ru: 'Пляжный отдых', en: 'Beach leisure' })
-    : c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Table booking' });
+  const pageTitle = bookingFlow === 'EVENT'
+    ? c({ ua: 'Бронювання на подію', ru: 'Бронь на событие', en: 'Event booking' })
+    : resolvedBookingKind === 'BEACH'
+      ? c({ ua: 'Пляжний відпочинок', ru: 'Пляжный отдых', en: 'Beach leisure' })
+      : c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Table booking' });
+
+  const formIntro = bookingFlow === 'EVENT'
+    ? c({
+      ua: 'Оберіть подію, вечірню карту та конкретний стіл. Пляжні позиції тут приховані, щоб сценарій лишався простим.',
+      ru: 'Выберите событие, вечернюю карту и конкретный стол. Пляжные позиции здесь скрыты, чтобы сценарий оставался простым.',
+      en: 'Choose an event, an evening map, and a specific table. Beach positions are hidden here to keep the flow simple.'
+    })
+    : c({
+      ua: 'Оберіть формат відпочинку, зону та конкретну позицію. Якщо для неї передбачено депозит, оплата відкриється на фінальному кроці.',
+      ru: 'Выберите формат отдыха, зону и конкретную позицию. Если для нее предусмотрен депозит, оплата откроется на финальном шаге.',
+      en: 'Choose a format, zone, and specific position. If a deposit applies, payment will open on the final step.'
+    });
+
+  const selectedMetaLine = [
+    bookingKindTitle(resolvedBookingKind),
+    selectedZone ? localizeField(selectedZone.name, locale) : '',
+    selectedMap ? localizeField(selectedMap.name, locale) : ''
+  ].filter(Boolean).join(' · ');
 
   return (
     <>
       <div className="section-header">
         <div>
           <h1>{pageTitle}</h1>
-          <p className="muted">
-            {c({
-              ua: 'Оберіть формат, зону та конкретну позицію. Якщо для неї передбачено депозит або квитки на подію, оплата відкриється на фінальному кроці.',
-              ru: 'Выберите формат, зону и конкретную позицию. Если для нее предусмотрен депозит или билеты на событие, оплата откроется на финальном шаге.',
-              en: 'Choose a format, zone and a specific position. If a deposit or event tickets apply, payment will open on the final step.'
-            })}
-          </p>
+          <p className="muted">{formIntro}</p>
         </div>
       </div>
 
-      {eventSlug ? (
-        <div className="booking-summary-panel">
+      {activeEventSlug ? (
+        <div className="booking-summary-panel booking-event-panel">
           <p className="muted" style={{ margin: 0 }}>
-            {c({ ua: 'Бронювання для події', ru: 'Бронирование для события', en: 'Booking for event' })}: <strong>{localizeField(eventInfo?.title, locale) || eventSlug}</strong>
+            {c({ ua: 'Бронювання для події', ru: 'Бронирование для события', en: 'Booking for event' })}: <strong>{localizeField(eventInfo?.title, locale) || activeEventSlug}</strong>
+          </p>
+          <p className="muted" style={{ margin: 0 }}>
+            {c({
+              ua: 'У цьому сценарії доступні тільки столи для вечірньої події.',
+              ru: 'В этом сценарии доступны только столы для вечернего события.',
+              en: 'Only evening event tables are available in this flow.'
+            })}
           </p>
         </div>
       ) : null}
 
       <form onSubmit={submitBooking} className="form-grid booking-flow-grid">
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '1. Формат відпочинку', ru: '1. Формат отдыха', en: '1. Booking type' })}</label>
+          <label>{c({ ua: '1. Сценарій бронювання', ru: '1. Сценарий брони', en: '1. Booking flow' })}</label>
           <div className="booking-kind-grid">
-            {BOOKING_KIND_OPTIONS.map((option) => {
+            {BOOKING_FLOW_OPTIONS.map((option) => {
               const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'];
               return (
                 <button
                   key={option.value}
                   type="button"
-                  className={`booking-kind-card${bookingKind === option.value ? ' active' : ''}`}
+                  className={`booking-kind-card${bookingFlow === option.value ? ' active' : ''}`}
+                  disabled={lockedToEvent}
                   onClick={() => {
-                    setBookingKind(option.value);
+                    setBookingFlow(option.value);
                     setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                    if (option.value === 'STANDARD') {
+                      setSelectedEventSlug('');
+                    }
                   }}
                 >
                   <strong>{localized.title}</strong>
@@ -479,68 +579,108 @@ export default function BookingPage() {
               );
             })}
           </div>
-          {selectedType ? (
-            <div className="booking-variants-panel">
-              <div className="booking-variants-head">
-                <div>
-                  <span className="eyebrow">{c({ ua: '5. Варіанти типу', ru: '5. Варианты типа', en: '5. Type variants' })}</span>
-                  <strong>{selectedType.label}</strong>
-                </div>
-                <span className="booking-variants-count">
-                  {selectedType.units.length} {c({ ua: 'позицій', ru: 'позиций', en: 'positions' })}
-                </span>
-              </div>
-              <div className="booking-variants-list">
-                {selectedType.units.map((unit) => {
-                  const localizedName = getUnitDisplayName(unit, locale);
-                  const isActive = selected.bookableUnitId === unit.id;
+          {bookingFlow === 'EVENT' ? (
+            <div className="booking-flow-note">
+              <strong>{c({ ua: 'Для подій бронюємо тільки столи', ru: 'Для событий бронируем только столы', en: 'Events use table-only booking' })}</strong>
+              <span>{c({ ua: 'Пляжні послуги приховані, щоб не змішувати денний і вечірній сценарії.', ru: 'Пляжные услуги скрыты, чтобы не смешивать дневной и вечерний сценарии.', en: 'Beach services are hidden so day and evening flows do not get mixed.' })}</span>
+            </div>
+          ) : (
+            <>
+              <label>{c({ ua: '2. Формат відпочинку', ru: '2. Формат отдыха', en: '2. Booking type' })}</label>
+              <div className="booking-kind-grid">
+                {BOOKING_KIND_OPTIONS.map((option) => {
+                  const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'];
                   return (
-                    <article key={unit.id} className={`booking-variant-row${isActive ? ' active' : ''}`}>
-                      <div className="booking-variant-copy">
-                        <strong>{unit.code || localizedName}</strong>
-                        <span>{localizedName}</span>
-                        <span>{unitStatusLabel(unit.status)} · {Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
-                      </div>
-                      <div className="booking-variant-actions">
-                        <Link className="btn btn-secondary btn-small" to={buildMapPreviewHref(unit)}>
-                          {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
-                        </Link>
-                        <button
-                          type="button"
-                          className={`btn btn-small ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                          disabled={unit.status !== 'free'}
-                          onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
-                        >
-                          {isActive
-                            ? c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })
-                            : c({ ua: 'Обрати', ru: 'Выбрать', en: 'Select' })}
-                        </button>
-                      </div>
-                    </article>
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`booking-kind-card${bookingKind === option.value ? ' active' : ''}`}
+                      onClick={() => {
+                        setBookingKind(option.value);
+                        setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                      }}
+                    >
+                      <strong>{localized.title}</strong>
+                      <span>{localized.body}</span>
+                    </button>
                   );
                 })}
               </div>
-            </div>
-          ) : null}
+            </>
+          )}
         </div>
 
+        {bookingFlow === 'EVENT' && !lockedToEvent ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label>{c({ ua: '2. Оберіть подію', ru: '2. Выберите событие', en: '2. Choose an event' })}</label>
+            <select
+              className="form-input"
+              value={selectedEventSlug}
+              onChange={(event) => {
+                setSelectedEventSlug(event.target.value);
+                setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+              }}
+            >
+              <option value="">{c({ ua: 'Оберіть подію', ru: 'Выберите событие', en: 'Choose an event' })}</option>
+              {eventOptionsState.events.map((item) => (
+                <option key={item.id} value={item.slug}>
+                  {localizeField(item.title, locale)}
+                </option>
+              ))}
+            </select>
+            {eventOptionsState.loading ? <div className="state-msg">{c({ ua: 'Завантажуємо події...', ru: 'Загружаем события...', en: 'Loading events...' })}</div> : null}
+            {eventOptionsState.error ? <div className="state-msg state-error">{eventOptionsState.error}</div> : null}
+          </div>
+        ) : null}
+
+        {bookingFlow === 'EVENT' && !activeEventSlug && !eventOptionsState.loading ? (
+          <div className="state-msg" style={{ gridColumn: '1 / -1' }}>
+            {c({
+              ua: 'Спочатку оберіть подію, після цього відкриються вечірні карти та вільні столи.',
+              ru: 'Сначала выберите событие, после этого откроются вечерние карты и свободные столы.',
+              en: 'Choose an event first to load evening maps and available tables.'
+            })}
+          </div>
+        ) : null}
+
         <div className="form-group">
-          <label>{c({ ua: 'Дата', ru: 'Дата', en: 'Date' })}</label>
-          <input type="date" className="form-input" value={form.date} min={today} required onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))} />
+          <label>{c({ ua: bookingFlow === 'EVENT' ? '3. Дата події' : '3. Дата', ru: bookingFlow === 'EVENT' ? '3. Дата события' : '3. Дата', en: bookingFlow === 'EVENT' ? '3. Event date' : '3. Date' })}</label>
+          <input
+            type="date"
+            className="form-input"
+            value={form.date}
+            min={today}
+            required
+            onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
+          />
         </div>
 
         <div className="form-group">
           <label>{c({ ua: 'Гостей', ru: 'Гостей', en: 'Guests' })}</label>
-          <input type="number" className="form-input" value={form.guests} min="1" max="20" required onChange={(event) => setForm((current) => ({ ...current, guests: Number(event.target.value) }))} />
+          <input
+            type="number"
+            className="form-input"
+            value={form.guests}
+            min="1"
+            max="20"
+            required
+            onChange={(event) => setForm((current) => ({ ...current, guests: Number(event.target.value) }))}
+          />
         </div>
 
         <div className="form-group">
           <label>{c({ ua: 'Час початку', ru: 'Время начала', en: 'Start time' })}</label>
-          <input type="time" className="form-input" value={form.timeFrom} required onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))} />
+          <input
+            type="time"
+            className="form-input"
+            value={form.timeFrom}
+            required
+            onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
+          />
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '2. Карта розміщення', ru: '2. Карта размещения', en: '2. Venue map' })}</label>
+          <label>{c({ ua: bookingFlow === 'EVENT' ? '4. Карта події' : '4. Карта розміщення', ru: bookingFlow === 'EVENT' ? '4. Карта события' : '4. Карта размещения', en: bookingFlow === 'EVENT' ? '4. Event map' : '4. Venue map' })}</label>
           <div className="booking-map-grid">
             {mapsState.maps.map((map) => (
               <button
@@ -550,7 +690,13 @@ export default function BookingPage() {
                 onClick={() => setSelected((current) => ({ ...current, mapId: map.id, zoneId: 0, bookableUnitId: '' }))}
               >
                 <strong>{localizeField(map.name, locale)}</strong>
-                <span>{localizeField(map.description, locale) || (map.usageMode === 'EVENING' ? c({ ua: 'Вечірня карта', ru: 'Вечерняя карта', en: 'Evening map' }) : c({ ua: 'Денна карта', ru: 'Дневная карта', en: 'Day map' }))}</span>
+                <span>
+                  {localizeField(map.description, locale) || (
+                    map.usageMode === 'EVENING'
+                      ? c({ ua: 'Вечірня карта', ru: 'Вечерняя карта', en: 'Evening map' })
+                      : c({ ua: 'Денна карта', ru: 'Дневная карта', en: 'Day map' })
+                  )}
+                </span>
                 <span>{c({ ua: 'Доступно позицій', ru: 'Доступно позиций', en: 'Available positions' })}: {map.unitCounts?.total || 0}</span>
               </button>
             ))}
@@ -560,16 +706,16 @@ export default function BookingPage() {
           {!mapsState.loading && !mapsState.error && !mapsState.maps.length ? (
             <div className="state-msg">
               {c({
-                ua: 'Для цього формату та кількості гостей зараз немає доступних карт.',
-                ru: 'Для этого формата и количества гостей сейчас нет доступных карт.',
-                en: 'No venue maps are available for this booking type and guest count right now.'
+                ua: 'Для цього сценарію та кількості гостей зараз немає доступних карт.',
+                ru: 'Для этого сценария и количества гостей сейчас нет доступных карт.',
+                en: 'No venue maps are available for this flow and guest count right now.'
               })}
             </div>
           ) : null}
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '3. Оберіть зону', ru: '3. Выберите зону', en: '3. Choose a zone' })}</label>
+          <label>{c({ ua: '5. Оберіть зону', ru: '5. Выберите зону', en: '5. Choose a zone' })}</label>
           <div className="booking-zone-tabs">
             {unitsState.zones.map((zone) => (
               <button
@@ -592,16 +738,16 @@ export default function BookingPage() {
           {!unitsState.loading && !unitsState.error && !!selected.mapId && !unitsState.zones.length ? (
             <div className="state-msg">
               {c({
-                ua: 'На цій карті ще немає зон для обраного формату.',
-                ru: 'На этой карте еще нет зон для выбранного формата.',
-                en: 'This map does not yet have zones for the selected booking type.'
+                ua: 'На цій карті ще немає зон для обраного сценарію.',
+                ru: 'На этой карте еще нет зон для выбранного сценария.',
+                en: 'This map does not yet have zones for the selected flow.'
               })}
             </div>
           ) : null}
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '4. Вільні варіанти', ru: '4. Свободные варианты', en: '4. Available options' })}</label>
+          <label>{c({ ua: '6. Вільні типи позицій', ru: '6. Свободные типы позиций', en: '6. Available position types' })}</label>
           <div className="booking-unit-grid">
             {unitTypeGroups.map((group) => {
               const localizedName = group.label;
@@ -627,7 +773,11 @@ export default function BookingPage() {
                     <strong>{localizedName}</strong>
                     <span>{group.units.slice(0, 3).map((item) => item.code).filter(Boolean).join(', ')}{group.units.length > 3 ? '...' : ''}</span>
                     <span>{Number(representative.seatsMin)}-{Number(representative.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
-                    <span>{representative.depositAmount > 0 ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(representative.depositAmount)}` : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}</span>
+                    <span>
+                      {representative.depositAmount > 0
+                        ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(representative.depositAmount)}`
+                        : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}
+                    </span>
                   </div>
                 </button>
               );
@@ -635,18 +785,19 @@ export default function BookingPage() {
             {!unitsState.loading && !unitTypeGroups.length ? (
               <div className="state-msg">
                 {c({
-                  ua: 'У цій зоні немає доступних позицій під обрані параметри.',
-                  ru: 'В этой зоне нет доступных позиций под выбранные параметры.',
+                  ua: 'У цій зоні немає доступних варіантів під обрані параметри.',
+                  ru: 'В этой зоне нет доступных вариантов под выбранные параметры.',
                   en: 'There are no available options in this zone for the selected parameters.'
                 })}
               </div>
             ) : null}
           </div>
+
           {selectedType ? (
             <div className="booking-variants-panel">
               <div className="booking-variants-head">
                 <div>
-                  <span className="eyebrow">{c({ ua: '5. Варіанти типу', ru: '5. Варианты типа', en: '5. Type variants' })}</span>
+                  <span className="eyebrow">{c({ ua: '7. Варіанти типу', ru: '7. Варианты типа', en: '7. Type variants' })}</span>
                   <strong>{selectedType.label}</strong>
                 </div>
                 <span className="booking-variants-count">
@@ -693,19 +844,20 @@ export default function BookingPage() {
               <div className="booking-selected-copy">
                 <span className="eyebrow">{c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })}</span>
                 <strong>{getUnitDisplayName(selectedUnit, locale)}</strong>
-                <span>
-                  {[bookingKindTitle(bookingKind), selectedZone ? localizeField(selectedZone.name, locale) : '', selectedMap ? localizeField(selectedMap.name, locale) : '']
-                    .filter(Boolean)
-                    .join(' • ')}
-                </span>
+                <span>{selectedMetaLine}</span>
               </div>
               <div className="booking-selected-meta">
                 <span>{positionTypeLabel(selectedUnit.positionType)}</span>
                 <span>{Number(selectedUnit.seatsMin)}-{Number(selectedUnit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
-                <span>{selectedUnit.depositAmount > 0 ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}` : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}</span>
+                <span>
+                  {selectedUnit.depositAmount > 0
+                    ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}`
+                    : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}
+                </span>
               </div>
             </div>
           ) : null}
+
           <div className="booking-summary-panel">
             <p className="muted" style={{ margin: 0 }}>
               <strong>{c({ ua: 'До оплати зараз', ru: 'К оплате сейчас', en: 'Due now' })}: {money(paymentPreview.totalAmount, paymentPreview.currency)}</strong>
@@ -714,7 +866,7 @@ export default function BookingPage() {
               {c({ ua: 'Депозит позиції', ru: 'Депозит позиции', en: 'Position deposit' })}: {paymentPreview.depositAmount > 0 ? money(paymentPreview.depositAmount, paymentPreview.currency) : c({ ua: 'не задано', ru: 'не задан', en: 'not configured' })}
             </p>
             <p className="muted" style={{ margin: 0 }}>
-              {c({ ua: 'Тип бронювання', ru: 'Тип бронирования', en: 'Booking type' })}: {bookingKindTitle(bookingKind)}
+              {c({ ua: 'Тип бронювання', ru: 'Тип бронирования', en: 'Booking type' })}: {bookingKindTitle(resolvedBookingKind)}
             </p>
             {paymentPreview.entryTicketsAmount > 0 ? (
               <p className="muted" style={{ margin: 0 }}>
@@ -725,7 +877,7 @@ export default function BookingPage() {
         </div>
 
         <div className="form-group">
-          <label>{c({ ua: '5. Ім’я', ru: '5. Имя', en: '5. Name' })}</label>
+          <label>{c({ ua: '8. Імʼя', ru: '8. Имя', en: '8. Name' })}</label>
           <input type="text" className="form-input" value={form.customerName} required minLength="2" onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))} />
         </div>
 
@@ -745,7 +897,7 @@ export default function BookingPage() {
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '6. Підтвердження', ru: '6. Подтверждение', en: '6. Confirmation' })}</label>
+          <label>{c({ ua: '9. Підтвердження', ru: '9. Подтверждение', en: '9. Confirmation' })}</label>
           <div className="booking-agreements">
             <label className="booking-check">
               <input type="checkbox" checked={form.agreeRules} onChange={(event) => setForm((current) => ({ ...current, agreeRules: event.target.checked }))} />
@@ -792,6 +944,11 @@ export default function BookingPage() {
               ? c({ ua: 'Вечірній режим: насамперед для подій та вечірніх посадок.', ru: 'Вечерний режим: прежде всего для событий и вечерних посадок.', en: 'Evening mode: primarily for events and evening seating.' })
               : c({ ua: 'Денний режим: підходить і для столів, і для пляжного відпочинку.', ru: 'Дневной режим: подходит и для столов, и для пляжного отдыха.', en: 'Day mode: suitable for both tables and beach leisure.' })}
           </p>
+          {reservationAccess?.ticketCode ? (
+            <p className="muted" style={{ margin: 0 }}>
+              {c({ ua: 'Код бронювання', ru: 'Код бронирования', en: 'Booking code' })}: <strong>{reservationAccess.ticketCode}</strong>
+            </p>
+          ) : null}
         </div>
       ) : null}
     </>

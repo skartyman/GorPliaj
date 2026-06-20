@@ -112,6 +112,18 @@ export default function EventDetailPage() {
     });
   }, [searchParams]);
 
+  useEffect(() => {
+    if (searchParams.get('focus') !== 'tickets') return;
+    if (!state.event || !['TICKETS', 'BOTH'].includes(state.event.ctaType)) return;
+
+    const node = document.getElementById('tickets');
+    if (!node) return;
+
+    window.requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [searchParams, state.event, sales.ticketTypes.length]);
+
   const visibleTicketTypes = useMemo(() => {
     if (!sales.sessions.length) return sales.ticketTypes;
     return sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(orderForm.eventSessionId || ''));
