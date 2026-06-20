@@ -175,7 +175,6 @@ async function buildTicketPayload(order, ticket, context) {
   const venue = localizedText(context.settings?.title) || 'GorPliaj';
   const address = localizedText(context.settings?.address) || 'Одеса, пляж Отрада';
   const support = buildSupportLabel(context.settings);
-  const tableBooking = buildTableBookingLabel(order, context.settings);
   const scanUrl = buildSaleTicketVerifyUrl(ticket.code);
 
   return {
@@ -194,7 +193,6 @@ async function buildTicketPayload(order, ticket, context) {
     posterDataUrl: posterBuffer ? imageBufferToDataUrl(posterBuffer, 'image/png') : '',
     venue,
     address,
-    tableBooking,
     support,
     scanUrl,
     qrDataUrl: await QRCode.toDataURL(scanUrl, {
@@ -255,8 +253,7 @@ function buildTicketHtml(ticket) {
           ${renderInfoBlock('Тип квитка', ticket.ticketType)}
           ${renderInfoBlock('Замовлення', ticket.orderNumber)}
           ${renderInfoBlock('Локація', `${ticket.venue} · ${ticket.address}`)}
-          ${renderInfoBlock('Підтримка', ticket.support)}
-          ${renderInfoBlock('Стіл / бронювання', ticket.tableBooking, true)}
+          ${renderInfoBlock('Підтримка', ticket.support, true)}
         </div>
 
         <div class="important-block">

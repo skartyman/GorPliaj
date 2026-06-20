@@ -189,6 +189,7 @@ export default function EventDetailPage() {
   const fullDescription = localizeField(event.fullDescription, locale);
   const fullDescriptionHtml = sanitizeRichText(fullDescription);
   const paymentUrl = orderStatus?.paymentUrl || orderResult?.paymentUrl;
+  const bookingUrl = `/booking?event=${encodeURIComponent(event.slug)}`;
 
   return (
     <>
@@ -209,7 +210,7 @@ export default function EventDetailPage() {
           ) : null}
           <div className="btn-group event-detail-actions">
             {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
-              <Link className="btn btn-primary" to={`/booking?event=${event.slug}`}>
+              <Link className="btn btn-primary" to={bookingUrl}>
                 {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
               </Link>
             ) : null}
@@ -227,6 +228,32 @@ export default function EventDetailPage() {
 
           {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
             <div id="tickets" className="ticket-purchase-panel">
+              {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
+                <div className="event-booking-promo">
+                  <div>
+                    <span className="event-booking-promo-kicker">
+                      {c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Table booking' })}
+                    </span>
+                    <h2>
+                      {c({
+                        ua: 'Йдете на подію? Одразу забронюйте стіл, щоб провести вечір у своєму ритмі.',
+                        ru: 'Идете на событие? Сразу забронируйте стол, чтобы провести вечер без суеты.',
+                        en: 'Going to the event? Book your table right away for a smoother evening.'
+                      })}
+                    </h2>
+                    <p>
+                      {c({
+                        ua: 'Відкриємо бронювання саме для цієї події: тільки вечірні столи, без пляжних послуг і зайвих кроків.',
+                        ru: 'Откроем бронь именно для этого события: только вечерние столы, без пляжных услуг и лишних шагов.',
+                        en: 'This opens booking for this event only: evening tables, no beach options, and fewer extra steps.'
+                      })}
+                    </p>
+                  </div>
+                  <Link className="btn btn-primary" to={bookingUrl}>
+                    {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
+                  </Link>
+                </div>
+              ) : null}
               {sales.loading && !sales.ticketTypes.length ? (
                 <div className="state-msg">
                   {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
@@ -371,6 +398,11 @@ export default function EventDetailPage() {
                 <a className="btn btn-primary" href={orderStatus.downloadUrl}>
                   {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
                 </a>
+              ) : null}
+              {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
+                <Link className="btn btn-secondary" to={bookingUrl}>
+                  {c({ ua: 'Забронювати стіл на цю подію', ru: 'Забронировать стол на это событие', en: 'Book a table for this event' })}
+                </Link>
               ) : null}
               {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
                 <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
