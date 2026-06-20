@@ -576,16 +576,22 @@ async function useTicket(code, adminUserId) {
   const result = await prisma.$transaction(async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { code: normalizedCode } });
     if (!ticket) return { type: 'NOT_FOUND' };
-    if (ticket.status !== 'VALID') {
+
+    const updatedState = await tx.ticket.updateMany({
+      where: { id: ticket.id, status: 'VALID' },
+      data: { status: 'USED', usedAt: new Date() }
+    });
+
+    if (updatedState.count !== 1) {
+      const latestTicket = await tx.ticket.findUnique({ where: { id: ticket.id } });
       await tx.ticketScan.create({
-        data: { ticketId: ticket.id, adminUserId, result: `REJECTED_${ticket.status}` }
+        data: { ticketId: ticket.id, adminUserId, result: `REJECTED_${latestTicket?.status || ticket.status}` }
       });
-      return { type: 'INVALID_STATUS', status: ticket.status };
+      return { type: 'INVALID_STATUS', status: latestTicket?.status || ticket.status };
     }
 
-    const updated = await tx.ticket.update({
+    const updated = await tx.ticket.findUnique({
       where: { id: ticket.id },
-      data: { status: 'USED', usedAt: new Date() },
       include: {
         event: true,
         eventSession: true,

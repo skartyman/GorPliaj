@@ -1,4 +1,5 @@
 const ticketSalesService = require('../services/ticketSalesService');
+const { verifySaleTicketSignature } = require('../utils/ticketSignature');
 
 function parseId(value) {
   const id = Number(value);
@@ -120,7 +121,15 @@ async function listTickets(req, res) {
 async function verifyTicket(req, res) {
   try {
     const ticket = await ticketSalesService.verifyTicket(req.params.code);
-    return ticket ? res.json({ ticket }) : res.status(404).json({ message: 'Ticket not found.' });
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
+
+    const signature = String(req.query.t || '').trim();
+    const isAuthentic = signature ? verifySaleTicketSignature(ticket.code, signature) : null;
+    if (signature && !isAuthentic) {
+      return res.status(403).json({ message: 'Ticket signature is invalid.' });
+    }
+
+    return res.json({ ticket: { ...ticket, isAuthentic } });
   } catch (error) {
     console.error('[adminTicketSales.verifyTicket] Failed.', error);
     return res.status(500).json({ message: 'Unable to verify ticket.' });

@@ -68,6 +68,7 @@ async function loadImageBuffer(source) {
 }
 
 module.exports = {
+  getFontPaths,
   getLogoPath,
   loadImageBuffer,
   registerPdfFonts

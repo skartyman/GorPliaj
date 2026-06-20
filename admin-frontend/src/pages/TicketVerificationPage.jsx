@@ -44,7 +44,7 @@ export default function TicketVerificationPage() {
       const params = signature ? `?t=${encodeURIComponent(signature)}` : '';
       const isSaleTicket = /^GPT-/i.test(ticketCode);
       const path = isSaleTicket
-        ? `/api/admin/tickets/verify/${encodeURIComponent(ticketCode)}`
+        ? `/api/admin/tickets/verify/${encodeURIComponent(ticketCode)}${params}`
         : `/api/admin/reservations/verify/${encodeURIComponent(ticketCode)}${params}`;
       const { response, body } = await apiRequest(path);
       if (response.ok) {
@@ -186,9 +186,10 @@ export default function TicketVerificationPage() {
 
   useEffect(() => {
     const ticketCode = String(searchParams.get('ticket') || '').trim().toUpperCase();
+    const signature = String(searchParams.get('t') || '').trim();
     if (ticketCode) {
       setCode(ticketCode);
-      fetchVerify(ticketCode, '');
+      fetchVerify(ticketCode, signature);
     }
   }, [searchParams]);
 
