@@ -68,13 +68,12 @@ export default function EventDetailPage() {
         const sessions = Array.isArray(result.sessions) ? result.sessions : [];
         const defaultSessionId = sessions[0] ? String(sessions[0].id) : '';
         const defaultTypes = ticketTypes.filter((type) => String(type.eventSessionId || '') === defaultSessionId);
-        const fallbackTypes = ticketTypes.filter((type) => !type.eventSessionId);
 
         setSales({ loading: false, error: '', ticketTypes, sessions });
         setOrderForm((current) => ({
           ...current,
           eventSessionId: current.eventSessionId || defaultSessionId,
-          ticketTypeId: current.ticketTypeId || String(defaultTypes[0]?.id || fallbackTypes[0]?.id || ticketTypes[0]?.id || '')
+          ticketTypeId: current.ticketTypeId || String(defaultTypes[0]?.id || ticketTypes[0]?.id || '')
         }));
       })
       .catch((error) => setSales({ loading: false, error: error.message, ticketTypes: [], sessions: [] }));
@@ -127,9 +126,7 @@ export default function EventDetailPage() {
 
   const visibleTicketTypes = useMemo(() => {
     if (!sales.sessions.length) return sales.ticketTypes;
-    const exactTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(orderForm.eventSessionId || ''));
-    if (exactTypes.length) return exactTypes;
-    return sales.ticketTypes.filter((type) => !type.eventSessionId);
+    return sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(orderForm.eventSessionId || ''));
   }, [sales.sessions, sales.ticketTypes, orderForm.eventSessionId]);
 
   const selectedTicketType = useMemo(() => {
@@ -155,9 +152,7 @@ export default function EventDetailPage() {
 
     try {
       const result = await eventsApi.createTicketOrder(slug, {
-        eventSessionId: selectedTicketType?.eventSessionId
-          ? Number(selectedTicketType.eventSessionId)
-          : null,
+        eventSessionId: orderForm.eventSessionId ? Number(orderForm.eventSessionId) : null,
         customerName: orderForm.customerName,
         customerEmail: orderForm.customerEmail,
         customerPhone: orderForm.customerPhone,
@@ -239,6 +234,15 @@ export default function EventDetailPage() {
                   })}
                 </div>
               ) : null}
+              {!sales.loading && sales.sessions.length > 0 && orderForm.eventSessionId && !visibleTicketTypes.length && !sales.error ? (
+                <div className="state-msg">
+                  {c({
+                    ua: 'Для обраної дати квитки ще не налаштовані. Оберіть іншу дату або зверніться до адміністратора.',
+                    ru: 'Для выбранной даты билеты еще не настроены. Выберите другую дату или обратитесь к администратору.',
+                    en: 'Tickets have not been configured for the selected date yet. Choose another date or contact the venue.'
+                  })}
+                </div>
+              ) : null}
               {sales.ticketTypes.length ? (
                 <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
                   <div className="form-group ticket-form-head">
@@ -253,11 +257,10 @@ export default function EventDetailPage() {
                         onChange={(eventValue) => {
                           const nextSessionId = eventValue.target.value;
                           const nextTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(nextSessionId || ''));
-                          const fallbackTypes = sales.ticketTypes.filter((type) => !type.eventSessionId);
                           setOrderForm({
                             ...orderForm,
                             eventSessionId: nextSessionId,
-                            ticketTypeId: String(nextTypes[0]?.id || fallbackTypes[0]?.id || '')
+                            ticketTypeId: String(nextTypes[0]?.id || '')
                           });
                         }}
                         required

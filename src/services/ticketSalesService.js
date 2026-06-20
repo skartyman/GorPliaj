@@ -100,6 +100,13 @@ async function ensureEventSessionBelongsToEvent(eventId, eventSessionId) {
   return session || null;
 }
 
+async function eventHasSessions(eventId) {
+  const count = await prisma.eventSession.count({
+    where: { eventId }
+  });
+  return count > 0;
+}
+
 async function listTicketTypes(eventId) {
   const rows = await prisma.ticketType.findMany({
     where: { eventId },
@@ -137,6 +144,9 @@ async function createTicketType(eventId, input) {
   }
 
   const eventSessionId = parseOptionalId(input.eventSessionId);
+  if (!eventSessionId && await eventHasSessions(eventId)) {
+    return { type: 'INVALID', message: 'Ticket type must be assigned to a specific event date.' };
+  }
   if (eventSessionId) {
     const session = await ensureEventSessionBelongsToEvent(eventId, eventSessionId);
     if (!session) return { type: 'INVALID', message: 'Event session is invalid.' };
@@ -166,6 +176,7 @@ async function createTicketType(eventId, input) {
 async function updateTicketType(id, input) {
   const existing = await prisma.ticketType.findUnique({ where: { id } });
   if (!existing) return { type: 'NOT_FOUND', message: 'Ticket type not found.' };
+  const hasSessions = await eventHasSessions(existing.eventId);
 
   const data = {};
   if (Object.prototype.hasOwnProperty.call(input, 'name')) {
@@ -200,6 +211,13 @@ async function updateTicketType(id, input) {
       if (!session) return { type: 'INVALID', message: 'Event session is invalid.' };
     }
     data.eventSessionId = eventSessionId;
+  }
+
+  const nextEventSessionId = Object.prototype.hasOwnProperty.call(data, 'eventSessionId')
+    ? data.eventSessionId
+    : existing.eventSessionId;
+  if (hasSessions && !nextEventSessionId && existing.soldCount < 1 && existing.isActive !== false) {
+    return { type: 'INVALID', message: 'Ticket type must be assigned to a specific event date.' };
   }
 
   const nextStart = Object.prototype.hasOwnProperty.call(data, 'salesStart') ? data.salesStart : existing.salesStart;

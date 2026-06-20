@@ -134,7 +134,7 @@ export default function TicketSalesPage() {
   }
 
   function resetTypeForm() {
-    setTypeForm((current) => ({ ...EMPTY_TYPE, eventSessionId: current.eventSessionId || '' }));
+    setTypeForm((current) => ({ ...EMPTY_TYPE, eventSessionId: sessions.length ? '' : (current.eventSessionId || '') }));
     setEditingTypeId(null);
   }
 
@@ -395,7 +395,7 @@ export default function TicketSalesPage() {
           <form className="event-admin-form" onSubmit={saveTicketType}>
             <label>Название (UA)<input required value={typeForm.name.ua} onChange={(event) => setTypeForm({ ...typeForm, name: { ...typeForm.name, ua: event.target.value } })} /></label>
             <label>Дата события
-              <select value={typeForm.eventSessionId} onChange={(event) => setTypeForm({ ...typeForm, eventSessionId: event.target.value })}>
+              <select required={sessions.length > 0} value={typeForm.eventSessionId} onChange={(event) => setTypeForm({ ...typeForm, eventSessionId: event.target.value })}>
                 <option value="">Без отдельной даты</option>
                 {sessions.map((session) => (
                   <option key={session.id} value={session.id}>{localizeField(session.name, language) || formatSessionLabel(session)}</option>
