@@ -93,6 +93,7 @@ export default function BookingPage() {
     customerPhone: '',
     customerEmail: '',
     commentCustomer: '',
+    agreeVenueRules: false,
     agreeRules: false,
     agreePrivacy: false
   });
@@ -440,11 +441,11 @@ export default function BookingPage() {
       return;
     }
 
-    if (!form.agreeRules || !form.agreePrivacy) {
+    if (!form.agreeVenueRules || !form.agreeRules || !form.agreePrivacy) {
       setErrorMessage(c({
-        ua: 'Потрібно погодитися з правилами та політикою.',
-        ru: 'Нужно согласиться с правилами и политикой.',
-        en: 'You need to accept the rules and policy.'
+        ua: 'Потрібно погодитися з правилами перебування, умовами оплати та політикою.',
+        ru: 'Нужно согласиться с правилами пребывания, условиями оплаты и политикой.',
+        en: 'You need to accept the venue rules, payment terms, and privacy policy.'
       }));
       return;
     }
@@ -867,6 +868,13 @@ export default function BookingPage() {
                 {c({ ua: 'Квитки на подію', ru: 'Билеты на событие', en: 'Event tickets' })}: {form.guests} x {money(paymentPreview.entryTicketPrice, paymentPreview.currency)} = {money(paymentPreview.entryTicketsAmount, paymentPreview.currency)}
               </p>
             ) : null}
+            <p className="menu-cart-note" style={{ margin: 0 }}>
+              {c({
+                ua: 'Нагадування: бронювання сервісних послуг оформлюється за 100% передоплатою, діє до 13:00 оплаченого дня, а за неявки до 13:00 може бути утримано 50% передоплати.',
+                ru: 'Напоминание: бронирование сервисных услуг оформляется по 100% предоплате, действует до 13:00 оплаченного дня, а при неявке до 13:00 может быть удержано 50% предоплаты.',
+                en: 'Reminder: paid service bookings require 100% prepayment, remain valid until 1:00 PM on the paid day, and a 50% retention may apply if the guest does not arrive by 1:00 PM.'
+              })}
+            </p>
           </div>
         </div>
 
@@ -893,6 +901,10 @@ export default function BookingPage() {
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           <label>{c({ ua: '9. Підтвердження', ru: '9. Подтверждение', en: '9. Confirmation' })}</label>
           <div className="booking-agreements">
+            <label className="booking-check">
+              <input type="checkbox" checked={form.agreeVenueRules} onChange={(event) => setForm((current) => ({ ...current, agreeVenueRules: event.target.checked }))} />
+              <span>{c({ ua: 'Я ознайомився з правилами перебування', ru: 'Я ознакомился с правилами пребывания', en: 'I have read the venue rules' })} <Link to="/rules">{c({ ua: 'читати', ru: 'читать', en: 'read' })}</Link></span>
+            </label>
             <label className="booking-check">
               <input type="checkbox" checked={form.agreeRules} onChange={(event) => setForm((current) => ({ ...current, agreeRules: event.target.checked }))} />
               <span>{c({ ua: 'Я погоджуюся з умовами оплати та повернення', ru: 'Я соглашаюсь с условиями оплаты и возврата', en: 'I agree to the payment and return terms' })} <Link to="/payment-returns">{c({ ua: 'читати', ru: 'читать', en: 'read' })}</Link></span>

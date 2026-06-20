@@ -1,158 +1,69 @@
+import { Link } from 'react-router-dom';
 import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
 const content = {
   ua: {
     title: 'Політика конфіденційності',
-    description: 'Розширена політика конфіденційності ГорПляж щодо збору, використання, зберігання та захисту персональних даних.',
-    updated: 'Останнє оновлення: 17 червня 2026',
+    description: 'Політика конфіденційності ГорПляж щодо збору, використання, зберігання та захисту персональних даних.',
+    updated: 'Останнє оновлення: 20 червня 2026',
+    intro: 'Ця політика пояснює, які персональні та технічні дані ГорПляж може обробляти під час бронювання, оплати, купівлі квитків, звернення до адміністрації та користування сайтом.',
+    note: 'Окремі умови надання послуг, передоплати, скасування, перебування на території комплексу та сервісного збору описані у правилах перебування та в умовах оплати і повернення.',
+    noteLink: 'Правила перебування',
+    noteHref: '/rules',
     sections: [
-      {
-        title: '1. Хто ми',
-        body: 'ГорПляж надає інформацію про заклад, меню, події, бронювання, квитки та повʼязані сервіси. Ця політика пояснює, які дані ми можемо обробляти під час користування сайтом і нашими офіційними каналами.'
-      },
-      {
-        title: '2. Які дані ми збираємо',
-        body: 'Ми можемо отримувати імʼя, номер телефону, електронну адресу, дату та час бронювання, кількість гостей, обраний стіл або подію, деталі замовлення, платіжний статус, технічні дані пристрою, IP-адресу, cookies та повідомлення, які ви надсилаєте адміністрації.'
-      },
-      {
-        title: '3. Як ми використовуємо дані',
-        body: 'Дані використовуються для обробки бронювань і замовлень, підтвердження оплати, видачі квитків, звʼязку з гостем, підтримки сервісу, покращення сайту, безпеки, аналітики та виконання юридичних або бухгалтерських обовʼязків.'
-      },
-      {
-        title: '4. Платежі',
-        body: 'Платежі можуть оброблятися сторонніми платіжними провайдерами. Ми не зберігаємо повні реквізити банківських карток на сайті. Для підтвердження платежу ми можемо зберігати суму, статус, ідентифікатор транзакції, дату та повʼязані дані замовлення.'
-      },
-      {
-        title: '5. Передача даних третім сторонам',
-        body: 'Ми можемо передавати дані сервісам, які допомагають працювати сайту: хостингу, платіжним провайдерам, сервісам електронної пошти, месенджерам, аналітиці, системам бронювання та технічній підтримці. Такі сторони отримують лише дані, необхідні для виконання їхніх функцій.'
-      },
-      {
-        title: '6. Cookies і технічні дані',
-        body: 'Сайт може використовувати cookies та локальне сховище для збереження мови, теми інтерфейсу, кошика, сесії та базової аналітики. Ви можете обмежити cookies у налаштуваннях браузера, але частина функцій сайту може працювати некоректно.'
-      },
-      {
-        title: '7. Зберігання даних',
-        body: 'Ми зберігаємо персональні дані не довше, ніж потрібно для надання послуг, вирішення звернень, бухгалтерського обліку, безпеки та дотримання законодавства. Строк зберігання може відрізнятися залежно від типу даних і підстави обробки.'
-      },
-      {
-        title: '8. Захист інформації',
-        body: 'Ми застосовуємо організаційні та технічні заходи для захисту даних від втрати, несанкціонованого доступу, зміни або розголошення. Водночас жоден спосіб передачі даних через інтернет не може бути гарантовано абсолютно безпечним.'
-      },
-      {
-        title: '9. Ваші права',
-        body: 'Ви можете звернутися до нас, щоб уточнити, виправити або видалити свої персональні дані, відкликати згоду на обробку, обмежити окремі види обробки або отримати інформацію про те, як використовуються ваші дані, якщо це не суперечить законним обовʼязкам закладу.'
-      },
-      {
-        title: '10. Зміни політики',
-        body: 'Ми можемо оновлювати цю політику, якщо змінюються сервіси, законодавчі вимоги або технічні процеси. Актуальна редакція завжди публікується на цій сторінці із зазначенням дати останнього оновлення.'
-      },
-      {
-        title: '11. Контакти',
-        body: 'З питань конфіденційності та обробки персональних даних звертайтеся до адміністрації за контактами, вказаними на сайті.'
-      }
+      { title: '1. Які дані ми можемо збирати', body: 'Ми можемо обробляти імʼя, номер телефону, email, дату і час бронювання, кількість гостей, обрану позицію або подію, коментар до замовлення, суму та статус оплати, технічні дані пристрою, IP-адресу, cookies, а також зміст звернень до адміністрації.' },
+      { title: '2. Для чого ми використовуємо дані', body: 'Дані використовуються для створення й супроводу бронювань, підтвердження платежів, надсилання квитків і документів, звʼязку з гостем, захисту від помилкових або дубльованих операцій, ведення внутрішнього обліку та виконання вимог законодавства.' },
+      { title: '3. Дані про оплату', body: 'Платежі можуть оброблятися сторонніми платіжними провайдерами. Ми не зберігаємо повні реквізити банківських карток на сайті, але можемо зберігати суму, валюту, статус, ідентифікатор транзакції, дату платежу та повʼязані з ним дані бронювання або замовлення.' },
+      { title: '4. Дані про погодження з правилами', body: 'Під час бронювання ми можемо фіксувати факт погодження гостя з правилами перебування, умовами оплати і повернення та політикою конфіденційності. Це потрібно для належного оформлення замовлення і підтвердження прийняття умов сервісу.' },
+      { title: '5. Передача третім сторонам', body: 'Ми можемо передавати дані платіжним провайдерам, сервісам email-розсилок, месенджерам, хостинговим і технічним сервісам лише в обсязі, необхідному для роботи сайту, бронювання, оплати, доставки квитків і підтримки гостей.' },
+      { title: '6. Cookies і технічні дані', body: 'Сайт може використовувати cookies та локальне сховище для збереження мови, сеансу, кошика, статусу бронювання та базової аналітики. Обмеження cookies у браузері може вплинути на коректну роботу окремих функцій.' },
+      { title: '7. Строк зберігання', body: 'Ми зберігаємо дані не довше, ніж це потрібно для надання послуг, розгляду звернень, бухгалтерського обліку, виконання договірних та законодавчих обовʼязків, а також захисту наших законних інтересів у спірних ситуаціях.' },
+      { title: '8. Захист даних', body: 'Ми застосовуємо організаційні та технічні заходи для захисту інформації від втрати, несанкціонованого доступу, зміни або розголошення. Водночас жоден спосіб передачі даних через інтернет не гарантує абсолютної безпеки.' },
+      { title: '9. Ваші права', body: 'Ви можете звернутися до адміністрації, щоб уточнити, виправити або видалити персональні дані, відкликати згоду, обмежити окремі види обробки або отримати додаткову інформацію, якщо це не суперечить обовʼязкам закладу за законом.' },
+      { title: '10. Зміни політики', body: 'Ми можемо оновлювати цю політику у разі зміни сервісів, правил бронювання, способів оплати або законодавчих вимог. Актуальна редакція завжди публікується на цій сторінці з датою останнього оновлення.' }
     ]
   },
   ru: {
     title: 'Политика конфиденциальности',
-    description: 'Расширенная политика конфиденциальности ГорПляж о сборе, использовании, хранении и защите персональных данных.',
-    updated: 'Последнее обновление: 17 июня 2026',
+    description: 'Политика конфиденциальности ГорПляж о сборе, использовании, хранении и защите персональных данных.',
+    updated: 'Последнее обновление: 20 июня 2026',
+    intro: 'Эта политика объясняет, какие персональные и технические данные ГорПляж может обрабатывать при бронировании, оплате, покупке билетов, обращении к администрации и использовании сайта.',
+    note: 'Отдельные условия оказания услуг, предоплаты, отмены, пребывания на территории комплекса и сервисного сбора описаны в правилах пребывания и в условиях оплаты и возврата.',
+    noteLink: 'Правила пребывания',
+    noteHref: '/rules',
     sections: [
-      {
-        title: '1. Кто мы',
-        body: 'ГорПляж предоставляет информацию о заведении, меню, событиях, бронировании, билетах и связанных сервисах. Эта политика объясняет, какие данные мы можем обрабатывать при использовании сайта и наших официальных каналов.'
-      },
-      {
-        title: '2. Какие данные мы собираем',
-        body: 'Мы можем получать имя, номер телефона, электронную почту, дату и время бронирования, количество гостей, выбранный стол или событие, детали заказа, платежный статус, технические данные устройства, IP-адрес, cookies и сообщения, которые вы отправляете администрации.'
-      },
-      {
-        title: '3. Как мы используем данные',
-        body: 'Данные используются для обработки бронирований и заказов, подтверждения оплаты, выдачи билетов, связи с гостем, поддержки сервиса, улучшения сайта, безопасности, аналитики и выполнения юридических или бухгалтерских обязанностей.'
-      },
-      {
-        title: '4. Платежи',
-        body: 'Платежи могут обрабатываться сторонними платежными провайдерами. Мы не храним полные реквизиты банковских карт на сайте. Для подтверждения платежа мы можем хранить сумму, статус, идентификатор транзакции, дату и связанные данные заказа.'
-      },
-      {
-        title: '5. Передача данных третьим сторонам',
-        body: 'Мы можем передавать данные сервисам, которые помогают работе сайта: хостингу, платежным провайдерам, сервисам электронной почты, мессенджерам, аналитике, системам бронирования и технической поддержке. Такие стороны получают только данные, необходимые для выполнения их функций.'
-      },
-      {
-        title: '6. Cookies и технические данные',
-        body: 'Сайт может использовать cookies и локальное хранилище для сохранения языка, темы интерфейса, корзины, сессии и базовой аналитики. Вы можете ограничить cookies в настройках браузера, но часть функций сайта может работать некорректно.'
-      },
-      {
-        title: '7. Хранение данных',
-        body: 'Мы храним персональные данные не дольше, чем нужно для оказания услуг, обработки обращений, бухгалтерского учета, безопасности и соблюдения законодательства. Срок хранения может отличаться в зависимости от типа данных и основания обработки.'
-      },
-      {
-        title: '8. Защита информации',
-        body: 'Мы применяем организационные и технические меры для защиты данных от потери, несанкционированного доступа, изменения или раскрытия. При этом ни один способ передачи данных через интернет не может быть гарантированно абсолютно безопасным.'
-      },
-      {
-        title: '9. Ваши права',
-        body: 'Вы можете обратиться к нам, чтобы уточнить, исправить или удалить свои персональные данные, отозвать согласие на обработку, ограничить отдельные виды обработки или получить информацию о том, как используются ваши данные, если это не противоречит законным обязанностям заведения.'
-      },
-      {
-        title: '10. Изменения политики',
-        body: 'Мы можем обновлять эту политику, если меняются сервисы, законодательные требования или технические процессы. Актуальная редакция всегда публикуется на этой странице с указанием даты последнего обновления.'
-      },
-      {
-        title: '11. Контакты',
-        body: 'По вопросам конфиденциальности и обработки персональных данных обращайтесь к администрации по контактам, указанным на сайте.'
-      }
+      { title: '1. Какие данные мы можем собирать', body: 'Мы можем обрабатывать имя, номер телефона, email, дату и время бронирования, количество гостей, выбранную позицию или событие, комментарий к заказу, сумму и статус оплаты, технические данные устройства, IP-адрес, cookies, а также содержание обращений к администрации.' },
+      { title: '2. Для чего мы используем данные', body: 'Данные используются для создания и сопровождения бронирований, подтверждения платежей, отправки билетов и документов, связи с гостем, защиты от ошибочных или дублирующих операций, внутреннего учета и выполнения требований законодательства.' },
+      { title: '3. Данные об оплате', body: 'Платежи могут обрабатываться сторонними платежными провайдерами. Мы не храним полные реквизиты банковских карт на сайте, но можем хранить сумму, валюту, статус, идентификатор транзакции, дату платежа и связанные с ним данные бронирования или заказа.' },
+      { title: '4. Данные о согласии с правилами', body: 'При бронировании мы можем фиксировать факт согласия гостя с правилами пребывания, условиями оплаты и возврата и политикой конфиденциальности. Это нужно для корректного оформления заказа и подтверждения принятия условий сервиса.' },
+      { title: '5. Передача третьим сторонам', body: 'Мы можем передавать данные платежным провайдерам, сервисам email-рассылок, мессенджерам, хостинговым и техническим сервисам только в объеме, необходимом для работы сайта, бронирования, оплаты, доставки билетов и поддержки гостей.' },
+      { title: '6. Cookies и технические данные', body: 'Сайт может использовать cookies и локальное хранилище для сохранения языка, сессии, корзины, статуса бронирования и базовой аналитики. Ограничение cookies в браузере может повлиять на корректную работу отдельных функций.' },
+      { title: '7. Срок хранения', body: 'Мы храним данные не дольше, чем это необходимо для оказания услуг, рассмотрения обращений, бухгалтерского учета, выполнения договорных и законодательных обязанностей, а также защиты наших законных интересов в спорных ситуациях.' },
+      { title: '8. Защита данных', body: 'Мы применяем организационные и технические меры для защиты информации от потери, несанкционированного доступа, изменения или раскрытия. При этом ни один способ передачи данных через интернет не гарантирует абсолютную безопасность.' },
+      { title: '9. Ваши права', body: 'Вы можете обратиться к администрации, чтобы уточнить, исправить или удалить персональные данные, отозвать согласие, ограничить отдельные виды обработки или получить дополнительную информацию, если это не противоречит обязанностям заведения по закону.' },
+      { title: '10. Изменения политики', body: 'Мы можем обновлять эту политику при изменении сервисов, правил бронирования, способов оплаты или требований законодательства. Актуальная редакция всегда публикуется на этой странице с датой последнего обновления.' }
     ]
   },
   en: {
     title: 'Privacy Policy',
-    description: 'Extended GorPliaj privacy policy about collecting, using, storing and protecting personal data.',
-    updated: 'Last updated: June 17, 2026',
+    description: 'GorPliaj privacy policy on collecting, using, storing, and protecting personal data.',
+    updated: 'Last updated: June 20, 2026',
+    intro: 'This policy explains what personal and technical data GorPliaj may process when you book services, make payments, buy tickets, contact the venue, or use the website.',
+    note: 'Separate conditions for service delivery, prepayment, cancellations, venue access, and the service charge are described in the venue rules and the payment and refund terms.',
+    noteLink: 'Venue rules',
+    noteHref: '/rules',
     sections: [
-      {
-        title: '1. Who We Are',
-        body: 'GorPliaj provides information about the venue, menu, events, bookings, tickets and related services. This policy explains what data we may process when you use the website and our official channels.'
-      },
-      {
-        title: '2. Data We Collect',
-        body: 'We may receive your name, phone number, email address, booking date and time, number of guests, selected table or event, order details, payment status, device technical data, IP address, cookies and messages you send to the administration.'
-      },
-      {
-        title: '3. How We Use Data',
-        body: 'Data is used to process bookings and orders, confirm payments, issue tickets, contact guests, support the service, improve the website, maintain security, run analytics and meet legal or accounting obligations.'
-      },
-      {
-        title: '4. Payments',
-        body: 'Payments may be processed by third-party payment providers. We do not store full bank card details on the website. To confirm payments, we may store the amount, status, transaction identifier, date and related order data.'
-      },
-      {
-        title: '5. Sharing Data With Third Parties',
-        body: 'We may share data with services that help operate the website, including hosting, payment providers, email services, messengers, analytics, booking systems and technical support. These parties receive only the data needed to perform their functions.'
-      },
-      {
-        title: '6. Cookies and Technical Data',
-        body: 'The website may use cookies and local storage to save language, interface theme, cart, session and basic analytics. You can restrict cookies in browser settings, but some website functions may not work correctly.'
-      },
-      {
-        title: '7. Data Retention',
-        body: 'We retain personal data only as long as needed to provide services, handle requests, keep accounting records, maintain security and comply with law. Retention periods may vary depending on the data type and processing basis.'
-      },
-      {
-        title: '8. Information Security',
-        body: 'We use organizational and technical measures to protect data from loss, unauthorized access, alteration or disclosure. However, no method of data transmission over the internet can be guaranteed to be absolutely secure.'
-      },
-      {
-        title: '9. Your Rights',
-        body: 'You may contact us to clarify, correct or delete your personal data, withdraw consent, restrict certain processing or receive information about how your data is used, provided this does not conflict with the venueʼs legal obligations.'
-      },
-      {
-        title: '10. Policy Changes',
-        body: 'We may update this policy if services, legal requirements or technical processes change. The current version is always published on this page with the last updated date.'
-      },
-      {
-        title: '11. Contacts',
-        body: 'For privacy and personal data questions, contact the administration using the contact details shown on the website.'
-      }
+      { title: '1. Data we may collect', body: 'We may process your name, phone number, email, booking date and time, number of guests, selected position or event, order comments, payment amount and status, device technical data, IP address, cookies, and messages sent to the venue administration.' },
+      { title: '2. Why we use data', body: 'Data is used to create and manage bookings, confirm payments, send tickets and documents, contact guests, protect against mistaken or duplicate transactions, keep internal records, and comply with legal obligations.' },
+      { title: '3. Payment data', body: 'Payments may be processed by third-party payment providers. We do not store full bank card details on the website, but we may store the payment amount, currency, status, transaction identifier, payment date, and related booking or order details.' },
+      { title: '4. Consent records', body: 'When a guest places a booking, we may record their acceptance of the venue rules, payment and refund terms, and privacy policy. This helps us properly process the order and confirm acceptance of the service terms.' },
+      { title: '5. Sharing with third parties', body: 'We may share data with payment providers, email services, messengers, hosting providers, and technical vendors only to the extent needed to operate the website, process bookings, receive payments, deliver tickets, and support guests.' },
+      { title: '6. Cookies and technical data', body: 'The website may use cookies and local storage to save language preferences, session data, cart details, booking status, and basic analytics. Restricting cookies in your browser may affect some website functions.' },
+      { title: '7. Retention period', body: 'We keep data no longer than necessary to provide services, review requests, maintain accounting records, meet contractual and legal duties, and protect our legitimate interests in case of disputes.' },
+      { title: '8. Data protection', body: 'We apply organizational and technical safeguards to protect information from loss, unauthorized access, alteration, or disclosure. However, no method of internet transmission can be guaranteed to be absolutely secure.' },
+      { title: '9. Your rights', body: 'You may contact the venue administration to clarify, correct, or delete personal data, withdraw consent, limit certain processing, or request more information where this does not conflict with the venue’s legal obligations.' },
+      { title: '10. Policy changes', body: 'We may update this policy if services, booking rules, payment methods, or legal requirements change. The current version is always published on this page with the latest update date.' }
     ]
   }
 };
@@ -168,7 +79,10 @@ export default function PrivacyPage() {
       <section className="content-section">
         <h1>{copy.title}</h1>
         <p className="muted">{copy.updated}</p>
-
+        <p>{copy.intro}</p>
+        <p className="legal-note">
+          {copy.note} <Link to={copy.noteHref}>{copy.noteLink}</Link>
+        </p>
         <div className="legal-sections">
           {copy.sections.map((section) => (
             <article className="legal-section" key={section.title}>

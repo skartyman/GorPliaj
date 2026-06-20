@@ -12,7 +12,7 @@ const navItems = [
     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
   )},
   { to: '/menu', labelKey: 'navMenu', icon: (
-    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
   )},
   { to: '/booking', labelKey: 'navBooking', icon: (
     <svg viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M18 8V6a6 6 0 0 0-12 0v2"/><rect x="3" y="20" width="18" height="2" rx="1"/></svg>
@@ -34,7 +34,7 @@ const SOCIAL_ICONS = {
 };
 
 function BottomNavIcon({ path }) {
-  const item = navItems.find(n => n.to === path);
+  const item = navItems.find((entry) => entry.to === path);
   return item?.icon || null;
 }
 
@@ -56,7 +56,6 @@ export default function Layout() {
 
   const brandName = localizeField(settings?.title, locale) || 'GorPliaj';
   const logoUrl = settings?.logoUrl || '/icons/Logo.png';
-  const isEn = locale === 'en';
   const footerDescription = localizeField(settings?.footerText, locale) || localizedCopy({
     ua: 'Сучасний ресторан біля моря з живою музикою, кухнею та вечірніми подіями.',
     ru: 'Современный ресторан у моря с живой музыкой, кухней и вечерними событиями.',
@@ -71,8 +70,14 @@ export default function Layout() {
   const contactsTitle = localizedCopy({ ua: 'Контакти', ru: 'Контакты', en: 'Contacts' }, locale);
   const findUsTitle = localizedCopy({ ua: 'Як знайти заклад', ru: 'Как найти заведение', en: 'How to find us' }, locale);
   const rightsText = localizedCopy({ ua: 'Усі права захищені', ru: 'Все права защищены', en: 'All rights reserved' }, locale);
+  const rulesLinkText = localizedCopy({ ua: 'Правила перебування', ru: 'Правила пребывания', en: 'Venue Rules' }, locale);
   const privacyLinkText = localizedCopy({ ua: 'Політика конфіденційності', ru: 'Политика конфиденциальности', en: 'Privacy Policy' }, locale);
   const paymentReturnsLinkText = localizedCopy({ ua: 'Умови оплати і повернення', ru: 'Условия оплаты и возврата', en: 'Payment and Refund Terms' }, locale);
+  const menuServiceNotice = localizedCopy({
+    ua: 'До рахунку за меню в закладі додається 10% за обслуговування гостя.',
+    ru: 'К счету по меню в заведении добавляется 10% за обслуживание гостя.',
+    en: 'A 10% guest service charge is added to menu bills at the venue.'
+  }, locale);
   const workingHoursText = settings?.workingHours?.mon?.open
     ? localizedCopy({
         ua: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Нд ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
@@ -83,7 +88,6 @@ export default function Layout() {
 
   return (
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
-      {/* Sidebar (desktop) */}
       <aside className="sidebar">
         <NavLink to="/" className="sidebar-logo">
           <img src={logoUrl} alt={brandName} />
@@ -105,17 +109,21 @@ export default function Layout() {
         </nav>
 
         <div className="sidebar-footer">
-          <button type="button" className="locale-btn" onClick={() => {
-            const order = ['ua', 'ru', 'en'];
-            const next = order[(order.indexOf(locale) + 1) % order.length];
-            setLocale(next);
-          }}>
+          <button
+            type="button"
+            className="locale-btn"
+            onClick={() => {
+              const order = ['ua', 'ru', 'en'];
+              const next = order[(order.indexOf(locale) + 1) % order.length];
+              setLocale(next);
+            }}
+          >
             {locale.toUpperCase()}
           </button>
           <button
             type="button"
             className="locale-btn"
-            onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+            onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
             style={{ marginTop: 4 }}
           >
             {theme === 'light' ? '🌙' : '☀️'}
@@ -123,34 +131,35 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Top bar (mobile) */}
       <header className={`top-bar${isMenuRoute ? ' menu-top-bar' : ''}`}>
         <NavLink to="/" className="top-bar-brand">
           <img className="top-bar-logo" src={logoUrl} alt={brandName} />
           <span>{brandName}</span>
         </NavLink>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button type="button" className="locale-btn" onClick={() => {
-            const order = ['ua', 'ru', 'en'];
-            const next = order[(order.indexOf(locale) + 1) % order.length];
-            setLocale(next);
-          }}>
+          <button
+            type="button"
+            className="locale-btn"
+            onClick={() => {
+              const order = ['ua', 'ru', 'en'];
+              const next = order[(order.indexOf(locale) + 1) % order.length];
+              setLocale(next);
+            }}
+          >
             {locale.toUpperCase()}
           </button>
-          <button type="button" className="locale-btn" onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}>
+          <button type="button" className="locale-btn" onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
         </div>
       </header>
 
-      {/* Main content */}
       <div className="main-content">
         <div className="page-container">
           <Outlet />
         </div>
       </div>
 
-      {/* Bottom navigation (mobile) */}
       <nav className="bottom-nav">
         {navItems.map((item) => (
           <NavLink
@@ -165,25 +174,22 @@ export default function Layout() {
         ))}
       </nav>
 
-      {/* Footer */}
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
               <p style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--brand)' }}>{brandName}</p>
-              <p style={{ marginTop: 8 }}>
-                {footerDescription}
-              </p>
+              <p style={{ marginTop: 8 }}>{footerDescription}</p>
               {socialLinks.length > 0 && (
                 <div className="footer-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
                   {socialLinks.map((social, idx) => {
                     const isInstagram = social.platform === 'instagram';
                     const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;
                     const iconClass = SOCIAL_ICONS[social.platform.toLowerCase()] || SOCIAL_ICONS.default;
-                    
+
                     return (
                       <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" className="social-link" style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <i className={`fab ${iconClass}`} style={{ fontSize: '1.2rem' }}></i>
+                        <i className={`fab ${iconClass}`} style={{ fontSize: '1.2rem' }} />
                         {isInstagram && <span style={{ fontSize: '0.9rem' }}>@{handle}</span>}
                       </a>
                     );
@@ -205,7 +211,7 @@ export default function Layout() {
             </h3>
             <div className="footer-bottom-map">
               <iframe
-                src={settings?.mapEmbedUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2772.5!2d30.69!3d46.43!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDbCsDI1JzQ4LjAiTiAzMMKwNDEnMjQuMCJF!5e0!3m2!1sru!2sua!4v1"}
+                src={settings?.mapEmbedUrl || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2772.5!2d30.69!3d46.43!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDbCsDI1JzQ4LjAiTiAzMMKwNDEnMjQuMCJF!5e0!3m2!1sru!2sua!4v1'}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -217,8 +223,10 @@ export default function Layout() {
           <div className="footer-bottom">
             <div className="footer-legal-links">
               <span>© {new Date().getFullYear()} {brandName}</span>
+              <NavLink to="/rules">{rulesLinkText}</NavLink>
               <NavLink to="/privacy">{privacyLinkText}</NavLink>
               <NavLink to="/payment-returns">{paymentReturnsLinkText}</NavLink>
+              <span className="footer-legal-note">{menuServiceNotice}</span>
             </div>
             <span>{rightsText}</span>
           </div>

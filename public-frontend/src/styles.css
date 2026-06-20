@@ -471,6 +471,26 @@ h3 {
   line-height: 1.75;
 }
 
+.legal-note {
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(201, 168, 108, 0.26);
+  border-radius: var(--radius);
+  background: rgba(201, 168, 108, 0.08);
+  line-height: 1.65;
+}
+
+.legal-note a {
+  color: var(--brand);
+}
+
+.legal-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+  line-height: 1.75;
+}
+
 /* ===== Events Grid ===== */
 .events-page-stack {
   display: grid;
@@ -2267,6 +2287,20 @@ h3 {
 .footer-legal-links a:hover {
   color: var(--brand);
   opacity: 1;
+}
+
+.footer-legal-note {
+  max-width: 30rem;
+  line-height: 1.55;
+  opacity: 0.82;
+}
+
+.menu-legal-note,
+.menu-cart-note {
+  margin-top: 12px;
+  color: var(--brand);
+  font-size: 0.86rem;
+  line-height: 1.55;
 }
 
 /* ===== State messages ===== */

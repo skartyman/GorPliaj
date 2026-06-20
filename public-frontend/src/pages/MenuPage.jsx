@@ -135,8 +135,14 @@ export default function MenuPage() {
     return Array.from(itemMap.values()).filter((entry) => entry.quantity > 0);
   }, [items, locale, menu]);
 
+  const c = (values) => localizedCopy(values, locale);
   const cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   const cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
+  const menuServiceChargeNote = c({
+    ua: 'До рахунку за меню в закладі додається 10% за обслуговування гостя.',
+    ru: 'К счету по меню в заведении добавляется 10% за обслуживание гостя.',
+    en: 'A 10% guest service charge is added to menu bills at the venue.'
+  });
 
   function formatPrice(value) {
     return new Intl.NumberFormat(locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU'), {
@@ -207,7 +213,6 @@ export default function MenuPage() {
   }
 
   const isEn = locale === 'en';
-  const c = (values) => localizedCopy(values, locale);
 
   return (
     <>
@@ -245,6 +250,7 @@ export default function MenuPage() {
             </button>
           ))}
         </div>
+        <div className="menu-legal-note">{menuServiceChargeNote}</div>
       </div>
 
       {/* Content */}
@@ -340,6 +346,7 @@ export default function MenuPage() {
                 {t('menuCartTotal')}: {formatPrice(cartTotalPrice)} грн
               </strong>
             </p>
+            <p className="menu-cart-note">{menuServiceChargeNote}</p>
             <div className="btn-group" style={{ marginTop: 16 }}>
               <button className="btn btn-secondary" type="button" onClick={copyOrder}>{t('menuCartCopy')}</button>
               <button className="btn btn-secondary" type="button" onClick={clear}>{t('menuCartClear')}</button>
