@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingsApi, eventsApi, mapApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
@@ -15,12 +15,150 @@ function toTimeOnly(value) {
   return new Date(value).toISOString().slice(11, 16);
 }
 
+function toDateKeyFromLocalDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function money(value, currency = 'UAH') {
   return `${Number(value || 0).toFixed(0)} ${currency}`;
 }
 
+function formatPhone(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 12);
+  if (!digits) return '';
+  const d = digits.startsWith('38') ? digits.slice(2) : digits;
+  let out = '+38 (0';
+  if (d.length > 1) out += d.slice(1, 4);
+  if (d.length > 3) out += ') ' + d.slice(3, 6);
+  if (d.length > 6) out += '-' + d.slice(6, 8);
+  if (d.length > 8) out += '-' + d.slice(8, 10);
+  return d.length > 1 ? out : '+38 (0';
+}
+
 function getUnitDisplayName(unit, locale) {
   return localizeField(unit?.name, locale) || localizeField(unit?.label, locale) || unit?.code || unit?.id || '';
+}
+
+function formatUkrainianDate(value, { weekday = false } = {}) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('uk-UA', {
+    weekday: weekday ? 'long' : undefined,
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
+function toLocalDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  return toDateKeyFromLocalDate(date);
+}
+
+function formatEventButtonLabel(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const weekday = date.toLocaleDateString('uk-UA', { weekday: 'long' });
+  const dayMonth = date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dayMonth}`;
+}
+
+function buildEventDateOptions(event) {
+  const sessions = Array.isArray(event?.sessions)
+    ? event.sessions.filter((session) => session?.isActive !== false && session?.startsAt)
+    : [];
+
+  if (sessions.length) {
+    const grouped = new Map();
+    sessions.forEach((session) => {
+      const sessionDate = new Date(session.startsAt);
+      const dateKey = toDateKeyFromLocalDate(sessionDate);
+      if (!dateKey) return;
+      const current = grouped.get(dateKey);
+      if (!current) {
+        grouped.set(dateKey, {
+          key: dateKey,
+          date: dateKey,
+          startsAt: session.startsAt,
+          timeFrom: toTimeOnly(session.startsAt) || '12:00',
+          label: formatEventButtonLabel(session.startsAt),
+          fullLabel: formatUkrainianDate(session.startsAt)
+        });
+        return;
+      }
+      if (new Date(session.startsAt) < new Date(current.startsAt)) {
+        current.startsAt = session.startsAt;
+        current.timeFrom = toTimeOnly(session.startsAt) || current.timeFrom;
+        current.label = formatEventButtonLabel(session.startsAt);
+        current.fullLabel = formatUkrainianDate(session.startsAt);
+      }
+    });
+    return Array.from(grouped.values()).sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+  }
+
+  if (!event?.startAt) return [];
+
+  const start = new Date(event.startAt);
+  const end = event?.endAt ? new Date(event.endAt) : start;
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+
+  const options = [];
+  const cursor = new Date(start);
+  cursor.setHours(0, 0, 0, 0);
+  const last = new Date(end);
+  last.setHours(0, 0, 0, 0);
+
+  while (cursor <= last) {
+    const cursorKey = toDateKeyFromLocalDate(cursor);
+    options.push({
+      key: cursorKey,
+      date: cursorKey,
+      startsAt: event.startAt,
+      timeFrom: toTimeOnly(event.startAt) || '12:00',
+      label: formatEventButtonLabel(cursor),
+      fullLabel: formatUkrainianDate(cursor)
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return options;
+}
+
+function formatEventRangeLabel(event) {
+  const start = toLocalDateKey(event?.startAt);
+  if (!start) return '';
+  const end = toLocalDateKey(event?.endAt);
+  if (!end || end === start) {
+    return formatUkrainianDate(event.startAt, { weekday: true });
+  }
+  return `${formatUkrainianDate(event.startAt, { weekday: true })} · ${formatUkrainianDate(event.endAt, { weekday: true })}`;
+}
+
+function getEventDateRange(event) {
+  const start = toLocalDateKey(event?.startAt);
+  if (!start) return [];
+  const end = toLocalDateKey(event?.endAt);
+  if (!end || end === start) {
+    return [start];
+  }
+  return [start, end].filter(Boolean);
+}
+
+function findEventForDate(events, date) {
+  const selectedDate = toLocalDateKey(date);
+  if (!selectedDate || !Array.isArray(events)) return null;
+
+  return events.find((event) => {
+    const range = getEventDateRange(event);
+    if (!range.length) return false;
+    return selectedDate >= range[0] && selectedDate <= range[range.length - 1];
+  }) || null;
 }
 
 const BOOKING_FLOW_OPTIONS = [
@@ -93,9 +231,7 @@ export default function BookingPage() {
     customerPhone: '',
     customerEmail: '',
     commentCustomer: '',
-    agreeVenueRules: false,
-    agreeRules: false,
-    agreePrivacy: false
+    agreeAll: false
   });
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -106,11 +242,72 @@ export default function BookingPage() {
   const [bookingMenuPromptOpen, setBookingMenuPromptOpen] = useState(false);
   const [eventInfo, setEventInfo] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
+  const [selectedEventDateKey, setSelectedEventDateKey] = useState('');
+  const [eventDateAvailability, setEventDateAvailability] = useState({});
+  const [eventBookingPrompt, setEventBookingPrompt] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
+
+  function canProceedFromStep() {
+    if (currentStep === 1) {
+      if (bookingFlow === 'EVENT') return Boolean(activeEventDateOption);
+      return true;
+    }
+    if (currentStep === 2) {
+      if (!form.date || !form.guests || form.guests < 1) return false;
+      if (bookingFlow !== 'EVENT' && !form.timeFrom) return false;
+      return true;
+    }
+    if (currentStep === 3) {
+      return Boolean(selectedUnit);
+    }
+    return true;
+  }
+
+  function goToNextStep() {
+    if (!canProceedFromStep()) return;
+    setCurrentStep((s) => Math.min(s + 1, totalSteps));
+  }
+
+  const [stepChanging, setStepChanging] = useState(false);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const [holdTimeLeft, setHoldTimeLeft] = useState(0);
+  const formNavRef = useRef(null);
+
+  useEffect(() => {
+    const el = document.querySelector('.booking-steps');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setStepChanging(true);
+    const timer = setTimeout(() => setStepChanging(false), 320);
+    return () => clearTimeout(timer);
+  }, [currentStep]);
 
   const activeEventSlug = bookingFlow === 'EVENT' ? (lockedEventSlug || selectedEventSlug) : '';
   const resolvedBookingKind = bookingFlow === 'EVENT' ? 'TABLE' : bookingKind;
   const usageMode = activeEventSlug ? 'EVENING' : 'DAY';
   const canLoadMaps = bookingFlow === 'STANDARD' || Boolean(activeEventSlug);
+  const eventDateOptions = useMemo(() => buildEventDateOptions(eventInfo), [eventInfo]);
+  const selectedEventDateOption = useMemo(
+    () => eventDateOptions.find((option) => option.key === selectedEventDateKey || option.date === form.date) || null,
+    [eventDateOptions, selectedEventDateKey, form.date]
+  );
+  const eventHasMultipleDates = eventDateOptions.length > 1;
+  const activeEventDateOption = selectedEventDateOption || (eventDateOptions.length === 1 ? eventDateOptions[0] : null);
+  const upcomingEvents = useMemo(
+    () => eventOptionsState.events.slice(0, 3),
+    [eventOptionsState.events]
+  );
+  const matchedEventForStandardDate = useMemo(
+    () => findEventForDate(eventOptionsState.events, form.date),
+    [eventOptionsState.events, form.date]
+  );
+  const standardBeachAlertEvent = useMemo(() => {
+    if (bookingFlow === 'EVENT' || bookingKind !== 'BEACH') {
+      return null;
+    }
+
+    return matchedEventForStandardDate;
+  }, [bookingFlow, bookingKind, matchedEventForStandardDate]);
 
   useMeta(
     resolvedBookingKind === 'BEACH'
@@ -124,10 +321,6 @@ export default function BookingPage() {
   );
 
   useEffect(() => {
-    if (lockedToEvent || bookingFlow !== 'EVENT') {
-      return;
-    }
-
     let cancelled = false;
     setEventOptionsState((current) => ({ ...current, loading: true, error: '' }));
 
@@ -138,7 +331,7 @@ export default function BookingPage() {
           ? events.filter((event) => ['BOOKING', 'BOTH'].includes(event.ctaType))
           : [];
         setEventOptionsState({ loading: false, error: '', events: availableEvents });
-        if (!selectedEventSlug && availableEvents[0]?.slug) {
+        if (bookingFlow === 'EVENT' && !selectedEventSlug && availableEvents[0]?.slug) {
           setSelectedEventSlug(availableEvents[0].slug);
         }
       })
@@ -150,7 +343,7 @@ export default function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [bookingFlow, lockedToEvent, selectedEventSlug]);
+  }, [bookingFlow, selectedEventSlug]);
 
   useEffect(() => {
     if (bookingFlow !== 'EVENT') return;
@@ -174,12 +367,28 @@ export default function BookingPage() {
       if (ignore) return;
       setEventInfo(event);
       setTicketTypes(Array.isArray(tickets?.ticketTypes) ? tickets.ticketTypes : []);
-      if (event?.startAt && !searchParams.get('date')) {
+      const dates = buildEventDateOptions(event);
+      if (dates.length === 1) {
+        const onlyDate = dates[0];
+        setSelectedEventDateKey(onlyDate.key);
         setForm((current) => ({
           ...current,
-          date: toDateOnly(event.startAt),
-          timeFrom: current.timeFrom === '12:00' ? toTimeOnly(event.startAt) || current.timeFrom : current.timeFrom
+          date: onlyDate.date,
+          timeFrom: current.timeFrom === '12:00' ? onlyDate.timeFrom || current.timeFrom : current.timeFrom
         }));
+      } else {
+        const queryDate = searchParams.get('date') || '';
+        const matchedDate = queryDate && dates.find((item) => item.date === queryDate);
+        setSelectedEventDateKey(matchedDate?.key || '');
+        if (matchedDate) {
+          setForm((current) => ({
+            ...current,
+            date: matchedDate.date,
+            timeFrom: current.timeFrom === '12:00' ? matchedDate.timeFrom || current.timeFrom : current.timeFrom
+          }));
+        } else {
+          setSelectedEventDateKey('');
+        }
       }
     });
 
@@ -223,7 +432,48 @@ export default function BookingPage() {
   }, [canLoadMaps, usageMode, resolvedBookingKind, form.guests]);
 
   useEffect(() => {
-    if (!selected.mapId) {
+    if (bookingFlow !== 'EVENT' || !eventInfo?.id || !eventDateOptions.length || mapsState.loading || !mapsState.maps.length) {
+      setEventDateAvailability({});
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.all(eventDateOptions.map(async (option) => {
+      const checks = await Promise.allSettled(
+        mapsState.maps.map((map) => mapApi.bookableUnits(map.id, {
+          date: option.date,
+          timeFrom: option.timeFrom,
+          guests: form.guests,
+          bookingKind: 'TABLE',
+          eventId: eventInfo.id
+        }))
+      );
+
+      const hasFree = checks.some((result) =>
+        result.status === 'fulfilled'
+        && Array.isArray(result.value?.units)
+        && result.value.units.some((unit) => unit.status === 'free')
+      );
+
+      return [option.key, hasFree];
+    }))
+      .then((entries) => {
+        if (cancelled) return;
+        setEventDateAvailability(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEventDateAvailability({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingFlow, eventInfo?.id, eventDateOptions, mapsState.loading, mapsState.maps, form.guests]);
+
+  useEffect(() => {
+    if (!selected.mapId || (bookingFlow === 'EVENT' && !activeEventDateOption)) {
       setUnitsState({ loading: false, error: '', map: null, zones: [], units: [] });
       return;
     }
@@ -235,7 +485,8 @@ export default function BookingPage() {
       date: form.date,
       timeFrom: form.timeFrom,
       guests: form.guests,
-      bookingKind: resolvedBookingKind
+      bookingKind: resolvedBookingKind,
+      eventId: eventInfo?.id || undefined
     })
       .then((result) => {
         if (cancelled) return;
@@ -265,7 +516,7 @@ export default function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [selected.mapId, form.date, form.timeFrom, form.guests, resolvedBookingKind]);
+  }, [selected.mapId, form.date, form.timeFrom, form.guests, resolvedBookingKind, eventInfo?.id, bookingFlow, activeEventDateOption]);
 
   useEffect(() => {
     if (!returnedReservationCode || !returnedReservationToken) return;
@@ -297,8 +548,31 @@ export default function BookingPage() {
     [filteredUnits, selected.bookableUnitId]
   );
 
+  useEffect(() => {
+    if (!formNavRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!!selectedUnit && !entry.isIntersecting),
+      { threshold: 0, rootMargin: '0px 0px -80px 0px' }
+    );
+    observer.observe(formNavRef.current);
+    return () => observer.disconnect();
+  }, [selectedUnit]);
+
+  useEffect(() => {
+    if (!selectedUnit) { setHoldTimeLeft(0); return; }
+    setHoldTimeLeft(15 * 60);
+    const interval = setInterval(() => {
+      setHoldTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [selectedUnit]);
+
+  const holdTimerDisplay = holdTimeLeft > 0
+    ? `${String(Math.floor(holdTimeLeft / 60)).padStart(2, '0')}:${String(holdTimeLeft % 60).padStart(2, '0')}`
+    : selectedUnit ? c({ ua: 'Час вийшов', ru: 'Время вышло', en: 'Time expired' }) : '';
+
   const entryTicketType = useMemo(() => {
-    if (!eventInfo?.startAt || toDateOnly(eventInfo.startAt) !== form.date) return null;
+    if (!eventInfo?.startAt || toLocalDateKey(eventInfo.startAt) !== form.date) return null;
     return ticketTypes[0] || null;
   }, [eventInfo, form.date, ticketTypes]);
 
@@ -429,6 +703,70 @@ export default function BookingPage() {
     return `/map-preview?${params.toString()}`;
   }
 
+  function openEventBooking(event, date) {
+    if (!event?.slug) return;
+    const targetDate = date || toLocalDateKey(event.startAt);
+    const params = new URLSearchParams();
+    params.set('event', event.slug);
+    if (targetDate) params.set('date', targetDate);
+    window.location.assign(`/booking?${params.toString()}`);
+  }
+
+  function handleStandardDateChange(nextDate) {
+    setForm((current) => ({ ...current, date: nextDate }));
+    const matchedEvent = findEventForDate(eventOptionsState.events, nextDate);
+    if (matchedEvent) {
+      setEventBookingPrompt({ event: matchedEvent, date: nextDate });
+    } else {
+      setEventBookingPrompt(null);
+    }
+  }
+
+  function selectEventDate(option) {
+    if (!option) return;
+    setSelectedEventDateKey(option.key);
+    setForm((current) => ({
+      ...current,
+      date: option.date,
+      timeFrom: option.timeFrom || current.timeFrom
+    }));
+    setSelected((current) => ({ ...current, zoneId: 0, bookableUnitId: '' }));
+  }
+
+  function resetEventDateSelection() {
+    setSelectedEventDateKey('');
+    setForm((current) => ({ ...current, date: '', timeFrom: '12:00' }));
+    setSelected((current) => ({ ...current, zoneId: 0, bookableUnitId: '' }));
+  }
+
+  function confirmEventBookingPrompt() {
+    if (!eventBookingPrompt?.event?.slug) return;
+    openEventBooking(eventBookingPrompt.event, eventBookingPrompt.date);
+  }
+
+  function returnToStandardBooking() {
+    setBookingFlow('STANDARD');
+    setSelectedEventSlug('');
+    setEventInfo(null);
+    setTicketTypes([]);
+    setSelectedEventDateKey('');
+    setEventBookingPrompt(null);
+    setSelected((current) => ({ ...current, zoneId: 0, bookableUnitId: '' }));
+    setForm((current) => ({
+      ...current,
+      date: today,
+      timeFrom: '12:00'
+    }));
+  }
+
+  function dismissEventBookingPrompt() {
+    setEventBookingPrompt(null);
+    setForm((current) => ({
+      ...current,
+      date: today
+    }));
+  }
+
   async function submitBooking(event) {
     event.preventDefault();
 
@@ -441,11 +779,11 @@ export default function BookingPage() {
       return;
     }
 
-    if (!form.agreeVenueRules || !form.agreeRules || !form.agreePrivacy) {
+    if (!form.agreeAll) {
       setErrorMessage(c({
-        ua: 'Потрібно погодитися з правилами перебування, умовами оплати та політикою.',
-        ru: 'Нужно согласиться с правилами пребывания, условиями оплаты и политикой.',
-        en: 'You need to accept the venue rules, payment terms, and privacy policy.'
+        ua: 'Потрібно погодитися з умовами.',
+        ru: 'Нужно согласиться с условиями.',
+        en: 'You need to accept the terms.'
       }));
       return;
     }
@@ -501,20 +839,20 @@ export default function BookingPage() {
   }
 
   const pageTitle = bookingFlow === 'EVENT'
-    ? c({ ua: 'Бронювання на подію', ru: 'Бронь на событие', en: 'Event booking' })
+    ? c({ ua: 'Бронювання столу на подію', ru: 'Бронь стола на событие', en: 'Table booking for event' })
     : resolvedBookingKind === 'BEACH'
       ? c({ ua: 'Пляжний відпочинок', ru: 'Пляжный отдых', en: 'Beach leisure' })
       : c({ ua: 'Бронювання столу', ru: 'Бронирование стола', en: 'Table booking' });
 
   const formIntro = bookingFlow === 'EVENT'
     ? c({
-      ua: 'Оберіть подію, вечірню карту та конкретний стіл. Пляжні позиції тут приховані, щоб сценарій лишався простим.',
-      ru: 'Выберите событие, вечернюю карту и конкретный стол. Пляжные позиции здесь скрыты, чтобы сценарий оставался простым.',
-      en: 'Choose an event, an evening map, and a specific table. Beach positions are hidden here to keep the flow simple.'
+      ua: 'Оберіть дату події та вільний вечірній стіл. Пляжні позиції тут приховані.',
+      ru: 'Выберите дату события и свободный вечерний стол. Пляжные позиции здесь скрыты.',
+      en: 'Choose an event date and an available evening table. Beach positions are hidden here.'
     })
     : c({
-      ua: 'Оберіть формат відпочинку, зону та конкретну позицію. Якщо для неї передбачено депозит, оплата відкриється на фінальному кроці.',
-      ru: 'Выберите формат отдыха, зону и конкретную позицию. Если для нее предусмотрен депозит, оплата откроется на финальном шаге.',
+      ua: 'Оберіть, що бажаєте забронювати, а далі ми покажемо доступні зони та позиції.',
+      ru: 'Выберите, что хотите забронировать, а дальше мы покажем доступные зоны и позиции.',
       en: 'Choose a format, zone, and specific position. If a deposit applies, payment will open on the final step.'
     });
 
@@ -533,6 +871,53 @@ export default function BookingPage() {
         </div>
       </div>
 
+      {upcomingEvents.length ? (
+        <section className="booking-event-strip">
+          <div className="booking-event-strip-head">
+            <div>
+              <span className="eyebrow">{c({ ua: 'Найближчі події', ru: 'Ближайшие события', en: 'Upcoming events' })}</span>
+              <h2>{c({ ua: 'Оберіть подію', ru: 'Выберите событие', en: 'Choose an event' })}</h2>
+            </div>
+            <p className="muted">
+              {c({
+                ua: 'Клік по картці відкриває бронювання події.',
+                ru: 'Клик по карточке откроет бронирование события.',
+                en: 'Click a card to open event booking.'
+              })}
+            </p>
+          </div>
+          <div className="booking-event-strip-grid">
+            {upcomingEvents.map((event) => {
+              const poster = event.posterImage || '';
+              const shortText = localizeField(event.shortDescription, locale);
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  className="booking-event-strip-card"
+                  onClick={() => openEventBooking(event)}
+                >
+                  <div className="booking-event-strip-copy">
+                    <div className="booking-event-strip-main">
+                      {poster ? (
+                        <div className="booking-event-strip-poster">
+                          <img src={poster} alt={localizeField(event.title, locale)} />
+                        </div>
+                      ) : null}
+                      <div className="booking-event-strip-info">
+                        <strong>{localizeField(event.title, locale)}</strong>
+                        <span>{formatEventRangeLabel(event)}</span>
+                        {shortText ? <p className="booking-event-strip-text">{shortText}</p> : null}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       {activeEventSlug ? (
         <div className="booking-summary-panel booking-event-panel">
           <p className="muted" style={{ margin: 0 }}>
@@ -545,65 +930,58 @@ export default function BookingPage() {
               en: 'Only evening event tables are available in this flow.'
             })}
           </p>
+          <button type="button" className="btn btn-secondary btn-small" onClick={returnToStandardBooking}>
+            {c({ ua: 'Повернутись до звичайної броні', ru: 'Вернуться к обычной брони', en: 'Back to regular booking' })}
+          </button>
         </div>
       ) : null}
 
-      <form onSubmit={submitBooking} className="form-grid booking-flow-grid">
-        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '1. Сценарій бронювання', ru: '1. Сценарий брони', en: '1. Booking flow' })}</label>
-          <div className="booking-kind-grid">
-            {BOOKING_FLOW_OPTIONS.map((option) => {
-              const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'];
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`booking-kind-card${bookingFlow === option.value ? ' active' : ''}`}
-                  disabled={lockedToEvent}
-                  onClick={() => {
-                    setBookingFlow(option.value);
-                    setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
-                    if (option.value === 'STANDARD') {
-                      setSelectedEventSlug('');
-                    }
-                  }}
-                >
-                  <strong>{localized.title}</strong>
-                  <span>{localized.body}</span>
-                </button>
-              );
-            })}
-          </div>
-          {bookingFlow === 'EVENT' ? (
-            <div className="booking-flow-note">
-              <strong>{c({ ua: 'Для подій бронюємо тільки столи', ru: 'Для событий бронируем только столы', en: 'Events use table-only booking' })}</strong>
-              <span>{c({ ua: 'Пляжні послуги приховані, щоб не змішувати денний і вечірній сценарії.', ru: 'Пляжные услуги скрыты, чтобы не смешивать дневной и вечерний сценарии.', en: 'Beach services are hidden so day and evening flows do not get mixed.' })}</span>
+      <div className="booking-steps">
+        {[
+          { step: 1, label: c({ ua: 'Формат', ru: 'Формат', en: 'Format' }) },
+          { step: 2, label: c({ ua: 'Дата та гості', ru: 'Дата и гости', en: 'Date & guests' }) },
+          { step: 3, label: c({ ua: 'Вибір місця', ru: 'Выбор места', en: 'Choose place' }) },
+          { step: 4, label: c({ ua: 'Контакти', ru: 'Контакты', en: 'Contacts' }) },
+        ].map((s) => (
+          <button
+            type="button"
+            key={s.step}
+            className={`booking-step${currentStep === s.step ? ' active' : ''}${currentStep > s.step ? ' done' : ''}`}
+            onClick={() => { if (s.step < currentStep) setCurrentStep(s.step); }}
+            disabled={s.step > currentStep}
+          >
+            <span className="booking-step-number">{s.step}</span>
+            <span className="booking-step-label">{s.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={submitBooking} className={`form-grid booking-flow-grid${stepChanging ? ' animate-step' : ''}`}>
+{currentStep === 1 && (<>
+        {bookingFlow === 'STANDARD' ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label>{c({ ua: 'Що бажаєте забронювати?', ru: 'Что хотите забронировать?', en: 'What would you like to book?' })}</label>
+            <div className="booking-kind-grid">
+              {BOOKING_KIND_OPTIONS.map((option) => {
+                const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'];
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`booking-kind-card${bookingKind === option.value ? ' active' : ''}`}
+                    onClick={() => {
+                      setBookingKind(option.value);
+                      setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                    }}
+                  >
+                    <strong>{localized.title}</strong>
+                    <span>{localized.body}</span>
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <>
-              <label>{c({ ua: '2. Формат відпочинку', ru: '2. Формат отдыха', en: '2. Booking type' })}</label>
-              <div className="booking-kind-grid">
-                {BOOKING_KIND_OPTIONS.map((option) => {
-                  const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'];
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`booking-kind-card${bookingKind === option.value ? ' active' : ''}`}
-                      onClick={() => {
-                        setBookingKind(option.value);
-                        setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
-                      }}
-                    >
-                      <strong>{localized.title}</strong>
-                      <span>{localized.body}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {bookingFlow === 'EVENT' && !lockedToEvent ? (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -638,74 +1016,141 @@ export default function BookingPage() {
           </div>
         ) : null}
 
-        <div className="form-group">
-          <label>{c({ ua: bookingFlow === 'EVENT' ? '3. Дата події' : '3. Дата', ru: bookingFlow === 'EVENT' ? '3. Дата события' : '3. Дата', en: bookingFlow === 'EVENT' ? '3. Event date' : '3. Date' })}</label>
-          <input
-            type="date"
-            className="form-input"
-            value={form.date}
-            min={today}
-            required
-            onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
-          />
-        </div>
+        {bookingFlow === 'EVENT' && activeEventSlug ? (
+          eventHasMultipleDates && !activeEventDateOption ? (
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label>{c({ ua: 'Оберіть дату події', ru: 'Выберите дату события', en: 'Choose an event date' })}</label>
+              <div className="booking-event-date-grid">
+                {eventDateOptions.map((option) => {
+                  const availabilityKnown = Object.prototype.hasOwnProperty.call(eventDateAvailability, option.key);
+                  const isAvailable = eventDateAvailability[option.key] !== false;
+
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      className={`booking-event-date-card${availabilityKnown && !isAvailable ? ' unavailable' : ''}`}
+                      disabled={availabilityKnown && !isAvailable}
+                      onClick={() => selectEventDate(option)}
+                    >
+                      <strong>{option.label}</strong>
+                      <span className={`booking-event-date-status${availabilityKnown ? (isAvailable ? ' available' : ' unavailable') : ''}`}>
+                        {availabilityKnown
+                          ? (isAvailable
+                            ? c({ ua: 'Доступні столи', ru: 'Доступные столы', en: 'Tables available' })
+                            : c({ ua: 'Місць немає', ru: 'Мест нет', en: 'No seats available' }))
+                          : c({ ua: 'Перевіряємо…', ru: 'Проверяем…', en: 'Checking…' })}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : activeEventDateOption ? (
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <div className="booking-event-inline-date">
+                <span className="booking-event-date-static">{activeEventDateOption.fullLabel}</span>
+                {eventHasMultipleDates ? (
+                  <button type="button" className="booking-event-change-link" onClick={resetEventDateSelection}>
+                    {c({ ua: 'Змінити дату', ru: 'Изменить дату', en: 'Change date' })}
+                  </button>
+                ) : null}
+              </div>
+              <p className="booking-compact-note" style={{ marginTop: 12 }}>
+                {c({ ua: 'Для цієї події доступні тільки вечірні столи.', ru: 'Для этого события доступны только вечерние столы.', en: 'Only evening tables are available for this event.' })}
+              </p>
+            </div>
+          ) : null
+        ) : null}
+</>)}
+
+        {currentStep === 2 && (<>
+        {bookingFlow !== 'EVENT' ? (
+          <div className="form-group">
+            <label>{c({ ua: '3. Дата', ru: '3. Дата', en: '3. Date' })}</label>
+            <input
+              type="date"
+              className="form-input"
+              value={form.date}
+              min={today}
+              required
+              onChange={(event) => handleStandardDateChange(event.target.value)}
+            />
+          </div>
+        ) : null}
 
         <div className="form-group">
           <label>{c({ ua: 'Гостей', ru: 'Гостей', en: 'Guests' })}</label>
-          <input
-            type="number"
-            className="form-input"
-            value={form.guests}
-            min="1"
-            max="20"
-            required
-            onChange={(event) => setForm((current) => ({ ...current, guests: Number(event.target.value) }))}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>{c({ ua: 'Час початку', ru: 'Время начала', en: 'Start time' })}</label>
-          <input
-            type="time"
-            className="form-input"
-            value={form.timeFrom}
-            required
-            onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
-          />
-        </div>
-
-        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: bookingFlow === 'EVENT' ? '4. Карта події' : '4. Карта розміщення', ru: bookingFlow === 'EVENT' ? '4. Карта события' : '4. Карта размещения', en: bookingFlow === 'EVENT' ? '4. Event map' : '4. Venue map' })}</label>
-          <div className="booking-map-grid">
-            {mapsState.maps.map((map) => (
-              <button
-                key={map.id}
-                type="button"
-                className={`booking-map-card${selected.mapId === map.id ? ' active' : ''}`}
-                onClick={() => setSelected((current) => ({ ...current, mapId: map.id, zoneId: 0, bookableUnitId: '' }))}
-              >
-                <strong>{localizeField(map.name, locale)}</strong>
-                <span>
-                  {localizeField(map.description, locale) || (
-                    map.usageMode === 'EVENING'
-                      ? c({ ua: 'Вечірня карта', ru: 'Вечерняя карта', en: 'Evening map' })
-                      : c({ ua: 'Денна карта', ru: 'Дневная карта', en: 'Day map' })
-                  )}
-                </span>
-                <span>{c({ ua: 'Доступно позицій', ru: 'Доступно позиций', en: 'Available positions' })}: {map.unitCounts?.total || 0}</span>
-              </button>
-            ))}
+          <div className="guest-stepper">
+            <button type="button" className="guest-stepper-btn" onClick={() => setForm((current) => ({ ...current, guests: Math.max(1, current.guests - 1) }))}>−</button>
+            <span className="guest-stepper-value">{form.guests}</span>
+            <button type="button" className="guest-stepper-btn" onClick={() => setForm((current) => ({ ...current, guests: Math.min(20, current.guests + 1) }))}>+</button>
           </div>
-          {mapsState.loading ? <div className="state-msg">{c({ ua: 'Завантажуємо карти...', ru: 'Загружаем карты...', en: 'Loading maps...' })}</div> : null}
-          {mapsState.error ? <div className="state-msg state-error">{mapsState.error}</div> : null}
-          {!mapsState.loading && !mapsState.error && !mapsState.maps.length ? (
-            <div className="state-msg">
+        </div>
+
+        {bookingFlow !== 'EVENT' ? (
+          <div className="form-group">
+            <label>{c({ ua: 'Час початку', ru: 'Время начала', en: 'Start time' })}</label>
+            <input
+              type="time"
+              className="form-input"
+              value={form.timeFrom}
+              required
+              onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
+            />
+          </div>
+        ) : null}
+
+        {standardBeachAlertEvent ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
               {c({
-                ua: 'Для цього сценарію та кількості гостей зараз немає доступних карт.',
-                ru: 'Для этого сценария и количества гостей сейчас нет доступных карт.',
-                en: 'No venue maps are available for this flow and guest count right now.'
+                ua: 'У цей день пляжні послуги у всіх зонах, крім Лівого пляжу, працюють до 18:00, бо з 19:00 починається подія.',
+                ru: 'В этот день пляжные услуги во всех зонах, кроме Левого пляжа, работают до 18:00, потому что с 19:00 начинается событие.',
+                en: 'On this day, beach services in all zones except the Left Beach operate until 18:00 because the event starts at 19:00.'
               })}
-            </div>
+            </p>
+          </div>
+        ) : null}
+</>)}
+
+        {currentStep === 3 && (<>
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label>{c({ ua: bookingFlow === 'EVENT' ? 'Оберіть вільний стіл на карті' : '4. Карта розміщення', ru: bookingFlow === 'EVENT' ? 'Выберите свободный стол на карте' : '4. Карта размещения', en: bookingFlow === 'EVENT' ? 'Choose an available table on the map' : '4. Venue map' })}</label>
+          {bookingFlow !== 'EVENT' || activeEventDateOption ? (
+            <>
+              <div className="booking-map-grid">
+                {mapsState.maps.map((map) => (
+                  <button
+                    key={map.id}
+                    type="button"
+                    className={`booking-map-card${selected.mapId === map.id ? ' active' : ''}`}
+                    onClick={() => setSelected((current) => ({ ...current, mapId: map.id, zoneId: 0, bookableUnitId: '' }))}
+                  >
+                    <strong>{localizeField(map.name, locale)}</strong>
+                    <span>
+                      {localizeField(map.description, locale) || (
+                        map.usageMode === 'EVENING'
+                          ? c({ ua: 'Вечірня карта', ru: 'Вечерняя карта', en: 'Evening map' })
+                          : c({ ua: 'Денна карта', ru: 'Дневная карта', en: 'Day map' })
+                      )}
+                    </span>
+                    <span>{c({ ua: 'Доступно позицій', ru: 'Доступно позиций', en: 'Available positions' })}: {map.unitCounts?.total || 0}</span>
+                  </button>
+                ))}
+              </div>
+              {mapsState.loading ? <div className="state-msg">{c({ ua: 'Завантажуємо карти...', ru: 'Загружаем карты...', en: 'Loading maps...' })}</div> : null}
+              {mapsState.error ? <div className="state-msg state-error">{mapsState.error}</div> : null}
+              {!mapsState.loading && !mapsState.error && !mapsState.maps.length ? (
+                <div className="state-msg">
+                  {c({
+                    ua: 'Для цього сценарію та кількості гостей зараз немає доступних карт.',
+                    ru: 'Для этого сценария и количества гостей сейчас нет доступных карт.',
+                    en: 'No venue maps are available for this flow and guest count right now.'
+                  })}
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
 
@@ -832,7 +1277,9 @@ export default function BookingPage() {
             </div>
           ) : null}
         </div>
+</>)}
 
+        {currentStep === 4 && (<>
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           {selectedUnit ? (
             <div className="booking-selected-panel">
@@ -868,13 +1315,15 @@ export default function BookingPage() {
                 {c({ ua: 'Квитки на подію', ru: 'Билеты на событие', en: 'Event tickets' })}: {form.guests} x {money(paymentPreview.entryTicketPrice, paymentPreview.currency)} = {money(paymentPreview.entryTicketsAmount, paymentPreview.currency)}
               </p>
             ) : null}
-            <p className="menu-cart-note" style={{ margin: 0 }}>
-              {c({
-                ua: 'Нагадування: бронювання сервісних послуг оформлюється за 100% передоплатою, діє до 13:00 оплаченого дня, а за неявки до 13:00 може бути утримано 50% передоплати.',
-                ru: 'Напоминание: бронирование сервисных услуг оформляется по 100% предоплате, действует до 13:00 оплаченного дня, а при неявке до 13:00 может быть удержано 50% предоплаты.',
-                en: 'Reminder: paid service bookings require 100% prepayment, remain valid until 1:00 PM on the paid day, and a 50% retention may apply if the guest does not arrive by 1:00 PM.'
-              })}
-            </p>
+            {bookingFlow !== 'EVENT' && bookingKind === 'BEACH' ? (
+              <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
+                {c({
+                  ua: 'Нагадування: бронювання сервісних послуг оформлюється за 100% передоплатою, діє до 13:00 оплаченого дня, а за неявки до 13:00 може бути утримано 50% передоплати.',
+                  ru: 'Напоминание: бронирование сервисных услуг оформляется по 100% предоплате, действует до 13:00 оплаченного дня, а при неявке до 13:00 может быть удержано 50% предоплаты.',
+                  en: 'Reminder: paid service bookings require 100% prepayment, remain valid until 1:00 PM on the paid day, and a 50% retention may apply if the guest does not arrive by 1:00 PM.'
+                })}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -885,7 +1334,7 @@ export default function BookingPage() {
 
         <div className="form-group">
           <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
-          <input type="tel" className="form-input" value={form.customerPhone} required minLength="7" onChange={(event) => setForm((current) => ({ ...current, customerPhone: event.target.value }))} />
+          <input type="tel" className="form-input" value={form.customerPhone} placeholder="+38 (0XX) XXX-XX-XX" required minLength="7" onChange={(event) => setForm((current) => ({ ...current, customerPhone: formatPhone(event.target.value) }))} />
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -902,38 +1351,49 @@ export default function BookingPage() {
           <label>{c({ ua: '9. Підтвердження', ru: '9. Подтверждение', en: '9. Confirmation' })}</label>
           <div className="booking-agreements">
             <label className="booking-check">
-              <input type="checkbox" checked={form.agreeVenueRules} onChange={(event) => setForm((current) => ({ ...current, agreeVenueRules: event.target.checked }))} />
-              <span>{c({ ua: 'Я ознайомився з правилами перебування', ru: 'Я ознакомился с правилами пребывания', en: 'I have read the venue rules' })} <Link to="/rules">{c({ ua: 'читати', ru: 'читать', en: 'read' })}</Link></span>
-            </label>
-            <label className="booking-check">
-              <input type="checkbox" checked={form.agreeRules} onChange={(event) => setForm((current) => ({ ...current, agreeRules: event.target.checked }))} />
-              <span>{c({ ua: 'Я погоджуюся з умовами оплати та повернення', ru: 'Я соглашаюсь с условиями оплаты и возврата', en: 'I agree to the payment and return terms' })} <Link to="/payment-returns">{c({ ua: 'читати', ru: 'читать', en: 'read' })}</Link></span>
-            </label>
-            <label className="booking-check">
-              <input type="checkbox" checked={form.agreePrivacy} onChange={(event) => setForm((current) => ({ ...current, agreePrivacy: event.target.checked }))} />
-              <span>{c({ ua: 'Я погоджуюся з політикою конфіденційності', ru: 'Я соглашаюсь с политикой конфиденциальности', en: 'I agree to the privacy policy' })} <Link to="/privacy">{c({ ua: 'читати', ru: 'читать', en: 'read' })}</Link></span>
+              <input type="checkbox" checked={form.agreeAll} onChange={(event) => setForm((current) => ({ ...current, agreeAll: event.target.checked }))} />
+              <span>{c({ ua: 'Я погоджуюся з правилами перебування, умовами оплати/повернення та політикою конфіденційності', ru: 'Я соглашаюсь с правилами пребывания, условиями оплаты/возврата и политикой конфиденциальности', en: 'I agree to the venue rules, payment/return terms, and privacy policy' })}</span>
             </label>
           </div>
         </div>
+</>)}
 
-        <div className="btn-group">
-          <button type="submit" className="btn btn-primary" disabled={mapsState.loading || unitsState.loading || submitting || !selectedUnit}>
-            {submitting
-              ? c({ ua: 'Створюємо бронювання...', ru: 'Создаем бронирование...', en: 'Creating booking...' })
-              : paymentPreview.totalAmount > 0
-                ? c({ ua: 'Перейти до оплати', ru: 'Перейти к оплате', en: 'Continue to payment' })
-                : c({ ua: 'Підтвердити бронювання', ru: 'Подтвердить бронирование', en: 'Confirm booking' })}
-          </button>
-          {paymentUrl ? (
-            <a className="btn btn-primary" href={paymentUrl}>
-              {c({ ua: 'Відкрити оплату', ru: 'Открыть оплату', en: 'Open payment' })}
-            </a>
-          ) : null}
-          {reservationStatus?.downloadUrl ? (
-            <a className="btn btn-secondary" href={reservationStatus.downloadUrl}>
-              {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
-            </a>
-          ) : null}
+        <div ref={formNavRef}>
+        {currentStep === 4 ? (
+          <div className="btn-group">
+            <button type="button" className="btn btn-secondary" onClick={() => setCurrentStep((s) => s - 1)}>
+              {c({ ua: 'Назад', ru: 'Назад', en: 'Back' })}
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={mapsState.loading || unitsState.loading || submitting || !selectedUnit}>
+              {submitting
+                ? c({ ua: 'Створюємо бронювання...', ru: 'Создаем бронирование...', en: 'Creating booking...' })
+                : paymentPreview.totalAmount > 0
+                  ? c({ ua: 'Перейти до оплати', ru: 'Перейти к оплате', en: 'Continue to payment' })
+                  : c({ ua: 'Підтвердити бронювання', ru: 'Подтвердить бронирование', en: 'Confirm booking' })}
+            </button>
+            {paymentUrl ? (
+              <a className="btn btn-primary" href={paymentUrl}>
+                {c({ ua: 'Відкрити оплату', ru: 'Открыть оплату', en: 'Open payment' })}
+              </a>
+            ) : null}
+            {reservationStatus?.downloadUrl ? (
+              <a className="btn btn-secondary" href={reservationStatus.downloadUrl}>
+                {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
+              </a>
+            ) : null}
+          </div>
+        ) : (
+          <div className="btn-group booking-nav-group">
+            {currentStep > 1 ? (
+              <button type="button" className="btn btn-secondary" onClick={() => setCurrentStep((s) => s - 1)}>
+                {c({ ua: 'Назад', ru: 'Назад', en: 'Back' })}
+              </button>
+            ) : null}
+            <button type="button" className="btn btn-primary" onClick={goToNextStep} disabled={!canProceedFromStep() || submitting}>
+              {c({ ua: 'Далі', ru: 'Далее', en: 'Next' })}
+            </button>
+          </div>
+        )}
         </div>
 
         {errorMessage && <div className="state-msg state-error">{errorMessage}</div>}
@@ -987,6 +1447,58 @@ export default function BookingPage() {
           </div>
         </div>
       ) : null}
+
+      {eventBookingPrompt ? (
+        <div className="booking-event-prompt-backdrop" role="presentation" onClick={dismissEventBookingPrompt}>
+          <div
+            className="booking-event-prompt-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="booking-event-prompt-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="booking-event-prompt-copy">
+              <span className="eyebrow">{c({ ua: 'Подія знайдена', ru: 'Событие найдено', en: 'Event detected' })}</span>
+              <strong id="booking-event-prompt-title">
+                {c({ ua: 'Ви обрали дату події', ru: 'Вы выбрали дату события', en: 'You selected an event date' })}
+              </strong>
+              <p className="muted" style={{ margin: 0 }}>
+                {c({ ua: 'Перейти до бронювання на', ru: 'Перейти к брони на', en: 'Go to booking for' })}{' '}
+                <strong>{localizeField(eventBookingPrompt.event?.title, locale)}</strong>?
+              </p>
+            </div>
+            <div className="booking-event-prompt-actions">
+              <button type="button" className="btn btn-secondary btn-small" onClick={dismissEventBookingPrompt}>
+                {c({ ua: 'Залишитись', ru: 'Остаться', en: 'Stay here' })}
+              </button>
+              <button type="button" className="btn btn-primary btn-small" onClick={confirmEventBookingPrompt}>
+                {c({ ua: 'Перейти', ru: 'Перейти', en: 'Continue' })}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+{showStickyBar ? (
+  <div className="booking-sticky-bar">
+    <div className="booking-sticky-body">
+      <div className="booking-sticky-info">
+        <strong>{selectedUnit ? getUnitDisplayName(selectedUnit, locale) : ''}</strong>
+        <span>{selectedMetaLine}</span>
+      </div>
+      <div className="booking-sticky-meta">
+        <span className="booking-sticky-timer">{holdTimerDisplay}</span>
+        <span className="booking-sticky-price">{money(paymentPreview.totalAmount, paymentPreview.currency)}</span>
+      </div>
+    </div>
+    <button type="button" className="btn btn-primary booking-sticky-btn" onClick={() => {
+      const navEl = document.querySelector('.booking-steps');
+      if (navEl) navEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }}>
+      {c({ ua: 'Продовжити', ru: 'Продолжить', en: 'Continue' })}
+    </button>
+  </div>
+) : null}
     </>
   );
 }
