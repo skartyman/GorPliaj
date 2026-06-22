@@ -15,3 +15,4 @@ debug-map*.js
 *.log
 live-snapshot/
 live-snapshot-*.zip
+ticket-pdfs/

@@ -1,10 +1,14 @@
+const fs = require('fs');
 const prisma = require('../lib/prisma');
 const ticketSalesService = require('../services/ticketSalesService');
 const hutkoService = require('../services/hutkoService');
 const { normalizeLocalizedField } = require('../utils/localization');
 const {
   generateTicketOrderPdf,
-  getOrderForDelivery
+  getOrderForDelivery,
+  cachedPdfExists,
+  pdfCachePath,
+  ensureCacheDir
 } = require('../services/ticketOrderDeliveryService');
 
 function isSalesOpen(ticketType, now) {
@@ -194,16 +198,19 @@ async function getTicketOrderStatus(req, res) {
       if (!order) return res.status(404).json({ message: 'Ticket order not found.' });
     }
 
+    const isPaid = order.status === 'PAID';
+
     return res.json({
       orderNumber: order.orderNumber,
       status: order.status,
       amount: Number(order.amount),
       currency: order.currency,
-      paymentUrl: order.status === 'PAID' ? null : order.payment?.paymentUrl || null,
+      paymentUrl: isPaid ? null : order.payment?.paymentUrl || null,
       paymentStatus: order.payment?.status || null,
-      downloadUrl: order.status === 'PAID'
+      downloadUrl: isPaid
         ? `/api/ticket-orders/${encodeURIComponent(order.orderNumber)}/pdf?token=${encodeURIComponent(order.downloadToken)}`
-        : null
+        : null,
+      pdfReady: isPaid ? cachedPdfExists(order.orderNumber) : false
     });
   } catch (error) {
     console.error('[publicTicketSales.getTicketOrderStatus] Failed.', error);
@@ -222,8 +229,18 @@ async function downloadTicketOrderPdf(req, res) {
     if (!order) return res.status(404).json({ message: 'Ticket order not found.' });
     if (order.status !== 'PAID') return res.status(409).json({ message: 'Tickets are available after payment.' });
 
+    if (cachedPdfExists(orderNumber)) {
+      const cached = fs.readFileSync(pdfCachePath(orderNumber));
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="gorpliaj-${orderNumber}.pdf"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.send(cached);
+    }
+
     const deliveryOrder = await getOrderForDelivery(order.id);
     const pdf = await generateTicketOrderPdf(deliveryOrder);
+    ensureCacheDir();
+    fs.writeFileSync(pdfCachePath(orderNumber), pdf);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="gorpliaj-${orderNumber}.pdf"`);
     res.setHeader('Cache-Control', 'private, no-store');

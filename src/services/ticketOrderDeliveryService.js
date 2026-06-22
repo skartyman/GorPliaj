@@ -1,6 +1,9 @@
 const fs = require('fs');
+const path = require('path');
 const nodemailer = require('nodemailer');
 const prisma = require('../lib/prisma');
+
+const PDF_CACHE_DIR = path.join(__dirname, '..', '..', 'ticket-pdfs');
 const { generateTicketOrderPdf } = require('./ticketOrderPdfService');
 const {
   getBaseUrl,
@@ -11,6 +14,20 @@ const {
   formatMoney
 } = require('../utils/deliveryPresentation');
 const { getLogoPath } = require('../utils/pdfBranding');
+
+function ensureCacheDir() {
+  if (!fs.existsSync(PDF_CACHE_DIR)) {
+    fs.mkdirSync(PDF_CACHE_DIR, { recursive: true });
+  }
+}
+
+function pdfCachePath(orderNumber) {
+  return path.join(PDF_CACHE_DIR, `${orderNumber}.pdf`);
+}
+
+function cachedPdfExists(orderNumber) {
+  return fs.existsSync(pdfCachePath(orderNumber));
+}
 
 function isMailConfigured() {
   return Boolean(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASS);
@@ -170,6 +187,8 @@ async function deliverPaidOrder(orderId) {
   if (!order || order.status !== 'PAID') return { sent: false, reason: 'order_not_paid' };
 
   const pdf = await generateTicketOrderPdf(order);
+  ensureCacheDir();
+  fs.writeFileSync(pdfCachePath(order.orderNumber), pdf);
   const downloadUrl = getDownloadUrl(order);
 
   if (!isMailConfigured()) {
@@ -207,5 +226,8 @@ module.exports = {
   deliverPaidOrder,
   generateTicketOrderPdf,
   getOrderForDelivery,
-  getDownloadUrl
+  getDownloadUrl,
+  cachedPdfExists,
+  pdfCachePath,
+  ensureCacheDir
 };

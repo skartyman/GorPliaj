@@ -125,6 +125,13 @@ export default function EventDetailPage() {
       currency: 'UAH',
       paymentUrl: null
     });
+    setOrderStatus({
+      status: 'PAID',
+      amount: null,
+      currency: 'UAH',
+      downloadUrl: `/api/ticket-orders/${encodeURIComponent(orderNumber)}/pdf?token=${encodeURIComponent(downloadToken)}`,
+      pdfReady: false
+    });
     setTicketFormOpen(true);
   }, [searchParams]);
 
@@ -366,11 +373,18 @@ export default function EventDetailPage() {
                   </>
                 ) : (
                   <>
-                    {orderStatus?.downloadUrl ? (
+                    {orderStatus?.downloadUrl && orderStatus?.pdfReady ? (
                       <div className="guest-modal-actions" style={{ marginBottom: 16 }}>
                         <a className="btn btn-primary" href={orderStatus.downloadUrl}>
                           {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
                         </a>
+                      </div>
+                    ) : null}
+                    {orderStatus?.status === 'PAID' && !orderStatus?.pdfReady ? (
+                      <div className="guest-modal-actions" style={{ marginBottom: 16 }}>
+                        <p className="state-msg">
+                          {c({ ua: 'Формуємо файл для завантаження...', ru: 'Формируем файл для загрузки...', en: 'Preparing your download...' })}
+                        </p>
                       </div>
                     ) : null}
                     {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
@@ -394,7 +408,7 @@ export default function EventDetailPage() {
                           <Link className="btn btn-secondary" to="/menu" onClick={() => setTicketFormOpen(false)}>
                             {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
                           </Link>
-                          {orderStatus?.downloadUrl ? (
+                          {orderStatus?.downloadUrl && orderStatus?.pdfReady ? (
                             <a className="btn btn-secondary" href={orderStatus.downloadUrl}>
                               {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
                             </a>
