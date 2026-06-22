@@ -125,6 +125,7 @@ export default function EventDetailPage() {
       currency: 'UAH',
       paymentUrl: null
     });
+    setTicketFormOpen(true);
   }, [searchParams]);
 
   useEffect(() => {
