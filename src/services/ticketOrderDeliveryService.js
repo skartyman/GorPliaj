@@ -143,21 +143,22 @@ function buildOrderMailHtml(order, downloadUrl) {
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;">
                 <tr>
                   <td style="width:50%;padding-right:8px;vertical-align:top;">
-                    <div style="background:#3d2417;border-radius:24px;padding:22px;min-height:124px;">
+                    <div style="background:#3d2417;border-radius:24px;padding:22px;">
                       <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#d9c0a0;">Квитків</div>
                       <div style="font-size:32px;font-weight:700;color:#ffffff;margin-top:10px;">${order.tickets.length}</div>
-                      <div style="font-size:13px;line-height:1.6;color:#f0dfcf;margin-top:10px;">Усі коди та QR уже зібрані в одному PDF, щоб на вході все було під рукою.</div>
                     </div>
                   </td>
                   <td style="width:50%;padding-left:8px;vertical-align:top;">
-                    <div style="background:#f6eee4;border-radius:24px;padding:22px;min-height:124px;">
+                    <div style="background:#f6eee4;border-radius:24px;padding:22px;">
                       <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#8f6a44;">Сума</div>
                       <div style="font-size:32px;font-weight:700;color:#402719;margin-top:10px;">${escapeHtml(formatMoney(order.amount, order.currency))}</div>
-                      <div style="font-size:13px;line-height:1.6;color:#6d5948;margin-top:10px;">Покупець: ${escapeHtml(order.customerName)}</div>
                     </div>
                   </td>
                 </tr>
               </table>
+              <div style="font-size:13px;line-height:1.6;color:#6d5948;margin-top:14px;">
+                Покупець: ${escapeHtml(order.customerName)} · Усі коди та QR зібрані в одному PDF
+              </div>
               <div style="background:#fbf6ef;border:1px solid #eadbca;border-radius:24px;padding:22px 24px;margin-top:20px;">
                 <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#8f6a44;margin-bottom:14px;">Коди квитків</div>
                 ${buildTicketChips(order)}
