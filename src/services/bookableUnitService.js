@@ -3,8 +3,6 @@ const prisma = require('../lib/prisma');
 const reservationService = require('./reservationService');
 const venueTableOverrideService = require('./venueTableOverrideService');
 const { localizeField, normalizeLocalizedField } = require('../utils/localization');
-
-const BEACH_POSITION_TYPES = new Set(['BUNGALOW', 'KROVAT', 'PIER']);
 const EVENING_USAGE_KEYWORDS = ['night', 'evening', 'event', 'concert'];
 
 function matchesRequestedUsageMode(mapUsageMode, requestedUsageMode) {
@@ -97,7 +95,13 @@ function inferBookingKind(table, objectMeta = {}) {
     return 'BEACH';
   }
 
-  return BEACH_POSITION_TYPES.has(String(table.positionType || '').toUpperCase()) ? 'BEACH' : 'TABLE';
+  return inferBeachKindFromPositionType(table.positionType);
+}
+
+function inferBeachKindFromPositionType(positionType) {
+  // Fallback for old data without explicit bookingKind
+  const BEACH_TYPES = new Set(['BUNGALOW', 'KROVAT', 'PIER']);
+  return BEACH_TYPES.has(String(positionType || '').toUpperCase()) ? 'BEACH' : 'TABLE';
 }
 
 function getUnitPhotoUrl(table, objectMeta = {}) {
@@ -128,6 +132,8 @@ function buildBookableUnit(table, linkedObject) {
     bookingKind,
     positionType: table.positionType || linkedObject?.type || null,
     side: table.positionSide || null,
+    rowId: table.rowId ? Number(table.rowId) : null,
+    rowSortOrder: table.row?.sortOrder != null ? Number(table.row.sortOrder) : null,
     code: table.code || null,
     name: pickLocalizedValue(table.serviceName, table.name),
     label: pickLocalizedValue(linkedObject?.label, table.name),
@@ -267,7 +273,10 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
         where: {
           isActive: true
         },
-        orderBy: { id: 'asc' }
+        orderBy: { id: 'asc' },
+        include: {
+          row: { select: { sortOrder: true } }
+        }
       },
       mapObjects: {
         where: {

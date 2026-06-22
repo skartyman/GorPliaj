@@ -135,7 +135,8 @@ const POSITION_TYPES = [
 const POSITION_SIDES = [
   { value: '', label: 'Без стороны', code: '' },
   { value: 'LEFT', label: 'Лево', code: 'L' },
-  { value: 'RIGHT', label: 'Право', code: 'R' }
+  { value: 'RIGHT', label: 'Право', code: 'R' },
+  { value: 'CENTER', label: 'Центр', code: 'C' }
 ];
 
 const ASSET_CATEGORIES = {
@@ -565,7 +566,30 @@ function normalizeObject(object) {
   };
 }
 
+let apiPositionTypes = null;
+
+async function loadPositionTypes() {
+  try {
+    const { response, body } = await apiRequest('/api/admin/position-types');
+    if (response.ok && Array.isArray(body)) {
+      apiPositionTypes = body.map((t) => ({
+        value: t.value,
+        label: t.name?.ua || t.value,
+        code: t.code,
+        requiresSide: t.requiresSide,
+        bookingKind: t.bookingKind
+      }));
+    }
+  } catch (e) {
+    // keep fallback POSITION_TYPES
+  }
+}
+
 function getPositionTypeConfig(positionType) {
+  if (apiPositionTypes) {
+    const found = apiPositionTypes.find((item) => item.value === positionType);
+    if (found) return found;
+  }
   return POSITION_TYPES.find((item) => item.value === positionType) || POSITION_TYPES[0];
 }
 
@@ -575,13 +599,25 @@ function getPositionSideConfig(positionSide) {
 
 function parsePositionCode(code) {
   const normalized = String(code || '').trim().toUpperCase();
-  const sidedMatch = normalized.match(/^(L|R)(B|K)-(\d+)$/);
+  const sidedMatch = normalized.match(/^(L|R|C)(B|K)-(\d+)(?:\.(\d+))?$/);
   if (sidedMatch) {
-    const [, sideCode, typeCode, number] = sidedMatch;
+    const [, sideCode, typeCode, number, row] = sidedMatch;
     return {
       positionType: typeCode === 'B' ? 'BUNGALOW' : 'KROVAT',
-      positionSide: sideCode === 'L' ? 'LEFT' : 'RIGHT',
-      number: Number(number) || 0
+      positionSide: sideCode === 'L' ? 'LEFT' : (sideCode === 'C' ? 'CENTER' : 'RIGHT'),
+      number: Number(number) || 0,
+      row: row ? Number(row) : null
+    };
+  }
+
+  const noSideMatch = normalized.match(/^(B|K)-(\d+)(?:\.(\d+))?$/);
+  if (noSideMatch) {
+    const [, typeCode, number, row] = noSideMatch;
+    return {
+      positionType: typeCode === 'B' ? 'BUNGALOW' : 'KROVAT',
+      positionSide: '',
+      number: Number(number) || 0,
+      row: row ? Number(row) : null
     };
   }
 
@@ -596,11 +632,12 @@ function parsePositionCode(code) {
     return {
       positionType: typeMap[typeCode] || '',
       positionSide: '',
-      number: Number(number) || 0
+      number: Number(number) || 0,
+      row: null
     };
   }
 
-  return { positionType: '', positionSide: '', number: 0 };
+  return { positionType: '', positionSide: '', number: 0, row: null };
 }
 
 function inferPositionSettings(object, table = null) {
@@ -624,16 +661,17 @@ function buildPositionCodePrefix(positionType, positionSide) {
   }
 
   const sideConfig = getPositionSideConfig(positionSide);
-  return sideConfig.code ? `${sideConfig.code}${typeConfig.code}` : '';
+  return sideConfig.code ? `${sideConfig.code}${typeConfig.code}` : typeConfig.code;
 }
 
-function getNextPositionCode(positionType, positionSide, tables, excludeTableId = null, zoneId = null) {
+function getNextPositionCode(positionType, positionSide, tables, excludeTableId = null, zoneId = null, row = null) {
   const prefix = buildPositionCodePrefix(positionType, positionSide);
   if (!prefix) {
     return '';
   }
 
-  const matcher = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+  const pattern = row != null ? `^${prefix}-${row}\\.(\\d+)$` : `^${prefix}-(\\d+)$`;
+  const matcher = new RegExp(pattern, 'i');
   const normalizedZoneId = zoneId === null || zoneId === undefined || zoneId === '' ? null : Number(zoneId);
   const maxNumber = (tables || []).reduce((max, table) => {
     if (excludeTableId && Number(table.id) === Number(excludeTableId)) {
@@ -648,7 +686,7 @@ function getNextPositionCode(positionType, positionSide, tables, excludeTableId 
     return match ? Math.max(max, Number(match[1]) || 0) : max;
   }, 0);
 
-  return `${prefix}-${maxNumber + 1}`;
+  return row != null ? `${prefix}-${row}.${maxNumber + 1}` : `${prefix}-${maxNumber + 1}`;
 }
 
 function isPointInPolygon(point, points) {
@@ -739,23 +777,31 @@ function buildEditorState(payload) {
       viewportJson: normalizeZoneViewport(zone.viewportJson),
       polygonJson: normalizeZonePolygon(zone.polygonJson)
     })),
-      tables: (payload.tables || []).map((table) => ({
-        ...table,
-        code: String(table.code || '').trim(),
-        bookingKind: String(table.bookingKind || 'TABLE').trim().toUpperCase(),
-        positionType: String(table.positionType || '').trim(),
-        positionSide: String(table.positionSide || '').trim(),
-        name: table.name,
-        serviceName: table.serviceName || null,
-        serviceDescription: table.serviceDescription || null,
-        photoUrl: String(table.photoUrl || '').trim(),
-        sortOrder: Number(table.sortOrder) || 0,
-        seatsMin: Number(table.seatsMin) || 1,
-        seatsMax: Number(table.seatsMax) || 4,
-        deposit: Number(table.deposit) || 0,
-        isActive: table.isActive ?? true,
-        isBookable: table.isBookable ?? true
-      })),
+    rows: (payload.rows || []).map((row) => ({
+      ...row,
+      id: Number(row.id),
+      mapId: Number(row.mapId),
+      zoneId: row.zoneId ? Number(row.zoneId) : null,
+      sortOrder: Number(row.sortOrder)
+    })),
+    tables: (payload.tables || []).map((table) => ({
+      ...table,
+      code: String(table.code || '').trim(),
+      bookingKind: String(table.bookingKind || 'TABLE').trim().toUpperCase(),
+      positionType: String(table.positionType || '').trim(),
+      positionSide: String(table.positionSide || '').trim(),
+      rowId: table.rowId ? Number(table.rowId) : null,
+      name: table.name,
+      serviceName: table.serviceName || null,
+      serviceDescription: table.serviceDescription || null,
+      photoUrl: String(table.photoUrl || '').trim(),
+      sortOrder: Number(table.sortOrder) || 0,
+      seatsMin: Number(table.seatsMin) || 1,
+      seatsMax: Number(table.seatsMax) || 4,
+      deposit: Number(table.deposit) || 0,
+      isActive: table.isActive ?? true,
+      isBookable: table.isBookable ?? true
+    })),
     objects: (payload.objects || []).map((object) => normalizeObject(object, map))
   };
 }
@@ -772,6 +818,7 @@ function buildPreviewDraftPayload(current) {
   return {
     map: current.map,
     zones: current.zones || [],
+    rows: current.rows || [],
     tables: current.tables || [],
     objects: current.objects || [],
     savedAt: new Date().toISOString()
@@ -859,7 +906,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
     });
 
     if (result.response.ok && result.body?.url) {
-      onMapFieldChange('backgroundImage', result.body.url);
+      onMapFieldChange('backgroundImage', result.body.url, { saveAfterChange: true });
     } else {
       alert(result.body?.message || 'Upload failed');
     }
@@ -1057,7 +1104,7 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, onDrawZoneP
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, mapId, onAppendRow, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -1069,8 +1116,24 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
   const positionType = table?.positionType || inferredPosition.positionType;
   const positionSide = table?.positionSide || inferredPosition.positionSide;
   const positionTypeConfig = getPositionTypeConfig(positionType);
-  const suggestedPositionCode = getNextPositionCode(positionType, positionSide, tables, table?.id, table?.zoneId);
+  const isBeachType = positionTypeConfig.bookingKind === 'BEACH' && !!positionType;
+  const zoneRows = (rows || []).filter((r) => table?.zoneId ? r.zoneId === table.zoneId : true);
+  const row = table?.rowId ? rows?.find((r) => r.id === table.rowId) : null;
+  const suggestedPositionCode = getNextPositionCode(positionType, positionSide, tables, table?.id, table?.zoneId, row?.sortOrder);
   const persistedZones = (zones || []).filter((item) => Number.isInteger(Number(item.id)) && Number(item.id) > 0);
+  const positionTypeOptions = apiPositionTypes || POSITION_TYPES;
+
+  async function handleCreateRow() {
+    if (!table?.zoneId) { alert('Сначала выберите зону для стола'); return; }
+    const zoneRows = (rows || []).filter((r) => r.zoneId === table.zoneId);
+    const nextSortOrder = zoneRows.length > 0 ? Math.max(...zoneRows.map((r) => r.sortOrder || 0)) + 1 : 1;
+    const { response, body } = await apiRequest(`/api/admin/maps/${mapId}/rows`, {
+      method: 'POST',
+      body: JSON.stringify({ zoneId: Number(table.zoneId), sortOrder: nextSortOrder })
+    });
+    if (!response.ok) { alert(body?.message || 'Failed to create row'); return; }
+    onAppendRow(body);
+  }
 
   const uploadFileToField = async (event, field) => {
     const file = event.target.files?.[0];
@@ -1296,7 +1359,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
                 onChange={(event) => onFieldChange('positionType', event.target.value)}
                 disabled={!selectedObject.tableId}
               >
-                {POSITION_TYPES.map((item) => (
+                {positionTypeOptions.map((item) => (
                   <option key={item.value || 'none'} value={item.value}>{item.label}</option>
                 ))}
               </select>
@@ -1314,6 +1377,34 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, zones, tables,
                 ))}
               </select>
             </label>
+
+            {isBeachType ? (
+              <div className="field-span-2" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <label style={{ flex: 1, margin: 0 }}>
+                  Ряд
+                  <select
+                    value={table?.rowId || ''}
+                    onChange={(event) => onFieldChange('tableRowId', event.target.value)}
+                    disabled={!selectedObject.tableId}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Не задано</option>
+                    {zoneRows.map((item) => (
+                      <option key={item.id} value={item.id}>Ряд {item.sortOrder}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={handleCreateRow}
+                  disabled={!selectedObject.tableId || !table?.zoneId}
+                  style={{ whiteSpace: 'nowrap', marginBottom: 1 }}
+                >
+                  + Ряд
+                </button>
+              </div>
+            ) : null}
 
             <label>
               Код позиции
@@ -2412,7 +2503,7 @@ export default function MapEditorPage() {
   function applyTextureToSelected(textureUrl) {
     if (!selectedObject) return;
     handleFieldChange('textureUrl', textureUrl);
-    handleFieldChange('texture', '');
+    handleFieldChange('texture', '', { saveAfterChange: true });
   }
 
   async function deleteTextureAsset(assetId) {
@@ -2485,6 +2576,11 @@ export default function MapEditorPage() {
 
   useEffect(() => {
     loadMapAssetLibrary().catch(() => {});
+  }, []);
+
+  const [typesLoaded, setTypesLoaded] = useState(0);
+  useEffect(() => {
+    loadPositionTypes().then(() => setTypesLoaded((v) => v + 1));
   }, []);
 
   useEffect(() => {
@@ -2592,6 +2688,10 @@ export default function MapEditorPage() {
   const zoneMap = useMemo(
     () => new Map((editorState.current?.zones || []).map((zone) => [zone.id, zone])),
     [editorState.current?.zones]
+  );
+  const rowMap = useMemo(
+    () => new Map((editorState.current?.rows || []).map((row) => [row.id, row])),
+    [editorState.current?.rows]
   );
   const selectedObject = useMemo(
     () => objects.find((object) => object.id === editorState.selectedObjectId) || null,
@@ -2966,7 +3066,7 @@ export default function MapEditorPage() {
       return;
     }
 
-    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableServiceName' || field === 'tableServiceDescription' || field === 'tableBookingKind' || field === 'tableSortOrder' || field === 'tableZoneId' || field === 'tableSeatsMin' || field === 'tableSeatsMax' || field === 'tableDeposit' || field === 'tableIsBookable') {
+    if (field === 'tablePhotoUrl' || field === 'tableCode' || field === 'tableName' || field === 'tableServiceName' || field === 'tableServiceDescription' || field === 'tableBookingKind' || field === 'tableSortOrder' || field === 'tableZoneId' || field === 'tableSeatsMin' || field === 'tableSeatsMax' || field === 'tableDeposit' || field === 'tableIsBookable' || field === 'tableRowId') {
       if (!selectedObject.tableId) {
         return;
       }
@@ -2976,13 +3076,15 @@ export default function MapEditorPage() {
         const nextZoneId = field === 'tableZoneId'
           ? (value === '' ? null : Number(value))
           : currentTable?.zoneId;
+        const row = currentTable?.rowId ? prev.current.rows?.find((r) => r.id === currentTable.rowId) : null;
         const nextCode = field === 'tableZoneId'
           ? getNextPositionCode(
               currentTable?.positionType,
               currentTable?.positionSide,
               prev.current.tables,
               selectedObject.tableId,
-              nextZoneId
+              nextZoneId,
+              row?.sortOrder
             )
           : null;
         const next = {
@@ -3003,7 +3105,8 @@ export default function MapEditorPage() {
                     ...(field === 'tableSeatsMin' ? { seatsMin: Math.max(1, Number(value) || 1) } : {}),
                     ...(field === 'tableSeatsMax' ? { seatsMax: Math.max(1, Number(value) || 1) } : {}),
                     ...(field === 'tableDeposit' ? { deposit: Math.max(0, Number(value) || 0) } : {}),
-                    ...(field === 'tableIsBookable' ? { isBookable: Boolean(value) } : {})
+                    ...(field === 'tableIsBookable' ? { isBookable: Boolean(value) } : {}),
+                    ...(field === 'tableRowId' ? { rowId: value === '' ? null : Number(value) } : {})
                   }
                 : table
             )
@@ -3039,11 +3142,12 @@ export default function MapEditorPage() {
         const requestedType = field === 'positionType' ? String(value || '') : (currentTable?.positionType || inferred.positionType);
         const typeConfig = getPositionTypeConfig(requestedType);
         const requestedSide = typeConfig.requiresSide
-          ? (field === 'positionSide' ? String(value || '') : (currentTable?.positionSide || inferred.positionSide || 'LEFT'))
+          ? (field === 'positionSide' ? String(value || '') : (currentTable?.positionSide || inferred.positionSide || ''))
           : '';
+        const row = currentTable?.rowId ? prev.current.rows?.find((r) => r.id === currentTable.rowId) : null;
         const generatedCode = field === 'generatePositionCode'
           ? String(value || '')
-          : getNextPositionCode(requestedType, requestedSide, prev.current.tables, selectedObject.tableId, currentTable?.zoneId);
+          : getNextPositionCode(requestedType, requestedSide, prev.current.tables, selectedObject.tableId, currentTable?.zoneId, row?.sortOrder);
 
         const next = {
           current: {
@@ -3054,6 +3158,7 @@ export default function MapEditorPage() {
                     ...table,
                     positionType: requestedType || null,
                     positionSide: requestedSide || null,
+                    bookingKind: (typeConfig.bookingKind || 'TABLE'),
                     code: generatedCode || table.code || null
                   }
                 : table
@@ -3143,18 +3248,26 @@ export default function MapEditorPage() {
     return { ua: String(label || ''), ru: '', en: '' };
   }
 
-  function handleMapFieldChange(field, value) {
-    updateCurrent((prev) => ({
-      current: {
-        ...prev.current,
-        map: {
-          ...prev.current.map,
-          [field]: field === 'width' || field === 'height'
-            ? Math.max(roundCoordinate(value), 100)
-            : String(value)
+  function handleMapFieldChange(field, value, options = {}) {
+    updateCurrent((prev) => {
+      const next = {
+        current: {
+          ...prev.current,
+          map: {
+            ...prev.current.map,
+            [field]: field === 'width' || field === 'height'
+              ? Math.max(roundCoordinate(value), 100)
+              : String(value)
+          }
         }
+      };
+
+      if (options.saveAfterChange) {
+        pendingSaveRef.current = { ...prev, ...next };
       }
-    }));
+
+      return next;
+    });
   }
 
   function handleZoneChange(zoneId, patch) {
@@ -3223,7 +3336,7 @@ export default function MapEditorPage() {
       const inferred = inferPositionSettings(selectedObject, null);
       const positionType = inferred.positionType || (selectedObject.type === 'TABLE' ? 'RESTAURANT' : '');
       const typeConfig = getPositionTypeConfig(positionType);
-      const positionSide = typeConfig.requiresSide ? (inferred.positionSide || 'LEFT') : '';
+      const positionSide = typeConfig.requiresSide ? (inferred.positionSide || '') : '';
       const code = getNextPositionCode(positionType, positionSide, prev.current.tables, null, defaultZone.id);
       const displayName = code || localizeField(selectedObject.label, language) || 'Новая позиция';
 
@@ -3237,7 +3350,7 @@ export default function MapEditorPage() {
               zoneId: Number(defaultZone.id),
               name: normalizeLocalizedField(displayName),
               code: code || null,
-              bookingKind: positionType === 'BUNGALOW' || positionType === 'KROVAT' || positionType === 'PIER' ? 'BEACH' : 'TABLE',
+              bookingKind: typeConfig.bookingKind || 'TABLE',
               positionType: positionType || null,
               positionSide: positionSide || null,
               serviceName: normalizeLocalizedField(displayName),
@@ -3561,6 +3674,23 @@ export default function MapEditorPage() {
         activeTab: 'PROPERTIES'
       };
     });
+  }
+
+  function appendRow(rowData) {
+    if (!rowData?.id) return;
+    const normalized = {
+      id: Number(rowData.id),
+      mapId: Number(rowData.mapId),
+      zoneId: rowData.zoneId ? Number(rowData.zoneId) : null,
+      sortOrder: Number(rowData.sortOrder)
+    };
+    setEditorState((prev) => ({
+      ...prev,
+      current: {
+        ...prev.current,
+        rows: [...(prev.current?.rows || []), normalized]
+      }
+    }));
   }
 
   async function saveChanges(stateOverride = null) {
@@ -4415,6 +4545,7 @@ export default function MapEditorPage() {
                       selectedObject={selectedObject}
                       tableMap={tableMap}
                       zoneMap={zoneMap}
+                      rows={editorState.current.rows || []}
                       zones={editorState.current.zones}
                       tables={editorState.current.tables}
                       onFieldChange={handleFieldChange}
@@ -4424,6 +4555,8 @@ export default function MapEditorPage() {
                       onDelete={handleDeleteSelected}
                       onLayerAction={moveSelectedLayer}
                       onSave={saveChanges}
+                      mapId={map?.id}
+                      onAppendRow={appendRow}
                       t={t}
                       language={language}
                     />

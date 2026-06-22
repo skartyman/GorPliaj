@@ -112,6 +112,96 @@ function hasBuiltinTexture(texture) {
   return ['sand', 'water', 'wood', 'grass'].includes(String(texture || '').toLowerCase());
 }
 
+function expandBounds(bounds, object) {
+  const x = Number(object?.x) || 0;
+  const y = Number(object?.y) || 0;
+  const width = Math.max(Number(object?.width) || 0, 1);
+  const height = Math.max(Number(object?.height) || 0, 1);
+  const maxX = x + width;
+  const maxY = y + height;
+
+  if (!bounds) {
+    return { minX: x, minY: y, maxX, maxY };
+  }
+
+  return {
+    minX: Math.min(bounds.minX, x),
+    minY: Math.min(bounds.minY, y),
+    maxX: Math.max(bounds.maxX, maxX),
+    maxY: Math.max(bounds.maxY, maxY)
+  };
+}
+
+const POSITION_TYPE_LABELS = {
+  TABLE: { ua: 'Стіл', ru: 'Стол', en: 'Table' },
+  SUNBED: { ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' },
+  BUNGALOW: { ua: 'Бунгало', ru: 'Бунгало', en: 'Bungalow' },
+  KROVAT: { ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' },
+  PIER: { ua: 'Пірс', ru: 'Пирс', en: 'Pier' },
+  RESTAURANT: { ua: 'Ресторан', ru: 'Ресторан', en: 'Restaurant' },
+  TERRACE: { ua: 'Тераса', ru: 'Терраса', en: 'Terrace' }
+};
+
+function positionTypeLabel(value, locale) {
+  const type = String(value || '').toUpperCase();
+  const label = POSITION_TYPE_LABELS[type];
+  if (label) return localizeField(label, locale);
+  return type;
+}
+
+function padBounds(bounds, mapDimensions, padding = 96) {
+  if (!bounds) {
+    return null;
+  }
+
+  const minX = Math.max(0, bounds.minX - padding);
+  const minY = Math.max(0, bounds.minY - padding);
+  const maxX = Math.min(mapDimensions.width, bounds.maxX + padding);
+  const maxY = Math.min(mapDimensions.height, bounds.maxY + padding);
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(maxX - minX, 80),
+    height: Math.max(maxY - minY, 80)
+  };
+}
+
+function parseZoneViewport(value, mapDimensions) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const x = Math.max(0, Number(value.x) || 0);
+  const y = Math.max(0, Number(value.y) || 0);
+  const width = Math.min(Math.max(Number(value.width) || 0, 1), Math.max(mapDimensions.width - x, 1));
+  const height = Math.min(Math.max(Number(value.height) || 0, 1), Math.max(mapDimensions.height - y, 1));
+
+  return width > 1 && height > 1 ? { x, y, width, height } : null;
+}
+
+function parseZonePolygonBounds(value, mapDimensions) {
+  const points = Array.isArray(value?.points) ? value.points : [];
+  if (points.length < 3) {
+    return null;
+  }
+
+  const normalized = points.map((point) => ({
+    x: Math.max(Number(point?.x) || 0, 0),
+    y: Math.max(Number(point?.y) || 0, 0)
+  }));
+  const minX = Math.min(...normalized.map((point) => point.x));
+  const minY = Math.min(...normalized.map((point) => point.y));
+  const maxX = Math.max(...normalized.map((point) => point.x));
+  const maxY = Math.max(...normalized.map((point) => point.y));
+
+  return padBounds({ minX, minY, maxX, maxY }, mapDimensions);
+}
+
+function zoneDisplayName(zone, locale) {
+  return localizeField(zone?.name, locale) || localizeField(zone?.name, 'ua') || '';
+}
+
 function BuiltinTexturePattern({ id, texture }) {
   switch (String(texture || '').toLowerCase()) {
     case 'grass':
@@ -922,6 +1012,12 @@ export default function MapPage() {
               <p>
                 <strong>{localizeField(selectedTable.name, locale) || selectedTable.code}</strong>
               </p>
+              {selectedTable.positionType ? (
+                <p className="muted">{positionTypeLabel(selectedTable.positionType, locale)}</p>
+              ) : null}
+              {selectedTable.rowSortOrder != null ? (
+                <p className="muted">{localizeField({ ua: 'Ряд', ru: 'Ряд', en: 'Row' }, locale)} {selectedTable.rowSortOrder}</p>
+              ) : null}
               <p className="muted">
                 {t('mapSeats')}: {selectedTable.seatsMin}-{selectedTable.seatsMax}
               </p>
@@ -937,6 +1033,12 @@ export default function MapPage() {
               <p>
                 <strong>{selectedObjectLabel}</strong>
               </p>
+              {selectedObjectTable?.positionType ? (
+                <p className="muted">{positionTypeLabel(selectedObjectTable.positionType, locale)}</p>
+              ) : null}
+              {selectedObjectTable?.rowSortOrder != null ? (
+                <p className="muted">{localizeField({ ua: 'Ряд', ru: 'Ряд', en: 'Row' }, locale)} {selectedObjectTable.rowSortOrder}</p>
+              ) : null}
               {selectedObjectMeta.photoUrl ? (
                 <div className="map-object-photo">
                   <img src={selectedObjectMeta.photoUrl} alt={selectedObjectLabel} />

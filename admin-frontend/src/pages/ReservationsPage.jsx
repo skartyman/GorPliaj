@@ -66,16 +66,16 @@ function getPositionTypeLabel(positionType, language) {
     TERRACE: { ua: 'Тераса', ru: 'Терраса', en: 'Terrace' }
   };
 
-  return labels[positionType] ? pickLabel(language, labels[positionType]) : '';
+  const label = labels[positionType];
+  if (label) return pickLabel(language, label);
+  return positionType || '';
 }
 
 function getReservationUnitName(reservation, language) {
-  return (
-    localizeField(reservation.table?.serviceName, language)
-    || reservation.table?.code
-    || localizeField(reservation.table?.name, language)
-    || '—'
-  );
+  const code = reservation.table?.code || localizeField(reservation.table?.name, language) || '';
+  const rowSortOrder = reservation.table?.row?.sortOrder;
+  const rowLabel = rowSortOrder != null ? `Ряд ${rowSortOrder}` : '';
+  return [code, rowLabel].filter(Boolean).join(' · ') || '—';
 }
 
 function getReservationModePlace(reservation, language, t) {

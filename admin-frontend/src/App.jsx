@@ -15,6 +15,7 @@ import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
 import TicketVerificationPage from './pages/TicketVerificationPage';
 import TicketSalesPage from './pages/TicketSalesPage';
+import PositionTypesPage from './pages/PositionTypesPage';
 import AdminInstallPrompt from './components/AdminInstallPrompt';
 
 function ProtectedPage({ children }) {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/admin/verify-ticket" element={<ProtectedPage><TicketVerificationPage /></ProtectedPage>} />
         <Route path="/admin/users" element={<ProtectedPage><UsersPage /></ProtectedPage>} />
         <Route path="/admin/settings" element={<ProtectedPage><SettingsPage /></ProtectedPage>} />
+        <Route path="/admin/position-types" element={<ProtectedPage><PositionTypesPage /></ProtectedPage>} />
         <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>
     </AuthProvider>

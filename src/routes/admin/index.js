@@ -70,6 +70,18 @@ const {
 } = require('../../controllers/adminSettingsController');
 const { handleTranslate } = require('../../controllers/adminTranslationController');
 const {
+  listPositionTypes,
+  createPositionType,
+  updatePositionType,
+  deletePositionType
+} = require('../../controllers/adminPositionTypeController');
+const {
+  listBeachRows,
+  createBeachRow,
+  updateBeachRow,
+  deleteBeachRow
+} = require('../../controllers/adminBeachRowController');
+const {
   upload,
   handleMulterError,
   uploadAdminImage,
@@ -128,6 +140,16 @@ router.delete('/maps/:id', requireAdminAuth, requirePermission('map:edit'), dele
 router.get('/maps/default/editor', requireAdminAuth, requirePermission('map:view'), getDefaultAdminMapEditor);
 router.get('/maps/:id/editor', requireAdminAuth, requirePermission('map:view'), getAdminMapEditor);
 router.put('/maps/:id/editor', requireAdminAuth, requirePermission('map:edit'), updateAdminMapEditor);
+
+router.get('/position-types', requireAdminAuth, requirePermission('map:view'), listPositionTypes);
+router.post('/position-types', requireAdminAuth, requirePermission('map:edit'), createPositionType);
+router.patch('/position-types/:id', requireAdminAuth, requirePermission('map:edit'), updatePositionType);
+router.delete('/position-types/:id', requireAdminAuth, requirePermission('map:edit'), deletePositionType);
+
+router.get('/maps/:mapId/rows', requireAdminAuth, requirePermission('map:view'), listBeachRows);
+router.post('/maps/:mapId/rows', requireAdminAuth, requirePermission('map:edit'), createBeachRow);
+router.patch('/beach-rows/:id', requireAdminAuth, requirePermission('map:edit'), updateBeachRow);
+router.delete('/beach-rows/:id', requireAdminAuth, requirePermission('map:edit'), deleteBeachRow);
 
 router.get('/menu/categories', requireAdminAuth, requirePermission('menu:view'), getMenuCategories);
 router.post('/menu/categories', requireAdminAuth, requirePermission('menu:edit'), createMenuCategory);

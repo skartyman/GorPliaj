@@ -1,13 +1,13 @@
-const { MapObjectType, MapStatus, VenuePositionSide, VenuePositionType } = require('@prisma/client');
+const { MapObjectType, MapStatus, VenuePositionSide } = require('@prisma/client');
 const prisma = require('../lib/prisma');
 const { saveMapSnapshot } = require('./r2StorageService');
 const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
+const positionTypeService = require('./adminPositionTypeService');
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
 const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor', 'usageMode'];
-const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'bookingKind', 'positionType', 'positionSide', 'serviceName', 'serviceDescription', 'sortOrder', 'seatsMin', 'seatsMax', 'deposit', 'isActive', 'isBookable'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'bookingKind', 'positionType', 'positionSide', 'rowId', 'serviceName', 'serviceDescription', 'sortOrder', 'seatsMin', 'seatsMax', 'deposit', 'isActive', 'isBookable'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
-const VALID_POSITION_TYPES = new Set(Object.values(VenuePositionType));
 const VALID_POSITION_SIDES = new Set(Object.values(VenuePositionSide));
 const VALID_MAP_USAGE_MODES = new Set(['DAY', 'EVENING', 'EVENT']);
 const VALID_BOOKING_KINDS = new Set(['TABLE', 'BEACH']);
@@ -15,6 +15,11 @@ const MAP_EDITOR_INCLUDE = {
   zones: {
     orderBy: {
       sortOrder: 'asc'
+    },
+    include: {
+      rows: {
+        orderBy: { sortOrder: 'asc' }
+      }
     }
   },
   tables: {
@@ -64,11 +69,15 @@ function serializeMapEditorPayload(map) {
 
   const { zones, tables, mapObjects, ...mapData } = map;
 
+  const rows = (zones || []).flatMap((zone) => zone.rows || []);
+  const cleanZones = (zones || []).map(({ rows: _rows, ...zone }) => zone);
+
   return {
     map: fitMapToObjects(mapData, mapObjects),
-    zones,
+    zones: cleanZones,
     tables,
-    objects: mapObjects
+    objects: mapObjects,
+    rows
   };
 }
 
@@ -450,6 +459,12 @@ function normalizeTableInput(tableInput, existingTable = null) {
       continue;
     }
 
+    if (field === 'rowId') {
+      const nextRowId = tableInput?.rowId === undefined ? existingTable?.rowId : tableInput.rowId;
+      normalized.rowId = nextRowId ? Number(nextRowId) : null;
+      continue;
+    }
+
     if (field === 'name') {
       const nextValue = tableInput?.name === undefined ? existingTable?.name : tableInput?.name;
       normalized.name = normalizeJsonValue(nextValue);
@@ -698,6 +713,21 @@ function validateEditorZones(zones) {
   return null;
 }
 
+function validateEditorRows(rows) {
+  if (rows === undefined) return null;
+  if (!Array.isArray(rows)) return 'Rows payload must be an array.';
+  const uniqueIds = new Set();
+  for (const row of rows) {
+    const rawId = row?.id;
+    if (rawId === undefined || rawId === null || rawId === '') return 'Each row must include an id.';
+    const normalizedId = String(rawId);
+    if (uniqueIds.has(normalizedId)) return `Row ${normalizedId} is duplicated in payload.`;
+    uniqueIds.add(normalizedId);
+    if (row.zoneId === undefined || row.zoneId === null || row.zoneId === '') return `Row ${normalizedId} must include a zoneId.`;
+  }
+  return null;
+}
+
 function validateEditorTables(tables) {
   if (tables === undefined) {
     return null;
@@ -737,13 +767,6 @@ function validateEditorTables(tables) {
       return `Table ${normalizedId} must include a zone id.`;
     }
 
-    if (table.positionType !== undefined && table.positionType !== null && table.positionType !== '') {
-      const positionType = String(table.positionType).trim().toUpperCase();
-      if (!VALID_POSITION_TYPES.has(positionType)) {
-        return `Table ${normalizedId} contains an invalid position type.`;
-      }
-    }
-
     if (table.bookingKind !== undefined && table.bookingKind !== null && table.bookingKind !== '') {
       const bookingKind = String(table.bookingKind).trim().toUpperCase();
       if (!VALID_BOOKING_KINDS.has(bookingKind)) {
@@ -762,8 +785,8 @@ function validateEditorTables(tables) {
   return null;
 }
 
-async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = [], zonesInput = []) {
-  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput) || validateEditorZones(zonesInput);
+async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = [], zonesInput = [], rowsInput = []) {
+  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput) || validateEditorZones(zonesInput) || validateEditorRows(rowsInput);
   if (validationError) {
     return { type: 'INVALID', message: validationError };
   }
@@ -792,7 +815,8 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
           seatsMax: true,
           deposit: true,
           isActive: true,
-          isBookable: true
+          isBookable: true,
+          rowId: true
         }
       },
       zones: {

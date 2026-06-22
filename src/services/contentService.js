@@ -23,7 +23,11 @@ async function getDefaultMap() {
           sortOrder: 'asc',
         },
       },
-      tables: true,
+      tables: {
+        include: {
+          row: { select: { sortOrder: true } }
+        }
+      },
       mapObjects: {
         orderBy: [
           {
@@ -65,7 +69,11 @@ async function getMapById(mapId) {
           sortOrder: 'asc',
         },
       },
-      tables: true,
+      tables: {
+        include: {
+          row: { select: { sortOrder: true } }
+        }
+      },
       mapObjects: {
         orderBy: [
           {

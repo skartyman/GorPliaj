@@ -199,6 +199,23 @@ const BOOKING_KIND_OPTIONS = [
   }
 ];
 
+let positionTypeOptions = null;
+
+async function loadPositionTypes() {
+  try {
+    const response = await fetch('/api/admin/position-types');
+    const body = await response.json();
+    if (Array.isArray(body)) {
+      positionTypeOptions = body.reduce((map, pt) => {
+        map[pt.value?.toUpperCase()] = pt.name || { ua: pt.value, ru: pt.value, en: pt.value };
+        return map;
+      }, {});
+    }
+  } catch (e) {
+    // keep fallback
+  }
+}
+
 export default function BookingPage() {
   const { locale } = useLocale();
   const [searchParams] = useSearchParams();
@@ -321,6 +338,7 @@ export default function BookingPage() {
   );
 
   useEffect(() => {
+    loadPositionTypes();
     let cancelled = false;
     setEventOptionsState((current) => ({ ...current, loading: true, error: '' }));
 
@@ -609,11 +627,18 @@ export default function BookingPage() {
 
   function positionTypeLabel(value) {
     const type = String(value || '').toUpperCase();
-    if (type === 'BUNGALOW') return c({ ua: 'Бунгало', ru: 'Бунгало', en: 'Bungalow' });
-    if (type === 'KROVAT') return c({ ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' });
-    if (type === 'PIER') return c({ ua: 'Пірс', ru: 'Пирс', en: 'Pier' });
-    if (type === 'SUNBED') return c({ ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' });
-    return bookingKindTitle(resolvedBookingKind);
+    if (positionTypeOptions && positionTypeOptions[type]) {
+      return localizedCopy(positionTypeOptions[type], locale);
+    }
+    const labels = {
+      BUNGALOW: { ua: 'Бунгало', ru: 'Бунгало', en: 'Bungalow' },
+      KROVAT: { ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' },
+      PIER: { ua: 'Пірс', ru: 'Пирс', en: 'Pier' },
+      SUNBED: { ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' }
+    };
+    const label = labels[type];
+    if (label) return localizedCopy(label, locale);
+    return type;
   }
 
   const unitTypeGroups = useMemo(() => {
@@ -1253,6 +1278,7 @@ export default function BookingPage() {
                       <div className="booking-variant-copy">
                         <strong>{unit.code || localizedName}</strong>
                         <span>{localizedName}</span>
+                        {unit.rowSortOrder != null ? <span className="muted small">{c({ ua: 'Ряд', ru: 'Ряд', en: 'Row' })} {unit.rowSortOrder}</span> : null}
                         <span>{unitStatusLabel(unit.status)} · {Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
                       </div>
                       <div className="booking-variant-actions">
@@ -1287,6 +1313,7 @@ export default function BookingPage() {
                 <span className="eyebrow">{c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })}</span>
                 <strong>{getUnitDisplayName(selectedUnit, locale)}</strong>
                 <span>{selectedMetaLine}</span>
+                {selectedUnit.rowSortOrder != null ? <span className="muted small">{c({ ua: 'Ряд', ru: 'Ряд', en: 'Row' })} {selectedUnit.rowSortOrder}</span> : null}
               </div>
               <div className="booking-selected-meta">
                 <span>{positionTypeLabel(selectedUnit.positionType)}</span>

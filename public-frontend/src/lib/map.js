@@ -158,21 +158,26 @@ export async function getPublicMapData(mapApi, params = {}) {
       name: zone.name,
       tables: (zone.tables?.length ? zone.tables : tablesByZone.get(zone.id) || []).map((table, index) => {
         const mapObject = tableObjectById.get(table.id);
-        return {
-          id: table.id,
-          zoneId: zone.id,
-          code: table.code || `T-${table.id}`,
-          name: table.name || `Table ${index + 1}`,
-          seatsMin: table.seatsMin || 2,
-          seatsMax: table.seatsMax || 4,
-          deposit: Number(table.deposit || 0),
-          x: toPercentCoordinate(table.x ?? mapObject?.x, mapData.width),
-          y: toPercentCoordinate(table.y ?? mapObject?.y, mapData.height),
-          isBookable: table.isBookable ?? true,
-          isActive: table.isActive ?? true,
-          shape: String(table.shape || 'ROUND').toUpperCase(),
-          status: table.isActive === false || table.isBookable === false ? 'unavailable' : 'free'
-        };
+          return {
+            id: table.id,
+            zoneId: zone.id,
+            code: table.code || `T-${table.id}`,
+            name: table.name || `Table ${index + 1}`,
+            positionType: table.positionType || null,
+            bookingKind: table.bookingKind || 'TABLE',
+            positionSide: table.positionSide || null,
+            rowId: table.rowId ? Number(table.rowId) : null,
+            rowSortOrder: table.row?.sortOrder != null ? Number(table.row.sortOrder) : null,
+            seatsMin: table.seatsMin || 2,
+            seatsMax: table.seatsMax || 4,
+            deposit: Number(table.deposit || 0),
+            x: toPercentCoordinate(table.x ?? mapObject?.x, mapData.width),
+            y: toPercentCoordinate(table.y ?? mapObject?.y, mapData.height),
+            isBookable: table.isBookable ?? true,
+            isActive: table.isActive ?? true,
+            shape: String(table.shape || 'ROUND').toUpperCase(),
+            status: table.isActive === false || table.isBookable === false ? 'unavailable' : 'free'
+          };
       })
     })),
     objects: objects.map((object) => ({
