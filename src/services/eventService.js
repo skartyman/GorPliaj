@@ -43,7 +43,22 @@ function normalizeSortOrder(value) {
   return Number.isInteger(parsed) ? parsed : 0;
 }
 
+function toEventTicketType(type) {
+  return {
+    id: type.id,
+    name: normalizeLocalizedField(type.name),
+    price: type.price,
+    capacity: type.capacity,
+    soldCount: type.soldCount,
+    isActive: type.isActive,
+    eventSessionId: type.eventSessionId,
+    createdAt: type.createdAt
+  };
+}
+
 function toAdminEvent(event) {
+  const sessions = event.sessions || [];
+  const ticketTypes = event.ticketTypes || [];
   return {
     id: event.id,
     title: normalizeLocalizedField(event.title),
@@ -57,6 +72,10 @@ function toAdminEvent(event) {
     isFeatured: event.isFeatured,
     ctaType: event.ctaType,
     ticketUrl: event.ticketUrl || '',
+    sessions: sessions.map(toEventSession),
+    ticketTypes: ticketTypes.map(toEventTicketType),
+    _sessionsCount: event._count?.sessions ?? sessions.length,
+    _ticketTypesCount: event._count?.ticketTypes ?? ticketTypes.length,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt
   };
@@ -140,14 +159,25 @@ function validateTimeRange(startAt, endAt) {
 
 async function listAdminEvents() {
   const events = await prisma.event.findMany({
-    orderBy: [{ startAt: 'asc' }, { id: 'asc' }]
+    orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
+    include: {
+      _count: {
+        select: { sessions: true, ticketTypes: true }
+      }
+    }
   });
 
   return events.map(toAdminEvent);
 }
 
 async function getAdminEventById(id) {
-  const event = await prisma.event.findUnique({ where: { id } });
+  const event = await prisma.event.findUnique({
+    where: { id },
+    include: {
+      sessions: { orderBy: [{ sortOrder: 'asc' }, { startsAt: 'asc' }, { id: 'asc' }] },
+      ticketTypes: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }
+    }
+  });
   return event ? toAdminEvent(event) : null;
 }
 
@@ -170,6 +200,18 @@ async function createAdminEvent(input) {
   if (timeError) return { type: 'INVALID', message: timeError };
 
   const slug = await ensureUniqueSlug(slugify(input.slug || titleObj.ua));
+
+  const sessionsInput = Array.isArray(input.sessions) ? input.sessions : [];
+  const sessionNameObjs = await Promise.all(
+    sessionsInput.map(async (s) => ({
+      name: s.name ? await autoTranslateObject(s.name) : null,
+      startsAt: normalizeDate(s.startsAt),
+      endsAt: normalizeDate(s.endsAt),
+      sortOrder: normalizeSortOrder(s.sortOrder),
+      isActive: normalizeBoolean(s.isActive, true)
+    }))
+  );
+
   const event = await prisma.event.create({
     data: {
       title: titleObj,
@@ -182,7 +224,13 @@ async function createAdminEvent(input) {
       status,
       isFeatured: normalizeBoolean(input.isFeatured, false),
       ctaType,
-      ticketUrl: normalizeOptionalText(input.ticketUrl)
+      ticketUrl: normalizeOptionalText(input.ticketUrl),
+      ...(sessionNameObjs.length > 0 ? {
+        sessions: { create: sessionNameObjs }
+      } : {})
+    },
+    include: {
+      sessions: { orderBy: [{ sortOrder: 'asc' }, { startsAt: 'asc' }, { id: 'asc' }] }
     }
   });
 

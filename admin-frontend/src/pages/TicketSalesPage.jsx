@@ -317,6 +317,7 @@ export default function TicketSalesPage() {
             {events.map((item) => <option key={item.id} value={item.id}>{localizeField(item.title, language)}</option>)}
           </select>
         </label>
+        {!eventId ? <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>Оберіть подію вище, або створіть дати та тарифи на сторінці «Події».</p> : null}
         {state.error ? <p className="error">{state.error}</p> : null}
         {state.message ? <p className="form-state">{state.message}</p> : null}
       </PageContainer>
