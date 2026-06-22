@@ -222,7 +222,7 @@ export default function SettingsPage() {
                       [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
                       setForm({ ...form, galleryImages: arr });
                     }} style={{ fontSize: 11, padding: '2px 6px' }}>↑</button>
-                    <button type="button" className="btn btn-small" disabled={i === arr.length - 1} onClick={() => {
+                    <button type="button" className="btn btn-small" disabled={i === (form.galleryImages || []).length - 1} onClick={() => {
                       const arr = [...(form.galleryImages || [])];
                       [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
                       setForm({ ...form, galleryImages: arr });
