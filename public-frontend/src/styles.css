@@ -3489,6 +3489,7 @@ h3 {
 
   .menu-route .main-content > .page-container {
     padding-top: 0;
+    overflow-x: visible;
   }
 
   .menu-route .menu-page-header {
