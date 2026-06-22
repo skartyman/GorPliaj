@@ -11,7 +11,8 @@ const EMPTY_LOCALIZED = { ua: '', ru: '', en: '' };
 
 const DEFAULT_FORM = {
   title: { ...EMPTY_LOCALIZED },
-  body: { ...EMPTY_LOCALIZED }
+  body: { ...EMPTY_LOCALIZED },
+  image: ''
 };
 
 function normalizeLocalized(value) {
@@ -32,6 +33,7 @@ export default function NewsPage() {
   const [editId, setEditId] = useState(null);
   const [savingKey, setSavingKey] = useState('');
   const [translating, setTranslating] = useState({});
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [feedback, setFeedback] = useState({ tone: '', message: '' });
 
   const stats = useMemo(() => ({
@@ -57,7 +59,8 @@ export default function NewsPage() {
   function resetForm() {
     setForm({
       title: { ...EMPTY_LOCALIZED },
-      body: { ...EMPTY_LOCALIZED }
+      body: { ...EMPTY_LOCALIZED },
+      image: ''
     });
     setEditId(null);
   }
@@ -66,7 +69,8 @@ export default function NewsPage() {
     setEditId(news.id);
     setForm({
       title: normalizeLocalized(news.title),
-      body: normalizeLocalized(news.body)
+      body: normalizeLocalized(news.body),
+      image: news.image || ''
     });
     window.requestAnimationFrame(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -105,6 +109,22 @@ export default function NewsPage() {
       }
     }));
     setFeedback({ tone: 'success', message: 'Переклад оновлено.' });
+  }
+
+  async function handleImageUpload(file) {
+    if (!file) return;
+    setUploadingImage(true);
+    const payload = new FormData();
+    payload.append('folder', 'news');
+    payload.append('image', file);
+    const { response, body } = await apiRequest('/api/admin/uploads/image', { method: 'POST', body: payload });
+    setUploadingImage(false);
+    if (!response.ok || !body.url) {
+      setFeedback({ tone: 'error', message: body.message || 'Failed to upload image' });
+      return;
+    }
+    setForm((current) => ({ ...current, image: body.url }));
+    setFeedback({ tone: 'success', message: 'Image uploaded' });
   }
 
   async function submitForm(event) {
@@ -275,6 +295,21 @@ export default function NewsPage() {
               >
                 {translating.body ? t('newsAdmin.form.translating') : t('newsAdmin.form.translate')}
               </button>
+            </div>
+
+            <div style={{ marginTop: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: 8 }}>Image</label>
+              {form.image ? (
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src={form.image} alt="" style={{ width: 200, height: 120, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                  <button type="button" className="btn btn-small btn-danger" style={{ position: 'absolute', top: 4, right: 4, padding: '2px 8px', fontSize: 11 }} onClick={() => setForm((c) => ({ ...c, image: '' }))}>✕</button>
+                </div>
+              ) : (
+                <label className="btn btn-secondary btn-small" style={{ cursor: 'pointer' }}>
+                  {uploadingImage ? 'Uploading…' : 'Upload image'}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploadingImage} onChange={(e) => { handleImageUpload(e.target.files[0]); e.target.value = ''; }} />
+                </label>
+              )}
             </div>
 
             <div className="actions" style={{ marginTop: '1rem' }}>

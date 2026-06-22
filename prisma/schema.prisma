@@ -418,6 +418,7 @@ model News {
   id        Int      @id @default(autoincrement())
   title     Json
   body      Json
+  image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

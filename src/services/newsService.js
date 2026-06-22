@@ -7,6 +7,7 @@ function toAdminNews(news) {
     id: news.id,
     title: normalizeLocalizedField(news.title),
     body: normalizeLocalizedField(news.body),
+    image: news.image || null,
     createdAt: news.createdAt,
     updatedAt: news.updatedAt
   };
@@ -33,7 +34,8 @@ async function createAdminNews(input) {
   const news = await prisma.news.create({
     data: {
       title: titleObj,
-      body: bodyObj
+      body: bodyObj,
+      image: input.image || null
     }
   });
 
@@ -61,7 +63,8 @@ async function updateAdminNews(id, input) {
     where: { id },
     data: {
       title: titleObj,
-      body: bodyObj
+      body: bodyObj,
+      ...(Object.prototype.hasOwnProperty.call(input, 'image') ? { image: input.image || null } : {})
     }
   });
 
