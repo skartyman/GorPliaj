@@ -274,6 +274,24 @@ export function useInteractiveMap({
     setTransform(clampTranslate(centered.translateX, centered.translateY, fitViewScale));
   }, [clampTranslate, fitViewScale, viewport, worldHeight, worldWidth]);
 
+  const focusRect = useCallback((rect, padding = 48) => {
+    if (!rect || !viewport.width || !viewport.height) {
+      return;
+    }
+
+    const width = Math.max(Number(rect.width) || 0, 1);
+    const height = Math.max(Number(rect.height) || 0, 1);
+    const availableWidth = Math.max(viewport.width - padding * 2, 1);
+    const availableHeight = Math.max(viewport.height - padding * 2, 1);
+    const nextScale = clamp(Math.min(availableWidth / width, availableHeight / height), minScale, maxScale);
+    const centerX = (Number(rect.x) || 0) + width / 2;
+    const centerY = (Number(rect.y) || 0) + height / 2;
+    const nextTranslateX = viewport.width / 2 - centerX * nextScale;
+    const nextTranslateY = viewport.height / 2 - centerY * nextScale;
+
+    setTransform(clampTranslate(nextTranslateX, nextTranslateY, nextScale));
+  }, [clampTranslate, maxScale, minScale, viewport]);
+
   return {
     containerRef,
     transform,
@@ -289,7 +307,8 @@ export function useInteractiveMap({
     actions: {
       zoomIn,
       zoomOut,
-      fitToView
+      fitToView,
+      focusRect
     }
   };
 }

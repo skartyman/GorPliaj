@@ -30,7 +30,15 @@ export const contentApi = {
 
 export const eventsApi = {
   list: (includePast = true) => request(`/events?includePast=${includePast ? '1' : '0'}`),
-  bySlug: (slug) => request(`/events/${encodeURIComponent(slug)}`)
+  bySlug: (slug) => request(`/events/${encodeURIComponent(slug)}`),
+  ticketTypes: (slug) => request(`/events/${encodeURIComponent(slug)}/ticket-types`),
+  createTicketOrder: (slug, payload) =>
+    request(`/events/${encodeURIComponent(slug)}/ticket-orders`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  ticketOrderStatus: (orderNumber, token) =>
+    request(`/ticket-orders/${encodeURIComponent(orderNumber)}/status?token=${encodeURIComponent(token)}`)
 };
 
 export const menuApi = {
@@ -43,10 +51,29 @@ export const menuApi = {
 };
 
 export const mapApi = {
+  list: ({ usageMode, bookingKind, guests } = {}) => {
+    const params = new URLSearchParams();
+    if (usageMode) params.set('usageMode', usageMode);
+    if (bookingKind) params.set('bookingKind', bookingKind);
+    if (guests) params.set('guests', String(guests));
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return request(`/maps${suffix}`);
+  },
   defaultMap: () => request('/maps/default'),
   byId: (mapId) => request(`/maps/${mapId}`),
   availability: (mapId, reservationDate, timeFrom) =>
-    request(`/maps/${mapId}/availability?date=${encodeURIComponent(reservationDate)}&timeFrom=${encodeURIComponent(timeFrom)}`)
+    request(`/maps/${mapId}/availability?date=${encodeURIComponent(reservationDate)}&timeFrom=${encodeURIComponent(timeFrom)}`),
+  bookableUnits: (mapId, params) => {
+    const search = new URLSearchParams({
+      date: params.date,
+      timeFrom: params.timeFrom
+    });
+    if (params.guests) search.set('guests', String(params.guests));
+    if (params.bookingKind) search.set('bookingKind', params.bookingKind);
+    if (params.zoneId) search.set('zoneId', String(params.zoneId));
+    if (params.eventId) search.set('eventId', String(params.eventId));
+    return request(`/maps/${mapId}/bookable-units?${search.toString()}`);
+  }
 };
 
 export const bookingsApi = {
@@ -54,7 +81,9 @@ export const bookingsApi = {
     request('/reservations', {
       method: 'POST',
       body: JSON.stringify(payload)
-    })
+    }),
+  status: (ticketCode, token) =>
+    request(`/reservations/${encodeURIComponent(ticketCode)}/status?t=${encodeURIComponent(token)}`)
 };
 
 export const settingsApi = {

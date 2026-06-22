@@ -2,6 +2,7 @@ const adminAuthService = require('../services/adminAuthService');
 const adminReservationService = require('../services/adminReservationService');
 const adminMapEditorService = require('../services/adminMapEditorService');
 const reservationService = require('../services/reservationService');
+const venueTableOverrideService = require('../services/venueTableOverrideService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
 const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
@@ -103,6 +104,46 @@ function logoutAdmin(req, res) {
   });
 }
 
+async function changeAdminPassword(req, res) {
+  try {
+    const adminId = Number(req.adminAuth.sub);
+    const currentPassword = String(req.body.currentPassword || '');
+    const nextPassword = String(req.body.nextPassword || '');
+    const confirmPassword = String(req.body.confirmPassword || '');
+
+    if (!currentPassword || !nextPassword || !confirmPassword) {
+      return res.status(400).json({ message: 'Current password, new password, and confirmation are required.' });
+    }
+
+    if (nextPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters long.' });
+    }
+
+    if (nextPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'New password confirmation does not match.' });
+    }
+
+    const result = await adminAuthService.changeAdminPassword({
+      adminId,
+      currentPassword,
+      nextPassword
+    });
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(401).json({ message: 'Unauthorized admin access.' });
+    }
+
+    if (result.type === 'INVALID_CURRENT_PASSWORD') {
+      return res.status(400).json({ message: 'Current password is incorrect.' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[adminController.changeAdminPassword] Failed to change password.', error);
+    return res.status(500).json({ message: 'Unable to change password.' });
+  }
+}
+
 async function getAdminReservations(req, res) {
   try {
     const reservations = await adminReservationService.getAdminReservations();
@@ -110,6 +151,102 @@ async function getAdminReservations(req, res) {
   } catch (error) {
     console.error('[adminController.getAdminReservations] Failed to get reservations.', error);
     return res.status(500).json({ message: 'Unable to load reservations.' });
+  }
+}
+
+async function getAdminReservationPositions(req, res) {
+  try {
+    const result = await venueTableOverrideService.listReservationPositionsManagement({
+      reservationDate: req.query.date ? String(req.query.date) : '',
+      eventId: req.query.eventId ? Number(req.query.eventId) : null,
+      mapId: req.query.mapId ? Number(req.query.mapId) : null,
+      zoneId: req.query.zoneId ? Number(req.query.zoneId) : null,
+      search: req.query.search ? String(req.query.search) : ''
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error('[adminController.getAdminReservationPositions] Failed to load reservation positions.', error);
+    return res.status(500).json({ message: 'Unable to load reservation positions.' });
+  }
+}
+
+async function updateAdminReservationPosition(req, res) {
+  try {
+    const result = await venueTableOverrideService.updateTableBaseSettings({
+      tableId: req.params.tableId,
+      patch: req.body || {}
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      table: result.table
+    });
+  } catch (error) {
+    console.error('[adminController.updateAdminReservationPosition] Failed to update reservation position.', error);
+    return res.status(500).json({ message: 'Unable to update reservation position.' });
+  }
+}
+
+async function upsertAdminReservationPositionOverride(req, res) {
+  try {
+    const result = await venueTableOverrideService.upsertTableOverride({
+      tableId: req.params.tableId,
+      scope: {
+        eventId: req.body?.eventId,
+        ruleDate: req.body?.ruleDate
+      },
+      patch: req.body || {}
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.status(result.type === 'CREATED' ? 201 : 200).json({
+      success: true,
+      override: result.override
+    });
+  } catch (error) {
+    console.error('[adminController.upsertAdminReservationPositionOverride] Failed to save reservation position override.', error);
+    return res.status(500).json({ message: 'Unable to save reservation position override.' });
+  }
+}
+
+async function deleteAdminReservationPositionOverride(req, res) {
+  try {
+    const result = await venueTableOverrideService.deleteTableOverride({
+      tableId: req.params.tableId,
+      scope: {
+        eventId: req.query.eventId,
+        ruleDate: req.query.ruleDate
+      }
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[adminController.deleteAdminReservationPositionOverride] Failed to delete reservation position override.', error);
+    return res.status(500).json({ message: 'Unable to delete reservation position override.' });
   }
 }
 
@@ -251,6 +388,7 @@ async function createAdminMapVariant(req, res) {
       name: req.body?.name,
       slug: req.body?.slug,
       description: req.body?.description,
+      usageMode: req.body?.usageMode,
       sourceMapId: req.body?.sourceMapId,
       creationMode: req.body?.creationMode,
       width: req.body?.width,
@@ -324,6 +462,29 @@ async function setDefaultAdminMap(req, res) {
   }
 }
 
+async function activateAdminMapController(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const result = await adminMapEditorService.activateAdminMap(id);
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      ...result.data
+    });
+  } catch (error) {
+    console.error('[adminController.activateAdminMapController] Failed to activate map.', error);
+    return res.status(500).json({ message: 'Unable to activate map.' });
+  }
+}
+
 async function updateAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -336,7 +497,8 @@ async function updateAdminMapEditor(req, res) {
       id,
       req.body.objects,
       req.body.map || {},
-      Array.isArray(req.body.tables) ? req.body.tables : []
+      Array.isArray(req.body.tables) ? req.body.tables : [],
+      Array.isArray(req.body.zones) ? req.body.zones : []
     );
 
     if (result.type === 'NOT_FOUND') {
@@ -400,39 +562,54 @@ async function createAdminReservation(req, res) {
     const tableId = Number(body.tableId);
     const mapId = Number(body.mapId);
     const zoneId = Number(body.zoneId);
+    const table = await reservationService.getReservationTable({
+      tableId,
+      mapId,
+      zoneId,
+      reservationDate,
+      eventId: body.eventId ? Number(body.eventId) : null
+    });
+
+    if (!table) {
+      return res.status(400).json({ message: 'Selected booking position is not available.' });
+    }
+
+    if (!reservationService.matchesGuestCapacity(table, guests)) {
+      return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
+    }
 
     const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
     if (conflict) {
-      return res.status(409).json({ message: 'Table is already booked for this time.' });
+      return res.status(409).json({ message: 'This booking position is already reserved for this time.' });
     }
 
     const ticketCode = generateTicketCode();
+    const requestedBookingKind = String(body.bookingKind || '').trim().toUpperCase();
+    const bookingKind = requestedBookingKind || table.bookingKind || 'TABLE';
+    const depositAmount = body.depositRequired
+      ? Math.max(0, Number(body.depositAmount) || Number(table.deposit || 0))
+      : 0;
 
-    const reservation = await prisma.reservation.create({
-      data: {
-        tableId,
-        mapId,
-        zoneId,
-        eventId: body.eventId ? Number(body.eventId) : null,
-        customerName: body.customerName,
-        customerPhone: body.customerPhone,
-        customerEmail: body.customerEmail || null,
-        guests,
-        reservationDate,
-        timeFrom,
-        timeTo,
-        source: source || undefined,
-        ticketCode,
-        commentCustomer: body.commentCustomer || null,
-        commentAdmin: body.commentAdmin || null,
-        depositRequired: Boolean(body.depositRequired),
-        depositAmount: body.depositAmount ? Number(body.depositAmount) : null,
-        status: body.status || 'PENDING'
-      },
-      include: {
-        table: { select: { id: true, name: true, code: true } },
-        zone: { select: { id: true, name: true } }
-      }
+    const reservation = await reservationService.createReservation({
+      tableId,
+      mapId,
+      zoneId,
+      eventId: body.eventId ? Number(body.eventId) : null,
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
+      customerEmail: body.customerEmail || null,
+      guests,
+      reservationDate,
+      timeFrom,
+      timeTo,
+      bookingKind,
+      commentCustomer: body.commentCustomer || null,
+      commentAdmin: body.commentAdmin || null,
+      depositRequired: depositAmount > 0,
+      depositAmount: depositAmount > 0 ? depositAmount : null,
+      status: body.status || 'PENDING',
+      source: source || undefined,
+      ticketCode
     });
 
     return res.status(201).json({ reservation });
@@ -485,6 +662,7 @@ async function verifyAdminReservation(req, res) {
         arrivedGuests: reservation.arrivedGuests,
         table: reservation.table,
         zone: reservation.zone,
+        depositAmount: reservation.depositAmount || null,
         paymentStatus: reservation.payment?.status || null,
         paymentAmount: reservation.payment?.amount || null,
         paidAt: reservation.payment?.paidAt || null
@@ -541,8 +719,13 @@ module.exports = {
   loginAdmin,
   getAdminMe,
   logoutAdmin,
+  changeAdminPassword,
   getAdminReservations,
+  getAdminReservationPositions,
   getAdminReservationById,
+  updateAdminReservationPosition,
+  upsertAdminReservationPositionOverride,
+  deleteAdminReservationPositionOverride,
   updateAdminReservationStatus,
   deleteAdminReservation,
   createAdminReservation,
@@ -552,6 +735,7 @@ module.exports = {
   createAdminMapVariant,
   deleteAdminMapVariant,
   setDefaultAdminMap,
+  activateAdminMapController,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor

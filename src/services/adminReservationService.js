@@ -11,11 +11,27 @@ function getAdminReservations() {
       createdAt: 'desc'
     },
     include: {
+      map: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          usageMode: true
+        }
+      },
       table: {
         select: {
           id: true,
           name: true,
-          code: true
+          code: true,
+          bookingKind: true,
+          positionType: true,
+          photoUrl: true,
+          serviceName: true,
+          serviceDescription: true,
+          seatsMin: true,
+          seatsMax: true,
+          deposit: true
         }
       },
       zone: {
@@ -37,8 +53,14 @@ function getAdminReservationById(id) {
           id: true,
           name: true,
           code: true,
+          bookingKind: true,
+          positionType: true,
+          photoUrl: true,
+          serviceName: true,
+          serviceDescription: true,
           seatsMin: true,
-          seatsMax: true
+          seatsMax: true,
+          deposit: true
         }
       },
       zone: {
@@ -93,11 +115,27 @@ async function updateAdminReservationStatus({ id, status }) {
     where: { id },
     data: { status },
     include: {
+      map: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          usageMode: true
+        }
+      },
       table: {
         select: {
           id: true,
           name: true,
-          code: true
+          code: true,
+          bookingKind: true,
+          positionType: true,
+          photoUrl: true,
+          serviceName: true,
+          serviceDescription: true,
+          seatsMin: true,
+          seatsMax: true,
+          deposit: true
         }
       },
       zone: {

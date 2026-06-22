@@ -2,7 +2,7 @@ const prisma = require('../lib/prisma.js');
 const { autoTranslateObject } = require('../services/translationService');
 const { normalizeLocalizedField } = require('../utils/localization');
 
-const LOCALIZED_SETTINGS_FIELDS = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'footerText', 'address'];
+const LOCALIZED_SETTINGS_FIELDS = ['title', 'description', 'keywords', 'heroTitle', 'heroSubtitle', 'aboutTitle', 'aboutText', 'footerText', 'address'];
 
 function normalizeSettings(settings) {
   if (!settings) return {};
@@ -31,7 +31,7 @@ async function updateSettings(req, res) {
   const {
     title, description, keywords, logoUrl, faviconUrl,
     phone, email, address, workingHours, socialMedia,
-    heroTitle, heroSubtitle, footerText, mapEmbedUrl
+    heroTitle, heroSubtitle, aboutTitle, aboutText, aboutImageUrl, footerText, mapEmbedUrl
   } = req.body;
 
   try {
@@ -41,6 +41,8 @@ async function updateSettings(req, res) {
     const keywordsObj = keywords ? await autoTranslateObject(keywords) : null;
     const heroTitleObj = heroTitle ? await autoTranslateObject(heroTitle) : null;
     const heroSubtitleObj = heroSubtitle ? await autoTranslateObject(heroSubtitle) : null;
+    const aboutTitleObj = aboutTitle ? await autoTranslateObject(aboutTitle) : null;
+    const aboutTextObj = aboutText ? await autoTranslateObject(aboutText) : null;
     const footerTextObj = footerText ? await autoTranslateObject(footerText) : null;
     const addressObj = address ? await autoTranslateObject(address) : null;
 
@@ -56,6 +58,9 @@ async function updateSettings(req, res) {
         workingHours, socialMedia,
         heroTitle: heroTitleObj,
         heroSubtitle: heroSubtitleObj,
+        aboutTitle: aboutTitleObj,
+        aboutText: aboutTextObj,
+        aboutImageUrl,
         footerText: footerTextObj,
         mapEmbedUrl
       },
@@ -69,6 +74,9 @@ async function updateSettings(req, res) {
         workingHours, socialMedia,
         heroTitle: heroTitleObj,
         heroSubtitle: heroSubtitleObj,
+        aboutTitle: aboutTitleObj,
+        aboutText: aboutTextObj,
+        aboutImageUrl,
         footerText: footerTextObj,
         mapEmbedUrl
       },

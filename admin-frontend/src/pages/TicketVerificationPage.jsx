@@ -1,16 +1,20 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { apiRequest } from '../lib/api';
+import { apiRequest, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
+import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import StatusPill from '../components/StatusPill';
 
 const QR_SCAN_ID = 'qr-scanner-element';
 
 export default function TicketVerificationPage() {
-  const { t } = useAdminI18n();
+  const { t, language } = useAdminI18n();
+  const [searchParams] = useSearchParams();
   const [code, setCode] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
+  const [saleTicket, setSaleTicket] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [arriving, setArriving] = useState(false);
@@ -19,7 +23,9 @@ export default function TicketVerificationPage() {
   const [arriveError, setArriveError] = useState('');
   const [scanMode, setScanMode] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [fileScanning, setFileScanning] = useState(false);
   const scannerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -30,19 +36,26 @@ export default function TicketVerificationPage() {
     setLoading(true);
     setError('');
     setVerifyResult(null);
+    setSaleTicket(null);
     setArriveSuccess(false);
     setArriveError('');
 
     try {
       const params = signature ? `?t=${encodeURIComponent(signature)}` : '';
-      const { response } = await apiRequest(`/api/admin/reservations/verify/${encodeURIComponent(ticketCode)}${params}`);
+      const isSaleTicket = /^GPT-/i.test(ticketCode);
+      const path = isSaleTicket
+        ? `/api/admin/tickets/verify/${encodeURIComponent(ticketCode)}${params}`
+        : `/api/admin/reservations/verify/${encodeURIComponent(ticketCode)}${params}`;
+      const { response, body } = await apiRequest(path);
       if (response.ok) {
-        const data = await response.json();
-        setVerifyResult(data.reservation);
-        setArrivedGuests(data.reservation.arrivedAt ? '' : String(data.reservation.guests || ''));
+        if (isSaleTicket) {
+          setSaleTicket(body.ticket);
+        } else {
+          setVerifyResult(body.reservation);
+          setArrivedGuests(body.reservation.arrivedAt ? '' : String(body.reservation.guests || ''));
+        }
       } else {
-        const errData = await response.json().catch(() => null);
-        setError(errData?.message || t('verifyTicket.notFound'));
+        setError(body.message || t('verifyTicket.notFound'));
       }
     } catch {
       setError(t('verifyTicket.error'));
@@ -64,45 +77,67 @@ export default function TicketVerificationPage() {
       const segments = parsed.pathname.split('/');
       const ticketCode = segments[segments.length - 1];
       const signature = parsed.searchParams.get('t') || '';
-      if (!ticketCode || !/^GP-/i.test(ticketCode)) return null;
+      if (!ticketCode || !/^GP(?:T)?-/i.test(ticketCode)) return null;
       return { ticketCode: ticketCode.toUpperCase(), signature };
     } catch {
       return null;
     }
   }
 
+  const handleDecodedText = useCallback(async (decodedText) => {
+    const parsed = parseQrUrl(decodedText);
+    if (parsed) {
+      setCode(parsed.ticketCode);
+      await fetchVerify(parsed.ticketCode, parsed.signature);
+    } else {
+      setError(t('verifyTicket.invalidQr'));
+    }
+  }, [t]);
+
   const startScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try { await scannerRef.current.stop(); } catch {}
+      try { await scannerRef.current.clear(); } catch {}
+      scannerRef.current = null;
+    }
+
     setCameraError('');
+    setError('');
     setScanMode(true);
 
-    try {
-      const scanner = new Html5Qrcode(QR_SCAN_ID);
-      scannerRef.current = scanner;
+    const element = document.getElementById(QR_SCAN_ID);
+    if (!element) {
+      setCameraError(t('verifyTicket.cameraError'));
+      setScanMode(false);
+      return;
+    }
 
+    const scanner = new Html5Qrcode(QR_SCAN_ID);
+    scannerRef.current = scanner;
+    try {
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1 },
         async (decodedText) => {
-          await scanner.stop();
-          if (mountedRef.current) {
-            setScanMode(false);
-            scannerRef.current = null;
-          }
-          const parsed = parseQrUrl(decodedText);
-          if (parsed) {
-            setCode(parsed.ticketCode);
-            await fetchVerify(parsed.ticketCode, parsed.signature);
-          } else {
-            setError(t('verifyTicket.invalidQr'));
-          }
+          try {
+            await scanner.stop();
+          } catch {}
+          scannerRef.current = null;
+          if (mountedRef.current) setScanMode(false);
+          await handleDecodedText(decodedText);
         },
         () => {}
       );
-    } catch (err) {
-      setCameraError(t('verifyTicket.cameraError'));
-      setScanMode(false);
+    } catch (error) {
+      console.error('[ticket-scanner] Camera start failed.', error);
+      scannerRef.current = null;
+      try { await scanner.clear(); } catch {}
+      if (mountedRef.current) {
+        setCameraError(t('verifyTicket.cameraError'));
+        setScanMode(false);
+      }
     }
-  }, [t]);
+  }, [handleDecodedText, t]);
 
   async function stopScanner() {
     if (scannerRef.current) {
@@ -114,6 +149,33 @@ export default function TicketVerificationPage() {
     setScanMode(false);
   }
 
+  async function handleQrFile(file) {
+    if (!file) return;
+    setFileScanning(true);
+    setCameraError('');
+    setError('');
+
+    const temporaryId = `${QR_SCAN_ID}-file`;
+    const temporaryElement = document.createElement('div');
+    temporaryElement.id = temporaryId;
+    temporaryElement.style.display = 'none';
+    document.body.appendChild(temporaryElement);
+    const scanner = new Html5Qrcode(temporaryId);
+
+    try {
+      const decodedText = await scanner.scanFile(file, true);
+      await handleDecodedText(decodedText);
+    } catch (error) {
+      console.error('[ticket-scanner] Image scan failed.', error);
+      setError(t('verifyTicket.invalidQr'));
+    } finally {
+      try { await scanner.clear(); } catch {}
+      temporaryElement.remove();
+      setFileScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
@@ -122,6 +184,31 @@ export default function TicketVerificationPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const ticketCode = String(searchParams.get('ticket') || '').trim().toUpperCase();
+    const signature = String(searchParams.get('t') || '').trim();
+    if (ticketCode) {
+      setCode(ticketCode);
+      fetchVerify(ticketCode, signature);
+    }
+  }, [searchParams]);
+
+  async function handleUseSaleTicket() {
+    if (!saleTicket) return;
+    setArriving(true);
+    setArriveError('');
+    const { response, body } = await apiRequest(`/api/admin/tickets/verify/${encodeURIComponent(saleTicket.code)}/use`, {
+      method: 'POST'
+    });
+    setArriving(false);
+    if (!response.ok) {
+      setArriveError(body.message || t('verifyTicket.arriveError'));
+      return;
+    }
+    setSaleTicket(body.ticket);
+    setArriveSuccess(true);
+  }
+
   async function handleArrive() {
     if (!verifyResult) return;
     setArriving(true);
@@ -129,7 +216,7 @@ export default function TicketVerificationPage() {
     setArriveSuccess(false);
 
     try {
-      const { response } = await apiRequest(`/api/admin/reservations/${verifyResult.id}/arrive`, {
+      const { response, body } = await apiRequest(`/api/admin/reservations/${verifyResult.id}/arrive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ arrivedGuests: arrivedGuests ? Number(arrivedGuests) : null })
@@ -139,8 +226,7 @@ export default function TicketVerificationPage() {
         setArriveSuccess(true);
         setVerifyResult((prev) => ({ ...prev, arrivedAt: new Date().toISOString(), arrivedGuests: arrivedGuests ? Number(arrivedGuests) : null }));
       } else {
-        const errData = await response.json().catch(() => null);
-        setArriveError(errData?.message || t('verifyTicket.arriveError'));
+        setArriveError(body.message || t('verifyTicket.arriveError'));
       }
     } catch {
       setArriveError(t('verifyTicket.arriveError'));
@@ -165,7 +251,8 @@ export default function TicketVerificationPage() {
   const isAuthentic = verifyResult?.isAuthentic;
 
   return (
-    <PageContainer title={t('verifyTicket.title')}>
+    <AdminLayout>
+      <PageContainer title={t('verifyTicket.title')}>
       <div className="card" style={{ maxWidth: 600, margin: '0 auto' }}>
         {!scanMode ? (
           <>
@@ -173,6 +260,23 @@ export default function TicketVerificationPage() {
               <button type="button" className="btn btn-primary" onClick={startScanner}>
                 {t('verifyTicket.scanQr')}
               </button>
+              <button
+                type="button"
+                className="btn"
+                style={{ marginLeft: 8 }}
+                disabled={fileScanning}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {fileScanning ? t('verifyTicket.searching') : t('verifyTicket.scanImage')}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(event) => handleQrFile(event.target.files?.[0])}
+              />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}>
@@ -195,16 +299,16 @@ export default function TicketVerificationPage() {
               </button>
             </form>
           </>
-        ) : (
-          <div style={{ marginBottom: 16 }}>
-            <div id={QR_SCAN_ID} style={{ width: '100%', maxWidth: 400, margin: '0 auto' }} />
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
-              <button type="button" className="btn" onClick={stopScanner}>
-                {t('verifyTicket.cancelScan')}
-              </button>
-            </div>
+        ) : null}
+
+        <div style={{ display: scanMode ? 'block' : 'none', marginBottom: 16 }}>
+          <div id={QR_SCAN_ID} style={{ width: '100%', maxWidth: 400, margin: '0 auto', minHeight: 280 }} />
+          <div style={{ textAlign: 'center', marginTop: 8 }}>
+            <button type="button" className="btn" onClick={stopScanner}>
+              {t('verifyTicket.cancelScan')}
+            </button>
           </div>
-        )}
+        </div>
 
         {cameraError && <div className="status-pill status-error" style={{ marginBottom: 12 }}>{cameraError}</div>}
         {error && <div className="status-pill status-error" style={{ marginBottom: 12 }}>{error}</div>}
@@ -272,7 +376,36 @@ export default function TicketVerificationPage() {
             )}
           </div>
         )}
+
+        {saleTicket && (
+          <div className="card" style={{ background: 'var(--bg-page)' }}>
+            {arriveSuccess && <div className="status-pill status-success" style={{ marginBottom: 12 }}>{t('verifyTicket.arrived')}</div>}
+            <div style={{ display: 'grid', gap: 8, fontSize: 15 }}>
+              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 700, letterSpacing: 2, color: 'var(--accent-gold)' }}>
+                  {saleTicket.code}
+                </div>
+              </div>
+              <div><strong>Подія:</strong> {localizeField(saleTicket.event?.title, language)}</div>
+              {saleTicket.eventSession ? <div><strong>Дата:</strong> {formatDate(saleTicket.eventSession.startsAt)} {formatTime(saleTicket.eventSession.startsAt)} - {formatTime(saleTicket.eventSession.endsAt)}</div> : null}
+              <div><strong>Тариф:</strong> {localizeField(saleTicket.ticketType?.name, language)}</div>
+              <div><strong>{t('verifyTicket.guest')}:</strong> {saleTicket.holderName || saleTicket.order?.customerName || '—'}</div>
+              <div><strong>Email:</strong> {saleTicket.holderEmail || saleTicket.order?.customerEmail || '—'}</div>
+              <div><strong>{t('verifyTicket.status')}:</strong> <StatusPill status={saleTicket.status} /></div>
+              {saleTicket.usedAt ? <div><strong>{t('verifyTicket.arrivedAt')}:</strong> {formatDate(saleTicket.usedAt)} {formatTime(saleTicket.usedAt)}</div> : null}
+            </div>
+            {saleTicket.status === 'VALID' ? (
+              <div style={{ marginTop: 20, borderTop: '1px solid var(--border-light)', paddingTop: 16 }}>
+                {arriveError && <div className="status-pill status-error" style={{ marginBottom: 8 }}>{arriveError}</div>}
+                <button type="button" className="btn btn-primary" disabled={arriving} onClick={handleUseSaleTicket}>
+                  {arriving ? t('verifyTicket.saving') : t('verifyTicket.confirmArrive')}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
-    </PageContainer>
+      </PageContainer>
+    </AdminLayout>
   );
 }

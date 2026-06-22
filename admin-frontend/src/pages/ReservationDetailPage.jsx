@@ -7,6 +7,87 @@ import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { parseReservationMeta } from '../lib/reservationMeta';
 
+function pickLabel(language, labels) {
+  return labels[language] || labels.ua || labels.ru || labels.en || '';
+}
+
+function getBookingKindLabel(bookingKind, language) {
+  if (bookingKind === 'BEACH') {
+    return pickLabel(language, {
+      ua: 'Пляжна послуга',
+      ru: 'Пляжная услуга',
+      en: 'Beach service'
+    });
+  }
+
+  return pickLabel(language, {
+    ua: 'Стіл',
+    ru: 'Стол',
+    en: 'Table'
+  });
+}
+
+function getUsageModeLabel(usageMode, language) {
+  if (usageMode === 'EVENING') {
+    return pickLabel(language, {
+      ua: 'Вечір',
+      ru: 'Вечер',
+      en: 'Evening'
+    });
+  }
+
+  if (usageMode === 'EVENT') {
+    return pickLabel(language, {
+      ua: 'Подія',
+      ru: 'Событие',
+      en: 'Event'
+    });
+  }
+
+  return pickLabel(language, {
+    ua: 'День',
+    ru: 'День',
+    en: 'Day'
+  });
+}
+
+function getPositionTypeLabel(positionType, language) {
+  const labels = {
+    TABLE: { ua: 'Стіл', ru: 'Стол', en: 'Table' },
+    SUNBED: { ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' },
+    BUNGALOW: { ua: 'Бунгало', ru: 'Бунгало', en: 'Bungalow' },
+    KROVAT: { ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' },
+    PIER: { ua: 'Пірс', ru: 'Пирс', en: 'Pier' }
+  };
+
+  return labels[positionType] ? pickLabel(language, labels[positionType]) : '';
+}
+
+function getReservationUnitName(reservation, language) {
+  return (
+    localizeField(reservation.table?.serviceName, language)
+    || reservation.table?.code
+    || localizeField(reservation.table?.name, language)
+    || '—'
+  );
+}
+
+function getMapFieldLabel(language) {
+  return pickLabel(language, {
+    ua: 'Карта',
+    ru: 'Карта',
+    en: 'Map'
+  });
+}
+
+function getDepositFieldLabel(language) {
+  return pickLabel(language, {
+    ua: 'Депозит',
+    ru: 'Депозит',
+    en: 'Deposit'
+  });
+}
+
 function DetailRow({ label, value }) {
   return (
     <div className="detail-row">
@@ -70,6 +151,14 @@ export default function ReservationDetailPage() {
   const allowedNextStatuses = state.data?.allowedNextStatuses || [];
   const reservationMeta = parseReservationMeta(reservation?.commentCustomer);
   const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
+  const unitLabel = reservation ? getReservationUnitName(reservation, language) : '—';
+  const modeLabel = reservation?.map?.usageMode
+    ? getUsageModeLabel(reservation.map.usageMode, language)
+    : (reservationMeta.mode ? t(`reservationMeta.mode.${reservationMeta.mode}`) : '—');
+  const placeTypeLabel = reservation?.table?.positionType
+    ? getPositionTypeLabel(reservation.table.positionType, language)
+    : (reservation?.bookingKind ? getBookingKindLabel(reservation.bookingKind, language) : (reservationMeta.place ? t(`reservationMeta.place.${reservationMeta.place}`) : '—'));
+  const commentLabel = reservationMeta.cleanComment || reservation?.commentCustomer || reservation?.commentAdmin || '—';
 
   return (
     <AdminLayout>
@@ -98,9 +187,9 @@ export default function ReservationDetailPage() {
                 <DetailRow label={t('reservationDetail.fields.guest')} value={reservation.customerName} />
                 <DetailRow label={t('reservationDetail.fields.phone')} value={reservation.customerPhone} />
                 <DetailRow label={t('reservationDetail.fields.guests')} value={reservation.guests} />
-                <DetailRow label={t('reservationDetail.fields.mode')} value={reservationMeta.mode ? t(`reservationMeta.mode.${reservationMeta.mode}`) : '—'} />
-                <DetailRow label={t('reservationDetail.fields.placeType')} value={reservationMeta.place ? t(`reservationMeta.place.${reservationMeta.place}`) : '—'} />
-                <DetailRow label={t('reservationDetail.fields.comments')} value={reservationMeta.cleanComment || reservation.commentAdmin || '—'} />
+                <DetailRow label={t('reservationDetail.fields.mode')} value={modeLabel} />
+                <DetailRow label={t('reservationDetail.fields.placeType')} value={placeTypeLabel} />
+                <DetailRow label={t('reservationDetail.fields.comments')} value={commentLabel} />
               </div>
             </PanelCard>
 
@@ -108,9 +197,11 @@ export default function ReservationDetailPage() {
               <div className="details-grid compact">
                 <DetailRow label={t('reservationDetail.fields.date')} value={formatDate(reservation.reservationDate, dateLocale)} />
                 <DetailRow label={t('reservationDetail.fields.startTime')} value={formatTime(reservation.timeFrom, dateLocale)} />
-                <DetailRow label={t('reservationDetail.fields.table')} value={reservation.table?.code || localizeField(reservation.table?.name, language) || '—'} />
+                <DetailRow label={t('reservationDetail.fields.table')} value={unitLabel} />
                 <DetailRow label={t('reservationDetail.fields.zone')} value={localizeField(reservation.zone?.name, language) || '—'} />
                 <DetailRow label={t('reservationDetail.fields.status')} value={<StatusPill status={reservation.status} />} />
+                <DetailRow label={getMapFieldLabel(language)} value={localizeField(reservation.map?.name, language) || reservation.map?.slug || '—'} />
+                <DetailRow label={getDepositFieldLabel(language)} value={reservation.depositRequired ? `${reservation.depositAmount || reservation.table?.deposit || '—'} UAH` : '—'} />
               </div>
             </PanelCard>
 

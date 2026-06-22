@@ -23,6 +23,7 @@ model Map {
   slug            String        @unique
   description     Json?
   status          MapStatus     @default(DRAFT)
+  usageMode       MapUsageMode  @default(DAY)
   isDefault       Boolean       @default(false)
   width           Int
   height          Int
@@ -37,6 +38,7 @@ model Map {
 
   @@index([status])
   @@index([isDefault])
+  @@index([usageMode])
 }
 
 model Zone {
@@ -45,6 +47,8 @@ model Zone {
   name         Json
   color        String
   sortOrder    Int           @default(0)
+  viewportJson Json?
+  polygonJson  Json?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
@@ -60,12 +64,18 @@ model VenueTable {
   zoneId       Int
   name         Json
   code         String?
+  bookingKind  BookingKind   @default(TABLE)
+  positionType VenuePositionType?
+  positionSide VenuePositionSide?
   photoUrl     String?
+  serviceName  Json?
+  serviceDescription Json?
   seatsMin     Int
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
   isActive     Boolean       @default(true)
   isBookable   Boolean       @default(true)
+  sortOrder    Int           @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
@@ -73,9 +83,32 @@ model VenueTable {
   mapObjects   MapObject[]
   reservations Reservation[]
   tableHolds   TableHold[]
+  overrides    VenueTableOverride[]
 
   @@index([mapId])
   @@index([zoneId])
+  @@index([bookingKind])
+  @@index([sortOrder])
+}
+
+model VenueTableOverride {
+  id         Int       @id @default(autoincrement())
+  tableId     Int
+  eventId     Int?
+  ruleDate    DateTime?
+  deposit     Decimal?  @db.Decimal(10, 2)
+  isActive    Boolean?
+  isBookable  Boolean?
+  photoUrl    String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  table       VenueTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  event       Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([tableId])
+  @@index([eventId])
+  @@index([ruleDate])
 }
 
 model MapObject {
@@ -109,6 +142,7 @@ model Reservation {
   mapId           Int
   zoneId          Int
   eventId         Int?
+  bookingKind     BookingKind       @default(TABLE)
   customerName    String
   customerPhone   String
   customerEmail   String?
@@ -118,7 +152,7 @@ model Reservation {
   timeTo          DateTime
   status          ReservationStatus @default(PENDING)
   source          ReservationSource @default(WEB)
-  ticketCode      String?
+  ticketCode      String?           @unique
   arrivedAt       DateTime?
   arrivedGuests   Int?
   commentCustomer String?
@@ -143,6 +177,7 @@ model Reservation {
   @@index([reservationDate])
   @@index([tableId, reservationDate])
   @@index([status])
+  @@index([bookingKind])
 }
 
 model TableHold {
@@ -172,7 +207,8 @@ model TableHold {
 
 model Payment {
   id                Int           @id @default(autoincrement())
-  reservationId     Int           @unique
+  reservationId     Int?          @unique
+  ticketOrderId     Int?          @unique
   provider          String
   providerPaymentId String?
   providerOrderId   String?
@@ -184,8 +220,10 @@ model Payment {
   paidAt            DateTime?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
-  reservation       Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservation       Reservation?  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  ticketOrder       TicketOrder?  @relation(fields: [ticketOrderId], references: [id], onDelete: Cascade)
 
+  @@index([ticketOrderId])
   @@index([providerPaymentId])
   @@index([providerOrderId])
   @@index([status])
@@ -203,16 +241,139 @@ model Event {
   status           EventStatus   @default(DRAFT)
   isFeatured       Boolean       @default(false)
   ctaType          EventCtaType  @default(BOOKING)
+  preferredMapUsageMode MapUsageMode?
   ticketUrl        String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   reservations     Reservation[]
   tableHolds       TableHold[]
+  tableOverrides   VenueTableOverride[]
+  sessions         EventSession[]
+  ticketTypes      TicketType[]
+  ticketOrders     TicketOrder[]
+  tickets          Ticket[]
 
   @@index([slug])
   @@index([status])
   @@index([startAt])
   @@index([isFeatured])
+  @@index([preferredMapUsageMode])
+}
+
+model EventSession {
+  id        Int       @id @default(autoincrement())
+  eventId    Int
+  name       Json?
+  startsAt   DateTime
+  endsAt     DateTime
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypes TicketType[]
+  ticketOrders TicketOrder[]
+  tickets    Ticket[]
+
+  @@index([eventId])
+  @@index([startsAt])
+  @@index([sortOrder])
+}
+
+model TicketType {
+  id          Int      @id @default(autoincrement())
+  eventId     Int
+  eventSessionId Int?
+  name        Json
+  description Json?
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("UAH")
+  capacity    Int
+  soldCount   Int      @default(0)
+  salesStart  DateTime?
+  salesEnd    DateTime?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventSession EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
+  tickets     Ticket[]
+
+  @@index([eventId])
+  @@index([eventSessionId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model TicketOrder {
+  id            Int               @id @default(autoincrement())
+  eventId       Int
+  eventSessionId Int?
+  orderNumber   String            @unique
+  downloadToken String            @unique
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  amount        Decimal           @db.Decimal(10, 2)
+  currency      String            @default("UAH")
+  status        TicketOrderStatus @default(PENDING)
+  expiresAt     DateTime?
+  paidAt        DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  event         Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  eventSession  EventSession?     @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
+  payment       Payment?
+  tickets       Ticket[]
+
+  @@index([eventId])
+  @@index([eventSessionId])
+  @@index([status])
+  @@index([customerEmail])
+  @@index([createdAt])
+}
+
+model Ticket {
+  id           Int          @id @default(autoincrement())
+  orderId      Int
+  eventId      Int
+  eventSessionId Int?
+  ticketTypeId Int
+  code         String       @unique
+  status       TicketStatus @default(RESERVED)
+  holderName   String?
+  holderEmail  String?
+  issuedAt     DateTime?
+  usedAt       DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  order        TicketOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  eventSession EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
+  ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  scans        TicketScan[]
+
+  @@index([orderId])
+  @@index([eventId])
+  @@index([eventSessionId])
+  @@index([ticketTypeId])
+  @@index([status])
+}
+
+model TicketScan {
+  id          Int      @id @default(autoincrement())
+  ticketId    Int
+  adminUserId Int?
+  result      String
+  note        String?
+  scannedAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([scannedAt])
 }
 
 model MenuCategory {
@@ -276,6 +437,9 @@ model FrontendSettings {
   socialMedia  Json?
   heroTitle    Json?
   heroSubtitle Json?
+  aboutTitle   Json?
+  aboutText    Json?
+  aboutImageUrl String?
   footerText   Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -298,6 +462,17 @@ enum MapStatus {
   DRAFT
   ACTIVE
   ARCHIVED
+}
+
+enum MapUsageMode {
+  DAY
+  EVENING
+  EVENT
+}
+
+enum BookingKind {
+  TABLE
+  BEACH
 }
 
 enum ReservationStatus {
@@ -323,6 +498,19 @@ enum MapObjectType {
   STAIRS
   PATH
   CUSTOM
+}
+
+enum VenuePositionType {
+  BUNGALOW
+  KROVAT
+  PIER
+  RESTAURANT
+  TERRACE
+}
+
+enum VenuePositionSide {
+  LEFT
+  RIGHT
 }
 
 enum ReservationSource {
@@ -361,6 +549,23 @@ enum EventCtaType {
   BOOKING
   TICKETS
   BOTH
+}
+
+enum TicketOrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  PAID
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum TicketStatus {
+  RESERVED
+  VALID
+  USED
+  CANCELLED
+  REFUNDED
 }
 
 enum MenuSection {

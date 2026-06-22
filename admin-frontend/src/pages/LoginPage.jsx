@@ -6,18 +6,16 @@ import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { user, loading: authLoading, setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { t } = useAdminI18n();
 
   useEffect(() => {
-    apiRequest('/api/admin/auth/me').then(({ response }) => {
-      if (response.ok) {
-        navigate('/admin/dashboard', { replace: true });
-      }
-    });
-  }, [navigate]);
+    if (!authLoading && user) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [authLoading, navigate, user]);
 
   async function onSubmit(event) {
     event.preventDefault();

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
-const { PrismaClient, MapStatus, MapObjectType, EventStatus, EventCtaType } = require('@prisma/client');
+const { PrismaClient, MapStatus, MapUsageMode, BookingKind, MapObjectType, EventStatus, EventCtaType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -129,6 +129,7 @@ async function main() {
       name: jsonStr('Main venue map', 'Main venue map', 'Main venue map'),
       description: jsonStr('Main booking map for GorPliaj', 'Main booking map for GorPliaj', 'Main booking map for GorPliaj'),
       status: MapStatus.ACTIVE,
+      usageMode: MapUsageMode.DAY,
       isDefault: true,
       width: 1600,
       height: 900,
@@ -139,6 +140,7 @@ async function main() {
       slug: 'main-venue',
       description: jsonStr('Main booking map for GorPliaj', 'Main booking map for GorPliaj', 'Main booking map for GorPliaj'),
       status: MapStatus.ACTIVE,
+      usageMode: MapUsageMode.DAY,
       isDefault: true,
       width: 1600,
       height: 900,
@@ -180,12 +182,16 @@ async function main() {
     const tableRecord = await upsertTable(map.id, zones[table.zoneKey].id, {
       name: table.name,
       code: table.code,
+      bookingKind: table.zoneKey === 'beach' ? BookingKind.BEACH : BookingKind.TABLE,
       seatsMin: table.seatsMin,
       seatsMax: table.seatsMax,
       deposit: table.deposit,
       photoUrl: table.photoUrl || null,
+      serviceName: table.name,
+      serviceDescription: null,
       isActive: true,
       isBookable: true,
+      sortOrder: 0,
     });
 
     await upsertMapObject(map.id, {
@@ -312,6 +318,7 @@ async function main() {
     status: EventStatus.PUBLISHED,
     isFeatured: false,
     ctaType: EventCtaType.BOOKING,
+    preferredMapUsageMode: MapUsageMode.DAY,
     ticketUrl: null,
   });
 
@@ -326,6 +333,7 @@ async function main() {
     status: EventStatus.PUBLISHED,
     isFeatured: false,
     ctaType: EventCtaType.BOOKING,
+    preferredMapUsageMode: MapUsageMode.DAY,
     ticketUrl: null,
   });
 

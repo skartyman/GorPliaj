@@ -24,6 +24,96 @@ const DEFAULT_FORM = {
   ticketUrl: ''
 };
 
+const UI_COPY = {
+  ua: {
+    edit: 'Редагувати',
+    ticketTariffs: 'Тарифи квитків',
+    fillUaFirst: 'Спочатку заповніть поле UA для перекладу.',
+    translationFailed: 'Не вдалося виконати переклад.',
+    translationUpdated: 'Переклад оновлено.',
+    posterUploaded: 'Постер завантажено.',
+    posterUrl: 'URL постера',
+    uploadPoster: 'Завантажити постер',
+    ticketUrl: 'URL квитків',
+    featured: 'Вибрана подія',
+    preview: 'Попередній перегляд',
+    previewTitle: 'Назва події',
+    previewDescription: 'Короткий опис з’явиться тут.',
+    previewHint: 'Збережіть подію, щоб відкрити її публічну сторінку.',
+    openPublic: 'Відкрити публічну сторінку',
+    saveChanges: 'Зберегти зміни',
+    createEvent: 'Створити подію',
+    shortDescription: 'Короткий опис',
+    fullDescription: 'Повний опис',
+    fullDescriptionUa: 'Повний опис українською...',
+    fullDescriptionRu: 'Повний опис російською...',
+    fullDescriptionEn: 'Full description in English...',
+    autoTranslated: 'Автоматичний переклад',
+    translate: 'Перекласти RU/EN з UA',
+    translating: 'Перекладаємо...',
+    deleteConfirm: 'Видалити подію "{title}"?',
+    deleteBlocked: 'Не можна видалити подію, бо до неї вже привʼязані продажі квитків або видані квитки. Перенесіть її в архів або спочатку приберіть повʼязані квиткові дані.'
+  },
+  ru: {
+    edit: 'Редактировать',
+    ticketTariffs: 'Тарифы билетов',
+    fillUaFirst: 'Сначала заполните поле UA для перевода.',
+    translationFailed: 'Не удалось выполнить перевод.',
+    translationUpdated: 'Перевод обновлён.',
+    posterUploaded: 'Постер загружен.',
+    posterUrl: 'URL постера',
+    uploadPoster: 'Загрузить постер',
+    ticketUrl: 'URL билетов',
+    featured: 'Избранное событие',
+    preview: 'Предпросмотр',
+    previewTitle: 'Название события',
+    previewDescription: 'Короткое описание появится здесь.',
+    previewHint: 'Сохраните событие, чтобы открыть его публичную страницу.',
+    openPublic: 'Открыть публичную страницу',
+    saveChanges: 'Сохранить изменения',
+    createEvent: 'Создать событие',
+    shortDescription: 'Короткое описание',
+    fullDescription: 'Полное описание',
+    fullDescriptionUa: 'Полное описание на украинском...',
+    fullDescriptionRu: 'Полное описание на русском...',
+    fullDescriptionEn: 'Full description in English...',
+    autoTranslated: 'Автоматический перевод',
+    translate: 'Перевести RU/EN с UA',
+    translating: 'Переводим...',
+    deleteConfirm: 'Удалить событие "{title}"?',
+    deleteBlocked: 'Нельзя удалить событие, потому что к нему уже привязаны продажи билетов или выданные билеты. Переведите его в архив или сначала удалите связанные билетные данные.'
+  },
+  en: {
+    edit: 'Edit',
+    ticketTariffs: 'Ticket tariffs',
+    fillUaFirst: 'Fill in the UA field first before translation.',
+    translationFailed: 'Translation failed.',
+    translationUpdated: 'Translation updated.',
+    posterUploaded: 'Poster uploaded.',
+    posterUrl: 'Poster URL',
+    uploadPoster: 'Upload poster',
+    ticketUrl: 'Ticket URL',
+    featured: 'Featured event',
+    preview: 'Preview',
+    previewTitle: 'Event title',
+    previewDescription: 'Short description will appear here.',
+    previewHint: 'Save the event to open its public page.',
+    openPublic: 'Open public page',
+    saveChanges: 'Save changes',
+    createEvent: 'Create event',
+    shortDescription: 'Short description',
+    fullDescription: 'Full description',
+    fullDescriptionUa: 'Full description in Ukrainian...',
+    fullDescriptionRu: 'Full description in Russian...',
+    fullDescriptionEn: 'Full description in English...',
+    autoTranslated: 'Auto-translated',
+    translate: 'Translate RU/EN from UA',
+    translating: 'Translating...',
+    deleteConfirm: 'Delete event "{title}"?',
+    deleteBlocked: 'This event cannot be deleted because it already has ticket sales or issued tickets. Archive it instead or remove the related ticket data first.'
+  }
+};
+
 function normalizeLocalized(value) {
   if (!value || typeof value !== 'object') {
     return { ...EMPTY_LOCALIZED, ua: value || '' };
@@ -50,8 +140,13 @@ function fromDateTimeLocal(value) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function getLocaleCode(locale) {
+  return locale.toUpperCase();
+}
+
 export default function EventsPage() {
-  const { language } = useAdminI18n();
+  const { t, language } = useAdminI18n();
+  const ui = UI_COPY[language] || UI_COPY.ua;
   const [viewMode, setViewMode] = useState('table');
   const [state, setState] = useState({ loading: true, error: '', events: [] });
   const [form, setForm] = useState(DEFAULT_FORM);
@@ -74,12 +169,17 @@ export default function EventsPage() {
     return `/events/${form.slug}`;
   }, [editId, form.slug]);
 
+  const ticketSalesHref = useMemo(() => {
+    if (!editId) return '/admin/ticket-sales';
+    return `/admin/ticket-sales?eventId=${encodeURIComponent(editId)}`;
+  }, [editId]);
+
   async function loadEvents() {
     setState((current) => ({ ...current, loading: true, error: '' }));
 
     const { response, body } = await apiRequest('/api/admin/events');
     if (!response.ok) {
-      setState({ loading: false, error: body.message || 'Failed to load events.', events: [] });
+      setState({ loading: false, error: body.message || t('eventsAdmin.errors.load'), events: [] });
       return;
     }
 
@@ -88,9 +188,9 @@ export default function EventsPage() {
 
   useEffect(() => {
     loadEvents().catch(() => {
-      setState({ loading: false, error: 'Failed to load events.', events: [] });
+      setState({ loading: false, error: t('eventsAdmin.errors.load'), events: [] });
     });
-  }, []);
+  }, [language]);
 
   function resetForm() {
     setForm({
@@ -138,7 +238,7 @@ export default function EventsPage() {
   async function autoTranslateField(field) {
     const sourceText = form[field]?.ua;
     if (!sourceText?.trim()) {
-      setFeedback({ tone: 'error', message: 'Спочатку заповніть поле UA для перекладу.' });
+      setFeedback({ tone: 'error', message: ui.fillUaFirst });
       return;
     }
 
@@ -150,7 +250,7 @@ export default function EventsPage() {
     setTranslating((current) => ({ ...current, [field]: false }));
 
     if (!response.ok) {
-      setFeedback({ tone: 'error', message: body.error || body.message || 'Translation failed.' });
+      setFeedback({ tone: 'error', message: body.error || body.message || ui.translationFailed });
       return;
     }
 
@@ -162,7 +262,7 @@ export default function EventsPage() {
         en: body.en || current[field].en || ''
       }
     }));
-    setFeedback({ tone: 'success', message: 'Переклад оновлено.' });
+    setFeedback({ tone: 'success', message: ui.translationUpdated });
   }
 
   async function submitForm(event) {
@@ -185,31 +285,32 @@ export default function EventsPage() {
 
     if (!response.ok) {
       setSavingKey('');
-      setFeedback({ tone: 'error', message: body.message || 'Failed to save event.' });
+      setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.save') });
       return;
     }
 
     await loadEvents();
+    const wasEditing = Boolean(editId);
     resetForm();
     setSavingKey('');
-    setFeedback({ tone: 'success', message: editId ? 'Event updated.' : 'Event created.' });
+    setFeedback({ tone: 'success', message: wasEditing ? t('eventsAdmin.form.updated') : t('eventsAdmin.form.created') });
   }
 
   async function removeEvent(eventRow) {
-    if (!window.confirm(`Delete event "${localizeField(eventRow.title, language)}"?`)) return;
+    if (!window.confirm(ui.deleteConfirm.replace('{title}', localizeField(eventRow.title, language)))) return;
 
     setSavingKey(`delete-${eventRow.id}`);
     const { response, body } = await apiRequest(`/api/admin/events/${eventRow.id}`, { method: 'DELETE' });
     if (!response.ok) {
       setSavingKey('');
-      setFeedback({ tone: 'error', message: body.message || 'Failed to delete event.' });
+      setFeedback({ tone: 'error', message: response.status === 409 ? ui.deleteBlocked : (body.message || t('eventsAdmin.errors.delete')) });
       return;
     }
 
     await loadEvents();
     if (editId === eventRow.id) resetForm();
     setSavingKey('');
-    setFeedback({ tone: 'success', message: 'Event deleted.' });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.form.deleted') });
   }
 
   async function handlePosterUpload(file) {
@@ -231,19 +332,19 @@ export default function EventsPage() {
 
     setForm((current) => ({ ...current, posterImage: body.url }));
     setPosterUploadState({ status: 'success', details: body.url });
-    setFeedback({ tone: 'success', message: 'Постер завантажено.' });
+    setFeedback({ tone: 'success', message: ui.posterUploaded });
   }
 
   const columns = [
     { key: 'title', label: t('eventsAdmin.columns.title'), render: (row) => <strong>{localizeField(row.title, language)}</strong> },
     { key: 'startAt', label: t('eventsAdmin.columns.start'), render: (row) => formatDateTime(row.startAt, language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US')) },
-    { key: 'status', label: t('eventsAdmin.columns.status') },
+    { key: 'status', label: t('eventsAdmin.columns.status'), render: (row) => t(`eventsAdmin.statusOptions.${row.status}`) },
     {
       key: 'actions',
       label: t('eventsAdmin.columns.actions'),
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('eventsAdmin.form.fields.title')}</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{ui.edit}</button>
           <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>{t('eventsAdmin.form.delete')}</button>
         </div>
       )
@@ -292,6 +393,8 @@ export default function EventsPage() {
         {!state.loading && viewMode === 'calendar' ? (
           <CalendarView
             items={state.events.map((event) => ({
+              id: event.id,
+              event,
               date: event.startAt,
               title: localizeField(event.title, language),
               color: event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'neutral' : 'danger',
@@ -304,18 +407,33 @@ export default function EventsPage() {
                     </div>
                   </div>
                   <span className={`status-pill ${event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'neutral' : 'danger'}`}>
-                    {event.status}
+                    {t(`eventsAdmin.statusOptions.${event.status}`)}
                   </span>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-secondary"
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      startEdit(event);
+                    }}
+                  >
+                    {ui.edit}
+                  </button>
                 </div>
               )
             }))}
+            onItemClick={(item) => {
+              if (item?.event) startEdit(item.event);
+            }}
             onDateClick={(date) => {
-              const match = state.events.find((e) => {
-                const d = new Date(e.startAt);
-                return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() && d.getDate() === date.getDate();
+              const match = state.events.find((event) => {
+                const eventDate = new Date(event.startAt);
+                return eventDate.getFullYear() === date.getFullYear()
+                  && eventDate.getMonth() === date.getMonth()
+                  && eventDate.getDate() === date.getDate();
               });
               if (match) {
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                startEdit(match);
               }
             }}
           />
@@ -326,24 +444,24 @@ export default function EventsPage() {
         <PanelCard title={editId ? t('eventsAdmin.form.edit') : t('eventsAdmin.form.create')} subtitle="">
           <form onSubmit={submitForm} className="event-admin-form">
             <div className="grid-two-col">
-              <label>{t('eventsAdmin.form.fields.title')} (UA) <input value={form.title.ua} onChange={(e) => setLocalizedField('title', 'ua', e.target.value)} required /></label>
-              <label>{t('eventsAdmin.form.fields.title')} (RU) <input value={form.title.ru} onChange={(e) => setLocalizedField('title', 'ru', e.target.value)} placeholder={t('eventsAdmin.form.placeholders.autoTranslated')} /></label>
-              <label>{t('eventsAdmin.form.fields.title')} (EN) <input value={form.title.en} onChange={(e) => setLocalizedField('title', 'en', e.target.value)} placeholder={t('eventsAdmin.form.placeholders.autoTranslated')} /></label>
-              <label>{t('eventsAdmin.form.fields.slug')} <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></label>
+              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('ua')}) <input value={form.title.ua} onChange={(event) => setLocalizedField('title', 'ua', event.target.value)} required /></label>
+              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('ru')}) <input value={form.title.ru} onChange={(event) => setLocalizedField('title', 'ru', event.target.value)} placeholder={ui.autoTranslated} /></label>
+              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('en')}) <input value={form.title.en} onChange={(event) => setLocalizedField('title', 'en', event.target.value)} placeholder={ui.autoTranslated} /></label>
+              <label>{t('eventsAdmin.form.fields.slug')} <input value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} /></label>
             </div>
 
             <div className="actions compact" style={{ marginTop: '0.5rem' }}>
               <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslateField('title')} disabled={!!translating.title}>
-                {translating.title ? 'Перекладаємо...' : '✦✦ Перекласти title RU/EN з UA'}
+                {translating.title ? ui.translating : ui.translate}
               </button>
             </div>
 
             <div className="grid-two-col" style={{ marginTop: '1rem' }}>
-              <label>{t('eventsAdmin.form.fields.start')} <input type="datetime-local" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} required /></label>
-              <label>{t('eventsAdmin.form.fields.end')} <input type="datetime-local" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
+              <label>{t('eventsAdmin.form.fields.start')} <input type="datetime-local" value={form.startAt} onChange={(event) => setForm({ ...form, startAt: event.target.value })} required /></label>
+              <label>{t('eventsAdmin.form.fields.end')} <input type="datetime-local" value={form.endAt} onChange={(event) => setForm({ ...form, endAt: event.target.value })} /></label>
               <label>
                 {t('eventsAdmin.form.fields.status')}
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
                   <option value="DRAFT">{t('eventsAdmin.statusOptions.DRAFT')}</option>
                   <option value="PUBLISHED">{t('eventsAdmin.statusOptions.PUBLISHED')}</option>
                   <option value="ARCHIVED">{t('eventsAdmin.statusOptions.ARCHIVED')}</option>
@@ -351,7 +469,7 @@ export default function EventsPage() {
               </label>
               <label>
                 {t('eventsAdmin.form.fields.cta')}
-                <select value={form.ctaType} onChange={(e) => setForm({ ...form, ctaType: e.target.value })}>
+                <select value={form.ctaType} onChange={(event) => setForm({ ...form, ctaType: event.target.value })}>
                   <option value="BOOKING">{t('eventsAdmin.ctaOptions.BOOKING')}</option>
                   <option value="TICKETS">{t('eventsAdmin.ctaOptions.TICKETS')}</option>
                   <option value="BOTH">{t('eventsAdmin.ctaOptions.BOTH')}</option>
@@ -360,81 +478,86 @@ export default function EventsPage() {
             </div>
 
             <div style={{ marginTop: '1rem' }}>
-              <label>Short Description (UA) <textarea value={form.shortDescription.ua} onChange={(e) => setLocalizedField('shortDescription', 'ua', e.target.value)} rows="3" /></label>
-              <label>Short Description (RU) <textarea value={form.shortDescription.ru} onChange={(e) => setLocalizedField('shortDescription', 'ru', e.target.value)} placeholder="Auto-translated" rows="3" /></label>
-              <label>Short Description (EN) <textarea value={form.shortDescription.en} onChange={(e) => setLocalizedField('shortDescription', 'en', e.target.value)} placeholder="Auto-translated" rows="3" /></label>
+              <label>{ui.shortDescription} ({getLocaleCode('ua')}) <textarea value={form.shortDescription.ua} onChange={(event) => setLocalizedField('shortDescription', 'ua', event.target.value)} rows="3" /></label>
+              <label>{ui.shortDescription} ({getLocaleCode('ru')}) <textarea value={form.shortDescription.ru} onChange={(event) => setLocalizedField('shortDescription', 'ru', event.target.value)} placeholder={ui.autoTranslated} rows="3" /></label>
+              <label>{ui.shortDescription} ({getLocaleCode('en')}) <textarea value={form.shortDescription.en} onChange={(event) => setLocalizedField('shortDescription', 'en', event.target.value)} placeholder={ui.autoTranslated} rows="3" /></label>
             </div>
 
             <div className="actions compact" style={{ marginTop: '0.5rem' }}>
               <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslateField('shortDescription')} disabled={!!translating.shortDescription}>
-                {translating.shortDescription ? 'Перекладаємо...' : '✦✦ Перекласти short description RU/EN з UA'}
+                {translating.shortDescription ? ui.translating : ui.translate}
               </button>
             </div>
 
             <div style={{ marginTop: '1rem' }}>
               <label>
-                Full Description (UA)
+                {ui.fullDescription} ({getLocaleCode('ua')})
                 <RichEditor
                   value={form.fullDescription.ua}
                   onChange={(html) => setLocalizedField('fullDescription', 'ua', html)}
-                  placeholder="Full description in Ukrainian..."
+                  placeholder={ui.fullDescriptionUa}
                 />
               </label>
               <label>
-                Full Description (RU)
+                {ui.fullDescription} ({getLocaleCode('ru')})
                 <RichEditor
                   value={form.fullDescription.ru}
                   onChange={(html) => setLocalizedField('fullDescription', 'ru', html)}
-                  placeholder="Full description in Russian..."
+                  placeholder={ui.fullDescriptionRu}
                 />
               </label>
               <label>
-                Full Description (EN)
+                {ui.fullDescription} ({getLocaleCode('en')})
                 <RichEditor
                   value={form.fullDescription.en}
                   onChange={(html) => setLocalizedField('fullDescription', 'en', html)}
-                  placeholder="Full description in English..."
+                  placeholder={ui.fullDescriptionEn}
                 />
               </label>
             </div>
 
             <div className="actions compact" style={{ marginTop: '0.5rem' }}>
               <button type="button" className="btn btn-secondary btn-small" onClick={() => autoTranslateField('fullDescription')} disabled={!!translating.fullDescription}>
-                {translating.fullDescription ? 'Перекладаємо...' : '✦✦ Перекласти full description RU/EN з UA'}
+                {translating.fullDescription ? ui.translating : ui.translate}
               </button>
             </div>
 
             <div className="grid-two-col" style={{ marginTop: '1rem' }}>
-              <label>Poster URL <input value={form.posterImage} onChange={(e) => setForm({ ...form, posterImage: e.target.value })} placeholder="https://..." /></label>
-              <label>Upload poster <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => handlePosterUpload(e.target.files?.[0])} disabled={uploadingImage} /></label>
+              <label>{ui.posterUrl} <input value={form.posterImage} onChange={(event) => setForm({ ...form, posterImage: event.target.value })} placeholder="https://..." /></label>
+              <label>{ui.uploadPoster} <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handlePosterUpload(event.target.files?.[0])} disabled={uploadingImage} /></label>
             </div>
 
             {posterUploadState.status !== 'idle' ? (
               <div className={`upload-status-card ${posterUploadState.status === 'error' ? 'is-error' : posterUploadState.status === 'success' ? 'is-success' : 'is-uploading'}`}>
-                <strong>Poster upload</strong>
+                <strong>{ui.uploadPoster}</strong>
                 <p>{posterUploadState.details}</p>
               </div>
             ) : null}
 
             <div className="grid-two-col" style={{ marginTop: '1rem' }}>
               <label>
-                Ticket URL
-                <input value={form.ticketUrl} onChange={(e) => setForm({ ...form, ticketUrl: e.target.value })} placeholder="https://tickets.example.com" />
+                {ui.ticketUrl}
+                <input value={form.ticketUrl} onChange={(event) => setForm({ ...form, ticketUrl: event.target.value })} placeholder="https://tickets.example.com" />
               </label>
               <label className="menu-admin-checkbox" style={{ marginTop: 28 }}>
-                <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} />
-                <span>Featured event</span>
+                <input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm({ ...form, isFeatured: event.target.checked })} />
+                <span>{ui.featured}</span>
               </label>
             </div>
 
             <div className="actions" style={{ marginTop: '1rem' }}>
               <button type="submit" className="btn" disabled={!!savingKey}>
-                {savingKey === 'event-form' ? 'Saving...' : (editId ? 'Save changes' : 'Create event')}
+                {savingKey === 'event-form' ? t('eventsAdmin.form.saving') : (editId ? ui.saveChanges : ui.createEvent)}
               </button>
-              {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>Cancel</button> : null}
+              {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>{t('eventsAdmin.form.cancel')}</button> : null}
               {publicPreviewHref ? (
                 <a className="btn btn-secondary" href={publicPreviewHref} target="_blank" rel="noreferrer">
-                  Open public page
+                  {ui.openPublic}
+                </a>
+              ) : null}
+              {['TICKETS', 'BOTH'].includes(form.ctaType) ? (
+                <a className="btn btn-secondary" href={ticketSalesHref}>
+                  {ui.ticketTariffs}
                 </a>
               ) : null}
             </div>
@@ -443,33 +566,33 @@ export default function EventsPage() {
           </form>
         </PanelCard>
 
-        <PanelCard title="Preview" subtitle="Current form preview in the public style.">
+        <PanelCard title={ui.preview} subtitle="">
           <div className="menu-admin-image-preview" style={{ width: '100%', maxWidth: 360 }}>
-            <img src={form.posterImage || '/icons/lebedi.jpg'} alt={localizeField(form.title, language) || 'Poster preview'} />
+            <img src={form.posterImage || '/icons/lebedi.jpg'} alt={localizeField(form.title, language) || ui.preview} />
           </div>
 
           <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
             <div className="menu-admin-badges">
-              <span className="status-pill neutral">{form.status}</span>
-              <span className="status-pill neutral">{form.ctaType}</span>
-              {form.isFeatured ? <span className="status-pill success">FEATURED</span> : null}
+              <span className="status-pill neutral">{t(`eventsAdmin.statusOptions.${form.status}`)}</span>
+              <span className="status-pill neutral">{t(`eventsAdmin.ctaOptions.${form.ctaType}`)}</span>
+              {form.isFeatured ? <span className="status-pill success">{ui.featured}</span> : null}
             </div>
-            <h3>{localizeField(form.title, language) || 'Event title preview'}</h3>
+            <h3>{localizeField(form.title, language) || ui.previewTitle}</h3>
             {form.startAt ? (
               <p className="muted">
                 {formatDateTime(fromDateTimeLocal(form.startAt), language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}
                 {form.endAt ? ` - ${formatDateTime(fromDateTimeLocal(form.endAt), language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}` : ''}
               </p>
             ) : null}
-            <p className="muted">{localizeField(form.shortDescription, language) || 'Short description preview'}</p>
+            <p className="muted">{localizeField(form.shortDescription, language) || ui.previewDescription}</p>
             {localizeField(form.fullDescription, language) ? <p>{localizeField(form.fullDescription, language)}</p> : null}
-            {form.ticketUrl ? <p><strong>Ticket URL:</strong> {form.ticketUrl}</p> : null}
+            {form.ticketUrl ? <p><strong>{ui.ticketUrl}:</strong> {form.ticketUrl}</p> : null}
             {publicPreviewHref ? (
               <a href={publicPreviewHref} target="_blank" rel="noreferrer" className="text-link">
                 /events/{form.slug}
               </a>
             ) : (
-              <p className="muted">Save the event to open its public page.</p>
+              <p className="muted">{ui.previewHint}</p>
             )}
           </div>
         </PanelCard>

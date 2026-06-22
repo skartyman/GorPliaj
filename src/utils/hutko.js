@@ -9,7 +9,10 @@ function getConfig() {
 }
 
 function generateSignature(params, secretKey) {
-  const keys = Object.keys(params).filter((k) => k !== 'signature').sort();
+  const keys = Object.keys(params)
+    .filter((k) => k !== 'signature' && k !== 'response_signature_string')
+    .filter((k) => params[k] !== undefined && params[k] !== null && String(params[k]) !== '')
+    .sort();
   const parts = [secretKey, ...keys.map((k) => String(params[k] ?? ''))];
   return crypto.createHash('sha1').update(parts.join('|')).digest('hex');
 }

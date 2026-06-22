@@ -1,5 +1,21 @@
 const prisma = require('../lib/prisma');
+const venueTableOverrideService = require('./venueTableOverrideService');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
+
+function matchesGuestCapacity(target, guests) {
+  const normalizedGuests = Number(guests || 0);
+  if (!Number.isFinite(normalizedGuests) || normalizedGuests <= 0) {
+    return false;
+  }
+
+  const min = Number(target?.seatsMin || 1);
+  const max = Number(target?.seatsMax || min || 1);
+  const resolvedMax = Number.isFinite(max) && max > 0
+    ? Math.max(max, Number.isFinite(min) && min > 0 ? min : 1)
+    : (Number.isFinite(min) && min > 0 ? min : 1);
+
+  return normalizedGuests <= resolvedMax;
+}
 
 function getReservations() {
   return prisma.reservation.findMany({
@@ -14,15 +30,22 @@ function createReservation(payload) {
     tableId,
     mapId,
     zoneId,
+    eventId,
+    bookingKind,
     customerName,
     customerPhone,
+    customerEmail,
     guests,
     reservationDate,
     timeFrom,
     timeTo,
     commentCustomer,
+    commentAdmin,
     depositRequired,
-    depositAmount
+    depositAmount,
+    status,
+    source,
+    ticketCode
   } = payload;
 
   return prisma.reservation.create({
@@ -30,17 +53,69 @@ function createReservation(payload) {
       tableId,
       mapId,
       zoneId,
+      eventId: eventId || null,
+      bookingKind: bookingKind || undefined,
       customerName,
       customerPhone,
+      customerEmail: customerEmail || null,
       guests,
       reservationDate,
       timeFrom,
       timeTo,
       commentCustomer: commentCustomer || null,
+      commentAdmin: commentAdmin || null,
       depositRequired: Boolean(depositRequired),
-      depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount
+      depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount,
+      status: status || undefined,
+      source: source || undefined,
+      ticketCode: ticketCode || undefined
+    },
+    include: {
+      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, deposit: true } },
+      zone: { select: { id: true, name: true } },
+      event: { select: { id: true, slug: true, title: true, startAt: true } },
+      payment: true
     }
   });
+}
+
+async function getReservationTable({ tableId, mapId, zoneId, reservationDate = null, eventId = null }) {
+  const table = await prisma.venueTable.findFirst({
+    where: {
+      id: tableId,
+      mapId,
+      zoneId
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      serviceName: true,
+      bookingKind: true,
+      positionType: true,
+      deposit: true,
+      photoUrl: true,
+      seatsMin: true,
+      seatsMax: true,
+      isActive: true,
+      isBookable: true
+    }
+  });
+
+  if (!table) {
+    return null;
+  }
+
+  const effectiveTable = await venueTableOverrideService.getEffectiveTable(table, {
+    reservationDate,
+    eventId
+  });
+
+  if (!effectiveTable?.isActive || !effectiveTable?.isBookable) {
+    return null;
+  }
+
+  return effectiveTable;
 }
 
 function getReservationObject({ objectId, mapId, tableId }) {
@@ -56,6 +131,60 @@ function getReservationObject({ objectId, mapId, tableId }) {
       label: true,
       metaJson: true,
       tableId: true
+    }
+  });
+}
+
+function getPublicEventWithEntryTicket(slug) {
+  return prisma.event.findFirst({
+    where: {
+      slug,
+      status: 'PUBLISHED',
+      ctaType: { in: ['TICKETS', 'BOTH'] }
+    },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      startAt: true,
+      endAt: true,
+      ticketTypes: {
+        where: {
+          isActive: true
+        },
+        orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          currency: true,
+          capacity: true,
+          soldCount: true,
+          salesStart: true,
+          salesEnd: true,
+          eventSessionId: true,
+          eventSession: {
+            select: {
+              id: true,
+              startsAt: true,
+              endsAt: true,
+              isActive: true
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function getPublicReservationByTicketCode(ticketCode) {
+  return prisma.reservation.findUnique({
+    where: { ticketCode },
+    include: {
+      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true } },
+      zone: { select: { id: true, name: true } },
+      event: { select: { id: true, slug: true, title: true, startAt: true } },
+      payment: true
     }
   });
 }
@@ -184,7 +313,11 @@ async function deleteReservation(id) {
 module.exports = {
   getReservations,
   createReservation,
+  getReservationTable,
   getReservationObject,
+  getPublicEventWithEntryTicket,
+  getPublicReservationByTicketCode,
+  matchesGuestCapacity,
   findReservationConflict,
   getMapAvailability,
   updateReservationStatus,

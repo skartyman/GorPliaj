@@ -7,6 +7,7 @@ import { LocaleProvider } from './state/locale';
 import { CartProvider } from './state/cart';
 import { SettingsProvider } from './state/settings';
 import './styles.css';
+import './guest-modal-fix.css';
 
 // Sync theme before React mounts
 const savedTheme = localStorage.getItem('theme');

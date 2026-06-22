@@ -1,0 +1,16 @@
+.guest-modal {
+  color: #f3efe6;
+}
+
+.guest-modal-close {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f3efe6;
+}
+
+.guest-modal h2 {
+  color: #f7f1e8;
+}
+
+.guest-modal p {
+  color: rgba(243, 239, 230, 0.78);
+}

@@ -1,12 +1,16 @@
-const { MapObjectType, MapStatus } = require('@prisma/client');
+const { MapObjectType, MapStatus, VenuePositionSide, VenuePositionType } = require('@prisma/client');
 const prisma = require('../lib/prisma');
 const { saveMapSnapshot } = require('./r2StorageService');
 const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
-const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor'];
-const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId'];
+const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor', 'usageMode'];
+const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'bookingKind', 'positionType', 'positionSide', 'serviceName', 'serviceDescription', 'sortOrder', 'seatsMin', 'seatsMax', 'deposit', 'isActive', 'isBookable'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
+const VALID_POSITION_TYPES = new Set(Object.values(VenuePositionType));
+const VALID_POSITION_SIDES = new Set(Object.values(VenuePositionSide));
+const VALID_MAP_USAGE_MODES = new Set(['DAY', 'EVENING', 'EVENT']);
+const VALID_BOOKING_KINDS = new Set(['TABLE', 'BEACH']);
 const MAP_EDITOR_INCLUDE = {
   zones: {
     orderBy: {
@@ -32,6 +36,7 @@ const MAP_LIST_SELECT = {
   slug: true,
   description: true,
   status: true,
+  usageMode: true,
   isDefault: true,
   width: true,
   height: true,
@@ -102,6 +107,7 @@ async function createAdminMapVariant({
   name,
   slug,
   description,
+  usageMode = 'DAY',
   sourceMapId = null,
   creationMode = 'clone',
   width = null,
@@ -117,6 +123,9 @@ async function createAdminMapVariant({
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
   const normalizedDescription = String(description || '').trim() || null;
+  const normalizedUsageMode = VALID_MAP_USAGE_MODES.has(String(usageMode || '').trim().toUpperCase())
+    ? String(usageMode || '').trim().toUpperCase()
+    : 'DAY';
 
   if (!normalizedName) {
     return { type: 'INVALID', message: 'Map name is required.' };
@@ -184,6 +193,7 @@ async function createAdminMapVariant({
         slug: normalizedSlug,
         description: normalizedDescription,
         status: sourceMap?.status || MapStatus.DRAFT,
+        usageMode: sourceMap?.usageMode || normalizedUsageMode,
         isDefault: Boolean(makeDefault),
         width: sourceMap?.width || blankWidth,
         height: sourceMap?.height || blankHeight,
@@ -199,7 +209,9 @@ async function createAdminMapVariant({
           mapId: map.id,
           name: zone.name,
           color: zone.color,
-          sortOrder: zone.sortOrder
+          sortOrder: zone.sortOrder,
+          viewportJson: zone.viewportJson,
+          polygonJson: zone.polygonJson
         }
       });
       zoneIdMap.set(zone.id, createdZone.id);
@@ -213,7 +225,13 @@ async function createAdminMapVariant({
           zoneId: zoneIdMap.get(table.zoneId),
           name: table.name,
           code: table.code,
+          bookingKind: table.bookingKind || 'TABLE',
+          positionType: table.positionType,
+          positionSide: table.positionSide,
           photoUrl: table.photoUrl,
+          serviceName: table.serviceName || null,
+          serviceDescription: table.serviceDescription || null,
+          sortOrder: table.sortOrder || 0,
           seatsMin: table.seatsMin,
           seatsMax: table.seatsMax,
           deposit: table.deposit,
@@ -338,6 +356,41 @@ async function setDefaultAdminMap(mapId) {
   };
 }
 
+async function activateAdminMap(mapId) {
+  const id = Number(mapId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { type: 'INVALID', message: 'Map id is invalid.' };
+  }
+
+  const map = await prisma.map.findUnique({
+    where: { id },
+    select: { id: true, status: true }
+  });
+
+  if (!map) {
+    return { type: 'NOT_FOUND', message: 'Map not found.' };
+  }
+
+  if (map.status !== MapStatus.ACTIVE) {
+    await prisma.map.update({
+      where: { id },
+      data: {
+        status: MapStatus.ACTIVE
+      }
+    });
+  }
+
+  const maps = await listAdminMaps();
+  const payload = await getAdminMapEditor(id);
+  return {
+    type: 'UPDATED',
+    data: {
+      ...payload,
+      maps
+    }
+  };
+}
+
 function normalizeMapInput(mapInput) {
   const normalized = {};
 
@@ -352,6 +405,12 @@ function normalizeMapInput(mapInput) {
 
     if (field === 'backgroundImage' || field === 'backgroundColor') {
       normalized[field] = String(mapInput?.[field] ?? '').trim() || null;
+      continue;
+    }
+
+    if (field === 'usageMode') {
+      const value = String(mapInput?.usageMode ?? '').trim().toUpperCase();
+      normalized.usageMode = VALID_MAP_USAGE_MODES.has(value) ? value : 'DAY';
     }
   }
 
@@ -372,15 +431,64 @@ function normalizeTableInput(tableInput, existingTable = null) {
       continue;
     }
 
+    if (field === 'positionType') {
+      const nextPositionType = tableInput?.positionType === undefined ? existingTable?.positionType : tableInput.positionType;
+      normalized.positionType = nextPositionType ? String(nextPositionType).trim().toUpperCase() : null;
+      continue;
+    }
+
+    if (field === 'bookingKind') {
+      const nextBookingKind = tableInput?.bookingKind === undefined ? existingTable?.bookingKind : tableInput.bookingKind;
+      const bookingKind = String(nextBookingKind || '').trim().toUpperCase() || 'TABLE';
+      normalized.bookingKind = VALID_BOOKING_KINDS.has(bookingKind) ? bookingKind : 'TABLE';
+      continue;
+    }
+
+    if (field === 'positionSide') {
+      const nextPositionSide = tableInput?.positionSide === undefined ? existingTable?.positionSide : tableInput.positionSide;
+      normalized.positionSide = nextPositionSide ? String(nextPositionSide).trim().toUpperCase() : null;
+      continue;
+    }
+
     if (field === 'name') {
       const nextValue = tableInput?.name === undefined ? existingTable?.name : tableInput?.name;
       normalized.name = normalizeJsonValue(nextValue);
       continue;
     }
 
+    if (field === 'serviceName' || field === 'serviceDescription') {
+      const nextValue = tableInput?.[field] === undefined ? existingTable?.[field] : tableInput?.[field];
+      normalized[field] = normalizeJsonValue(nextValue);
+      continue;
+    }
+
     if (field === 'zoneId') {
       const nextZoneId = tableInput?.zoneId === undefined ? existingTable?.zoneId : tableInput?.zoneId;
       normalized.zoneId = Number(nextZoneId);
+      continue;
+    }
+
+    if (field === 'seatsMin' || field === 'seatsMax') {
+      const fallback = field === 'seatsMin' ? 1 : 4;
+      const value = Number(tableInput?.[field] ?? existingTable?.[field] ?? fallback);
+      normalized[field] = Number.isFinite(value) ? Math.max(1, Math.round(value)) : fallback;
+      continue;
+    }
+
+    if (field === 'sortOrder') {
+      const value = Number(tableInput?.sortOrder ?? existingTable?.sortOrder ?? 0);
+      normalized.sortOrder = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+      continue;
+    }
+
+    if (field === 'deposit') {
+      const value = Number(tableInput?.deposit ?? existingTable?.deposit ?? 0);
+      normalized.deposit = Number.isFinite(value) ? Math.max(0, value) : 0;
+      continue;
+    }
+
+    if (field === 'isActive' || field === 'isBookable') {
+      normalized[field] = tableInput?.[field] === undefined ? (existingTable?.[field] ?? true) : Boolean(tableInput[field]);
     }
   }
 
@@ -446,6 +554,22 @@ function normalizeJsonValue(value) {
   return String(value).trim() || null;
 }
 
+function normalizeZoneInput(zoneInput, existingZone = null) {
+  const nextViewport = zoneInput?.viewportJson === undefined ? existingZone?.viewportJson : zoneInput.viewportJson;
+  const nextPolygon = zoneInput?.polygonJson === undefined ? existingZone?.polygonJson : zoneInput.polygonJson;
+  const nextName = zoneInput?.name === undefined ? existingZone?.name : zoneInput.name;
+  const nextColor = zoneInput?.color === undefined ? existingZone?.color : zoneInput.color;
+  const nextSortOrder = zoneInput?.sortOrder === undefined ? existingZone?.sortOrder : zoneInput.sortOrder;
+
+  return {
+    name: normalizeJsonValue(nextName) || { ua: 'Нова зона', ru: 'Новая зона', en: 'New zone' },
+    color: String(nextColor || '#2563eb').trim() || '#2563eb',
+    sortOrder: Number.isFinite(Number(nextSortOrder)) ? Number(nextSortOrder) : 0,
+    viewportJson: normalizeJsonValue(nextViewport),
+    polygonJson: normalizeJsonValue(nextPolygon)
+  };
+}
+
 function validateEditorObjects(objects) {
   if (!Array.isArray(objects)) {
     return 'Objects payload must be an array.';
@@ -487,12 +611,86 @@ function validateEditorObjects(objects) {
 
     if (object.tableId !== null && object.tableId !== '' && object.tableId !== undefined) {
       const tableId = Number(object.tableId);
-      if (!Number.isInteger(tableId) || tableId <= 0) {
+      if ((!Number.isInteger(tableId) || tableId <= 0) && !String(object.tableId).trim()) {
         return `Object ${normalizedId} contains an invalid table id.`;
       }
+    }
+  }
 
-      if (type && type !== 'TABLE') {
-        return `Only table objects can reference a table id (${normalizedId}).`;
+  return null;
+}
+
+function validateEditorZones(zones) {
+  if (zones === undefined) {
+    return null;
+  }
+
+  if (!Array.isArray(zones)) {
+    return 'Zones payload must be an array.';
+  }
+
+  const uniqueIds = new Set();
+  for (const zone of zones) {
+    const rawId = zone?.id;
+    if (rawId === undefined || rawId === null || rawId === '') {
+      return 'Each zone must include an id.';
+    }
+
+    const normalizedId = String(rawId);
+    if (uniqueIds.has(normalizedId)) {
+      return `Zone ${normalizedId} is duplicated in payload.`;
+    }
+    uniqueIds.add(normalizedId);
+
+    const numericId = Number(rawId);
+    const isExistingZone = Number.isInteger(numericId) && numericId > 0;
+    if (!isExistingZone) {
+      const name = normalizeJsonValue(zone.name);
+      if (!name) {
+        return `Zone ${normalizedId} must include a name.`;
+      }
+    }
+
+    if (zone.name !== undefined && zone.name !== null && typeof zone.name !== 'string' && typeof zone.name !== 'object') {
+      return `Zone ${normalizedId} contains an invalid name.`;
+    }
+
+    if (zone.color !== undefined && zone.color !== null && typeof zone.color !== 'string') {
+      return `Zone ${normalizedId} contains an invalid color.`;
+    }
+
+    if (zone.sortOrder !== undefined && zone.sortOrder !== null && !Number.isFinite(Number(zone.sortOrder))) {
+      return `Zone ${normalizedId} contains an invalid sort order.`;
+    }
+
+    if (zone.viewportJson !== undefined && zone.viewportJson !== null) {
+      if (typeof zone.viewportJson !== 'object' || Array.isArray(zone.viewportJson)) {
+        return `Zone ${normalizedId} contains an invalid viewport.`;
+      }
+
+      for (const field of ['x', 'y', 'width', 'height']) {
+        const value = Number(zone.viewportJson[field]);
+        if (!Number.isFinite(value) || value < 0) {
+          return `Zone ${normalizedId} contains an invalid viewport ${field}.`;
+        }
+      }
+    }
+
+    if (zone.polygonJson !== undefined && zone.polygonJson !== null) {
+      if (typeof zone.polygonJson !== 'object' || Array.isArray(zone.polygonJson)) {
+        return `Zone ${normalizedId} contains an invalid polygon.`;
+      }
+
+      if (!Array.isArray(zone.polygonJson.points) || zone.polygonJson.points.length < 3) {
+        return `Zone ${normalizedId} polygon must include at least 3 points.`;
+      }
+
+      for (const point of zone.polygonJson.points) {
+        const x = Number(point?.x);
+        const y = Number(point?.y);
+        if (!Number.isFinite(x) || x < 0 || !Number.isFinite(y) || y < 0) {
+          return `Zone ${normalizedId} contains an invalid polygon point.`;
+        }
       }
     }
   }
@@ -512,24 +710,51 @@ function validateEditorTables(tables) {
   const uniqueIds = new Set();
 
   for (const table of tables) {
-    const tableId = Number(table?.id);
-    if (!Number.isInteger(tableId) || tableId <= 0) {
-      return 'Each table must include a valid id.';
+    const rawId = table?.id;
+    if (rawId === undefined || rawId === null || rawId === '') {
+      return 'Each table must include an id.';
     }
 
-    if (uniqueIds.has(tableId)) {
-      return `Table ${tableId} is duplicated in payload.`;
+    const normalizedId = String(rawId);
+    if (uniqueIds.has(normalizedId)) {
+      return `Table ${normalizedId} is duplicated in payload.`;
     }
-    uniqueIds.add(tableId);
+    uniqueIds.add(normalizedId);
+
+    const tableId = Number(rawId);
+    const isExistingTable = Number.isInteger(tableId) && tableId > 0;
 
     if (table.photoUrl !== undefined && table.photoUrl !== null && typeof table.photoUrl !== 'string') {
-      return `Table ${tableId} contains an invalid photo URL.`;
+      return `Table ${normalizedId} contains an invalid photo URL.`;
     }
 
     if (table.zoneId !== undefined && table.zoneId !== null && table.zoneId !== '') {
       const zoneId = Number(table.zoneId);
       if (!Number.isInteger(zoneId) || zoneId <= 0) {
-        return `Table ${tableId} contains an invalid zone id.`;
+        return `Table ${normalizedId} contains an invalid zone id.`;
+      }
+    } else {
+      return `Table ${normalizedId} must include a zone id.`;
+    }
+
+    if (table.positionType !== undefined && table.positionType !== null && table.positionType !== '') {
+      const positionType = String(table.positionType).trim().toUpperCase();
+      if (!VALID_POSITION_TYPES.has(positionType)) {
+        return `Table ${normalizedId} contains an invalid position type.`;
+      }
+    }
+
+    if (table.bookingKind !== undefined && table.bookingKind !== null && table.bookingKind !== '') {
+      const bookingKind = String(table.bookingKind).trim().toUpperCase();
+      if (!VALID_BOOKING_KINDS.has(bookingKind)) {
+        return `Table ${normalizedId} contains an invalid booking kind.`;
+      }
+    }
+
+    if (table.positionSide !== undefined && table.positionSide !== null && table.positionSide !== '') {
+      const positionSide = String(table.positionSide).trim().toUpperCase();
+      if (!VALID_POSITION_SIDES.has(positionSide)) {
+        return `Table ${normalizedId} contains an invalid position side.`;
       }
     }
   }
@@ -537,8 +762,8 @@ function validateEditorTables(tables) {
   return null;
 }
 
-async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = []) {
-  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput);
+async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput = [], zonesInput = []) {
+  const validationError = validateEditorObjects(objects) || validateEditorTables(tablesInput) || validateEditorZones(zonesInput);
   if (validationError) {
     return { type: 'INVALID', message: validationError };
   }
@@ -549,18 +774,35 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
       id: true,
       width: true,
       height: true,
+      usageMode: true,
       tables: {
         select: {
           id: true,
           photoUrl: true,
           code: true,
+          bookingKind: true,
+          positionType: true,
+          positionSide: true,
           name: true,
-          zoneId: true
+          serviceName: true,
+          serviceDescription: true,
+          zoneId: true,
+          sortOrder: true,
+          seatsMin: true,
+          seatsMax: true,
+          deposit: true,
+          isActive: true,
+          isBookable: true
         }
       },
       zones: {
         select: {
-          id: true
+          id: true,
+          name: true,
+          color: true,
+          sortOrder: true,
+          viewportJson: true,
+          polygonJson: true
         }
       }
     }
@@ -572,19 +814,36 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
   const tableIds = new Set(map.tables.map((table) => table.id));
   const tablesById = new Map(map.tables.map((table) => [table.id, table]));
+  const newTableIds = new Set(
+    (tablesInput || [])
+      .filter((table) => {
+        const tableId = Number(table.id);
+        return !Number.isInteger(tableId) || tableId <= 0;
+      })
+      .map((table) => String(table.id))
+  );
   const payloadTableIds = objects
-    .map((object) => (object.tableId === null || object.tableId === '' || object.tableId === undefined ? null : Number(object.tableId)))
+    .map((object) => (object.tableId === null || object.tableId === '' || object.tableId === undefined ? null : object.tableId))
     .filter((tableId) => tableId !== null);
 
-  if (payloadTableIds.some((tableId) => !tableIds.has(tableId))) {
+  if (payloadTableIds.some((rawTableId) => {
+    const tableId = Number(rawTableId);
+    return Number.isInteger(tableId) && tableId > 0
+      ? !tableIds.has(tableId)
+      : !newTableIds.has(String(rawTableId));
+  })) {
     return { type: 'INVALID', message: 'Objects payload references an unknown table id.' };
   }
 
-  if ((tablesInput || []).some((table) => !tableIds.has(Number(table.id)))) {
-    return { type: 'INVALID', message: 'Tables payload references an unknown table id.' };
+  for (const table of tablesInput || []) {
+    const tableId = Number(table.id);
+    if (Number.isInteger(tableId) && tableId > 0 && !tableIds.has(tableId)) {
+      return { type: 'INVALID', message: 'Tables payload references an unknown table id.' };
+    }
   }
 
   const zoneIds = new Set((map.zones || []).map((zone) => zone.id));
+  const zonesById = new Map((map.zones || []).map((zone) => [zone.id, zone]));
   if ((tablesInput || []).some((table) => {
     if (table.zoneId === undefined || table.zoneId === null || table.zoneId === '') {
       return false;
@@ -593,6 +852,13 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
     return !zoneIds.has(Number(table.zoneId));
   })) {
     return { type: 'INVALID', message: 'Tables payload references an unknown zone id.' };
+  }
+
+  for (const zone of zonesInput || []) {
+    const zoneId = Number(zone.id);
+    if (Number.isInteger(zoneId) && zoneId > 0 && !zoneIds.has(zoneId)) {
+      return { type: 'INVALID', message: 'Zones payload references an unknown zone id.' };
+    }
   }
 
   const existingObjects = await prisma.mapObject.findMany({
@@ -649,10 +915,11 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   mapUpdateData.width = contentSize.width;
   mapUpdateData.height = contentSize.height;
   const operations = [];
+  const newTableInputs = [];
 
   if (Object.keys(mapUpdateData).length) {
     operations.push(
-      prisma.map.update({
+      (tx) => tx.map.update({
         where: { id: mapId },
         data: mapUpdateData
       })
@@ -661,10 +928,15 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
   for (const table of tablesInput || []) {
     const tableId = Number(table.id);
+    if (!Number.isInteger(tableId) || tableId <= 0) {
+      newTableInputs.push(table);
+      continue;
+    }
+
     const normalizedTable = normalizeTableInput(table, tablesById.get(tableId));
 
     operations.push(
-      prisma.venueTable.update({
+      (tx) => tx.venueTable.update({
         where: { id: tableId },
         data: normalizedTable
       })
@@ -677,7 +949,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
     }
 
     operations.push(
-      prisma.mapObject.delete({
+      (tx) => tx.mapObject.delete({
         where: { id: existingObject.id }
       })
     );
@@ -686,7 +958,12 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
   for (const object of objects) {
     const numericId = Number(object.id);
     const isExistingObject = Number.isInteger(numericId) && numericId > 0;
-    const normalizedObject = normalizeEditableObject(object, isExistingObject ? existingById.get(numericId) : null);
+    const rawTableId = object.tableId === null || object.tableId === '' || object.tableId === undefined ? null : object.tableId;
+    const isNewTableReference = rawTableId !== null && (!Number.isInteger(Number(rawTableId)) || Number(rawTableId) <= 0);
+    const normalizedObject = normalizeEditableObject(
+      isNewTableReference ? { ...object, tableId: null } : object,
+      isExistingObject ? existingById.get(numericId) : null
+    );
 
     if (!VALID_OBJECT_TYPES.has(normalizedObject.type)) {
       return { type: 'INVALID', message: `Object ${object.id} contains an invalid type.` };
@@ -698,26 +975,74 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
     if (isExistingObject) {
       operations.push(
-        prisma.mapObject.update({
-          where: { id: numericId },
-          data: normalizedObject
+        (tx, createdTableIdMap) => tx.mapObject.update({
+            where: { id: numericId },
+            data: {
+              ...normalizedObject,
+              tableId: isNewTableReference ? createdTableIdMap.get(String(rawTableId)) : normalizedObject.tableId
+            }
+          })
+      );
+      continue;
+    }
+
+    operations.push(
+      (tx, createdTableIdMap) => tx.mapObject.create({
+        data: {
+          mapId,
+          ...normalizedObject,
+          tableId: isNewTableReference ? createdTableIdMap.get(String(rawTableId)) : normalizedObject.tableId
+        }
+      })
+    );
+  }
+
+  for (const zone of zonesInput || []) {
+    const zoneId = Number(zone.id);
+    const isExistingZone = Number.isInteger(zoneId) && zoneId > 0;
+    const normalizedZone = normalizeZoneInput(zone, isExistingZone ? zonesById.get(zoneId) : null);
+
+    if (isExistingZone) {
+      operations.push(
+        (tx) => tx.zone.update({
+          where: { id: zoneId },
+          data: normalizedZone
         })
       );
       continue;
     }
 
     operations.push(
-      prisma.mapObject.create({
+      (tx) => tx.zone.create({
         data: {
           mapId,
-          ...normalizedObject
+          ...normalizedZone
         }
       })
     );
   }
 
-  if (operations.length) {
-    await prisma.$transaction(operations);
+  if (operations.length || newTableInputs.length) {
+    await prisma.$transaction(async (tx) => {
+      const createdTableIdMap = new Map();
+
+      for (const table of newTableInputs) {
+        const normalizedTable = normalizeTableInput(table, null);
+        const createdTable = await tx.venueTable.create({
+          data: {
+            mapId,
+            ...normalizedTable,
+            name: normalizedTable.name || { ua: normalizedTable.code || 'Нова позиція', ru: normalizedTable.code || 'Новая позиция', en: normalizedTable.code || 'New position' }
+          },
+          select: { id: true }
+        });
+        createdTableIdMap.set(String(table.id), createdTable.id);
+      }
+
+      for (const operation of operations) {
+        await operation(tx, createdTableIdMap);
+      }
+    });
   }
 
   const updatedMap = await getAdminMapEditor(mapId);
@@ -738,6 +1063,7 @@ module.exports = {
   createAdminMapVariant,
   deleteAdminMapVariant,
   setDefaultAdminMap,
+  activateAdminMap,
   getAdminMapEditor,
   getDefaultAdminMapEditor,
   updateAdminMapEditor

@@ -7,6 +7,38 @@ import { useAdminI18n } from '../lib/i18n';
 
 const EMPTY_LOCALIZED = { ua: '', ru: '', en: '' };
 
+function ActionIcon({ type }) {
+  const commonProps = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': true
+  };
+
+  if (type === 'edit') {
+    return <svg {...commonProps}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>;
+  }
+  if (type === 'eye') {
+    return <svg {...commonProps}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
+  }
+  if (type === 'eye-off') {
+    return <svg {...commonProps}><path d="m3 3 18 18" /><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" /><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a17.2 17.2 0 0 1-2 3.1" /><path d="M6.6 6.6C3.6 8.5 2 12 2 12s3.5 8 10 8a9.8 9.8 0 0 0 4.1-.9" /></svg>;
+  }
+  if (type === 'stop') {
+    return <svg {...commonProps}><path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z" /><path d="M9 9h6v6H9z" /></svg>;
+  }
+  if (type === 'check') {
+    return <svg {...commonProps}><circle cx="12" cy="12" r="9" /><path d="m8 12 2.5 2.5L16 9" /></svg>;
+  }
+  if (type === 'add') {
+    return <svg {...commonProps}><path d="M12 5v14M5 12h14" /></svg>;
+  }
+  return <svg {...commonProps}><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="m19 6-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>;
+}
+
 const CATEGORY_FORM_DEFAULT = {
   name: EMPTY_LOCALIZED,
   slug: '',
@@ -520,30 +552,34 @@ export default function MenuEditorPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="actions compact">
-                      <button type="button" className="btn btn-small btn-secondary" onClick={() => startCreateItem(category.id)}>
-                        {t('menuAdmin.actions.addItem')}
+                    <div className="menu-admin-actions" aria-label={t('menuAdmin.actions.edit')}>
+                      <button type="button" className="menu-action-btn is-add" onClick={() => startCreateItem(category.id)} title={t('menuAdmin.actions.addItem')} aria-label={t('menuAdmin.actions.addItem')}>
+                        <ActionIcon type="add" />
                       </button>
-                      <button type="button" className="btn btn-small btn-secondary" onClick={() => startEditCategory(category)}>
-                        {t('menuAdmin.actions.edit')}
+                      <button type="button" className="menu-action-btn" onClick={() => startEditCategory(category)} title={t('menuAdmin.actions.edit')} aria-label={t('menuAdmin.actions.edit')}>
+                        <ActionIcon type="edit" />
                       </button>
                       <button
                         type="button"
-                        className="btn btn-small btn-secondary"
+                        className="menu-action-btn"
                         disabled={savingKey === `category-${category.id}`}
                         onClick={() =>
                           patchCategory(category.id, { isActive: !category.isActive }, t('menuAdmin.feedback.categoryVisibilityUpdated'))
                         }
+                        title={category.isActive ? t('menuAdmin.hidden') : t('menuAdmin.visible')}
+                        aria-label={category.isActive ? t('menuAdmin.hidden') : t('menuAdmin.visible')}
                       >
-                        {category.isActive ? t('menuAdmin.hidden') : t('menuAdmin.visible')}
+                        <ActionIcon type={category.isActive ? 'eye-off' : 'eye'} />
                       </button>
                       <button
                         type="button"
-                        className="btn btn-small btn-danger"
+                        className="menu-action-btn is-danger"
                         disabled={savingKey === `delete-category-${category.id}`}
                         onClick={() => removeCategory(category)}
+                        title={t('menuAdmin.actions.delete')}
+                        aria-label={t('menuAdmin.actions.delete')}
                       >
-                        {t('menuAdmin.actions.delete')}
+                        <ActionIcon type="delete" />
                       </button>
                     </div>
                   </div>
@@ -576,37 +612,43 @@ export default function MenuEditorPage() {
                                 <span className="status-pill neutral">#{item.sortOrder}</span>
                               </div>
                             </div>
-                            <div className="actions compact">
-                              <button type="button" className="btn btn-small btn-secondary" onClick={() => startEditItem(item)}>
-                                {t('menuAdmin.actions.edit')}
+                            <div className="menu-admin-actions menu-admin-item-actions">
+                              <button type="button" className="menu-action-btn" onClick={() => startEditItem(item)} title={t('menuAdmin.actions.edit')} aria-label={t('menuAdmin.actions.edit')}>
+                                <ActionIcon type="edit" />
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-small btn-secondary"
+                                className="menu-action-btn"
                                 disabled={savingKey === `item-${item.id}`}
                                 onClick={() =>
                                   patchItem(item.id, { isActive: !item.isActive }, t('menuAdmin.feedback.itemVisibilityUpdated'))
                                 }
+                                title={item.isActive ? t('menuAdmin.hidden') : t('menuAdmin.visible')}
+                                aria-label={item.isActive ? t('menuAdmin.hidden') : t('menuAdmin.visible')}
                               >
-                                {item.isActive ? t('menuAdmin.hidden') : t('menuAdmin.visible')}
+                                <ActionIcon type={item.isActive ? 'eye-off' : 'eye'} />
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-small btn-secondary"
+                                className={`menu-action-btn ${item.isAvailable ? 'is-warning' : 'is-success'}`}
                                 disabled={savingKey === `item-${item.id}`}
                                 onClick={() =>
                                   patchItem(item.id, { isAvailable: !item.isAvailable }, t('menuAdmin.feedback.itemAvailabilityUpdated'))
                                 }
+                                title={item.isAvailable ? t('menuAdmin.stopListLabel') : t('menuAdmin.available')}
+                                aria-label={item.isAvailable ? t('menuAdmin.stopListLabel') : t('menuAdmin.available')}
                               >
-                                {item.isAvailable ? t('menuAdmin.stopListLabel') : t('menuAdmin.available')}
+                                <ActionIcon type={item.isAvailable ? 'stop' : 'check'} />
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-small btn-danger"
+                                className="menu-action-btn is-danger"
                                 disabled={savingKey === `delete-item-${item.id}`}
                                 onClick={() => removeItem(item)}
+                                title={t('menuAdmin.actions.delete')}
+                                aria-label={t('menuAdmin.actions.delete')}
                               >
-                                {t('menuAdmin.actions.delete')}
+                                <ActionIcon type="delete" />
                               </button>
                             </div>
                           </article>

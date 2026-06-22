@@ -125,9 +125,37 @@ async function getAdminById(adminId) {
   });
 }
 
+async function changeAdminPassword({ adminId, currentPassword, nextPassword }) {
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { id: adminId },
+    select: {
+      id: true,
+      password: true
+    }
+  });
+
+  if (!adminUser) {
+    return { type: 'NOT_FOUND' };
+  }
+
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, adminUser.password);
+  if (!isCurrentPasswordValid) {
+    return { type: 'INVALID_CURRENT_PASSWORD' };
+  }
+
+  const hashedPassword = await bcrypt.hash(nextPassword, 10);
+  await prisma.adminUser.update({
+    where: { id: adminId },
+    data: { password: hashedPassword }
+  });
+
+  return { type: 'SUCCESS' };
+}
+
 module.exports = {
   loginAdmin,
   verifyToken,
   getAdminById,
+  changeAdminPassword,
   getTokenTtlMs
 };

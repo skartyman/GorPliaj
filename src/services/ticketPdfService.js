@@ -1,115 +1,195 @@
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
+const {
+  localizedText,
+  formatDate,
+  formatTime,
+  formatMoney,
+  getBaseUrl
+} = require('../utils/deliveryPresentation');
 
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+async function toQrBuffer(value, width = 320) {
+  if (!value) return null;
+  try {
+    return await QRCode.toBuffer(value, { width, margin: 2 });
+  } catch {
+    return null;
+  }
 }
 
-function formatTime(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
-}
-
-async function generateTicketPdf({ ticketCode, customerName, customerPhone, guests, reservationDate, timeFrom, timeTo, tableName, zoneName, status, paymentStatus, verifyUrl }) {
-  const doc = new PDFDocument({ size: [400, 680], margin: 24 });
-
+async function generateTicketPdf({
+  ticketCode,
+  customerName,
+  customerPhone,
+  guests,
+  reservationDate,
+  timeFrom,
+  timeTo,
+  tableName,
+  zoneName,
+  eventTitle,
+  depositAmount,
+  totalPaid,
+  entryTicketsAmount,
+  entryTicketCount,
+  entryTicketPrice,
+  status,
+  paymentStatus,
+  verifyUrl,
+  statusUrl,
+  downloadUrl,
+  depositVerifyUrl
+}) {
+  const doc = new PDFDocument({ size: [420, 760], margin: 24 });
   const buffers = [];
   doc.on('data', (chunk) => buffers.push(chunk));
 
-  let qrBuffer = null;
-  if (verifyUrl) {
-    try {
-      qrBuffer = await QRCode.toBuffer(verifyUrl, { width: 300, margin: 2 });
-    } catch {}
-  }
+  const [verifyQrBuffer, depositQrBuffer] = await Promise.all([
+    toQrBuffer(verifyUrl),
+    toQrBuffer(depositVerifyUrl || statusUrl)
+  ]);
 
   return new Promise((resolve, reject) => {
-    doc.on('end', () => {
-      const pdfBuffer = Buffer.concat(buffers);
-      resolve(pdfBuffer);
-    });
+    doc.on('end', () => resolve(Buffer.concat(buffers)));
     doc.on('error', reject);
 
-    const pageWidth = 400;
-    const pageHeight = 680;
+    const pageWidth = 420;
+    const pageHeight = 760;
     const margin = 24;
     const contentWidth = pageWidth - margin * 2;
+    const gold = '#c89241';
+    const dark = '#2f2219';
+    const deep = '#4b2f1f';
+    const muted = '#7c6b59';
+    const soft = '#fbf6ef';
+    const line = '#eadbca';
+    const isPaid = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
+    const deposit = Number(depositAmount || 0);
+    const paidTotal = Number(totalPaid || deposit || 0);
+    const entryAmount = Number(entryTicketsAmount || 0);
+    const hasDeposit = deposit > 0;
+    const reservationPosition = localizedText(tableName) || '-';
+    const reservationZone = localizedText(zoneName) || '-';
+    const eventName = localizedText(eventTitle);
+    const appBaseUrl = getBaseUrl();
     let y = margin;
 
-    const gold = '#c89241';
-    const dark = '#5c3a1e';
+    doc.rect(0, 0, pageWidth, pageHeight).fill('#f4ede2');
+    doc.roundedRect(margin, margin, contentWidth, pageHeight - margin * 2, 28).fill('#fffdf9');
 
-    doc.rect(0, 0, pageWidth, pageHeight).fill('#f5f0e8');
+    doc.save();
+    doc.roundedRect(margin, margin, contentWidth, 148, 28).clip();
+    const headerGradient = doc.linearGradient(margin, margin, margin + contentWidth, margin + 148);
+    headerGradient.stop(0, '#3f2416').stop(0.55, '#6d4328').stop(1, '#c89241');
+    doc.rect(margin, margin, contentWidth, 148).fill(headerGradient);
+    doc.restore();
 
-    doc.roundedRect(margin, margin, contentWidth, pageHeight - margin * 2, 16).fill('#ffffff');
+    y += 26;
+    doc.fillColor('#f7e8cf').font('Helvetica').fontSize(11)
+      .text('GORPLIAJ', margin + 24, y, { characterSpacing: 3 });
+    y += 18;
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(24)
+      .text('Booking Confirmation', margin + 24, y, { width: contentWidth - 48 });
+    y += 32;
+    doc.fillColor('#f2dfcd').font('Helvetica').fontSize(11)
+      .text('Table reservation and deposit receipt', margin + 24, y, { width: contentWidth - 48 });
+    y += 26;
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(20)
+      .text(ticketCode, margin + 24, y);
+    y += 18;
+    doc.fillColor('#f2dfcd').font('Helvetica').fontSize(9)
+      .text(isPaid ? 'Paid and ready to show at the entrance' : 'Awaiting payment confirmation', margin + 24, y);
 
-    doc.roundedRect(margin + 4, margin + 4, contentWidth - 8, pageHeight - margin * 2 - 8, 14)
-      .lineWidth(2)
-      .stroke(gold);
-
-    y = margin + 28;
-
-    doc.fontSize(26).font('Helvetica-Bold').fillColor(dark)
-      .text('ГоРПляж', margin, y, { align: 'center', width: contentWidth });
-    y += 28;
-    doc.fontSize(10).font('Helvetica').fillColor(gold)
-      .text('BEACH RESORT', margin, y, { align: 'center', width: contentWidth });
+    y = margin + 164;
+    doc.fillColor(dark).font('Helvetica-Bold').fontSize(16)
+      .text(customerName, margin + 24, y, { width: contentWidth - 48 });
     y += 22;
+    doc.fillColor(muted).font('Helvetica').fontSize(10)
+      .text(`${formatDate(reservationDate)}  •  ${formatTime(timeFrom)} - ${formatTime(timeTo)}  •  ${guests} guests`, margin + 24, y, { width: contentWidth - 48 });
+    y += 28;
 
-    doc.fontSize(22).font('Helvetica-Bold').fillColor(gold)
-      .text(ticketCode, margin, y, { align: 'center', width: contentWidth });
-    y += 20;
-    doc.fontSize(8).font('Helvetica').fillColor('#999999')
-      .text('Код квитка / Ticket code', margin, y, { align: 'center', width: contentWidth });
-    y += 16;
+    doc.roundedRect(margin + 18, y, contentWidth - 36, 158, 20).fill(soft);
+    y += 18;
 
-    const lineY = y;
-    doc.moveTo(margin + 20, lineY).lineTo(margin + contentWidth - 20, lineY).strokeColor('#e8dcc8').lineWidth(1).stroke();
-    y += 16;
-
-    doc.fontSize(10).font('Helvetica').fillColor(dark);
-    const labelX = margin + 32;
-    const valueX = margin + 110;
-    const rowH = 17;
-
-    const isPaid = paymentStatus === 'PAID' || status === 'PAID';
-
+    const labelX = margin + 34;
+    const valueX = margin + 128;
     const fields = [
-      { label: 'Гість / Guest', value: customerName },
-      { label: 'Телефон / Phone', value: customerPhone || '—' },
-      { label: 'Стіл / Table', value: tableName || '—' },
-      { label: 'Зона / Zone', value: zoneName || '—' },
-      { label: 'Гостей / Guests', value: String(guests) },
-      { label: 'Дата / Date', value: formatDate(reservationDate) },
-      { label: 'Час / Time', value: `${formatTime(timeFrom)} — ${formatTime(timeTo)}` },
-      { label: 'Оплата / Payment', value: isPaid ? 'Оплачено ✅' : 'Очікує оплати' }
+      ['Guest', customerName],
+      ['Phone', customerPhone || '-'],
+      ['Position', reservationPosition],
+      ['Zone', reservationZone],
+      ...(eventName ? [['Event', eventName]] : []),
+      ['Date', formatDate(reservationDate)],
+      ['Time', `${formatTime(timeFrom)} - ${formatTime(timeTo)}`],
+      ['Payment', isPaid ? 'Paid' : 'Waiting']
     ];
 
-    for (const field of fields) {
-      doc.font('Helvetica').fillColor('#888888').text(field.label, labelX, y);
-      doc.font('Helvetica-Bold').fillColor(dark).text(field.value, valueX, y);
-      y += rowH;
+    fields.forEach(([label, value], index) => {
+      const rowY = y + index * 16;
+      doc.font('Helvetica').fontSize(8.5).fillColor('#8a745f').text(label, labelX, rowY, { width: 84 });
+      doc.font('Helvetica-Bold').fontSize(9.2).fillColor(dark).text(String(value), valueX, rowY, { width: contentWidth - 152 });
+    });
+
+    y += 174;
+    const cardWidth = (contentWidth - 52) / 2;
+
+    doc.roundedRect(margin + 18, y, cardWidth, 110, 18).fill(deep);
+    doc.fillColor('#d8bf9e').font('Helvetica').fontSize(9).text('Deposit', margin + 34, y + 18);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(24).text(formatMoney(deposit), margin + 34, y + 36, { width: cardWidth - 32 });
+    doc.fillColor('#f0dfcf').font('Helvetica').fontSize(10)
+      .text(hasDeposit ? 'Included in the final bill at the venue.' : 'No deposit was required for this booking.', margin + 34, y + 70, { width: cardWidth - 32 });
+
+    doc.roundedRect(margin + 34 + cardWidth, y, cardWidth, 110, 18).fill('#f3ede5');
+    doc.fillColor('#8f6a44').font('Helvetica').fontSize(9).text('Online payment', margin + 50 + cardWidth, y + 18);
+    doc.fillColor(dark).font('Helvetica-Bold').fontSize(24).text(formatMoney(paidTotal), margin + 50 + cardWidth, y + 36, { width: cardWidth - 32 });
+    doc.fillColor('#6d5948').font('Helvetica').fontSize(10)
+      .text(entryAmount > 0 ? `Entry tickets included: ${formatMoney(entryAmount)}.` : 'Deposit only, no extra entry tickets.', margin + 50 + cardWidth, y + 70, { width: cardWidth - 32 });
+
+    y += 128;
+    if (entryAmount > 0) {
+      doc.roundedRect(margin + 18, y, contentWidth - 36, 54, 16).fill('#faf6f1');
+      doc.fillColor(dark).font('Helvetica-Bold').fontSize(10)
+        .text('Payment breakdown', margin + 34, y + 12);
+      doc.fillColor(muted).font('Helvetica').fontSize(9)
+        .text(`Deposit: ${formatMoney(deposit)}   •   Entry: ${entryTicketCount || guests} x ${formatMoney(entryTicketPrice)} = ${formatMoney(entryAmount)}`, margin + 34, y + 28, { width: contentWidth - 68 });
+      y += 70;
     }
 
-    y += 12;
+    const hasDepositQr = Boolean(depositQrBuffer && hasDeposit);
+    const qrBlockWidth = hasDepositQr ? (contentWidth - 52) / 2 : contentWidth - 36;
+    const qrTop = y;
 
-    if (qrBuffer) {
-      const qrSize = 100;
-      const qrX = margin + (contentWidth - qrSize) / 2;
-      doc.image(qrBuffer, qrX, y, { width: qrSize, height: qrSize });
-      y += qrSize + 8;
-      doc.fontSize(7).font('Helvetica').fillColor('#999999')
-        .text('Скануйте для підтвердження / Scan to verify', margin, y, { align: 'center', width: contentWidth });
-      y += 14;
+    if (verifyQrBuffer) {
+      doc.roundedRect(margin + 18, qrTop, qrBlockWidth, 160, 18).strokeColor(line).lineWidth(1).stroke();
+      doc.image(verifyQrBuffer, margin + 18 + (qrBlockWidth - 110) / 2, qrTop + 20, { width: 110, height: 110 });
+      doc.fillColor(dark).font('Helvetica-Bold').fontSize(11)
+        .text('Entry QR', margin + 26, qrTop + 136, { width: qrBlockWidth - 16, align: 'center' });
+      doc.fillColor(muted).font('Helvetica').fontSize(8)
+        .text('Use this code for booking verification and guest check-in.', margin + 30, qrTop + 150, { width: qrBlockWidth - 24, align: 'center' });
     }
 
-    y += 8;
-    doc.moveTo(margin + 20, y).lineTo(margin + contentWidth - 20, y).strokeColor('#e8dcc8').lineWidth(1).stroke();
-    y += 12;
+    if (hasDepositQr) {
+      const rightX = margin + 34 + qrBlockWidth;
+      doc.roundedRect(rightX, qrTop, qrBlockWidth, 160, 18).strokeColor(line).lineWidth(1).stroke();
+      doc.image(depositQrBuffer, rightX + (qrBlockWidth - 110) / 2, qrTop + 20, { width: 110, height: 110 });
+      doc.fillColor(dark).font('Helvetica-Bold').fontSize(11)
+        .text('Deposit QR', rightX + 8, qrTop + 136, { width: qrBlockWidth - 16, align: 'center' });
+      doc.fillColor(muted).font('Helvetica').fontSize(8)
+        .text('Separate scan for deposit amount and payment confirmation.', rightX + 12, qrTop + 150, { width: qrBlockWidth - 24, align: 'center' });
+    }
 
-    doc.fontSize(7).font('Helvetica').fillColor('#aaaaaa')
-      .text('ГоРПляж Beach Resort • От raда, Одеса • https://gorpliaj.fly.dev', margin, y, { align: 'center', width: contentWidth });
+    y = qrTop + 178;
+    doc.moveTo(margin + 24, y).lineTo(margin + contentWidth - 24, y).strokeColor(line).lineWidth(1).stroke();
+    y += 14;
+
+    doc.fillColor('#7f7165').font('Helvetica').fontSize(7.6)
+      .text('Show this PDF at the entrance. The deposit is not an extra fee: it is credited toward your final check in the venue. Keep the second QR available if the team needs to confirm the paid deposit separately.', margin + 24, y, { width: contentWidth - 48, align: 'center' });
+    y += 34;
+
+    const footerLinks = [appBaseUrl];
+    if (downloadUrl) footerLinks.push(downloadUrl);
+    doc.fillColor('#aaaaaa').font('Helvetica').fontSize(7)
+      .text(footerLinks.join('  •  '), margin + 24, y, { width: contentWidth - 48, align: 'center' });
 
     doc.end();
   });

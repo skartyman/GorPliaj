@@ -3,9 +3,14 @@ const {
   getAdminStatus,
   loginAdmin,
   getAdminMe,
+  changeAdminPassword,
   logoutAdmin,
   getAdminReservations,
+  getAdminReservationPositions,
   getAdminReservationById,
+  updateAdminReservationPosition,
+  upsertAdminReservationPositionOverride,
+  deleteAdminReservationPositionOverride,
   updateAdminReservationStatus,
   deleteAdminReservation,
   createAdminReservation,
@@ -15,6 +20,7 @@ const {
   createAdminMapVariant,
   deleteAdminMapVariant,
   setDefaultAdminMap,
+  activateAdminMapController,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor
@@ -38,7 +44,11 @@ const {
   getAdminEventById,
   createAdminEvent,
   updateAdminEvent,
-  deleteAdminEvent
+  deleteAdminEvent,
+  listAdminEventSessions,
+  createAdminEventSession,
+  updateAdminEventSession,
+  deleteAdminEventSession
 } = require('../../controllers/adminEventController');
 const {
   getAdminPayments,
@@ -73,6 +83,19 @@ const {
   updateUser,
   deleteUser
 } = require('../../controllers/adminUserController');
+const {
+  listTicketTypes,
+  createTicketType,
+  updateTicketType,
+  deleteTicketType,
+  createOrder,
+  listOrders,
+  getOrder,
+  updateOrderStatus,
+  listTickets,
+  verifyTicket,
+  useTicket
+} = require('../../controllers/adminTicketSalesController');
 
 const router = express.Router();
 
@@ -80,9 +103,14 @@ router.get('/status', getAdminStatus);
 
 router.post('/auth/login', rateLimiter, loginAdmin);
 router.get('/auth/me', requireAdminAuth, getAdminMe);
+router.patch('/auth/password', requireAdminAuth, changeAdminPassword);
 router.post('/auth/logout', requireAdminAuth, logoutAdmin);
 
 router.get('/reservations', requireAdminAuth, requirePermission('reservations:view'), getAdminReservations);
+router.get('/reservation-positions', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationPositions);
+router.patch('/reservation-positions/:tableId', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationPosition);
+router.put('/reservation-positions/:tableId/override', requireAdminAuth, requirePermission('reservations:update'), upsertAdminReservationPositionOverride);
+router.delete('/reservation-positions/:tableId/override', requireAdminAuth, requirePermission('reservations:update'), deleteAdminReservationPositionOverride);
 router.get('/reservations/verify/:ticketCode', requireAdminAuth, requirePermission('reservations:verify'), verifyAdminReservation);
 router.get('/reservations/:id', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationById);
 router.post('/reservations', requireAdminAuth, createAdminReservation);
@@ -93,6 +121,7 @@ router.delete('/reservations/:id', requireAdminAuth, requirePermission('reservat
 router.get('/maps', requireAdminAuth, requirePermission('map:view'), listAdminMaps);
 router.post('/maps', requireAdminAuth, requirePermission('map:edit'), createAdminMapVariant);
 router.patch('/maps/:id/default', requireAdminAuth, requirePermission('map:edit'), setDefaultAdminMap);
+router.patch('/maps/:id/activate', requireAdminAuth, requirePermission('map:edit'), activateAdminMapController);
 router.delete('/maps/:id', requireAdminAuth, requirePermission('map:edit'), deleteAdminMapVariant);
 router.get('/maps/default/editor', requireAdminAuth, requirePermission('map:view'), getDefaultAdminMapEditor);
 router.get('/maps/:id/editor', requireAdminAuth, requirePermission('map:view'), getAdminMapEditor);
@@ -114,6 +143,23 @@ router.get('/events/:id', requireAdminAuth, requirePermission('events:view'), ge
 router.post('/events', requireAdminAuth, requirePermission('events:create'), createAdminEvent);
 router.patch('/events/:id', requireAdminAuth, requirePermission('events:update'), updateAdminEvent);
 router.delete('/events/:id', requireAdminAuth, requirePermission('events:delete'), deleteAdminEvent);
+router.get('/events/:eventId/sessions', requireAdminAuth, requirePermission('events:view'), listAdminEventSessions);
+router.post('/events/:eventId/sessions', requireAdminAuth, requirePermission('events:update'), createAdminEventSession);
+router.patch('/event-sessions/:id', requireAdminAuth, requirePermission('events:update'), updateAdminEventSession);
+router.delete('/event-sessions/:id', requireAdminAuth, requirePermission('events:update'), deleteAdminEventSession);
+router.get('/events/:eventId/ticket-types', requireAdminAuth, requirePermission('tickets:view'), listTicketTypes);
+router.post('/events/:eventId/ticket-types', requireAdminAuth, requirePermission('tickets:manage'), createTicketType);
+router.patch('/ticket-types/:id', requireAdminAuth, requirePermission('tickets:manage'), updateTicketType);
+router.delete('/ticket-types/:id', requireAdminAuth, requirePermission('tickets:manage'), deleteTicketType);
+
+router.get('/ticket-orders', requireAdminAuth, requirePermission('tickets:view'), listOrders);
+router.post('/ticket-orders', requireAdminAuth, requirePermission('tickets:manage'), createOrder);
+router.get('/ticket-orders/:id', requireAdminAuth, requirePermission('tickets:view'), getOrder);
+router.patch('/ticket-orders/:id/status', requireAdminAuth, requirePermission('tickets:manage'), updateOrderStatus);
+
+router.get('/tickets', requireAdminAuth, requirePermission('tickets:view'), listTickets);
+router.get('/tickets/verify/:code', requireAdminAuth, requirePermission('tickets:verify'), verifyTicket);
+router.post('/tickets/verify/:code/use', requireAdminAuth, requirePermission('tickets:verify'), useTicket);
 
 router.get('/news', requireAdminAuth, requirePermission('news:view'), getAdminNews);
 router.get('/news/:id', requireAdminAuth, requirePermission('news:view'), getAdminNewsById);

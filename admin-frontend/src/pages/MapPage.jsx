@@ -18,6 +18,25 @@ function getDateKey(value = new Date()) {
   return value.toISOString().slice(0, 10);
 }
 
+function getRoundedTimeKey(value = new Date()) {
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() + 30);
+  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
+  return getTimeKey(date);
+}
+
+function getPositionDisplayName(table, language, fallback = '—') {
+  return localizeField(table?.serviceName, language) || table?.code || localizeField(table?.name, language) || fallback;
+}
+
+function getBookingKindBadgeLabel(bookingKind, language) {
+  if (bookingKind === 'BEACH') {
+    return language === 'en' ? 'Beach' : (language === 'ru' ? 'Пляж' : 'Пляж');
+  }
+
+  return language === 'en' ? 'Table' : (language === 'ru' ? 'Стол' : 'Стіл');
+}
+
 function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTableIds) {
   if (!table?.isActive || !table?.isBookable) {
     return 'UNAVAILABLE';
@@ -133,6 +152,75 @@ function compareMapObjects(a, b) {
   if (priorityDiff) return priorityDiff;
 
   return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+}
+
+function expandBounds(bounds, object) {
+  const x = Number(object?.x) || 0;
+  const y = Number(object?.y) || 0;
+  const width = Math.max(Number(object?.width) || 0, 1);
+  const height = Math.max(Number(object?.height) || 0, 1);
+  const maxX = x + width;
+  const maxY = y + height;
+
+  if (!bounds) {
+    return { minX: x, minY: y, maxX, maxY };
+  }
+
+  return {
+    minX: Math.min(bounds.minX, x),
+    minY: Math.min(bounds.minY, y),
+    maxX: Math.max(bounds.maxX, maxX),
+    maxY: Math.max(bounds.maxY, maxY)
+  };
+}
+
+function padBounds(bounds, mapDimensions, padding = 96) {
+  if (!bounds) {
+    return null;
+  }
+
+  const minX = Math.max(0, bounds.minX - padding);
+  const minY = Math.max(0, bounds.minY - padding);
+  const maxX = Math.min(mapDimensions.width, bounds.maxX + padding);
+  const maxY = Math.min(mapDimensions.height, bounds.maxY + padding);
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(maxX - minX, 80),
+    height: Math.max(maxY - minY, 80)
+  };
+}
+
+function parseZoneViewport(value, mapDimensions) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const x = Math.max(0, Number(value.x) || 0);
+  const y = Math.max(0, Number(value.y) || 0);
+  const width = Math.min(Math.max(Number(value.width) || 0, 1), Math.max(mapDimensions.width - x, 1));
+  const height = Math.min(Math.max(Number(value.height) || 0, 1), Math.max(mapDimensions.height - y, 1));
+
+  return width > 1 && height > 1 ? { x, y, width, height } : null;
+}
+
+function parseZonePolygonBounds(value, mapDimensions) {
+  const points = Array.isArray(value?.points) ? value.points : [];
+  if (points.length < 3) {
+    return null;
+  }
+
+  const normalized = points.map((point) => ({
+    x: Math.max(Number(point?.x) || 0, 0),
+    y: Math.max(Number(point?.y) || 0, 0)
+  }));
+  const minX = Math.min(...normalized.map((point) => point.x));
+  const minY = Math.min(...normalized.map((point) => point.y));
+  const maxX = Math.max(...normalized.map((point) => point.x));
+  const maxY = Math.max(...normalized.map((point) => point.y));
+
+  return padBounds({ minX, minY, maxX, maxY }, mapDimensions);
 }
 
 function getPolygonFill(meta) {
@@ -460,13 +548,23 @@ export default function MapPage() {
   const [state, setState] = useState({
     loading: true,
     error: '',
+    maps: [],
     mapData: null,
     reservations: [],
     availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
   });
+  const [selectedMapId, setSelectedMapId] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
   const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
+  const [bookingFormState, setBookingFormState] = useState({
+    open: false,
+    saving: false,
+    error: '',
+    success: '',
+    form: null
+  });
   const [selectedObjectForm, setSelectedObjectForm] = useState({
     zoneId: '',
     tableId: '',
@@ -475,6 +573,9 @@ export default function MapPage() {
     priceUnit: 'UAH',
     depositRequired: false,
     depositAmount: '',
+    seatsMin: 1,
+    seatsMax: 4,
+    isBookable: true,
     photoUrl: ''
   });
   const objectManagementRef = useRef(null);
@@ -482,47 +583,109 @@ export default function MapPage() {
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
-    async function loadMapData() {
-      const mapResult = await apiRequest('/api/maps/default');
-      if (!mapResult.response.ok) {
-        setState({
+    async function loadAvailableMaps() {
+      setState((prev) => ({
+        ...prev,
+        loading: true,
+        error: ''
+      }));
+
+      const mapsResult = await apiRequest('/api/admin/maps');
+      if (!mapsResult.response.ok) {
+        setState((prev) => ({
+          ...prev,
           loading: false,
-          error: mapResult.body.message || t('map.errors.load'),
+          error: mapsResult.body?.message || t('map.errors.load'),
+          maps: [],
           mapData: null,
           reservations: [],
           availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-        });
+        }));
         return;
       }
 
-      const mapData = mapResult.body;
-      const [reservationsResult, availabilityResult] = await Promise.all([
+      const maps = Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : [];
+      const preferredMap = maps.find((item) => item.isDefault) || maps[0] || null;
+
+      setState((prev) => ({
+        ...prev,
+        maps,
+        loading: Boolean(preferredMap),
+        error: preferredMap ? '' : t('map.errors.load'),
+        mapData: preferredMap ? prev.mapData : null,
+        reservations: preferredMap ? prev.reservations : [],
+        availability: preferredMap ? prev.availability : { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+      }));
+      setSelectedMapId(preferredMap?.id ? Number(preferredMap.id) : null);
+    }
+
+    loadAvailableMaps().catch(() => {
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: t('map.errors.load'),
+        maps: [],
+        mapData: null,
+        reservations: [],
+        availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+      }));
+    });
+  }, [t]);
+
+  useEffect(() => {
+    if (!selectedMapId) {
+      return;
+    }
+
+    async function loadMapData() {
+      setState((prev) => ({
+        ...prev,
+        loading: true,
+        error: ''
+      }));
+
+      const [mapResult, reservationsResult, availabilityResult] = await Promise.all([
+        apiRequest(`/api/maps/${selectedMapId}`),
         apiRequest('/api/admin/reservations'),
-        apiRequest(`/api/maps/${mapData.map.id}/availability?date=${getDateKey()}&timeFrom=${getTimeKey(new Date())}`)
+        apiRequest(`/api/maps/${selectedMapId}/availability?date=${getDateKey()}&timeFrom=${getTimeKey(new Date())}`)
       ]);
 
-      setState({
+      if (!mapResult.response.ok) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: mapResult.body?.message || t('map.errors.load'),
+          mapData: null,
+          reservations: [],
+          availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+        }));
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
         loading: false,
         error: '',
-        mapData,
+        mapData: mapResult.body,
         reservations: reservationsResult.response.ok && Array.isArray(reservationsResult.body) ? reservationsResult.body : [],
         availability:
           availabilityResult.response.ok && availabilityResult.body
             ? availabilityResult.body
             : { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-      });
+      }));
     }
 
     loadMapData().catch(() => {
-      setState({
+      setState((prev) => ({
+        ...prev,
         loading: false,
         error: t('map.errors.load'),
         mapData: null,
         reservations: [],
         availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-      });
+      }));
     });
-  }, [t]);
+  }, [selectedMapId, t]);
 
   const mapDimensions = {
     width: state.mapData?.map?.width || 1200,
@@ -597,7 +760,7 @@ export default function MapPage() {
 
     return objects.map((object) => {
       const isTable = object.type === 'TABLE';
-      const table = isTable && object.tableId ? tableMap.get(object.tableId) : null;
+      const table = object.tableId ? tableMap.get(object.tableId) : null;
       const meta = parseMetaJson(object.metaJson);
       const metaZoneId = Number(meta.zoneId);
       const zone = table ? zoneMap.get(table.zoneId) : (Number.isInteger(metaZoneId) ? zoneMap.get(metaZoneId) : null);
@@ -614,6 +777,45 @@ export default function MapPage() {
       };
     }).sort(compareMapObjects);
   }, [state.mapData?.objects, tableMap, zoneMap]);
+
+  const zoneFocusItems = useMemo(() => {
+    const zones = state.mapData?.zones || [];
+    if (!zones.length || !mapEntities.length) {
+      return [];
+    }
+
+    const boundsByZoneId = new Map();
+    mapEntities.forEach((object) => {
+      const zoneId = object.zone?.id || object.table?.zoneId || object.meta?.zoneId;
+      if (!zoneId) {
+        return;
+      }
+
+      boundsByZoneId.set(zoneId, expandBounds(boundsByZoneId.get(zoneId), object));
+    });
+
+    return zones
+      .map((zone) => {
+        const bounds =
+          parseZonePolygonBounds(zone.polygonJson, mapDimensions) ||
+          parseZoneViewport(zone.viewportJson, mapDimensions) ||
+          padBounds(boundsByZoneId.get(zone.id), mapDimensions);
+        if (!bounds) {
+          return null;
+        }
+
+        return {
+          zone,
+          bounds: {
+            x: bounds.x + mapRenderFrame.offsetX,
+            y: bounds.y + mapRenderFrame.offsetY,
+            width: bounds.width,
+            height: bounds.height
+          }
+        };
+      })
+      .filter(Boolean);
+  }, [mapDimensions, mapEntities, mapRenderFrame.offsetX, mapRenderFrame.offsetY, state.mapData?.zones]);
 
   const selectedTable = selectedTableId ? tableMap.get(selectedTableId) : null;
   const selectedObject = selectedObjectId ? mapEntities.find((object) => object.id === selectedObjectId) || null : null;
@@ -650,8 +852,11 @@ export default function MapPage() {
       tableCode: selectedObject.table?.code || selectedObject.meta?.tableCode || '',
       price: selectedObject.meta?.price ?? '',
       priceUnit: selectedObject.meta?.priceUnit || 'UAH',
-      depositRequired: Boolean(selectedObject.meta?.depositRequired),
-      depositAmount: selectedObject.meta?.depositAmount ?? '',
+      depositRequired: Number(selectedObject.table?.deposit || selectedObject.meta?.depositAmount || 0) > 0,
+      depositAmount: selectedObject.table?.deposit ?? selectedObject.meta?.depositAmount ?? '',
+      seatsMin: selectedObject.table?.seatsMin ?? 1,
+      seatsMax: selectedObject.table?.seatsMax ?? 4,
+      isBookable: selectedObject.table?.isBookable ?? true,
       photoUrl: selectedObject.meta?.photoUrl || ''
     });
   }, [selectedObject]);
@@ -696,10 +901,93 @@ export default function MapPage() {
     }));
   }
 
+  function buildBookingForm(table) {
+    return {
+      tableId: table.id,
+      mapId: state.mapData?.map?.id || table.mapId || '',
+      zoneId: table.zoneId || '',
+      bookingKind: table.bookingKind || 'TABLE',
+      customerName: '',
+      customerPhone: '',
+      customerEmail: '',
+      guests: table.seatsMin || 1,
+      reservationDate: getDateKey(),
+      timeFrom: getRoundedTimeKey(),
+      timeTo: '',
+      source: 'WALK_IN',
+      status: 'PENDING',
+      commentCustomer: '',
+      commentAdmin: '',
+      depositRequired: Number(table.deposit || 0) > 0,
+      depositAmount: Number(table.deposit || 0) > 0 ? Number(table.deposit || 0) : ''
+    };
+  }
+
   const onBookTable = (table) => {
-    // future booking flow callback
-    console.info('booking hook', table);
+    if (!table) {
+      return;
+    }
+
+    setBookingFormState({
+      open: true,
+      saving: false,
+      error: '',
+      success: '',
+      form: buildBookingForm(table)
+    });
   };
+
+  function closeBookingForm() {
+    setBookingFormState((current) => ({
+      ...current,
+      open: false,
+      saving: false,
+      error: '',
+      success: ''
+    }));
+  }
+
+  function updateBookingForm(field, value) {
+    setBookingFormState((current) => ({
+      ...current,
+      error: '',
+      success: '',
+      form: {
+        ...(current.form || {}),
+        [field]: value
+      }
+    }));
+  }
+
+  function focusWholeMap() {
+    setActiveZoneFocusId('all');
+    actions.fitToView();
+  }
+
+  function focusZone(zoneId, bounds) {
+    setActiveZoneFocusId(String(zoneId));
+    actions.focusRect(bounds);
+  }
+
+  function handleMapSelect(nextMapId) {
+    const normalizedMapId = Number(nextMapId);
+    if (!Number.isInteger(normalizedMapId) || normalizedMapId <= 0 || normalizedMapId === Number(selectedMapId)) {
+      return;
+    }
+
+    setSelectedMapId(normalizedMapId);
+    setSelectedTableId(null);
+    setSelectedObjectId(null);
+    setActiveZoneFocusId('all');
+    setObjectActionState({ saving: false, error: '' });
+    setBookingFormState({
+      open: false,
+      saving: false,
+      error: '',
+      success: '',
+      form: null
+    });
+  }
 
   const selectObject = (object) => {
     setSelectedObjectId(object.id);
@@ -724,7 +1012,12 @@ export default function MapPage() {
         zoneId: table.zoneId,
         code: table.code || null,
         name: table.name || null,
-        photoUrl: table.photoUrl || null
+        photoUrl: table.photoUrl || null,
+        seatsMin: table.seatsMin ?? 1,
+        seatsMax: table.seatsMax ?? 4,
+        deposit: table.deposit ?? 0,
+        isActive: table.isActive ?? true,
+        isBookable: table.isBookable ?? true
       })),
       objects: nextObjects.map((object) => ({
         id: object.id,
@@ -825,7 +1118,11 @@ export default function MapPage() {
       return {
         ...table,
         zoneId: normalizedZoneId || table.zoneId,
-        code: normalizedTableCode || table.code || null
+        code: normalizedTableCode || table.code || null,
+        seatsMin: Number(form.seatsMin) || table.seatsMin || 1,
+        seatsMax: Number(form.seatsMax) || table.seatsMax || 4,
+        deposit: form.depositRequired ? Math.max(0, Number(form.depositAmount) || 0) : 0,
+        isBookable: Boolean(form.isBookable)
       };
     });
     const nextObjects = (state.mapData?.objects || []).map((object) => {
@@ -843,8 +1140,6 @@ export default function MapPage() {
           tableCode: normalizedTableCode,
           price: normalizeMetaValue(form.price),
           priceUnit: form.priceUnit || 'UAH',
-          depositRequired: Boolean(form.depositRequired),
-          depositAmount: normalizeMetaValue(form.depositAmount),
           photoUrl: form.photoUrl || ''
         }
       };
@@ -895,6 +1190,54 @@ export default function MapPage() {
     }));
   }
 
+  async function submitBookingForm(event) {
+    event.preventDefault();
+
+    if (!bookingFormState.form) {
+      return;
+    }
+
+    setBookingFormState((current) => ({
+      ...current,
+      saving: true,
+      error: '',
+      success: ''
+    }));
+
+    const payload = {
+      ...bookingFormState.form,
+      guests: Number(bookingFormState.form.guests),
+      depositRequired: Boolean(bookingFormState.form.depositRequired),
+      depositAmount: bookingFormState.form.depositRequired ? Number(bookingFormState.form.depositAmount || 0) : 0
+    };
+
+    const result = await apiRequest('/api/admin/reservations', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    if (!result.response.ok) {
+      setBookingFormState((current) => ({
+        ...current,
+        saving: false,
+        error: result.body?.message || 'Unable to create reservation.'
+      }));
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      reservations: result.body?.reservation ? [result.body.reservation, ...prev.reservations] : prev.reservations
+    }));
+
+    setBookingFormState((current) => ({
+      ...current,
+      saving: false,
+      success: 'Бронь створено.',
+      open: false
+    }));
+  }
+
   return (
     <AdminLayout>
       <PageContainer
@@ -924,6 +1267,22 @@ export default function MapPage() {
 
         {!state.loading && !state.error && state.mapData?.map ? (
           <>
+            {state.maps.length > 1 ? (
+              <div className="map-variant-tabs" aria-label="Map variants">
+                {state.maps.map((mapItem) => (
+                  <button
+                    key={mapItem.id}
+                    type="button"
+                    className={`map-variant-tab ${Number(selectedMapId) === Number(mapItem.id) ? 'active' : ''}`}
+                    onClick={() => handleMapSelect(mapItem.id)}
+                    aria-pressed={Number(selectedMapId) === Number(mapItem.id)}
+                  >
+                    {localizeField(mapItem.name, language) || mapItem.slug || `Map #${mapItem.id}`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <div className="map-meta muted">
               {t('map.meta', {
                 map: localizeField(state.mapData.map?.name, language) || '—',
@@ -933,10 +1292,33 @@ export default function MapPage() {
             </div>
 
             <div className="interactive-map-shell">
+              {zoneFocusItems.length ? (
+                <div className="interactive-map-zone-tabs" aria-label="Map zones">
+                  <button
+                    type="button"
+                    className={`map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
+                    onClick={focusWholeMap}
+                    aria-pressed={activeZoneFocusId === 'all'}
+                  >
+                    Вся карта
+                  </button>
+                  {zoneFocusItems.map(({ zone, bounds }) => (
+                    <button
+                      key={zone.id}
+                      type="button"
+                      className={`map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
+                      onClick={() => focusZone(zone.id, bounds)}
+                      aria-pressed={activeZoneFocusId === String(zone.id)}
+                    >
+                      {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div className="interactive-map-controls">
                 <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
                 <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>
-                <button type="button" className="map-control fit" onClick={actions.fitToView} aria-label="Fit map">⤢</button>
+                <button type="button" className="map-control fit" onClick={focusWholeMap} aria-label="Fit map">⤢</button>
                 <span className="map-zoom-indicator">
                   {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
                 </span>
@@ -1156,13 +1538,25 @@ export default function MapPage() {
                     Валюта
                     <input type="text" value={selectedObjectForm.priceUnit} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, priceUnit: event.target.value }))} />
                   </label>
+                  <label>
+                    Мин. гостей
+                    <input type="number" min="1" step="1" value={selectedObjectForm.seatsMin} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, seatsMin: event.target.value }))} />
+                  </label>
+                  <label>
+                    Макс. гостей
+                    <input type="number" min="1" step="1" value={selectedObjectForm.seatsMax} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, seatsMax: event.target.value }))} />
+                  </label>
+                  <label className="checkbox-label inline">
+                    <input type="checkbox" checked={selectedObjectForm.isBookable} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, isBookable: event.target.checked }))} />
+                    Доступно для брони
+                  </label>
                   <label className="checkbox-label inline">
                     <input type="checkbox" checked={selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositRequired: event.target.checked }))} />
                     Потрібна застава
                   </label>
                   <label>
                     Сума застави
-                    <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
+                    <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} disabled={!selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
                   </label>
                   <label className="object-admin-form-wide">
                     URL фото
@@ -1173,6 +1567,113 @@ export default function MapPage() {
                     <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadSelectedObjectPhoto} />
                   </label>
                 </div>
+
+                {selectedObject.table?.isBookable ? (
+                  <div className="booking-admin-panel">
+                    <div className="table-sheet-head">
+                      <div>
+                        <span className="eyebrow">Ручна бронь</span>
+                        <h4>{getPositionDisplayName(selectedObject.table, language)}</h4>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => {
+                          if (bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id) {
+                            closeBookingForm();
+                            return;
+                          }
+
+                          onBookTable(selectedObject.table);
+                        }}
+                      >
+                        {bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id ? 'Скасувати' : 'Створити бронь'}
+                      </button>
+                    </div>
+
+                    <div className="details-grid compact table-sheet-grid">
+                      <div className="detail-row"><span className="muted">Тип</span><strong>{getBookingKindBadgeLabel(selectedObject.table?.bookingKind, language)}</strong></div>
+                      <div className="detail-row"><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedObject.table?.zoneId)?.name, language) || '—'}</strong></div>
+                      <div className="detail-row"><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedObject.table?.seatsMin || '—'}-{selectedObject.table?.seatsMax || '—'}</strong></div>
+                      <div className="detail-row"><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedObject.table?.deposit || '—'}</strong></div>
+                    </div>
+
+                    {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
+                    {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
+
+                    {bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id ? (
+                      <form className="object-admin-form booking-admin-form" onSubmit={submitBookingForm}>
+                        <label>
+                          Ім'я гостя
+                          <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} />
+                        </label>
+                        <label>
+                          Телефон
+                          <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} />
+                        </label>
+                        <label>
+                          Email
+                          <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} />
+                        </label>
+                        <label>
+                          Гостей
+                          <input type="number" min={selectedObject.table?.seatsMin || 1} max={selectedObject.table?.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} />
+                        </label>
+                        <label>
+                          Дата
+                          <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} />
+                        </label>
+                        <label>
+                          Початок
+                          <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} />
+                        </label>
+                        <label>
+                          Кінець
+                          <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} />
+                        </label>
+                        <label>
+                          Джерело
+                          <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)}>
+                            <option value="WALK_IN">Walk-in</option>
+                            <option value="PHONE">Phone</option>
+                            <option value="INSTAGRAM">Instagram</option>
+                            <option value="FACEBOOK">Facebook</option>
+                            <option value="WEB">Web</option>
+                          </select>
+                        </label>
+                        <label>
+                          Статус
+                          <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)}>
+                            <option value="PENDING">Pending</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                          </select>
+                        </label>
+                        <label className="checkbox-label inline">
+                          <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} />
+                          Є депозит
+                        </label>
+                        <label>
+                          Сума депозиту
+                          <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
+                        </label>
+                        <label className="object-admin-form-wide">
+                          Коментар гостя
+                          <textarea rows="3" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)} />
+                        </label>
+                        <label className="object-admin-form-wide">
+                          Коментар адміністратора
+                          <textarea rows="3" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} />
+                        </label>
+                        <div className="actions booking-admin-actions object-admin-form-wide">
+                          <button type="button" className="btn btn-secondary" onClick={closeBookingForm}>Скасувати</button>
+                          <button type="submit" className="btn" disabled={bookingFormState.saving}>
+                            {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <details className="object-admin-details">
                   <summary>Технічні дані</summary>
