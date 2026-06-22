@@ -3470,6 +3470,10 @@ h3 {
   display: none;
 }
 
+.menu-route .main-content > .page-container {
+  padding-top: 0;
+}
+
 @media (max-width: 767px) {
   /* Show regular top-bar on mobile for all pages */
   .top-bar {
@@ -3481,6 +3485,10 @@ h3 {
     display: flex !important;
     position: static;
     z-index: 1;
+  }
+
+  .menu-route .main-content > .page-container {
+    padding-top: 0;
   }
 
   .menu-route .menu-page-header {
