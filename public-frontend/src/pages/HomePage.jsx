@@ -125,15 +125,10 @@ export default function HomePage() {
 
       {/* Booking CTA */}
       <section className="content-section">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
-          <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32 }}>
-            <h2 style={{ marginBottom: 8 }}>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Book a table' })}</h2>
-            <p className="muted" style={{ marginBottom: 20 }}>{c({ ua: 'Оберіть дату, кількість гостей та доступний стіл.', ru: 'Выберите дату, количество гостей и доступный стол.', en: 'Choose a date, guest count and an available table.' })}</p>
-            <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
-          </div>
-          <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32, display: 'grid', placeItems: 'center' }}>
-            <img src="/icons/moonpirs.jpg" alt="" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} loading="lazy" />
-          </div>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32 }}>
+          <h2 style={{ marginBottom: 8 }}>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Book a table' })}</h2>
+          <p className="muted" style={{ marginBottom: 20 }}>{c({ ua: 'Оберіть дату, кількість гостей та доступний стіл.', ru: 'Выберите дату, количество гостей и доступный стол.', en: 'Choose a date, guest count and an available table.' })}</p>
+          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
         </div>
       </section>
 
