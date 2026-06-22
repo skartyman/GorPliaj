@@ -7,6 +7,21 @@ const { localizeField, normalizeLocalizedField } = require('../utils/localizatio
 const BEACH_POSITION_TYPES = new Set(['BUNGALOW', 'KROVAT', 'PIER']);
 const EVENING_USAGE_KEYWORDS = ['night', 'evening', 'event', 'concert'];
 
+function matchesRequestedUsageMode(mapUsageMode, requestedUsageMode) {
+  const normalizedMapUsageMode = String(mapUsageMode || '').toUpperCase();
+  const normalizedRequestedUsageMode = String(requestedUsageMode || '').toUpperCase();
+
+  if (!normalizedRequestedUsageMode) {
+    return true;
+  }
+
+  if (normalizedRequestedUsageMode === 'EVENING') {
+    return normalizedMapUsageMode === 'EVENING' || normalizedMapUsageMode === 'EVENT';
+  }
+
+  return normalizedMapUsageMode === normalizedRequestedUsageMode;
+}
+
 function parseMeta(metaJson) {
   if (!metaJson) return {};
   if (typeof metaJson === 'object') return metaJson;
@@ -233,7 +248,7 @@ async function listPublicBookingMaps({ usageMode, bookingKind, guests }) {
       };
     })
     .filter((map) => {
-      if (usageMode && map.usageMode !== usageMode) return false;
+      if (!matchesRequestedUsageMode(map.usageMode, usageMode)) return false;
       return map.unitCounts.total > 0;
     });
 }

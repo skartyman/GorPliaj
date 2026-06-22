@@ -462,6 +462,29 @@ async function setDefaultAdminMap(req, res) {
   }
 }
 
+async function activateAdminMapController(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const result = await adminMapEditorService.activateAdminMap(id);
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({
+      success: true,
+      ...result.data
+    });
+  } catch (error) {
+    console.error('[adminController.activateAdminMapController] Failed to activate map.', error);
+    return res.status(500).json({ message: 'Unable to activate map.' });
+  }
+}
+
 async function updateAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -712,6 +735,7 @@ module.exports = {
   createAdminMapVariant,
   deleteAdminMapVariant,
   setDefaultAdminMap,
+  activateAdminMapController,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor

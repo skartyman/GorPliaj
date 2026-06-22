@@ -5,3 +5,13 @@ npm-debug.log*
 public/public-app/
 public-frontend/node_modules/
 .aider*
+admin-cookies.txt
+.codex-remote-attachments/
+scripts/inspect-*.js
+scripts/normalize-*.js
+scripts/repair-*.js
+verify-deploy*.js
+debug-map*.js
+*.log
+live-snapshot/
+live-snapshot-*.zip

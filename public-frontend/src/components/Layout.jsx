@@ -74,9 +74,9 @@ export default function Layout() {
   const privacyLinkText = localizedCopy({ ua: 'Політика конфіденційності', ru: 'Политика конфиденциальности', en: 'Privacy Policy' }, locale);
   const paymentReturnsLinkText = localizedCopy({ ua: 'Умови оплати і повернення', ru: 'Условия оплаты и возврата', en: 'Payment and Refund Terms' }, locale);
   const menuServiceNotice = localizedCopy({
-    ua: 'До рахунку за меню в закладі додається 10% за обслуговування гостя.',
-    ru: 'К счету по меню в заведении добавляется 10% за обслуживание гостя.',
-    en: 'A 10% guest service charge is added to menu bills at the venue.'
+    ua: 'Звертаємо увагу, що до кінцевого рахунку за меню буде додано 10% за обслуговування гостя.',
+    ru: 'Обращаем внимание, что к итоговому счету за меню будет добавлено 10% за обслуживание гостя.',
+    en: 'Please note that a 10% guest service charge will be added to the final menu bill.'
   }, locale);
   const workingHoursText = settings?.workingHours?.mon?.open
     ? localizedCopy({

@@ -548,10 +548,12 @@ export default function MapPage() {
   const [state, setState] = useState({
     loading: true,
     error: '',
+    maps: [],
     mapData: null,
     reservations: [],
     availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
   });
+  const [selectedMapId, setSelectedMapId] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
@@ -581,47 +583,109 @@ export default function MapPage() {
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
-    async function loadMapData() {
-      const mapResult = await apiRequest('/api/maps/default');
-      if (!mapResult.response.ok) {
-        setState({
+    async function loadAvailableMaps() {
+      setState((prev) => ({
+        ...prev,
+        loading: true,
+        error: ''
+      }));
+
+      const mapsResult = await apiRequest('/api/admin/maps');
+      if (!mapsResult.response.ok) {
+        setState((prev) => ({
+          ...prev,
           loading: false,
-          error: mapResult.body.message || t('map.errors.load'),
+          error: mapsResult.body?.message || t('map.errors.load'),
+          maps: [],
           mapData: null,
           reservations: [],
           availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-        });
+        }));
         return;
       }
 
-      const mapData = mapResult.body;
-      const [reservationsResult, availabilityResult] = await Promise.all([
+      const maps = Array.isArray(mapsResult.body?.maps) ? mapsResult.body.maps : [];
+      const preferredMap = maps.find((item) => item.isDefault) || maps[0] || null;
+
+      setState((prev) => ({
+        ...prev,
+        maps,
+        loading: Boolean(preferredMap),
+        error: preferredMap ? '' : t('map.errors.load'),
+        mapData: preferredMap ? prev.mapData : null,
+        reservations: preferredMap ? prev.reservations : [],
+        availability: preferredMap ? prev.availability : { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+      }));
+      setSelectedMapId(preferredMap?.id ? Number(preferredMap.id) : null);
+    }
+
+    loadAvailableMaps().catch(() => {
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: t('map.errors.load'),
+        maps: [],
+        mapData: null,
+        reservations: [],
+        availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+      }));
+    });
+  }, [t]);
+
+  useEffect(() => {
+    if (!selectedMapId) {
+      return;
+    }
+
+    async function loadMapData() {
+      setState((prev) => ({
+        ...prev,
+        loading: true,
+        error: ''
+      }));
+
+      const [mapResult, reservationsResult, availabilityResult] = await Promise.all([
+        apiRequest(`/api/maps/${selectedMapId}`),
         apiRequest('/api/admin/reservations'),
-        apiRequest(`/api/maps/${mapData.map.id}/availability?date=${getDateKey()}&timeFrom=${getTimeKey(new Date())}`)
+        apiRequest(`/api/maps/${selectedMapId}/availability?date=${getDateKey()}&timeFrom=${getTimeKey(new Date())}`)
       ]);
 
-      setState({
+      if (!mapResult.response.ok) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: mapResult.body?.message || t('map.errors.load'),
+          mapData: null,
+          reservations: [],
+          availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+        }));
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
         loading: false,
         error: '',
-        mapData,
+        mapData: mapResult.body,
         reservations: reservationsResult.response.ok && Array.isArray(reservationsResult.body) ? reservationsResult.body : [],
         availability:
           availabilityResult.response.ok && availabilityResult.body
             ? availabilityResult.body
             : { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-      });
+      }));
     }
 
     loadMapData().catch(() => {
-      setState({
+      setState((prev) => ({
+        ...prev,
         loading: false,
         error: t('map.errors.load'),
         mapData: null,
         reservations: [],
         availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-      });
+      }));
     });
-  }, [t]);
+  }, [selectedMapId, t]);
 
   const mapDimensions = {
     width: state.mapData?.map?.width || 1200,
@@ -905,6 +969,26 @@ export default function MapPage() {
     actions.focusRect(bounds);
   }
 
+  function handleMapSelect(nextMapId) {
+    const normalizedMapId = Number(nextMapId);
+    if (!Number.isInteger(normalizedMapId) || normalizedMapId <= 0 || normalizedMapId === Number(selectedMapId)) {
+      return;
+    }
+
+    setSelectedMapId(normalizedMapId);
+    setSelectedTableId(null);
+    setSelectedObjectId(null);
+    setActiveZoneFocusId('all');
+    setObjectActionState({ saving: false, error: '' });
+    setBookingFormState({
+      open: false,
+      saving: false,
+      error: '',
+      success: '',
+      form: null
+    });
+  }
+
   const selectObject = (object) => {
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
@@ -1183,6 +1267,22 @@ export default function MapPage() {
 
         {!state.loading && !state.error && state.mapData?.map ? (
           <>
+            {state.maps.length > 1 ? (
+              <div className="map-variant-tabs" aria-label="Map variants">
+                {state.maps.map((mapItem) => (
+                  <button
+                    key={mapItem.id}
+                    type="button"
+                    className={`map-variant-tab ${Number(selectedMapId) === Number(mapItem.id) ? 'active' : ''}`}
+                    onClick={() => handleMapSelect(mapItem.id)}
+                    aria-pressed={Number(selectedMapId) === Number(mapItem.id)}
+                  >
+                    {localizeField(mapItem.name, language) || mapItem.slug || `Map #${mapItem.id}`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             <div className="map-meta muted">
               {t('map.meta', {
                 map: localizeField(state.mapData.map?.name, language) || '—',

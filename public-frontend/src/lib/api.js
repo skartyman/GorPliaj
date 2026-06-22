@@ -71,6 +71,7 @@ export const mapApi = {
     if (params.guests) search.set('guests', String(params.guests));
     if (params.bookingKind) search.set('bookingKind', params.bookingKind);
     if (params.zoneId) search.set('zoneId', String(params.zoneId));
+    if (params.eventId) search.set('eventId', String(params.eventId));
     return request(`/maps/${mapId}/bookable-units?${search.toString()}`);
   }
 };

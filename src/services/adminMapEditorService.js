@@ -356,6 +356,41 @@ async function setDefaultAdminMap(mapId) {
   };
 }
 
+async function activateAdminMap(mapId) {
+  const id = Number(mapId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { type: 'INVALID', message: 'Map id is invalid.' };
+  }
+
+  const map = await prisma.map.findUnique({
+    where: { id },
+    select: { id: true, status: true }
+  });
+
+  if (!map) {
+    return { type: 'NOT_FOUND', message: 'Map not found.' };
+  }
+
+  if (map.status !== MapStatus.ACTIVE) {
+    await prisma.map.update({
+      where: { id },
+      data: {
+        status: MapStatus.ACTIVE
+      }
+    });
+  }
+
+  const maps = await listAdminMaps();
+  const payload = await getAdminMapEditor(id);
+  return {
+    type: 'UPDATED',
+    data: {
+      ...payload,
+      maps
+    }
+  };
+}
+
 function normalizeMapInput(mapInput) {
   const normalized = {};
 
@@ -1028,6 +1063,7 @@ module.exports = {
   createAdminMapVariant,
   deleteAdminMapVariant,
   setDefaultAdminMap,
+  activateAdminMap,
   getAdminMapEditor,
   getDefaultAdminMapEditor,
   updateAdminMapEditor

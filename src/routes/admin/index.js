@@ -20,6 +20,7 @@ const {
   createAdminMapVariant,
   deleteAdminMapVariant,
   setDefaultAdminMap,
+  activateAdminMapController,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
   updateAdminMapEditor
@@ -120,6 +121,7 @@ router.delete('/reservations/:id', requireAdminAuth, requirePermission('reservat
 router.get('/maps', requireAdminAuth, requirePermission('map:view'), listAdminMaps);
 router.post('/maps', requireAdminAuth, requirePermission('map:edit'), createAdminMapVariant);
 router.patch('/maps/:id/default', requireAdminAuth, requirePermission('map:edit'), setDefaultAdminMap);
+router.patch('/maps/:id/activate', requireAdminAuth, requirePermission('map:edit'), activateAdminMapController);
 router.delete('/maps/:id', requireAdminAuth, requirePermission('map:edit'), deleteAdminMapVariant);
 router.get('/maps/default/editor', requireAdminAuth, requirePermission('map:view'), getDefaultAdminMapEditor);
 router.get('/maps/:id/editor', requireAdminAuth, requirePermission('map:view'), getAdminMapEditor);

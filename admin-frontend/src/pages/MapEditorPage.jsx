@@ -3848,6 +3848,50 @@ export default function MapEditorPage() {
     }));
   }
 
+  async function activateCurrentMap() {
+    if (!editorState.selectedMapId) {
+      return;
+    }
+
+    setEditorState((prev) => ({
+      ...prev,
+      saving: true,
+      error: '',
+      saveMessage: ''
+    }));
+
+    const result = await apiRequest(`/api/admin/maps/${editorState.selectedMapId}/activate`, {
+      method: 'PATCH'
+    });
+
+    if (!result.response.ok || !result.body?.map?.id) {
+      setEditorState((prev) => ({
+        ...prev,
+        saving: false,
+        error: result.body?.message || 'Unable to activate map.'
+      }));
+      return;
+    }
+
+    const nextData = buildEditorState(result.body);
+    historyRef.current = { past: [], future: [] };
+    setEditorState((prev) => ({
+      ...prev,
+      saving: false,
+      maps: Array.isArray(result.body.maps) ? result.body.maps : prev.maps.map((item) => (
+        Number(item.id) === Number(result.body.map.id)
+          ? { ...item, status: 'ACTIVE' }
+          : item
+      )),
+      selectedMapId: Number(result.body.map.id),
+      original: nextData,
+      current: nextData,
+      selectedObjectId: nextData.objects[0]?.id || null,
+      selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : [],
+      saveMessage: 'Карту активовано.'
+    }));
+  }
+
   return (
     <AdminLayout>
       <PageContainer title={t('mapEditor.title')} description={t('mapEditor.description')} className="map-editor-page">
@@ -3908,7 +3952,7 @@ export default function MapEditorPage() {
               >
                 {(editorState.maps || []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {localizeField(item.name, language)} ({item.slug}){item.isDefault ? ` • ${t('mapEditor.defaultMapBadge')}` : ''}
+                    {localizeField(item.name, language)} ({item.slug}){item.isDefault ? ` • ${t('mapEditor.defaultMapBadge')}` : ''}{item.status ? ` • ${item.status}` : ''}
                   </option>
                 ))}
               </select>
@@ -4015,6 +4059,19 @@ export default function MapEditorPage() {
             </label>
           </div>
           <div className="map-management-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={activateCurrentMap}
+              disabled={
+                editorState.loading ||
+                editorState.saving ||
+                editorState.mapsLoading ||
+                editorState.maps.find((item) => Number(item.id) === Number(editorState.selectedMapId))?.status === 'ACTIVE'
+              }
+            >
+              Активувати
+            </button>
             <button
               type="button"
               className="btn btn-primary btn-small"

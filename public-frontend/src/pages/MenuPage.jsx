@@ -139,9 +139,9 @@ export default function MenuPage() {
   const cartTotalItems = cartEntries.reduce((sum, entry) => sum + entry.quantity, 0);
   const cartTotalPrice = cartEntries.reduce((sum, entry) => sum + entry.quantity * entry.price, 0);
   const menuServiceChargeNote = c({
-    ua: 'До рахунку за меню в закладі додається 10% за обслуговування гостя.',
-    ru: 'К счету по меню в заведении добавляется 10% за обслуживание гостя.',
-    en: 'A 10% guest service charge is added to menu bills at the venue.'
+    ua: 'Звертаємо увагу, що до кінцевого рахунку за меню буде додано 10% за обслуговування гостя.',
+    ru: 'Обращаем внимание, что к итоговому счету за меню будет добавлено 10% за обслуживание гостя.',
+    en: 'Please note that a 10% guest service charge will be added to the final menu bill.'
   });
 
   function formatPrice(value) {

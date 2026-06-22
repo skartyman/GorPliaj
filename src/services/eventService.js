@@ -74,7 +74,8 @@ function toPublicEvent(event) {
     endAt: event.endAt,
     isFeatured: event.isFeatured,
     ctaType: event.ctaType,
-    ticketUrl: event.ticketUrl || ''
+    ticketUrl: event.ticketUrl || '',
+    sessions: Array.isArray(event.sessions) ? event.sessions.map(toEventSession) : []
   };
 }
 
@@ -393,6 +394,12 @@ async function getPublicEventBySlug(slug) {
     where: {
       slug,
       status: 'PUBLISHED'
+    },
+    include: {
+      sessions: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { startsAt: 'asc' }, { id: 'asc' }]
+      }
     }
   });
 
