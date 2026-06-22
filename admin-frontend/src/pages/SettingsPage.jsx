@@ -206,6 +206,82 @@ export default function SettingsPage() {
           </div>
         </PageCard>
 
+        {/* Gallery */}
+        <PageCard title="Фотогалерея">
+          <div style={{ display: 'grid', gap: 16 }}>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>
+              Фото для каруселі на головній сторінці. Максимум 10 фото. Перше фото = перше в каруселі.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {(form.galleryImages || []).map((url, i) => (
+                <div key={url} style={{ position: 'relative', width: 140, height: 100, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)', flexShrink: 0 }}>
+                  <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', gap: 2, padding: 4, background: 'rgba(0,0,0,0.45)' }}>
+                    <button type="button" className="btn btn-small" disabled={i === 0} onClick={() => {
+                      const arr = [...(form.galleryImages || [])];
+                      [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+                      setForm({ ...form, galleryImages: arr });
+                    }} style={{ fontSize: 11, padding: '2px 6px' }}>↑</button>
+                    <button type="button" className="btn btn-small" disabled={i === arr.length - 1} onClick={() => {
+                      const arr = [...(form.galleryImages || [])];
+                      [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+                      setForm({ ...form, galleryImages: arr });
+                    }} style={{ fontSize: 11, padding: '2px 6px' }}>↓</button>
+                    <button type="button" className="btn btn-danger btn-small" onClick={async () => {
+                      try {
+                        const res = await apiRequest('/api/admin/uploads/gallery/delete', {
+                          method: 'POST',
+                          body: JSON.stringify({ imageUrl: url })
+                        });
+                        if (res.body?.images) setForm({ ...form, galleryImages: res.body.images });
+                      } catch { alert('Помилка при видаленні фото'); }
+                    }} style={{ fontSize: 11, padding: '2px 6px', marginLeft: 'auto' }}>&times;</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+              {(form.galleryImages || []).length} / 10 фото
+            </div>
+            <div className="form-group">
+              <label className="btn btn-secondary btn-small" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                {uploadingField === 'gallery' ? 'Завантаження...' : '+ Додати фото'}
+                <input
+                  type="file"
+                  accept={IMAGE_UPLOAD_ACCEPT}
+                  style={{ display: 'none' }}
+                  disabled={uploadingField === 'gallery'}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file || uploadingField) return;
+                    setUploadingField('gallery');
+                    try {
+                      const payload = new FormData();
+                      payload.append('image', file);
+                      payload.append('folder', 'gallery');
+                      const { response, body } = await apiRequest('/api/admin/uploads/image', { method: 'POST', body: payload });
+                      if (response.ok && body.url) {
+                        setForm((current) => ({
+                          ...current,
+                          galleryImages: body.images || [...(current.galleryImages || []), body.url]
+                        }));
+                      } else {
+                        alert(body.message || 'Помилка завантаження');
+                      }
+                    } catch { alert('Помилка завантаження'); }
+                    finally { setUploadingField(null); event.target.value = ''; }
+                  }}
+                />
+              </label>
+            </div>
+            {(form.galleryImages || []).length > 0 ? (
+              <button className="btn btn-primary" onClick={() => updateField('gallery', { galleryImages: form.galleryImages })}>
+                {savingStatus.gallery ? 'Зберігаємо...' : 'Зберегти порядок фото'}
+              </button>
+            ) : null}
+          </div>
+        </PageCard>
+
         {/* Contacts & Map */}
         <PageCard title={t('settings.sections.contacts')}>
           <div style={{ display: 'grid', gap: 16 }}>

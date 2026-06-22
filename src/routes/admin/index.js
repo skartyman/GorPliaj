@@ -75,7 +75,9 @@ const {
   uploadAdminImage,
   listMapAssets,
   createMapAsset,
-  removeMapAsset
+  removeMapAsset,
+  deleteGalleryImage,
+  reorderGalleryImages
 } = require('../../controllers/adminUploadController');
 const {
   listUsers,
@@ -178,6 +180,8 @@ router.patch('/settings', requireAdminAuth, requirePermission('settings:edit'), 
 router.post('/translate', requireAdminAuth, handleTranslate);
 
 router.post('/uploads/image', requireAdminAuth, upload.single('image'), handleMulterError, uploadAdminImage);
+router.post('/uploads/gallery/delete', requireAdminAuth, requirePermission('settings:edit'), deleteGalleryImage);
+router.post('/uploads/gallery/reorder', requireAdminAuth, requirePermission('settings:edit'), reorderGalleryImages);
 router.get('/map-assets', requireAdminAuth, requirePermission('map:view'), listMapAssets);
 router.post('/map-assets', requireAdminAuth, requirePermission('map:edit'), createMapAsset);
 router.delete('/map-assets/:id', requireAdminAuth, requirePermission('map:edit'), removeMapAsset);

@@ -440,6 +440,7 @@ model FrontendSettings {
   aboutTitle   Json?
   aboutText    Json?
   aboutImageUrl String?
+  galleryImages Json?
   footerText   Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -1,6 +1,9 @@
 const multer = require('multer');
+const prisma = require('../lib/prisma');
 const {
   deleteMapAsset,
+  deleteObjectByKey,
+  extractKeyFromUrl,
   getMapAssetLibrary,
   saveMapAsset,
   uploadImage,
@@ -8,6 +11,7 @@ const {
 } = require('../services/r2StorageService');
 const { recoverMapAssetsFromR2 } = require('../../scripts/recover-map-assets-from-r2');
 
+const GALLERY_MAX_PHOTOS = 10;
 const IMAGE_SIZE_LIMIT_MB = 25;
 const IMAGE_SIZE_LIMIT_BYTES = IMAGE_SIZE_LIMIT_MB * 1024 * 1024;
 
@@ -84,6 +88,29 @@ async function uploadAdminImage(req, res) {
       }
     }
 
+    if (folder === 'gallery') {
+      let settings = await prisma.frontendSettings.findFirst();
+      let images = Array.isArray(settings?.galleryImages) ? [...settings.galleryImages] : [];
+
+      if (images.length >= GALLERY_MAX_PHOTOS) {
+        const oldest = images.shift();
+        const oldKey = extractKeyFromUrl(oldest);
+        if (oldKey) {
+          deleteObjectByKey(oldKey).catch(() => {});
+        }
+      }
+
+      images.push(result.url);
+
+      await prisma.frontendSettings.upsert({
+        where: { id: settings?.id || 1 },
+        create: { id: 1, galleryImages: images },
+        update: { galleryImages: images }
+      });
+
+      responsePayload.images = images;
+    }
+
     return res.status(201).json(responsePayload);
   } catch (error) {
     console.error('[adminUploadController.uploadAdminImage] Failed to upload image.', error);
@@ -158,14 +185,65 @@ async function removeMapAsset(req, res) {
   }
 }
 
+async function deleteGalleryImage(req, res) {
+  try {
+    const imageUrl = String(req.body?.imageUrl || '').trim();
+    if (!imageUrl) {
+      return res.status(400).json({ message: 'imageUrl is required.' });
+    }
+
+    const key = extractKeyFromUrl(imageUrl);
+    if (key) {
+      await deleteObjectByKey(key);
+    }
+
+    const settings = await prisma.frontendSettings.findFirst();
+    const images = Array.isArray(settings?.galleryImages) ? settings.galleryImages.filter((url) => url !== imageUrl) : [];
+
+    await prisma.frontendSettings.upsert({
+      where: { id: settings?.id || 1 },
+      create: { id: 1, galleryImages: images },
+      update: { galleryImages: images }
+    });
+
+    return res.json({ success: true, images });
+  } catch (error) {
+    console.error('[adminUploadController.deleteGalleryImage] Failed.', error);
+    return res.status(500).json({ message: 'Unable to delete gallery image.' });
+  }
+}
+
+async function reorderGalleryImages(req, res) {
+  try {
+    const images = req.body?.images;
+    if (!Array.isArray(images)) {
+      return res.status(400).json({ message: 'images array is required.' });
+    }
+
+    const settings = await prisma.frontendSettings.findFirst();
+    await prisma.frontendSettings.upsert({
+      where: { id: settings?.id || 1 },
+      create: { id: 1, galleryImages: images },
+      update: { galleryImages: images }
+    });
+
+    return res.json({ success: true, images });
+  } catch (error) {
+    console.error('[adminUploadController.reorderGalleryImages] Failed.', error);
+    return res.status(500).json({ message: 'Unable to reorder gallery images.' });
+  }
+}
+
 module.exports = {
   upload,
   handleMulterError,
   uploadAdminImage,
   listMapAssets,
   createMapAsset,
-  recoverMapAssetsFromR2,
   removeMapAsset,
+  deleteGalleryImage,
+  reorderGalleryImages,
+  recoverMapAssetsFromR2,
   IMAGE_SIZE_LIMIT_MB,
   IMAGE_SIZE_LIMIT_BYTES
 };

@@ -3,7 +3,7 @@ const path = require('path');
 const { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
 const { R2_CONFIG, isR2Configured } = require('../config/env');
 
-const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu', 'map-objects', 'settings']);
+const ALLOWED_UPLOAD_FOLDERS = new Set(['events', 'news', 'menu', 'map-objects', 'settings', 'gallery']);
 const MAP_ASSET_LIBRARY_KEY = 'map-objects/_asset-library.json';
 const MAP_ASSET_TYPES = new Set(['texture', 'object']);
 const SUPPORTED_MIME_TYPES = new Map([
@@ -55,6 +55,13 @@ function buildStorageKey({ folder, originalName, mimeType }) {
 function buildPublicUrl(key) {
   const base = String(R2_CONFIG.publicBaseUrl || '').trim().replace(/\/+$/u, '');
   return `${base}/${key}`;
+}
+
+function extractKeyFromUrl(url) {
+  const base = String(R2_CONFIG.publicBaseUrl || '').trim().replace(/\/+$/u, '');
+  if (!url || !base) return '';
+  const prefix = `${base}/`;
+  return url.startsWith(prefix) ? url.slice(prefix.length) : '';
 }
 
 async function streamToString(stream) {
@@ -359,6 +366,8 @@ module.exports = {
   MAP_ASSET_LIBRARY_KEY,
   SUPPORTED_MIME_TYPES,
   deleteMapAsset,
+  deleteObjectByKey,
+  extractKeyFromUrl,
   getMapAssetLibrary,
   isMimeTypeAllowed,
   replaceMapAssetLibrary,

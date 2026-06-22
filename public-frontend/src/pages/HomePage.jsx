@@ -6,6 +6,7 @@ import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
 import { localizedCopy, localizeField } from '../lib/i18n';
+import GalleryCarousel from '../components/GalleryCarousel';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
@@ -83,6 +84,9 @@ export default function HomePage() {
           {state.events.length ? (
             state.events.map((event) => {
               const eventTitle = localizeField(event.title, locale);
+              const cta = event.ctaType || '';
+              const hasBooking = cta === 'BOOKING' || cta === 'BOTH';
+              const hasTickets = cta === 'TICKETS' || cta === 'BOTH';
               return (
                 <article key={event.id} className="event-card">
                   <Link to={`/events/${event.slug}`} className="media-link">
@@ -92,6 +96,24 @@ export default function HomePage() {
                       <h3>{eventTitle}</h3>
                     </div>
                   </Link>
+                  <div className="event-card-actions">
+                    {hasBooking ? (
+                      <Link className="btn btn-primary btn-small" to={`/booking?event=${event.slug}`}>
+                        {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
+                      </Link>
+                    ) : null}
+                    {hasTickets ? (
+                      event.ticketUrl ? (
+                        <a className="btn btn-secondary btn-small" href={event.ticketUrl} target="_blank" rel="noreferrer">
+                          {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
+                        </a>
+                      ) : (
+                        <Link className="btn btn-secondary btn-small" to={`/events/${event.slug}?focus=tickets`}>
+                          {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
+                        </Link>
+                      )
+                    ) : null}
+                  </div>
                 </article>
               );
             })
@@ -115,20 +137,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Menu Preview */}
-      <section className="content-section">
-        <div className="section-header">
-          <h2>{c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}</h2>
-          <Link to="/menu" className="text-link">{c({ ua: 'Повне меню', ru: 'Открыть меню', en: 'Full menu' })} →</Link>
-        </div>
-        <div className="gallery-scroll">
-          {menuPhotos.map((photo) => (
-            <div key={photo} className="gallery-item">
-              <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" />
-            </div>
-          ))}
-        </div>
-      </section>
+      {settings?.galleryImages?.length > 0 ? (
+        <section className="content-section">
+          <div className="section-header">
+            <h2>{c({ ua: 'Галерея', ru: 'Галерея', en: 'Gallery' })}</h2>
+          </div>
+          <GalleryCarousel images={settings.galleryImages} />
+        </section>
+      ) : (
+        <section className="content-section">
+          <div className="section-header">
+            <h2>{c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}</h2>
+            <Link to="/menu" className="text-link">{c({ ua: 'Повне меню', ru: 'Открыть меню', en: 'Full menu' })} →</Link>
+          </div>
+          <div className="gallery-scroll">
+            {menuPhotos.map((photo) => (
+              <div key={photo} className="gallery-item">
+                <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* News */}
       <section className="content-section">
