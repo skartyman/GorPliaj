@@ -7,6 +7,18 @@ import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { sanitizeRichText } from '../lib/richText';
 
+function formatPhone(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 12);
+  if (!digits) return '';
+  const d = digits.startsWith('38') ? digits.slice(2) : digits;
+  let out = '+38 (0';
+  if (d.length > 1) out += d.slice(1, 3);
+  if (d.length > 3) out += ') ' + d.slice(3, 6);
+  if (d.length > 6) out += '-' + d.slice(6, 8);
+  if (d.length > 8) out += '-' + d.slice(8, 10);
+  return d.length > 1 ? out : '+38 (0';
+}
+
 function formatSessionRange(session, locale) {
   if (!session?.startsAt) return '';
   const formatLocale = locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU');
@@ -39,7 +51,7 @@ export default function EventDetailPage() {
   const [orderResult, setOrderResult] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
   const [justCreatedOrder, setJustCreatedOrder] = useState(false);
-  const [ticketUpsellOpen, setTicketUpsellOpen] = useState(false);
+  const [ticketFormOpen, setTicketFormOpen] = useState(false);
   const c = (values) => localizedCopy(values, locale);
   const metaTitle = localizeField(state.event?.title, locale);
   const metaDescription = localizeField(state.event?.shortDescription, locale);
@@ -101,12 +113,6 @@ export default function EventDetailPage() {
   }, [orderResult]);
 
   useEffect(() => {
-    if (orderStatus?.status === 'PAID') {
-      setTicketUpsellOpen(true);
-    }
-  }, [orderStatus?.status]);
-
-  useEffect(() => {
     const orderNumber = searchParams.get('ticket_order');
     const downloadToken = searchParams.get('token');
     if (!orderNumber || !downloadToken) return;
@@ -124,14 +130,8 @@ export default function EventDetailPage() {
   useEffect(() => {
     if (searchParams.get('focus') !== 'tickets') return;
     if (!state.event || !['TICKETS', 'BOTH'].includes(state.event.ctaType)) return;
-
-    const node = document.getElementById('tickets');
-    if (!node) return;
-
-    window.requestAnimationFrame(() => {
-      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [searchParams, state.event, sales.ticketTypes.length]);
+    setTicketFormOpen(true);
+  }, [searchParams, state.event]);
 
   const visibleTicketTypes = useMemo(() => {
     if (!sales.sessions.length) return sales.ticketTypes;
@@ -227,190 +227,188 @@ export default function EventDetailPage() {
               </a>
             ) : null}
             {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && !event.ticketUrl ? (
-              <a className="btn btn-secondary" href="#tickets">
+              <button type="button" className="btn btn-secondary" onClick={() => setTicketFormOpen(true)}>
                 {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
-              </a>
+              </button>
             ) : null}
           </div>
 
-          {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
-            <div id="tickets" className="ticket-purchase-panel">
-              {sales.loading && !sales.ticketTypes.length ? (
-                <div className="state-msg">
-                  {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
-                </div>
-              ) : null}
-              {!sales.loading && !sales.ticketTypes.length && !sales.error ? (
-                <div className="state-msg">
-                  {c({
-                    ua: 'Продаж квитків для цієї події ще не відкритий.',
-                    ru: 'Продажа билетов для этого события еще не открыта.',
-                    en: 'Ticket sales for this event are not open yet.'
-                  })}
-                </div>
-              ) : null}
-              {!sales.loading && sales.sessions.length > 0 && orderForm.eventSessionId && !visibleTicketTypes.length && !sales.error ? (
-                <div className="state-msg">
-                  {c({
-                    ua: 'Для обраної дати квитки ще не налаштовані. Оберіть іншу дату або зверніться до адміністратора.',
-                    ru: 'Для выбранной даты билеты еще не настроены. Выберите другую дату или обратитесь к администратору.',
-                    en: 'Tickets have not been configured for the selected date yet. Choose another date or contact the venue.'
-                  })}
-                </div>
-              ) : null}
-              {sales.ticketTypes.length ? (
-                <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
-                  <div className="form-group ticket-form-head">
-                    <h2>{c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy a ticket' })}</h2>
-                  </div>
-                  {sales.sessions.length ? (
-                    <div className="form-group">
-                      <label>{c({ ua: 'Дата події', ru: 'Дата события', en: 'Event date' })}</label>
-                      <select
-                        className="form-input"
-                        value={orderForm.eventSessionId}
-                        onChange={(eventValue) => {
-                          const nextSessionId = eventValue.target.value;
-                          const nextTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(nextSessionId || ''));
-                          setOrderForm({
-                            ...orderForm,
-                            eventSessionId: nextSessionId,
-                            ticketTypeId: String(nextTypes[0]?.id || '')
-                          });
-                        }}
-                        required
-                      >
-                        {sales.sessions.map((session) => (
-                          <option key={session.id} value={session.id}>
-                            {localizeField(session.name, locale) || formatSessionRange(session, locale)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : null}
-                  {hasTicketTypeChoice ? (
-                    <div className="form-group">
-                      <label>{c({ ua: 'Варіант квитка', ru: 'Вариант билета', en: 'Ticket option' })}</label>
-                      <select
-                        className="form-input"
-                        value={orderForm.ticketTypeId}
-                        onChange={(eventValue) => setOrderForm({ ...orderForm, ticketTypeId: eventValue.target.value })}
-                        required
-                      >
-                        {visibleTicketTypes.map((type) => (
-                          <option key={type.id} value={type.id}>
-                            {localizeField(type.name, locale)} - {type.price} {type.currency}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : selectedTicketType ? (
-                    <div className="form-group">
-                      <label>{c({ ua: 'Квиток', ru: 'Билет', en: 'Ticket' })}</label>
-                      <div className="ticket-type-summary">
-                        <strong>{localizeField(selectedTicketType.name, locale)}</strong>
-                        <span>{selectedTicketType.price} {selectedTicketType.currency}</span>
+          {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && ticketFormOpen ? (
+            <div className="guest-modal-backdrop" role="presentation" onClick={() => setTicketFormOpen(false)}>
+              <div className="guest-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                <button type="button" className="guest-modal-close" onClick={() => setTicketFormOpen(false)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>
+                  ×
+                </button>
+                {!orderResult ? (
+                  <>
+                    {sales.loading && !sales.ticketTypes.length ? (
+                      <div className="state-msg">
+                        {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
                       </div>
-                    </div>
-                  ) : null}
-                  <div className="form-group">
-                    <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      min="1"
-                      max="20"
-                      required
-                      value={orderForm.quantity}
-                      onChange={(eventValue) => setOrderForm({ ...orderForm, quantity: eventValue.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{c({ ua: "Ім'я", ru: 'Имя', en: 'Name' })}</label>
-                    <input
-                      className="form-input"
-                      required
-                      value={orderForm.customerName}
-                      onChange={(eventValue) => setOrderForm({ ...orderForm, customerName: eventValue.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      className="form-input"
-                      type="email"
-                      required
-                      value={orderForm.customerEmail}
-                      onChange={(eventValue) => setOrderForm({ ...orderForm, customerEmail: eventValue.target.value })}
-                    />
-                  </div>
-                  <div className="form-group ticket-form-full">
-                    <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
-                    <input
-                      className="form-input"
-                      value={orderForm.customerPhone}
-                      onChange={(eventValue) => setOrderForm({ ...orderForm, customerPhone: eventValue.target.value })}
-                    />
-                  </div>
-                  <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading || !selectedTicketType}>
-                    {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаем...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
-                  </button>
-                </form>
-              ) : null}
-            </div>
-          ) : null}
-          {sales.error ? <div className="state-msg state-error event-inline-state">{sales.error}</div> : null}
-          {orderResult ? (
-            <div className="state-msg state-success event-inline-state ticket-result-panel">
-              {orderStatus?.downloadUrl ? (
-                <a className="btn btn-primary" href={orderStatus.downloadUrl}>
-                  {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
-                </a>
-              ) : null}
-              {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
-                <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
-                  {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}
-                </a>
-              ) : null}
+                    ) : null}
+                    {!sales.loading && !sales.ticketTypes.length && !sales.error ? (
+                      <div className="state-msg">
+                        {c({
+                          ua: 'Продаж квитків для цієї події ще не відкритий.',
+                          ru: 'Продажа билетов для этого события еще не открыта.',
+                          en: 'Ticket sales for this event are not open yet.'
+                        })}
+                      </div>
+                    ) : null}
+                    {!sales.loading && sales.sessions.length > 0 && orderForm.eventSessionId && !visibleTicketTypes.length && !sales.error ? (
+                      <div className="state-msg">
+                        {c({
+                          ua: 'Для обраної дати квитки ще не налаштовані. Оберіть іншу дату або зверніться до адміністратора.',
+                          ru: 'Для выбранной даты билеты еще не настроены. Выберите другую дату или обратитесь к администратору.',
+                          en: 'Tickets have not been configured for the selected date yet. Choose another date or contact the venue.'
+                        })}
+                      </div>
+                    ) : null}
+                    {sales.ticketTypes.length ? (
+                      <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
+                        <div className="form-group ticket-form-head">
+                          <h2>{c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy a ticket' })}</h2>
+                        </div>
+                        {hasTicketTypeChoice ? (
+                          <div className="form-group">
+                            <label>{c({ ua: 'Варіант квитка', ru: 'Вариант билета', en: 'Ticket option' })}</label>
+                            <select
+                              className="form-input"
+                              value={orderForm.ticketTypeId}
+                              onChange={(eventValue) => setOrderForm({ ...orderForm, ticketTypeId: eventValue.target.value })}
+                              required
+                            >
+                              {visibleTicketTypes.map((type) => (
+                                <option key={type.id} value={type.id}>
+                                  {localizeField(type.name, locale)} - {type.price} {type.currency}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : selectedTicketType ? (
+                          <div className="form-group">
+                            <label>{c({ ua: 'Квиток', ru: 'Билет', en: 'Ticket' })}</label>
+                            <div className="ticket-type-summary">
+                              <strong>{localizeField(selectedTicketType.name, locale)}</strong>
+                              <span>{selectedTicketType.price} {selectedTicketType.currency}</span>
+                            </div>
+                          </div>
+                        ) : null}
+                        {sales.sessions.length ? (
+                          <div className="form-group">
+                            <label>{c({ ua: 'Дата події', ru: 'Дата события', en: 'Event date' })}</label>
+                            <select
+                              className="form-input"
+                              value={orderForm.eventSessionId}
+                              onChange={(eventValue) => {
+                                const nextSessionId = eventValue.target.value;
+                                const nextTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(nextSessionId || ''));
+                                setOrderForm({
+                                  ...orderForm,
+                                  eventSessionId: nextSessionId,
+                                  ticketTypeId: String(nextTypes[0]?.id || '')
+                                });
+                              }}
+                              required
+                            >
+                              {sales.sessions.map((session) => (
+                                <option key={session.id} value={session.id}>
+                                  {localizeField(session.name, locale) || formatSessionRange(session, locale)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
+                        <div className="form-group">
+                          <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
+                          <div className="guest-stepper">
+                            <button type="button" className="guest-stepper-btn" onClick={() => setOrderForm((current) => ({ ...current, quantity: Math.max(1, Number(current.quantity) - 1) }))}>−</button>
+                            <span className="guest-stepper-value">{orderForm.quantity}</span>
+                            <button type="button" className="guest-stepper-btn" onClick={() => setOrderForm((current) => ({ ...current, quantity: Math.min(20, Number(current.quantity) + 1) }))}>+</button>
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label>{c({ ua: "Ім'я", ru: 'Имя', en: 'Name' })}</label>
+                          <input
+                            className="form-input"
+                            required
+                            value={orderForm.customerName}
+                            onChange={(eventValue) => setOrderForm({ ...orderForm, customerName: eventValue.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Email</label>
+                          <input
+                            className="form-input"
+                            type="email"
+                            required
+                            value={orderForm.customerEmail}
+                            onChange={(eventValue) => setOrderForm({ ...orderForm, customerEmail: eventValue.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
+                          <input
+                            type="tel"
+                            className="form-input"
+                            placeholder="+38 (0XX) XXX-XX-XX"
+                            value={orderForm.customerPhone}
+                            onChange={(eventValue) => setOrderForm({ ...orderForm, customerPhone: formatPhone(eventValue.target.value) })}
+                          />
+                        </div>
+                        <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading || !selectedTicketType}>
+                          {sales.loading ? c({ ua: 'Створюємо...', ru: 'Создаем...', en: 'Creating...' }) : c({ ua: 'Оформити замовлення', ru: 'Оформить заказ', en: 'Place order' })}
+                        </button>
+                      </form>
+                    ) : null}
+                    {sales.error ? <div className="state-msg state-error" style={{ marginTop: 12 }}>{sales.error}</div> : null}
+                  </>
+                ) : (
+                  <>
+                    {orderStatus?.downloadUrl ? (
+                      <div className="guest-modal-actions" style={{ marginBottom: 16 }}>
+                        <a className="btn btn-primary" href={orderStatus.downloadUrl}>
+                          {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
+                        </a>
+                      </div>
+                    ) : null}
+                    {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
+                      <div className="guest-modal-actions" style={{ marginBottom: 16 }}>
+                        <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
+                          {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}
+                        </a>
+                      </div>
+                    ) : null}
+                    {orderStatus?.status === 'PAID' ? (
+                      <>
+                        <span className="guest-modal-kicker">{c({ ua: 'Квитки готові', ru: 'Билеты готовы', en: 'Tickets are ready' })}</span>
+                        <h2>{c({ ua: 'Хочете одразу забронювати стіл на цей вечір?', ru: 'Хотите сразу забронировать стол на этот вечер?', en: 'Would you like to book a table for the evening?' })}</h2>
+                        <p>{c({ ua: 'Можна одразу перейти до бронювання або спочатку переглянути меню.', ru: 'Можно сразу перейти к бронированию или сначала посмотреть меню.', en: 'You can jump straight to event booking or browse the menu first.' })}</p>
+                        <div className="guest-modal-actions">
+                          {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
+                            <Link className="btn btn-primary" to={bookingUrl} onClick={() => setTicketFormOpen(false)}>
+                              {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
+                            </Link>
+                          ) : null}
+                          <Link className="btn btn-secondary" to="/menu" onClick={() => setTicketFormOpen(false)}>
+                            {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
+                          </Link>
+                          {orderStatus?.downloadUrl ? (
+                            <a className="btn btn-secondary" href={orderStatus.downloadUrl}>
+                              {c({ ua: 'Завантажити квитки PDF', ru: 'Скачать билеты PDF', en: 'Download tickets PDF' })}
+                            </a>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : null}
+                  </>
+                )}
+              </div>
             </div>
           ) : null}
         </div>
       </div>
 
-      {ticketUpsellOpen && orderStatus?.status === 'PAID' ? (
-        <div className="guest-modal-backdrop" role="presentation" onClick={() => setTicketUpsellOpen(false)}>
-          <div className="guest-modal" role="dialog" aria-modal="true" aria-labelledby="ticket-upsell-title" onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="guest-modal-close" onClick={() => setTicketUpsellOpen(false)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>
-              ×
-            </button>
-            <span className="guest-modal-kicker">{c({ ua: 'Квитки готові', ru: 'Билеты готовы', en: 'Tickets are ready' })}</span>
-            <h2 id="ticket-upsell-title">
-              {c({
-                ua: 'Квитки вже у вас. Хочете одразу забронювати стіл на цей вечір?',
-                ru: 'Билеты уже у вас. Хотите сразу забронировать стол на этот вечер?',
-                en: 'Your tickets are ready. Would you like to book a table for the evening?'
-              })}
-            </h2>
-            <p>
-              {c({
-                ua: 'Можна одразу перейти до бронювання саме для цієї події або спочатку переглянути меню.',
-                ru: 'Можно сразу перейти к бронированию именно для этого события или сначала посмотреть меню.',
-                en: 'You can jump straight to event booking or browse the menu first.'
-              })}
-            </p>
-            <div className="guest-modal-actions">
-              {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
-                <Link className="btn btn-primary" to={bookingUrl} onClick={() => setTicketUpsellOpen(false)}>
-                  {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
-                </Link>
-              ) : null}
-              <Link className="btn btn-secondary" to="/menu" onClick={() => setTicketUpsellOpen(false)}>
-                {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

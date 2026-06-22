@@ -1446,15 +1446,19 @@ h3 {
 }
 
 .ticket-order-form {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
-.ticket-form-head,
-.ticket-form-full {
+.ticket-form-head {
+  grid-column: 1 / -1;
+}
+
+.ticket-order-form .form-group {
   grid-column: 1 / -1;
 }
 
@@ -1495,8 +1499,9 @@ h3 {
   inset: 0;
   z-index: 120;
   display: grid;
-  place-items: center;
-  padding: 20px;
+  place-items: start center;
+  padding: 30px 20px;
+  overflow-y: auto;
   background: rgba(10, 9, 11, 0.72);
   backdrop-filter: blur(8px);
 }
@@ -2003,6 +2008,12 @@ h3 {
 
 .booking-sticky-btn {
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .booking-sticky-bar {
+    bottom: var(--bottom-nav-height);
+  }
 }
 
 .guest-stepper {
@@ -3137,10 +3148,7 @@ h3 {
   }
 
   .ticket-order-form {
-    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
-    padding: 16px;
-    border-radius: 14px;
   }
 
   .ticket-order-form .form-input {
@@ -3262,10 +3270,6 @@ h3 {
 
   .event-detail-layout {
     gap: 16px;
-  }
-
-  .ticket-order-form {
-    padding: 14px 12px;
   }
 
   .event-detail-actions .btn,

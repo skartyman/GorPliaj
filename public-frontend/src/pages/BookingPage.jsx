@@ -32,7 +32,7 @@ function formatPhone(value) {
   if (!digits) return '';
   const d = digits.startsWith('38') ? digits.slice(2) : digits;
   let out = '+38 (0';
-  if (d.length > 1) out += d.slice(1, 4);
+  if (d.length > 1) out += d.slice(1, 3);
   if (d.length > 3) out += ') ' + d.slice(3, 6);
   if (d.length > 6) out += '-' + d.slice(6, 8);
   if (d.length > 8) out += '-' + d.slice(8, 10);
@@ -1443,6 +1443,11 @@ export default function BookingPage() {
               <Link className="btn btn-primary" to="/menu" onClick={() => setBookingMenuPromptOpen(false)}>
                 {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
               </Link>
+              {reservationStatus?.downloadUrl ? (
+                <a className="btn btn-secondary" href={reservationStatus.downloadUrl}>
+                  {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
