@@ -74,8 +74,8 @@ export default function PositionsPage() {
 
   function startEdit(row) {
     setForm({
-      mapId: row.mapId || '',
-      zoneId: row.zoneId || '',
+      mapId: row.map?.id || '',
+      zoneId: row.zone?.id || '',
       code: row.code || '',
       name: normalizeLocalizedFormField(row.name),
       positionType: row.positionType || '',
@@ -96,9 +96,21 @@ export default function PositionsPage() {
     setSaving(true);
     setFeedback('');
 
+    let url, method;
+    if (editId) {
+      url = `/api/admin/reservation-positions/${editId}`;
+      method = 'PATCH';
+    } else {
+      if (!form.mapId) {
+        setFeedback(t('positions.errors.save'));
+        setSaving(false);
+        return;
+      }
+      url = '/api/admin/tables';
+      method = 'POST';
+    }
+
     const payload = {
-      mapId: Number(form.mapId) || null,
-      zoneId: Number(form.zoneId) || null,
       code: form.code,
       name: form.name,
       positionType: form.positionType,
@@ -112,18 +124,11 @@ export default function PositionsPage() {
       sortOrder: Number(form.sortOrder)
     };
 
-    let url, method;
-    if (editId) {
-      url = `/api/admin/reservation-positions/${editId}`;
-      method = 'PATCH';
+    if (method === 'POST') {
+      payload.mapId = Number(form.mapId) || null;
+      payload.zoneId = Number(form.zoneId) || null;
     } else {
-      if (!payload.mapId) {
-        setFeedback(t('positions.errors.save'));
-        setSaving(false);
-        return;
-      }
-      url = '/api/admin/tables';
-      method = 'POST';
+      if (form.zoneId) payload.zoneId = Number(form.zoneId);
     }
 
     const { response, body } = await apiRequest(url, {
