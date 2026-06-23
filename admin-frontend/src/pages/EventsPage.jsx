@@ -36,122 +36,7 @@ const DEFAULT_FORM = {
   ticketUrl: ''
 };
 
-const UI_COPY = {
-  ua: {
-    edit: 'Редагувати',
-    ticketTariffs: 'Тарифи квитків',
-    fillUaFirst: 'Спочатку заповніть поле UA для перекладу.',
-    translationFailed: 'Не вдалося виконати переклад.',
-    translationUpdated: 'Переклад оновлено.',
-    posterUploaded: 'Постер завантажено.',
-    posterUrl: 'URL постера',
-    uploadPoster: 'Завантажити постер',
-    ticketUrl: 'URL квитків',
-    featured: 'Показувати на головній сторінці',
-    preview: 'Попередній перегляд',
-    previewTitle: 'Назва події',
-    previewDescription: 'Короткий опис з’явиться тут.',
-    previewHint: 'Збережіть подію, щоб відкрити її публічну сторінку.',
-    openPublic: 'Відкрити публічну сторінку',
-    saveChanges: 'Зберегти зміни',
-    createEvent: 'Створити подію',
-    shortDescription: 'Короткий опис',
-    fullDescription: 'Повний опис',
-    fullDescriptionUa: 'Повний опис українською...',
-    fullDescriptionRu: 'Повний опис російською...',
-    fullDescriptionEn: 'Full description in English...',
-    autoTranslated: 'Автоматичний переклад',
-    translate: 'Перекласти RU/EN з UA',
-    translateAll: 'Перекласти всі поля',
-    translating: 'Перекладаємо...',
-    deleteConfirm: 'Видалити подію "{title}"?',
-    deleteBlocked: 'Не можна видалити подію, бо до неї вже привʼязані продажі квитків або видані квитки. Перенесіть її в архів або спочатку приберіть повʼязані квиткові дані.',
-    discardConfirm: 'Є незбережені зміни. Скасувати?',
-    sectionSessions: 'Даты проведения',
-    noSessions: 'Немає дат',
-    sectionTicketTypes: 'Тарифи квитків',
-    noTicketTypes: 'Немає тарифів',
-    sold: 'продано',
-    hide: 'Приховати',
-    show: 'Показати'
-  },
-  ru: {
-    edit: 'Редактировать',
-    ticketTariffs: 'Тарифы билетов',
-    fillUaFirst: 'Сначала заполните поле UA для перевода.',
-    translationFailed: 'Не удалось выполнить перевод.',
-    translationUpdated: 'Перевод обновлён.',
-    posterUploaded: 'Постер загружен.',
-    posterUrl: 'URL постера',
-    uploadPoster: 'Загрузить постер',
-    ticketUrl: 'URL билетов',
-    featured: 'Показывать на главной странице',
-    preview: 'Предпросмотр',
-    previewTitle: 'Название события',
-    previewDescription: 'Короткое описание появится здесь.',
-    previewHint: 'Сохраните событие, чтобы открыть его публичную страницу.',
-    openPublic: 'Открыть публичную страницу',
-    saveChanges: 'Сохранить изменения',
-    createEvent: 'Создать событие',
-    shortDescription: 'Короткое описание',
-    fullDescription: 'Полное описание',
-    fullDescriptionUa: 'Полное описание на украинском...',
-    fullDescriptionRu: 'Полное описание на русском...',
-    fullDescriptionEn: 'Full description in English...',
-    autoTranslated: 'Автоматический перевод',
-    translate: 'Перевести RU/EN с UA',
-    translateAll: 'Перевести все поля',
-    translating: 'Переводим...',
-    deleteConfirm: 'Удалить событие "{title}"?',
-    deleteBlocked: 'Нельзя удалить событие, потому что к нему уже привязаны продажи билетов или выданные билеты. Переведите его в архив или сначала удалите связанные билетные данные.',
-    discardConfirm: 'Есть несохранённые изменения. Отменить?',
-    sectionSessions: 'Даты проведения',
-    noSessions: 'Нет дат',
-    sectionTicketTypes: 'Тарифы билетов',
-    noTicketTypes: 'Нет тарифов',
-    sold: 'продано',
-    hide: 'Скрыть',
-    show: 'Показать'
-  },
-  en: {
-    edit: 'Edit',
-    ticketTariffs: 'Ticket tariffs',
-    fillUaFirst: 'Fill in the UA field first before translation.',
-    translationFailed: 'Translation failed.',
-    translationUpdated: 'Translation updated.',
-    posterUploaded: 'Poster uploaded.',
-    posterUrl: 'Poster URL',
-    uploadPoster: 'Upload poster',
-    ticketUrl: 'Ticket URL',
-    featured: 'Show on homepage',
-    preview: 'Preview',
-    previewTitle: 'Event title',
-    previewDescription: 'Short description will appear here.',
-    previewHint: 'Save the event to open its public page.',
-    openPublic: 'Open public page',
-    saveChanges: 'Save changes',
-    createEvent: 'Create event',
-    shortDescription: 'Short description',
-    fullDescription: 'Full description',
-    fullDescriptionUa: 'Full description in Ukrainian...',
-    fullDescriptionRu: 'Full description in Russian...',
-    fullDescriptionEn: 'Full description in English...',
-    autoTranslated: 'Auto-translated',
-    translate: 'Translate RU/EN from UA',
-    translateAll: 'Translate all fields',
-    translating: 'Translating...',
-    deleteConfirm: 'Delete event "{title}"?',
-    deleteBlocked: 'This event cannot be deleted because it already has ticket sales or issued tickets. Archive it instead or remove the related ticket data first.',
-    discardConfirm: 'You have unsaved changes. Discard?',
-    sectionSessions: 'Event dates',
-    noSessions: 'No dates yet',
-    sectionTicketTypes: 'Ticket tariffs',
-    noTicketTypes: 'No tariffs yet',
-    sold: 'sold',
-    hide: 'Hide',
-    show: 'Show'
-  }
-};
+
 
 function normalizeLocalized(value) {
   if (!value || typeof value !== 'object') {
@@ -185,7 +70,6 @@ function getLocaleCode(locale) {
 
 export default function EventsPage() {
   const { t, language } = useAdminI18n();
-  const ui = UI_COPY[language] || UI_COPY.ua;
   const [viewMode, setViewMode] = useState('table');
   const [state, setState] = useState({ loading: true, error: '', events: [] });
   const [form, setForm] = useState(DEFAULT_FORM);
@@ -247,7 +131,7 @@ export default function EventsPage() {
   }, [language]);
 
   function resetForm() {
-    if (isFormDirty.current && !window.confirm(ui.discardConfirm)) return;
+    if (isFormDirty.current && !window.confirm(t('eventsAdmin.form.discardConfirm'))) return;
     setForm({
       ...DEFAULT_FORM,
       title: { ...EMPTY_LOCALIZED },
@@ -272,7 +156,7 @@ export default function EventsPage() {
   }
 
   function startEdit(event) {
-    if (isFormDirty.current && !window.confirm(ui.discardConfirm)) return;
+    if (isFormDirty.current && !window.confirm(t('eventsAdmin.form.discardConfirm'))) return;
     setEditId(event.id);
     setForm({
       title: normalizeLocalized(event.title),
@@ -331,7 +215,7 @@ export default function EventsPage() {
   async function autoTranslateField(field) {
     const sourceText = form[field]?.ua;
     if (!sourceText?.trim()) {
-      setFeedback({ tone: 'error', message: ui.fillUaFirst });
+      setFeedback({ tone: 'error', message: t('eventsAdmin.form.placeholders.fillUaFirst') });
       return;
     }
 
@@ -343,7 +227,7 @@ export default function EventsPage() {
     setTranslating((current) => ({ ...current, [field]: false }));
 
     if (!response.ok) {
-      setFeedback({ tone: 'error', message: body.error || body.message || ui.translationFailed });
+      setFeedback({ tone: 'error', message: body.error || body.message || t('eventsAdmin.errors.translation') });
       return;
     }
 
@@ -355,7 +239,7 @@ export default function EventsPage() {
         en: body.en || current[field].en || ''
       }
     }));
-    setFeedback({ tone: 'success', message: ui.translationUpdated });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.translationUpdated') });
   }
 
   function handleEditSession(idxOrId) {
@@ -371,7 +255,7 @@ export default function EventsPage() {
   }
 
   function handleDeleteSession(idxOrId) {
-    if (!window.confirm('Delete this date?')) return;
+    if (!window.confirm(t('eventsAdmin.errors.confirmDeleteSession'))) return;
     if (editId) {
       const session = sessions.find((s) => s.id === idxOrId);
       if (session) deleteSession(session.id);
@@ -457,13 +341,13 @@ export default function EventsPage() {
   }
 
   async function removeEvent(eventRow) {
-    if (!window.confirm(ui.deleteConfirm.replace('{title}', localizeField(eventRow.title, language)))) return;
+    if (!window.confirm(t('eventsAdmin.form.deleteConfirm', { title: localizeField(eventRow.title, language) }))) return;
 
     setSavingKey(`delete-${eventRow.id}`);
     const { response, body } = await apiRequest(`/api/admin/events/${eventRow.id}`, { method: 'DELETE' });
     if (!response.ok) {
       setSavingKey('');
-      setFeedback({ tone: 'error', message: response.status === 409 ? ui.deleteBlocked : (body.message || t('eventsAdmin.errors.delete')) });
+      setFeedback({ tone: 'error', message: response.status === 409 ? t('eventsAdmin.form.deleteBlocked') : (body.message || t('eventsAdmin.errors.delete')) });
       return;
     }
 
@@ -495,7 +379,7 @@ export default function EventsPage() {
         }));
       }
     }
-    setFeedback({ tone: 'success', message: ui.translationUpdated });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.translationUpdated') });
   }
 
   async function handlePosterUpload(file) {
@@ -512,7 +396,7 @@ export default function EventsPage() {
     }
     setForm((current) => ({ ...current, posterImage: body.url }));
     setPosterUploadState({ status: 'success', details: body.url });
-    setFeedback({ tone: 'success', message: ui.posterUploaded });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.posterUploaded') });
   }
 
   async function saveSession(event) {
@@ -528,21 +412,21 @@ export default function EventsPage() {
       ? await apiRequest(`/api/admin/event-sessions/${editingSessionId}`, { method: 'PATCH', body: JSON.stringify(payload) })
       : await apiRequest(`/api/admin/events/${editId}/sessions`, { method: 'POST', body: JSON.stringify(payload) });
     setSessionsSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to save session' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.saveSession') }); return; }
     await loadEventWithDetails(editId);
     setSessionForm({ name: { ua: '', ru: '', en: '' }, startsAt: '', endsAt: '', isActive: true });
     setEditingSessionId(null);
-    setFeedback({ tone: 'success', message: editingSessionId ? 'Date updated' : 'Date added' });
+    setFeedback({ tone: 'success', message: editingSessionId ? t('eventsAdmin.form.sessionSaved') : t('eventsAdmin.form.sessionAdded') });
   }
 
   async function deleteSession(id) {
-    if (!window.confirm('Delete this date?')) return;
+    if (!window.confirm(t('eventsAdmin.errors.confirmDeleteSession'))) return;
     setSessionsSaving(true);
     const { response, body } = await apiRequest(`/api/admin/event-sessions/${id}`, { method: 'DELETE' });
     setSessionsSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to delete session' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.deleteSession') }); return; }
     await loadEventWithDetails(editId);
-    setFeedback({ tone: 'success', message: 'Date deleted' });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.form.sessionDeleted') });
   }
 
   async function saveTicketType(event) {
@@ -559,47 +443,47 @@ export default function EventsPage() {
       ? await apiRequest(`/api/admin/ticket-types/${editingTypeId}`, { method: 'PATCH', body: JSON.stringify(payload) })
       : await apiRequest(`/api/admin/events/${editId}/ticket-types`, { method: 'POST', body: JSON.stringify(payload) });
     setTypesSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to save ticket type' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.saveTariff') }); return; }
     await loadEventWithDetails(editId);
     setTypeForm({ name: { ua: '', ru: '', en: '' }, price: '', capacity: '', eventSessionId: '' });
     setEditingTypeId(null);
-    setFeedback({ tone: 'success', message: editingTypeId ? 'Tariff updated' : 'Tariff created' });
+    setFeedback({ tone: 'success', message: editingTypeId ? t('eventsAdmin.form.tariffSaved') : t('eventsAdmin.form.tariffCreated') });
   }
 
   async function deleteTicketType(id) {
-    if (!window.confirm('Delete this tariff?')) return;
+    if (!window.confirm(t('eventsAdmin.errors.confirmDeleteTariff'))) return;
     setTypesSaving(true);
     const { response, body } = await apiRequest(`/api/admin/ticket-types/${id}`, { method: 'DELETE' });
     setTypesSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to delete tariff' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.deleteTariff') }); return; }
     await loadEventWithDetails(editId);
-    setFeedback({ tone: 'success', message: 'Tariff deleted' });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.form.tariffDeleted') });
   }
 
   async function toggleTicketType(id, isActive) {
     setTypesSaving(true);
     const { response, body } = await apiRequest(`/api/admin/ticket-types/${id}`, { method: 'PATCH', body: JSON.stringify({ isActive }) });
     setTypesSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to update tariff' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('eventsAdmin.errors.updateTariff') }); return; }
     await loadEventWithDetails(editId);
-    setFeedback({ tone: 'success', message: 'Tariff updated' });
+    setFeedback({ tone: 'success', message: t('eventsAdmin.form.tariffUpdated') });
   }
 
   const columns = [
     { key: 'title', label: t('eventsAdmin.columns.title'), render: (row) => <strong>{localizeField(row.title, language)}</strong> },
     { key: 'startAt', label: t('eventsAdmin.columns.start'), render: (row) => formatDateTime(row.startAt, language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US')) },
     { key: 'status', label: t('eventsAdmin.columns.status'), render: (row) => t(`eventsAdmin.statusOptions.${row.status}`) },
-    { key: 'tickets', label: 'Квитки', render: (row) => {
-      const s = row._sessionsCount ?? 0;
-      const t = row._ticketTypesCount ?? 0;
-      return <span style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{s} дат · {t} тарифов</span>;
+    { key: 'tickets', label: t('eventsAdmin.columns.tickets'), render: (row) => {
+      const sessionsCount = row._sessionsCount ?? 0;
+      const tariffsCount = row._ticketTypesCount ?? 0;
+      return <span style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{t('eventsAdmin.columns.ticketsInfo', { sessions: sessionsCount, tariffs: tariffsCount })}</span>;
     } },
     {
       key: 'actions',
       label: t('eventsAdmin.columns.actions'),
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{ui.edit}</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
           <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>{t('eventsAdmin.form.delete')}</button>
         </div>
       )
@@ -672,7 +556,7 @@ export default function EventsPage() {
                       startEdit(event);
                     }}
                   >
-                    {ui.edit}
+                    {t('common.edit')}
                   </button>
                 </div>
               )
@@ -703,13 +587,13 @@ export default function EventsPage() {
                 {t('eventsAdmin.form.fields.title')} ({getLocaleCode('ua')}) <span className="required">*</span>
                 <input value={form.title.ua} onChange={(event) => setLocalizedField('title', 'ua', event.target.value)} required />
               </label>
-              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('ru')}) <input value={form.title.ru} onChange={(event) => setLocalizedField('title', 'ru', event.target.value)} placeholder={ui.autoTranslated} /></label>
-              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('en')}) <input value={form.title.en} onChange={(event) => setLocalizedField('title', 'en', event.target.value)} placeholder={ui.autoTranslated} /></label>
+              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('ru')}) <input value={form.title.ru} onChange={(event) => setLocalizedField('title', 'ru', event.target.value)} placeholder={t('eventsAdmin.form.placeholders.autoTranslated')} /></label>
+              <label>{t('eventsAdmin.form.fields.title')} ({getLocaleCode('en')}) <input value={form.title.en} onChange={(event) => setLocalizedField('title', 'en', event.target.value)} placeholder={t('eventsAdmin.form.placeholders.autoTranslated')} /></label>
               <label>
                 {t('eventsAdmin.form.fields.slug')}
                 <div style={{ display: 'flex', gap: 4 }}>
                   <input value={form.slug} onChange={(e) => { setForm({ ...form, slug: e.target.value }); markDirty(); }} disabled={isSlugLocked} style={{ flex: 1 }} />
-                  <button type="button" className="btn btn-small btn-secondary" onClick={() => setIsSlugLocked(!isSlugLocked)} title={isSlugLocked ? 'Разблокувати' : 'Заблокувати'}>
+                  <button type="button" className="btn btn-small btn-secondary" onClick={() => setIsSlugLocked(!isSlugLocked)} title={isSlugLocked ? t('common.unlock') : t('common.lock')}>
                     {isSlugLocked ? '🔒' : '🔓'}
                   </button>
                 </div>
@@ -738,11 +622,11 @@ export default function EventsPage() {
             </div>
 
             <div className="admin-section-divider" style={{ marginTop: '1.5rem' }}>
-              <hr /><span>{ui.sectionSessions || 'Даты проведения'}</span>
+              <hr /><span>{t('eventsAdmin.sectionSessions')}</span>
             </div>
 
             {sessions.length === 0 ? (
-              <p className="muted" style={{ margin: '8px 0', fontSize: 13 }}>{ui.noSessions || 'Нет дат'}</p>
+              <p className="muted" style={{ margin: '8px 0', fontSize: 13 }}>{t('eventsAdmin.noSessions')}</p>
             ) : (
               <div style={{ margin: '8px 0' }}>
                 {sessions.map((session, idx) => {
@@ -754,8 +638,8 @@ export default function EventsPage() {
                     <div key={key} className="admin-inline-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
                       <span style={{ fontSize: 13 }}>{name ? `${name} · ` : ''}{startStr}{endStr ? ` — ${endStr}` : ''}</span>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" className="btn-link btn-small" onClick={() => handleEditSession(editId ? session.id : idx)}>{t('admin.edit')}</button>
-                        <button type="button" className="btn-link btn-small btn-link-danger" onClick={() => handleDeleteSession(editId ? session.id : idx)}>{t('admin.delete')}</button>
+                        <button type="button" className="btn-link btn-small" onClick={() => handleEditSession(editId ? session.id : idx)}>{t('common.edit')}</button>
+                        <button type="button" className="btn-link btn-small btn-link-danger" onClick={() => handleDeleteSession(editId ? session.id : idx)}>{t('common.delete')}</button>
                       </div>
                     </div>
                   );
@@ -765,7 +649,7 @@ export default function EventsPage() {
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end', marginTop: 8 }}>
               <label style={{ flex: '1 0 140px' }}>
-                {t('eventsAdmin.form.fields.title') || 'Name'} (опц)
+                {t('eventsAdmin.form.fields.name')} (опц)
                 <input value={localizeField(sessionForm.name, language)} onChange={(e) => setSessionForm({ ...sessionForm, name: { ...sessionForm.name, [language]: e.target.value } })} style={{ fontSize: 12 }} />
               </label>
               <label style={{ flex: '1 0 160px' }}>
@@ -778,11 +662,11 @@ export default function EventsPage() {
               </label>
               <label className="menu-admin-checkbox" style={{ marginBottom: 2 }}>
                 <input type="checkbox" checked={sessionForm.isActive} onChange={(e) => setSessionForm({ ...sessionForm, isActive: e.target.checked })} />
-                <span style={{ fontSize: 12 }}>{t('eventsAdmin.form.fields.active') || 'Active'}</span>
+                <span style={{ fontSize: 12 }}>{t('eventsAdmin.form.fields.active')}</span>
               </label>
               <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
                 <button type="button" className="btn btn-small" disabled={sessionsSaving} onClick={handleSaveSession}>
-                  {sessionsSaving ? t('eventsAdmin.form.saving') : (editingSessionId !== null ? (t('admin.save') || 'Save') : (t('admin.create') || 'Add'))}
+                  {sessionsSaving ? t('eventsAdmin.form.saving') : (editingSessionId !== null ? t('common.save') : t('common.create'))}
                 </button>
                 {editingSessionId !== null ? (
                   <button type="button" className="btn btn-small btn-secondary" onClick={() => { setEditingSessionId(null); setSessionForm({ name: { ua: '', ru: '', en: '' }, startsAt: '', endsAt: '', isActive: true }); }}>
@@ -793,7 +677,7 @@ export default function EventsPage() {
             </div>
 
             <div style={{ marginTop: '1.5rem' }}>
-              <strong>{ui.shortDescription}</strong>
+              <strong>{t('eventsAdmin.form.fields.shortDescription')}</strong>
               <div className="locale-tabs" style={{ margin: '6px 0' }}>
                 {['ua', 'ru', 'en'].map((loc) => (
                   <button type="button" key={loc} className={`locale-tab ${activeLocale === loc ? 'active' : ''}`} onClick={() => setActiveLocale(loc)}>{loc.toUpperCase()}</button>
@@ -802,13 +686,13 @@ export default function EventsPage() {
               {['ua', 'ru', 'en'].map((loc) => (
                 <label key={loc} style={{ display: activeLocale === loc ? 'block' : 'none' }}>
                   {loc === 'ua' ? <span className="required">*</span> : null}
-                  <textarea value={form.shortDescription[loc]} onChange={(e) => setLocalizedField('shortDescription', loc, e.target.value)} rows="3" placeholder={loc === 'ua' ? '' : ui.autoTranslated} />
+                  <textarea value={form.shortDescription[loc]} onChange={(e) => setLocalizedField('shortDescription', loc, e.target.value)} rows="3" placeholder={loc === 'ua' ? '' : t('eventsAdmin.form.placeholders.autoTranslated')} />
                 </label>
               ))}
             </div>
 
             <div style={{ marginTop: '1.5rem' }}>
-              <strong>{ui.fullDescription}</strong>
+              <strong>{t('eventsAdmin.form.fields.fullDescription')}</strong>
               <div className="locale-tabs" style={{ margin: '6px 0' }}>
                 {['ua', 'ru', 'en'].map((loc) => (
                   <button type="button" key={loc} className={`locale-tab ${activeLocale === loc ? 'active' : ''}`} onClick={() => setActiveLocale(loc)}>{loc.toUpperCase()}</button>
@@ -819,14 +703,14 @@ export default function EventsPage() {
                   <RichEditor
                     value={form.fullDescription[loc]}
                     onChange={(html) => setLocalizedField('fullDescription', loc, html)}
-                    placeholder={loc === 'ua' ? ui.fullDescriptionUa : ui.autoTranslated}
+                    placeholder={loc === 'ua' ? t('eventsAdmin.form.placeholders.fullDescriptionUa') : t('eventsAdmin.form.placeholders.autoTranslated')}
                   />
                 </div>
               ))}
             </div>
 
             <div style={{ marginTop: '1.5rem' }}>
-              <strong>{ui.posterUrl}</strong>
+              <strong>{t('eventsAdmin.form.fields.posterUrl')}</strong>
               <div style={{ marginTop: 8 }}>
                 {form.posterImage ? (
                   <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -835,13 +719,13 @@ export default function EventsPage() {
                   </div>
                 ) : (
                   <label className="btn btn-secondary btn-small" style={{ cursor: 'pointer' }}>
-                    {posterUploadState.status === 'uploading' ? 'Uploading…' : ui.uploadPoster}
+                    {posterUploadState.status === 'uploading' ? t('common.uploading') : t('eventsAdmin.form.posterUpload')}
                     <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} disabled={posterUploadState.status === 'uploading'} onChange={(e) => { handlePosterUpload(e.target.files[0]); e.target.value = ''; }} />
                   </label>
                 )}
                 <div style={{ marginTop: 4 }}>
                   <button type="button" className="btn-link btn-small" onClick={() => setShowPosterUrl(!showPosterUrl)}>
-                    {showPosterUrl ? ui.posterUrl : 'або вставте URL'}
+                    {showPosterUrl ? t('eventsAdmin.form.fields.posterUrl') : t('eventsAdmin.orPasteUrl')}
                   </button>
                   {showPosterUrl ? (
                     <input value={form.posterImage} onChange={(e) => { setForm({ ...form, posterImage: e.target.value }); markDirty(); }} placeholder="https://..." style={{ marginTop: 4 }} />
@@ -852,23 +736,23 @@ export default function EventsPage() {
 
             <div className="grid-two-col" style={{ marginTop: '1.5rem' }}>
               <label>
-                {ui.ticketUrl}
+                {t('eventsAdmin.form.fields.ticketUrl')}
                 <input value={form.ticketUrl} onChange={(event) => { setForm({ ...form, ticketUrl: event.target.value }); markDirty(); }} placeholder="https://tickets.example.com" />
               </label>
               <label className="menu-admin-checkbox" style={{ marginTop: 28 }}>
                 <input type="checkbox" checked={form.isFeatured} onChange={(event) => { setForm({ ...form, isFeatured: event.target.checked }); markDirty(); }} />
-                <span>{ui.featured}</span>
+                <span>{t('eventsAdmin.form.fields.featured')}</span>
               </label>
             </div>
 
             {editId ? (
               <>
                 <div className="admin-section-divider" style={{ marginTop: '1.5rem' }}>
-                  <hr /><span>{ui.sectionTicketTypes || 'Тарифы квитків'}</span>
+                  <hr /><span>{t('eventsAdmin.sectionTicketTypes')}</span>
                 </div>
 
                 {ticketTypes.length === 0 ? (
-                  <p className="muted" style={{ margin: '8px 0', fontSize: 13 }}>{ui.noTicketTypes || 'Нет тарифов'}</p>
+                  <p className="muted" style={{ margin: '8px 0', fontSize: 13 }}>{t('eventsAdmin.noTicketTypes')}</p>
                 ) : (
                   <div style={{ margin: '8px 0' }}>
                     {ticketTypes.map((tt) => {
@@ -877,15 +761,15 @@ export default function EventsPage() {
                       return (
                         <div key={tt.id} className="admin-inline-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: 13 }}>
                           <span>
-                            {localizeField(tt.name, language)} · {Number(tt.price).toFixed(2)} UAH · {ui.sold || 'sold'} {tt.soldCount ?? 0}/{tt.capacity ?? '∞'}
+                            {localizeField(tt.name, language)} · {Number(tt.price).toFixed(2)} UAH ·                             {t('eventsAdmin.sold')} {tt.soldCount ?? 0}/{tt.capacity ?? '∞'}
                             {sessionDate ? ` · ${sessionDate}` : ''}
                           </span>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <button type="button" className="btn-link btn-small" onClick={() => toggleTicketType(tt.id, !tt.isActive)} style={{ color: tt.isActive ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                              {tt.isActive ? (ui.hide || 'Hide') : (ui.show || 'Show')}
+                              {tt.isActive ? t('eventsAdmin.hide') : t('eventsAdmin.show')}
                             </button>
-                            <button type="button" className="btn-link btn-small" onClick={() => handleEditTicketType(tt.id)}>{t('admin.edit')}</button>
-                            <button type="button" className="btn-link btn-small btn-link-danger" onClick={() => { if (window.confirm('Delete this tariff?')) deleteTicketType(tt.id); }}>{t('admin.delete')}</button>
+                            <button type="button" className="btn-link btn-small" onClick={() => handleEditTicketType(tt.id)}>{t('common.edit')}</button>
+                            <button type="button" className="btn-link btn-small btn-link-danger" onClick={() => { if (window.confirm(t('eventsAdmin.errors.confirmDeleteTariff'))) deleteTicketType(tt.id); }}>{t('common.delete')}</button>
                           </div>
                         </div>
                       );
@@ -895,21 +779,21 @@ export default function EventsPage() {
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end', marginTop: 8 }}>
                   <label style={{ flex: '1 0 140px' }}>
-                    {t('eventsAdmin.form.fields.name') || 'Name'} (UA) <span className="required">*</span>
+                    {t('eventsAdmin.form.fields.name')} (UA) <span className="required">*</span>
                     <input value={typeForm.name.ua} onChange={(e) => setTypeForm({ ...typeForm, name: { ...typeForm.name, ua: e.target.value } })} required style={{ fontSize: 12 }} />
                   </label>
                   <label style={{ flex: '1 0 140px' }}>
-                    {t('eventsAdmin.form.fields.price') || 'Price'} <span className="required">*</span>
+                    {t('eventsAdmin.form.fields.price')} <span className="required">*</span>
                     <input type="number" step="0.01" min="0" value={typeForm.price} onChange={(e) => setTypeForm({ ...typeForm, price: e.target.value })} required style={{ fontSize: 12 }} />
                   </label>
                   <label style={{ flex: '0 0 100px' }}>
-                    {t('eventsAdmin.form.fields.capacity') || 'Capacity'}
+                    {t('eventsAdmin.form.fields.capacity')}
                     <input type="number" min="0" value={typeForm.capacity} onChange={(e) => setTypeForm({ ...typeForm, capacity: e.target.value })} style={{ fontSize: 12 }} />
                   </label>
                   <label style={{ flex: '1 0 140px' }}>
-                    {t('eventsAdmin.form.fields.session') || 'Session'}
+                    {t('eventsAdmin.form.fields.session')}
                     <select value={typeForm.eventSessionId} onChange={(e) => setTypeForm({ ...typeForm, eventSessionId: e.target.value })} style={{ fontSize: 12 }}>
-                      <option value="">{t('admin.all') || 'All'}</option>
+                      <option value="">{t('common.all')}</option>
                       {sessions.map((s) => (
                         <option key={s.id} value={s.id}>
                           {formatDateTime(s.startsAt, language === 'ua' ? 'uk-UA' : language === 'ru' ? 'ru-RU' : 'en-US')}
@@ -919,7 +803,7 @@ export default function EventsPage() {
                   </label>
                   <div style={{ display: 'flex', gap: 4, marginBottom: 2 }}>
                     <button type="button" className="btn btn-small" disabled={typesSaving} onClick={saveTicketType}>
-                      {typesSaving ? t('eventsAdmin.form.saving') : (editingTypeId ? (t('admin.save') || 'Save') : (t('admin.create') || 'Create'))}
+                      {typesSaving ? t('eventsAdmin.form.saving') : (editingTypeId ? t('common.save') : t('common.create'))}
                     </button>
                     {editingTypeId ? (
                       <button type="button" className="btn btn-small btn-secondary" onClick={() => { setEditingTypeId(null); setTypeForm({ name: { ua: '', ru: '', en: '' }, price: '', capacity: '', eventSessionId: '' }); }}>
@@ -933,18 +817,18 @@ export default function EventsPage() {
 
             <div className="actions compact" style={{ marginTop: '1.5rem' }}>
               <button type="button" className="btn btn-secondary btn-small" onClick={autoTranslateAll} disabled={!!Object.values(translating).some(Boolean)}>
-                {Object.values(translating).some(Boolean) ? ui.translating : ui.translateAll}
+                {Object.values(translating).some(Boolean) ? t('eventsAdmin.form.translating') : t('eventsAdmin.form.translate')}
               </button>
             </div>
 
             <div className="actions" style={{ marginTop: '0.5rem' }}>
               <button type="submit" className="btn" disabled={!!savingKey}>
-                {savingKey === 'event-form' ? t('eventsAdmin.form.saving') : (editId ? ui.saveChanges : ui.createEvent)}
+                {savingKey === 'event-form' ? t('eventsAdmin.form.saving') : (editId ? t('eventsAdmin.form.save') : t('eventsAdmin.form.create'))}
               </button>
               {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>{t('eventsAdmin.form.cancel')}</button> : null}
               {publicPreviewHref ? (
                 <a className="btn btn-secondary" href={publicPreviewHref} target="_blank" rel="noreferrer">
-                  {ui.openPublic}
+                  {t('eventsAdmin.form.openPublic')}
                 </a>
               ) : null}
             </div>
@@ -953,33 +837,33 @@ export default function EventsPage() {
           </form>
         </PanelCard>
 
-        <PanelCard title={ui.preview} subtitle="">
+        <PanelCard title={t('eventsAdmin.form.preview')} subtitle="">
           <div className="menu-admin-image-preview" style={{ width: '100%', maxWidth: 360 }}>
-            <img src={form.posterImage || '/icons/lebedi.jpg'} alt={localizeField(form.title, language) || ui.preview} />
+            <img src={form.posterImage || '/icons/lebedi.jpg'} alt={localizeField(form.title, language) || t('eventsAdmin.form.preview')} />
           </div>
 
           <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
             <div className="menu-admin-badges">
               <span className="status-pill neutral">{t(`eventsAdmin.statusOptions.${form.status}`)}</span>
               <span className="status-pill neutral">{t(`eventsAdmin.ctaOptions.${form.ctaType}`)}</span>
-              {form.isFeatured ? <span className="status-pill success">{ui.featured}</span> : null}
+              {form.isFeatured ? <span className="status-pill success">{t('eventsAdmin.form.fields.featured')}</span> : null}
             </div>
-            <h3>{localizeField(form.title, language) || ui.previewTitle}</h3>
+            <h3>{localizeField(form.title, language) || t('eventsAdmin.form.previewTitle')}</h3>
             {form.startAt ? (
               <p className="muted">
                 {formatDateTime(fromDateTimeLocal(form.startAt), language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}
                 {form.endAt ? ` - ${formatDateTime(fromDateTimeLocal(form.endAt), language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US'))}` : ''}
               </p>
             ) : null}
-            <p className="muted">{localizeField(form.shortDescription, language) || ui.previewDescription}</p>
+            <p className="muted">{localizeField(form.shortDescription, language) || t('eventsAdmin.form.previewDescription')}</p>
             {localizeField(form.fullDescription, language) ? <p>{localizeField(form.fullDescription, language)}</p> : null}
-            {form.ticketUrl ? <p><strong>{ui.ticketUrl}:</strong> {form.ticketUrl}</p> : null}
+            {form.ticketUrl ? <p><strong>{t('eventsAdmin.form.fields.ticketUrl')}:</strong> {form.ticketUrl}</p> : null}
             {publicPreviewHref ? (
               <a href={publicPreviewHref} target="_blank" rel="noreferrer" className="text-link">
                 /events/{form.slug}
               </a>
             ) : (
-              <p className="muted">{ui.previewHint}</p>
+              <p className="muted">{t('eventsAdmin.form.previewHint')}</p>
             )}
           </div>
         </PanelCard>

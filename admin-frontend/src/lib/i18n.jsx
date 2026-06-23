@@ -25,7 +25,16 @@ const translations = {
       deleted: 'Видалено',
       noItems: 'Немає даних',
       id: 'ID',
-      total: 'Всього'
+      total: 'Всього',
+      edit: 'Редагувати',
+      delete: 'Видалити',
+      save: 'Зберегти',
+      create: 'Створити',
+      all: 'Всі',
+      or: 'або',
+      uploading: 'Завантаження…',
+      lock: 'Заблокувати',
+      unlock: 'Розблокувати'
     },
     install: {
       title: 'Встановити адмінку',
@@ -159,6 +168,109 @@ const translations = {
       viewToggle: {
         table: 'Таблиця',
         kanban: 'Дошка'
+      },
+      management: {
+        title: 'Position management',
+        description: 'Deposits, availability, photo and manual booking',
+        helpText: 'This block works in the selected date or event scope and keeps static settings separate from per-scope overrides.',
+        openMap: 'Open map page',
+        scopeDate: 'Scope date',
+        event: 'Event',
+        noEvent: 'No event scope',
+        map: 'Map',
+        allMaps: 'All maps',
+        zone: 'Zone',
+        allZones: 'All zones',
+        search: 'Search',
+        searchPlaceholder: 'Code, map, zone, service',
+        scopeLabel: 'Scope: {scopeInfo} · {scopeDate}',
+        scopeDateLabel: 'date',
+        scopeEvent: 'event #{id}',
+        loading: 'Loading positions...',
+        empty: 'No position types in this scope.',
+        selectedType: 'Selected type',
+        specificPosition: 'Specific position',
+        codesInType: 'Codes in type: {codes}',
+        columns: {
+          type: 'Type',
+          mapZone: 'Map / zone',
+          capacity: 'Capacity',
+          effective: 'Effective',
+          bookings: 'Bookings',
+          pcs: 'pcs',
+          deposit: 'Deposit: {amount}',
+          confirmed: 'Confirmed: {count}'
+        },
+        details: {
+          kind: 'Kind',
+          type: 'Type',
+          capacity: 'Capacity',
+          effectiveDeposit: 'Effective deposit',
+          bookingsInScope: 'Bookings in scope',
+          availability: 'Availability'
+        },
+        baseSettings: {
+          title: 'Base settings',
+          description: 'Static properties of the position. They apply outside overrides too.',
+          deposit: 'Base deposit',
+          photoUrl: 'Photo URL',
+          activeOnMap: 'Active on map',
+          bookableByDefault: 'Bookable by default',
+          uploadPhoto: 'Upload photo',
+          save: 'Save base settings',
+          saving: 'Saving...',
+          uploading: 'Uploading...'
+        },
+        overrideSettings: {
+          title: 'Scope override',
+          description: 'Applied to {scope} with higher priority than base settings.',
+          enableOverride: 'Enable override in this scope',
+          deposit: 'Override deposit',
+          photoUrl: 'Override photo URL',
+          activeInScope: 'Active in this scope',
+          bookableInScope: 'Bookable in this scope',
+          note: 'Note',
+          save: 'Save override',
+          saving: 'Saving...',
+          remove: 'Remove override',
+          removing: 'Removing...'
+        },
+        manualBooking: {
+          title: 'Manual booking',
+          closeForm: 'Close form',
+          createBooking: 'Create booking',
+          guestName: 'Guest name',
+          phone: 'Phone',
+          email: 'Email',
+          guests: 'Guests',
+          date: 'Date',
+          start: 'Start',
+          end: 'End',
+          source: 'Source',
+          status: 'Status',
+          depositRequired: 'Deposit required',
+          depositAmount: 'Deposit amount',
+          guestComment: 'Guest comment',
+          adminComment: 'Admin comment',
+          saving: 'Saving...',
+          create: 'Create booking'
+        },
+        errors: {
+          loadPositions: 'Unable to load positions.',
+          saveBase: 'Unable to save base settings.',
+          saveOverride: 'Unable to save override.',
+          deleteOverride: 'Unable to delete override.',
+          uploadPhoto: 'Unable to upload photo.',
+          createReservation: 'Unable to create reservation.'
+        },
+        feedback: {
+          baseSaved: 'Base settings saved.',
+          overrideDisabled: 'Override is disabled.',
+          overrideRemoved: 'Override removed.',
+          overrideSaved: 'Override saved.',
+          photoUploaded: 'Photo uploaded. Save base settings to apply it.',
+          reservationCreated: 'Reservation created.'
+        }
       }
     },
     reservationDetail: {
@@ -191,21 +303,37 @@ const translations = {
         startTime: 'Час початку',
         table: 'Стіл',
         zone: 'Зона',
-        status: 'Статус'
+        status: 'Статус',
+        map: 'Карта',
+        deposit: 'Депозит',
+        row: 'Ряд'
       }
     },
     reservationMeta: {
       mode: {
         DAY: 'День',
         EVENING: 'Вечір',
-        WINTER: 'Зима'
+        WINTER: 'Зима',
+        EVENT: 'Подія'
       },
       place: {
         TABLE: 'Стіл',
         SUNBED: 'Шезлонг',
         BUNGALOW: 'Бунгало',
+        KROVAT: 'Ліжко',
         PIER: 'Пірс',
+        RESTAURANT: 'Ресторан',
+        TERRACE: 'Тераса',
         EVENT: 'Квиток'
+      },
+      bookingKind: {
+        BEACH: 'Пляжна послуга',
+        TABLE: 'Стіл'
+      },
+      availability: {
+        hidden: 'Сховано',
+        closed: 'Закрито',
+        available: 'Доступно'
       }
     },
     mapEditor: {
@@ -550,9 +678,52 @@ const translations = {
           fullDescriptionUa: 'Повний опис українською...',
           fullDescriptionRu: 'Повний опис російською...',
           fullDescriptionEn: 'Full description in English...',
-          ticketUrl: 'https://tickets.example.com'
+          ticketUrl: 'https://tickets.example.com',
+          fillUaFirst: 'Спочатку заповніть поле UA для перекладу.'
+        },
+        discardConfirm: 'Є незбережені зміни. Скасувати?',
+        deleteBlocked: 'Не можна видалити подію, бо до неї вже привʼязані продажі квитків або видані квитки. Перенесіть її в архів або спочатку приберіть повʼязані квиткові дані.',
+        previewTitle: 'Назва події',
+        previewDescription: 'Короткий опис з’явиться тут.',
+        previewHint: 'Збережіть подію, щоб відкрити її публічну сторінку.',
+        sessionSaved: 'Дату оновлено.',
+        sessionAdded: 'Дату додано.',
+        sessionDeleted: 'Дату видалено.',
+        tariffSaved: 'Тариф оновлено.',
+        tariffCreated: 'Тариф створено.',
+        tariffDeleted: 'Тариф видалено.',
+        tariffUpdated: 'Тариф оновлено.',
+        translationUpdated: 'Переклад оновлено.',
+        posterUploaded: 'Постер завантажено.',
+        fields: {
+          title: 'Назва',
+          slug: 'Посилання (slug)',
+          start: 'Початок',
+          end: 'Кінець',
+          status: 'Статус',
+          cta: 'Кнопка (CTA)',
+          shortDescription: 'Короткий опис',
+          fullDescription: 'Повний опис',
+          posterUrl: 'URL постера',
+          ticketUrl: 'URL квитків',
+          featured: 'Вибранa подія',
+          name: 'Назва',
+          price: 'Ціна',
+          capacity: 'Місткість',
+          session: 'Дата',
+          active: 'Активний'
         }
       },
+      sectionSessions: 'Даты проведения',
+      noSessions: 'Немає дат',
+      sectionTicketTypes: 'Тарифи квитків',
+      noTicketTypes: 'Немає тарифів',
+      sold: 'продано',
+      hide: 'Приховати',
+      show: 'Показати',
+      sessions: 'дати',
+      tariffs: 'тарифів',
+      orPasteUrl: 'або вставте URL',
       statusOptions: {
         DRAFT: 'Чернетка',
         PUBLISHED: 'Опубліковано',
@@ -562,6 +733,87 @@ const translations = {
         BOOKING: 'Бронювання',
         TICKETS: 'Квитки',
         BOTH: 'Обидва'
+      },
+      errors: {
+        load: 'Не вдалося завантажити події.',
+        save: 'Не вдалося зберегти подію.',
+        delete: 'Не вдалося видалити подію.',
+        upload: 'Не вдалося завантажити постер.',
+        saveSession: 'Не вдалося зберегти дату.',
+        deleteSession: 'Не вдалося видалити дату.',
+        saveTariff: 'Не вдалося зберегти тариф.',
+        deleteTariff: 'Не вдалося видалити тариф.',
+        updateTariff: 'Не вдалося оновити тариф.',
+        confirmDeleteSession: 'Видалити цю дату?',
+        confirmDeleteTariff: 'Видалити цей тариф?',
+        translation: 'Не вдалося виконати переклад.'
+      },
+      columns: {
+        title: 'Подія',
+        start: 'Початок',
+        status: 'Статус',
+        actions: 'Дії',
+        tickets: 'Квитки',
+        ticketsInfo: '{sessions} дат · {tariffs} тарифів'
+      }
+    },
+    positionTypes: {
+      title: 'Позиції',
+      description: 'Типи позицій: бунгало, ліжка, пірс, столи, тераса тощо',
+      loading: 'Завантаження...',
+      empty: 'Поки немає типів позицій.',
+      currency: 'грн',
+      form: {
+        edit: 'Редагувати тип',
+        create: 'Додати тип',
+        save: 'Зберегти',
+        saving: 'Зберігаємо...',
+        cancel: 'Скасувати',
+        fields: {
+          value: 'Value',
+          code: 'Code',
+          name: 'Назва',
+          description: 'Опис',
+          photo: 'Фото',
+          requiresSide: 'Потрібна сторона',
+          bookingKind: 'Тип бронювання',
+          sortOrder: 'Сортування',
+          isActive: 'Активно',
+          defaultPrice: 'Ціна за замовчуванням',
+          defaultDeposit: 'Депозит за замовчуванням',
+          changePhoto: 'Змінити',
+          uploadPhoto: 'Завантажити',
+        },
+        placeholders: {
+          defaultPrice: 'Наприклад: 1000',
+          defaultDeposit: 'Наприклад: 200',
+        }
+      },
+      columns: {
+        value: 'Value',
+        name: 'Name (UA)',
+        code: 'Code',
+        photo: 'Фото',
+        price: 'Ціна',
+        deposit: 'Депозит',
+        kind: 'Kind',
+        sort: 'Sort',
+        active: 'Active',
+      },
+      errors: {
+        save: 'Не вдалося зберегти.',
+        delete: 'Не вдалося видалити.',
+        upload: 'Не вдалося завантажити.',
+        confirmDelete: 'Видалити цей тип позиції?',
+      },
+      feedback: {
+        saved: 'Тип оновлено.',
+        created: 'Тип створено.',
+        deleted: 'Тип видалено.',
+      },
+      bookingKind: {
+        BEACH: 'Пляж (BEACH)',
+        TABLE: 'Стіл (TABLE)',
       }
     },
     newsAdmin: {
@@ -757,7 +1009,16 @@ const translations = {
       deleted: 'Удалено',
       noItems: 'Нет данных',
       id: 'ID',
-      total: 'Всего'
+      total: 'Всего',
+      edit: 'Редактировать',
+      delete: 'Удалить',
+      save: 'Сохранить',
+      create: 'Создать',
+      all: 'Все',
+      or: 'или',
+      uploading: 'Загрузка…',
+      lock: 'Заблокировать',
+      unlock: 'Разблокировать'
     },
     roles: {
       seo_smm: 'SEO/SMM',
@@ -838,7 +1099,16 @@ const translations = {
       deleted: 'Deleted',
       noItems: 'No data',
       id: 'ID',
-      total: 'Total'
+      total: 'Total',
+      edit: 'Edit',
+      delete: 'Delete',
+      save: 'Save',
+      create: 'Create',
+      all: 'All',
+      or: 'or',
+      uploading: 'Uploading…',
+      lock: 'Lock',
+      unlock: 'Unlock'
     },
     roles: {
       seo_smm: 'SEO/SMM',

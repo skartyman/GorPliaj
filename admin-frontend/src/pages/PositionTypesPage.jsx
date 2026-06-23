@@ -14,7 +14,7 @@ const EMPTY_FORM = {
 };
 
 export default function PositionTypesPage() {
-  const { language } = useAdminI18n();
+  const { t, language } = useAdminI18n();
   const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -65,9 +65,9 @@ export default function PositionTypesPage() {
       if (response.ok && body.url) {
         setForm((current) => ({ ...current, photoUrl: body.url }));
       } else {
-        alert(body?.message || 'Upload failed');
+        alert(body?.message || t('positionTypes.errors.upload'));
       }
-    } catch { alert('Upload failed'); }
+    } catch { alert(t('positionTypes.errors.upload')); }
     finally { setUploadingField(null); }
   }
 
@@ -84,41 +84,40 @@ export default function PositionTypesPage() {
     const method = editId ? 'PATCH' : 'POST';
     const { response, body } = await apiRequest(path, { method, body: JSON.stringify(payload) });
     setSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to save' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('positionTypes.errors.save') }); return; }
     await loadTypes();
     resetForm();
-    setFeedback({ tone: 'success', message: editId ? 'Type updated' : 'Type created' });
+    setFeedback({ tone: 'success', message: editId ? t('positionTypes.feedback.saved') : t('positionTypes.feedback.created') });
   }
 
   async function removeType(id) {
-    if (!window.confirm('Delete this position type?')) return;
+    if (!window.confirm(t('positionTypes.errors.confirmDelete'))) return;
     setSaving(true);
     const { response, body } = await apiRequest(`/api/admin/position-types/${id}`, { method: 'DELETE' });
     setSaving(false);
-    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || 'Failed to delete' }); return; }
+    if (!response.ok) { setFeedback({ tone: 'error', message: body.message || t('positionTypes.errors.delete') }); return; }
     await loadTypes();
-    setFeedback({ tone: 'success', message: 'Type deleted' });
+    setFeedback({ tone: 'success', message: t('positionTypes.feedback.deleted') });
   }
 
   const isBeach = form.bookingKind === 'BEACH';
-  const currencyLabel = isBeach ? 'грн' : 'грн';
 
   const columns = [
-    { key: 'value', label: 'Value', render: (row) => <strong>{row.value}</strong> },
-    { key: 'name', label: 'Name (UA)', render: (row) => row.name?.ua || '' },
-    { key: 'code', label: 'Code', render: (row) => row.code },
-    { key: 'photoUrl', label: 'Фото', render: (row) => row.photoUrl ? <img src={row.photoUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '—' },
-    { key: 'defaultPrice', label: 'Ціна', render: (row) => row.defaultPrice ? `${Number(row.defaultPrice).toFixed(0)} грн` : '—' },
-    { key: 'defaultDeposit', label: 'Депозит', render: (row) => row.defaultDeposit ? `${Number(row.defaultDeposit).toFixed(0)} грн` : '—' },
-    { key: 'bookingKind', label: 'Kind', render: (row) => row.bookingKind },
-    { key: 'sortOrder', label: 'Sort', render: (row) => row.sortOrder },
-    { key: 'isActive', label: 'Active', render: (row) => row.isActive ? '✓' : '—' },
+    { key: 'value', label: t('positionTypes.columns.value'), render: (row) => <strong>{row.value}</strong> },
+    { key: 'name', label: t('positionTypes.columns.name'), render: (row) => row.name?.ua || '' },
+    { key: 'code', label: t('positionTypes.columns.code'), render: (row) => row.code },
+    { key: 'photoUrl', label: t('positionTypes.columns.photo'), render: (row) => row.photoUrl ? <img src={row.photoUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '—' },
+    { key: 'defaultPrice', label: t('positionTypes.columns.price'), render: (row) => row.defaultPrice ? `${Number(row.defaultPrice).toFixed(0)} ${t('positionTypes.currency')}` : '—' },
+    { key: 'defaultDeposit', label: t('positionTypes.columns.deposit'), render: (row) => row.defaultDeposit ? `${Number(row.defaultDeposit).toFixed(0)} ${t('positionTypes.currency')}` : '—' },
+    { key: 'bookingKind', label: t('positionTypes.columns.kind'), render: (row) => row.bookingKind },
+    { key: 'sortOrder', label: t('positionTypes.columns.sort'), render: (row) => row.sortOrder },
+    { key: 'isActive', label: t('positionTypes.columns.active'), render: (row) => row.isActive ? '✓' : '—' },
     {
       key: 'actions', label: '',
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>Edit</button>
-          <button type="button" className="btn btn-small btn-danger" disabled={saving} onClick={() => removeType(row.id)}>Delete</button>
+          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
+          <button type="button" className="btn btn-small btn-danger" disabled={saving} onClick={() => removeType(row.id)}>{t('common.delete')}</button>
         </div>
       )
     }
@@ -126,54 +125,54 @@ export default function PositionTypesPage() {
 
   return (
     <AdminLayout>
-      <PageContainer title="Позиції" description="Типи позицій: бунгало, ліжка, пірс, столи, тераса тощо">
+      <PageContainer title={t('positionTypes.title')} description={t('positionTypes.description')}>
         {feedback.message ? <p className={feedback.tone === 'error' ? 'error' : 'success'}>{feedback.message}</p> : null}
 
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <h4 style={{ margin: '0 0 12px' }}>{editId ? 'Редагувати тип' : 'Додати тип'}</h4>
+          <h4 style={{ margin: '0 0 12px' }}>{editId ? t('positionTypes.form.edit') : t('positionTypes.form.create')}</h4>
           <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div className="grid-two-col">
-              <label>Value <span className="required">*</span>
+              <label>{t('positionTypes.form.fields.value')} <span className="required">*</span>
                 <input value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value.toUpperCase() })} required disabled={!!editId} />
               </label>
-              <label>Code <span className="required">*</span>
+              <label>{t('positionTypes.form.fields.code')} <span className="required">*</span>
                 <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} required maxLength={5} style={{ width: 80 }} />
               </label>
             </div>
 
             <div className="grid-two-col">
-              <label>Назва (UA)
+              <label>{t('positionTypes.form.fields.name')} (UA)
                 <input value={form.name.ua} onChange={(e) => setForm({ ...form, name: { ...form.name, ua: e.target.value } })} />
               </label>
-              <label>Назва (RU)
+              <label>{t('positionTypes.form.fields.name')} (RU)
                 <input value={form.name.ru} onChange={(e) => setForm({ ...form, name: { ...form.name, ru: e.target.value } })} />
               </label>
-              <label>Назва (EN)
+              <label>{t('positionTypes.form.fields.name')} (EN)
                 <input value={form.name.en} onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })} />
               </label>
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Опис (UA)</label>
+              <label>{t('positionTypes.form.fields.description')} (UA)</label>
               <textarea value={form.description.ua} onChange={(e) => setForm({ ...form, description: { ...form.description, ua: e.target.value } })} rows="3" />
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Опис (RU)</label>
+              <label>{t('positionTypes.form.fields.description')} (RU)</label>
               <textarea value={form.description.ru} onChange={(e) => setForm({ ...form, description: { ...form.description, ru: e.target.value } })} rows="3" />
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Опис (EN)</label>
+              <label>{t('positionTypes.form.fields.description')} (EN)</label>
               <textarea value={form.description.en} onChange={(e) => setForm({ ...form, description: { ...form.description, en: e.target.value } })} rows="3" />
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Фото</label>
+              <label>{t('positionTypes.form.fields.photo')}</label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {form.photoUrl ? (
                   <img src={form.photoUrl} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--line)' }} />
                 ) : null}
                 <label className="btn btn-secondary btn-small" style={{ cursor: 'pointer' }}>
-                  {uploadingField === 'photo' ? 'Завантаження...' : (form.photoUrl ? 'Змінити' : 'Завантажити')}
+                  {uploadingField === 'photo' ? t('common.uploading') : (form.photoUrl ? t('positionTypes.form.fields.changePhoto') : t('positionTypes.form.fields.uploadPhoto'))}
                   <input type="file" accept={IMAGE_UPLOAD_ACCEPT} style={{ display: 'none' }} disabled={uploadingField === 'photo'}
                     onChange={(e) => { uploadPhoto(e.target.files?.[0]); e.target.value = ''; }} />
                 </label>
@@ -186,45 +185,45 @@ export default function PositionTypesPage() {
             <div className="grid-two-col">
               <label className="menu-admin-checkbox">
                 <input type="checkbox" checked={form.requiresSide} onChange={(e) => setForm({ ...form, requiresSide: e.target.checked })} />
-                <span>Потрібна сторона</span>
+                <span>{t('positionTypes.form.fields.requiresSide')}</span>
               </label>
               <label>
-                Тип бронювання
+                {t('positionTypes.form.fields.bookingKind')}
                 <select value={form.bookingKind} onChange={(e) => setForm({ ...form, bookingKind: e.target.value })}>
-                  <option value="BEACH">Пляж (BEACH)</option>
-                  <option value="TABLE">Стіл (TABLE)</option>
+                  <option value="BEACH">{t('positionTypes.bookingKind.BEACH')}</option>
+                  <option value="TABLE">{t('positionTypes.bookingKind.TABLE')}</option>
                 </select>
               </label>
               <label>
-                Сортування
+                {t('positionTypes.form.fields.sortOrder')}
                 <input type="number" min="0" step="1" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
               </label>
               <label className="menu-admin-checkbox" style={{ marginTop: 28 }}>
                 <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-                <span>Активно</span>
+                <span>{t('positionTypes.form.fields.isActive')}</span>
               </label>
             </div>
 
             {isBeach ? (
               <div className="form-group">
-                <label>Ціна за замовчуванням ({currencyLabel})</label>
-                <input type="number" min="0" step="0.01" value={form.defaultPrice} onChange={(e) => setForm({ ...form, defaultPrice: e.target.value })} placeholder="Наприклад: 1000" />
+                <label>{t('positionTypes.form.fields.defaultPrice')} ({t('positionTypes.currency')})</label>
+                <input type="number" min="0" step="0.01" value={form.defaultPrice} onChange={(e) => setForm({ ...form, defaultPrice: e.target.value })} placeholder={t('positionTypes.form.placeholders.defaultPrice')} />
               </div>
             ) : (
               <div className="form-group">
-                <label>Депозит за замовчуванням ({currencyLabel})</label>
-                <input type="number" min="0" step="0.01" value={form.defaultDeposit} onChange={(e) => setForm({ ...form, defaultDeposit: e.target.value })} placeholder="Наприклад: 200" />
+                <label>{t('positionTypes.form.fields.defaultDeposit')} ({t('positionTypes.currency')})</label>
+                <input type="number" min="0" step="0.01" value={form.defaultDeposit} onChange={(e) => setForm({ ...form, defaultDeposit: e.target.value })} placeholder={t('positionTypes.form.placeholders.defaultDeposit')} />
               </div>
             )}
 
             <div className="actions">
-              <button type="submit" className="btn" disabled={saving}>{saving ? 'Зберігаємо...' : (editId ? 'Зберегти' : 'Створити')}</button>
-              {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>Скасувати</button> : null}
+              <button type="submit" className="btn" disabled={saving}>{saving ? t('positionTypes.form.saving') : (editId ? t('positionTypes.form.save') : t('positionTypes.form.create'))}</button>
+              {editId ? <button type="button" className="btn btn-secondary" onClick={resetForm}>{t('positionTypes.form.cancel')}</button> : null}
             </div>
           </form>
         </div>
 
-        {loading ? <p>Завантаження...</p> : <DataTable columns={columns} rows={types} emptyText="Поки немає типів позицій." />}
+        {loading ? <p>{t('positionTypes.loading')}</p> : <DataTable columns={columns} rows={types} emptyText={t('positionTypes.empty')} />}
       </PageContainer>
     </AdminLayout>
   );
