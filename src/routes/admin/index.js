@@ -23,7 +23,10 @@ const {
   activateAdminMapController,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
-  updateAdminMapEditor
+  updateAdminMapEditor,
+  createAdminTable,
+  deleteAdminTable,
+  batchUpdateAdminTables
 } = require('../../controllers/adminController');
 const {
   getMenuCategories,
@@ -125,6 +128,9 @@ router.get('/reservation-positions', requireAdminAuth, requirePermission('reserv
 router.patch('/reservation-positions/:tableId', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationPosition);
 router.put('/reservation-positions/:tableId/override', requireAdminAuth, requirePermission('reservations:update'), upsertAdminReservationPositionOverride);
 router.delete('/reservation-positions/:tableId/override', requireAdminAuth, requirePermission('reservations:update'), deleteAdminReservationPositionOverride);
+router.post('/tables', requireAdminAuth, requirePermission('map:edit'), createAdminTable);
+router.delete('/tables/:id', requireAdminAuth, requirePermission('map:edit'), deleteAdminTable);
+router.post('/tables/batch', requireAdminAuth, requirePermission('map:edit'), batchUpdateAdminTables);
 router.get('/reservations/verify/:ticketCode', requireAdminAuth, requirePermission('reservations:verify'), verifyAdminReservation);
 router.get('/reservations/:id', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationById);
 router.post('/reservations', requireAdminAuth, createAdminReservation);

@@ -714,6 +714,62 @@ async function arriveAdminReservation(req, res) {
   }
 }
 
+async function createAdminTable(req, res) {
+  try {
+    const result = await venueTableOverrideService.createTable({
+      mapId: req.body.mapId,
+      data: req.body
+    });
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.status(201).json({ success: true, table: result.table });
+  } catch (error) {
+    console.error('[adminController.createAdminTable] Failed to create table.', error);
+    return res.status(500).json({ message: 'Unable to create position.' });
+  }
+}
+
+async function deleteAdminTable(req, res) {
+  try {
+    const result = await venueTableOverrideService.deleteTable(req.params.id);
+
+    if (result.type === 'INVALID') {
+      return res.status(400).json({ message: result.message });
+    }
+    if (result.type === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('[adminController.deleteAdminTable] Failed to delete table.', error);
+    return res.status(500).json({ message: 'Unable to delete position.' });
+  }
+}
+
+async function batchUpdateAdminTables(req, res) {
+  try {
+    const result = await venueTableOverrideService.batchUpdateTables({
+      updates: req.body.updates || []
+    });
+
+    return res.json({
+      success: result.type === 'BATCH_DONE',
+      results: result.results,
+      errors: result.errors
+    });
+  } catch (error) {
+    console.error('[adminController.batchUpdateAdminTables] Failed to batch update tables.', error);
+    return res.status(500).json({ message: 'Unable to batch update positions.' });
+  }
+}
+
 module.exports = {
   getAdminStatus,
   loginAdmin,
@@ -738,5 +794,8 @@ module.exports = {
   activateAdminMapController,
   getDefaultAdminMapEditor,
   getAdminMapEditor,
-  updateAdminMapEditor
+  updateAdminMapEditor,
+  createAdminTable,
+  deleteAdminTable,
+  batchUpdateAdminTables
 };

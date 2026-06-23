@@ -216,6 +216,58 @@ async function updateTableBaseSettings({ tableId, patch }) {
     data.photoUrl = String(patch.photoUrl || '').trim() || null;
   }
 
+  if (Object.prototype.hasOwnProperty.call(patch, 'seatsMin')) {
+    data.seatsMin = Math.max(0, Number(patch.seatsMin) || 0);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'seatsMax')) {
+    data.seatsMax = Math.max(0, Number(patch.seatsMax) || 0);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'code')) {
+    data.code = String(patch.code || '').trim() || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
+    data.name = typeof patch.name === 'object' ? patch.name : { ua: String(patch.name || ''), ru: String(patch.name || ''), en: String(patch.name || '') };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'zoneId')) {
+    data.zoneId = Number(patch.zoneId) || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'positionType')) {
+    data.positionType = String(patch.positionType || '').trim() || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'positionSide')) {
+    data.positionSide = String(patch.positionSide || '').trim() || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'rowId')) {
+    data.rowId = Number(patch.rowId) || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'bookingKind')) {
+    data.bookingKind = String(patch.bookingKind || '').trim().toUpperCase() || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'sortOrder')) {
+    data.sortOrder = Number(patch.sortOrder) || 0;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'serviceName')) {
+    data.serviceName = typeof patch.serviceName === 'object' ? patch.serviceName : { ua: String(patch.serviceName || ''), ru: String(patch.serviceName || ''), en: String(patch.serviceName || '') };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'serviceDescription')) {
+    data.serviceDescription = typeof patch.serviceDescription === 'object' ? patch.serviceDescription : { ua: String(patch.serviceDescription || ''), ru: String(patch.serviceDescription || ''), en: String(patch.serviceDescription || '') };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'mapId')) {
+    data.mapId = Number(patch.mapId) || null;
+  }
+
   if (!Object.keys(data).length) {
     return { type: 'INVALID', message: 'No editable fields were provided.' };
   }
@@ -566,8 +618,104 @@ async function listReservationPositionsManagement({
   };
 }
 
+async function createTable({ mapId, data }) {
+  const normalizedMapId = Number(mapId || 0);
+  if (!Number.isInteger(normalizedMapId) || normalizedMapId <= 0) {
+    return { type: 'INVALID', message: 'Map id is invalid.' };
+  }
+
+  const map = await prisma.map.findUnique({ where: { id: normalizedMapId }, select: { id: true } });
+  if (!map) {
+    return { type: 'NOT_FOUND', message: 'Map not found.' };
+  }
+
+  const tableData = {
+    mapId: normalizedMapId,
+    name: data.name || { ua: '', ru: '', en: '' },
+    code: String(data.code || '').trim() || null,
+    bookingKind: String(data.bookingKind || 'TABLE').trim().toUpperCase(),
+    positionType: String(data.positionType || '').trim() || null,
+    positionSide: String(data.positionSide || '').trim() || null,
+    zoneId: Number(data.zoneId) || null,
+    rowId: Number(data.rowId) || null,
+    seatsMin: Math.max(0, Number(data.seatsMin) || 0),
+    seatsMax: Math.max(0, Number(data.seatsMax) || 0),
+    deposit: Number(data.deposit) || 0,
+    isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+    isBookable: data.isBookable !== undefined ? Boolean(data.isBookable) : true,
+    sortOrder: Number(data.sortOrder) || 0,
+    photoUrl: String(data.photoUrl || '').trim() || null,
+    serviceName: data.serviceName || { ua: '', ru: '', en: '' },
+    serviceDescription: data.serviceDescription || { ua: '', ru: '', en: '' }
+  };
+
+  try {
+    const table = await prisma.venueTable.create({
+      data: tableData,
+      include: {
+        map: { select: { id: true, name: true, usageMode: true } },
+        zone: { select: { id: true, name: true, color: true } }
+      }
+    });
+
+    return { type: 'CREATED', table };
+  } catch (error) {
+    console.error('[venueTableOverrideService.createTable] Failed to create table.', error);
+    return { type: 'INVALID', message: 'Unable to create position.' };
+  }
+}
+
+async function deleteTable(tableId) {
+  const id = Number(tableId || 0);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { type: 'INVALID', message: 'Position id is invalid.' };
+  }
+
+  try {
+    await prisma.venueTable.delete({ where: { id } });
+    return { type: 'DELETED' };
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return { type: 'NOT_FOUND', message: 'Position not found.' };
+    }
+    if (error.code === 'P2003') {
+      return { type: 'INVALID', message: 'Cannot delete position with active reservations.' };
+    }
+    throw error;
+  }
+}
+
+async function batchUpdateTables({ updates }) {
+  if (!Array.isArray(updates) || !updates.length) {
+    return { type: 'INVALID', message: 'Updates array is required.' };
+  }
+
+  const results = [];
+  const errors = [];
+
+  for (const item of updates) {
+    const { id, ...patch } = item;
+    if (!id) {
+      errors.push({ id: null, message: 'Missing position id.' });
+      continue;
+    }
+
+    const result = await updateTableBaseSettings({ tableId: id, patch });
+    if (result.type === 'UPDATED') {
+      results.push(result.table);
+    } else {
+      errors.push({ id, message: result.message });
+    }
+  }
+
+  return { type: 'BATCH_DONE', results, errors };
+}
+
 module.exports = {
   applyOverrideToTable,
+  batchUpdateTables,
+  createTable,
+  deleteTable,
   deleteTableOverride,
   findApplicableOverrides,
   getEffectiveTable,

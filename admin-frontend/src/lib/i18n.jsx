@@ -54,7 +54,8 @@ const translations = {
       ticketSales: 'Продаж квитків',
       verifyTicket: 'Квитки',
       users: 'Користувачі',
-      settings: 'Налаштування'
+      settings: 'Налаштування',
+      positions: 'Позиції'
     },
     login: {
       eyebrow: 'Доступ до адмінки',
@@ -755,6 +756,76 @@ const translations = {
         actions: 'Дії',
         tickets: 'Квитки',
         ticketsInfo: '{sessions} дат · {tariffs} тарифів'
+      }
+    },
+    positions: {
+      title: 'Позиції',
+      description: 'Управління всіма позиціями: столами, шезлонгами, ліжками тощо',
+      loading: 'Завантаження...',
+      empty: 'Позицій не знайдено.',
+      saving: 'Зберігаємо...',
+      saved: 'Збережено',
+      deleted: 'Видалено',
+      create: 'Створити позицію',
+      deleteConfirm: 'Видалити цю позицію?',
+      bulk: {
+        setDeposit: 'Встановити депозит',
+        setPrice: 'Встановити ціну',
+        setZone: 'Призначити зону',
+        setActive: 'Активувати',
+        setInactive: 'Деактивувати',
+        setBookingKind: 'Змінити тип бронювання',
+        apply: 'Застосувати',
+        selected: 'Вибрано: {count}',
+        noSelection: 'Не вибрано жодної позиції'
+      },
+      columns: {
+        code: 'Код',
+        name: 'Назва',
+        positionType: 'Тип',
+        zone: 'Зона',
+        bookingKind: 'Тип бронювання',
+        seats: 'Місця',
+        deposit: 'Депозит',
+        active: 'Активний',
+        actions: 'Дії'
+      },
+      filters: {
+        map: 'Карта',
+        zone: 'Зона',
+        positionType: 'Тип позиції',
+        bookingKind: 'Тип бронювання',
+        search: 'Пошук...',
+        all: 'Всі'
+      },
+      fields: {
+        code: 'Код',
+        name: 'Назва',
+        positionType: 'Тип позиції',
+        zone: 'Зона',
+        bookingKind: 'Тип бронювання',
+        seatsMin: 'Мін. місць',
+        seatsMax: 'Макс. місць',
+        deposit: 'Депозит',
+        isActive: 'Активний',
+        isBookable: 'Доступний для броні',
+        photoUrl: 'URL фото',
+        sortOrder: 'Сортування',
+        positionSide: 'Сторона',
+        row: 'Ряд',
+        map: 'Карта'
+      },
+      errors: {
+        load: 'Не вдалося завантажити позиції.',
+        save: 'Не вдалося зберегти позицію.',
+        delete: 'Не вдалося видалити позицію.',
+        batch: 'Помилка при масовому оновленні.'
+      },
+      feedback: {
+        created: 'Позицію створено.',
+        updated: 'Позицію оновлено.',
+        deleted: 'Позицію видалено.',
+        batchDone: 'Оновлено: {ok}, помилок: {fail}'
       }
     },
     positionTypes: {
