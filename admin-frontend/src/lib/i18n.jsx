@@ -714,7 +714,7 @@ const translations = {
           active: 'Активний'
         }
       },
-      sectionSessions: 'Даты проведения',
+      sectionSessions: 'Дати проведення',
       noSessions: 'Немає дат',
       sectionTicketTypes: 'Тарифи квитків',
       noTicketTypes: 'Немає тарифів',
