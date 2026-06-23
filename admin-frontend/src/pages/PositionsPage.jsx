@@ -39,10 +39,13 @@ export default function PositionsPage() {
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [feedbackType, setFeedbackType] = useState('');
   const [filters, setFilters] = useState({ mapId: '', zoneId: '', positionType: '', bookingKind: '', search: '' });
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkAction, setBulkAction] = useState('');
   const [bulkValue, setBulkValue] = useState('');
+
+  const [allPositionTypes, setAllPositionTypes] = useState([]);
 
   async function loadPositions() {
     const params = new URLSearchParams();
@@ -63,8 +66,16 @@ export default function PositionsPage() {
     setState({ loading: false, error: '', data: body });
   }
 
+  async function loadPositionTypes() {
+    const { response, body } = await apiRequest('/api/admin/position-types');
+    if (response.ok && Array.isArray(body)) {
+      setAllPositionTypes(body.map((pt) => pt.value).filter(Boolean));
+    }
+  }
+
   useEffect(() => {
     loadPositions().catch(() => setState({ loading: false, error: t('positions.errors.load'), data: null }));
+    loadPositionTypes();
   }, [filters.mapId, filters.zoneId]);
 
   function resetForm() {
@@ -95,6 +106,7 @@ export default function PositionsPage() {
     event.preventDefault();
     setSaving(true);
     setFeedback('');
+    setFeedbackType('');
 
     let url, method;
     if (editId) {
@@ -126,10 +138,8 @@ export default function PositionsPage() {
 
     if (method === 'POST') {
       payload.mapId = Number(form.mapId) || null;
-      payload.zoneId = Number(form.zoneId) || null;
-    } else {
-      if (form.zoneId) payload.zoneId = Number(form.zoneId);
     }
+    payload.zoneId = Number(form.zoneId) || null;
 
     const { response, body } = await apiRequest(url, {
       method,
@@ -138,11 +148,13 @@ export default function PositionsPage() {
 
     if (!response.ok) {
       setFeedback(body.message || t('positions.errors.save'));
+      setFeedbackType('error');
       setSaving(false);
       return;
     }
 
     setFeedback(editId ? t('positions.feedback.updated') : t('positions.feedback.created'));
+    setFeedbackType('success');
     resetForm();
     setSaving(false);
     await loadPositions();
@@ -150,12 +162,14 @@ export default function PositionsPage() {
 
   async function removePosition(id) {
     if (!window.confirm(t('positions.deleteConfirm'))) return;
-    const { response } = await apiRequest(`/api/admin/tables/${id}`, { method: 'DELETE' });
+    const { response, body } = await apiRequest(`/api/admin/tables/${id}`, { method: 'DELETE' });
     if (response.ok) {
       setFeedback(t('positions.feedback.deleted'));
+      setFeedbackType('success');
       await loadPositions();
     } else {
-      setFeedback(t('positions.errors.delete'));
+      setFeedback(body.message || t('positions.errors.delete'));
+      setFeedbackType('error');
     }
   }
 
@@ -197,6 +211,7 @@ export default function PositionsPage() {
 
     if (!response.ok) {
       setFeedback(t('positions.errors.batch'));
+      setFeedbackType('error');
       setSaving(false);
       return;
     }
@@ -204,6 +219,7 @@ export default function PositionsPage() {
     const okCount = (body.results || []).length;
     const failCount = (body.errors || []).length;
     setFeedback(t('positions.feedback.batchDone', { ok: okCount, fail: failCount }));
+    setFeedbackType(failCount > 0 ? 'warning' : 'success');
     setSelectedIds([]);
     setBulkAction('');
     setBulkValue('');
@@ -225,7 +241,7 @@ export default function PositionsPage() {
     return true;
   });
 
-  const positionTypes = [...new Set(positions.map((p) => p.positionType).filter(Boolean))];
+  const positionTypes = allPositionTypes.length ? allPositionTypes : [...new Set(positions.map((p) => p.positionType).filter(Boolean))];
   const allZonesForFilter = [...new Map(zones.map((z) => [z.id, z]))].values();
 
   const columns = [
@@ -293,7 +309,7 @@ export default function PositionsPage() {
     <AdminLayout>
       <PageContainer title={t('positions.title')} description={t('positions.description')}>
         {feedback ? (
-          <div className="feedback-bar" style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <div className="feedback-bar" style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)', background: feedbackType === 'error' ? '#fef2f2' : feedbackType === 'warning' ? '#fffbeb' : '#f0fdf4', border: '1px solid', borderColor: feedbackType === 'error' ? '#fecaca' : feedbackType === 'warning' ? '#fde68a' : '#bbf7d0', color: feedbackType === 'error' ? '#dc2626' : feedbackType === 'warning' ? '#92400e' : '#16a34a' }}>
             {feedback}
           </div>
         ) : null}
