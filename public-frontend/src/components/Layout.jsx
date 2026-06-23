@@ -6,19 +6,47 @@ import { localizedCopy, localizeField } from '../lib/i18n';
 
 const navItems = [
   { to: '/', labelKey: 'navHome', icon: (
-    <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5z"/><path d="M9 22V12h6v10"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
   )},
   { to: '/events', labelKey: 'navEvents', icon: (
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
   )},
   { to: '/menu', labelKey: 'navMenu', icon: (
-    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="18.71 20.63 5.29 20.63 3.38 16.79 20.63 16.79"/>
+      <line x1="0.5" y1="16.79" x2="23.5" y2="16.79"/>
+      <path d="M12 6.25a9.58 9.58 0 0 1 9.58 9.58v0.96H2.42v-0.96A9.58 9.58 0 0 1 12 6.25Z"/>
+      <line x1="12" y1="3.37" x2="12" y2="6.25"/>
+      <line x1="10.08" y1="3.38" x2="13.92" y2="3.38"/>
+    </svg>
+  )},
+  { to: '/map-preview', labelKey: 'navMap', icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+      <circle cx="12" cy="10" r="3"/>
+    </svg>
   )},
   { to: '/booking', labelKey: 'navBooking', icon: (
-    <svg viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M18 8V6a6 6 0 0 0-12 0v2"/><rect x="3" y="20" width="18" height="2" rx="1"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/>
+      <polyline points="8 10 12 14 16 10"/>
+      <line x1="12" y1="2" x2="12" y2="6"/>
+    </svg>
   )},
   { to: '/about', labelKey: 'navAbout', icon: (
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="16" x2="12" y2="12"/>
+      <line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
   )}
 ];
 

@@ -24,6 +24,10 @@ async function createPositionType(input) {
     data: {
       value: String(input.value).trim().toUpperCase(),
       name: input.name,
+      description: input.description || undefined,
+      photoUrl: input.photoUrl || undefined,
+      defaultPrice: input.defaultPrice != null ? Number(input.defaultPrice) : undefined,
+      defaultDeposit: input.defaultDeposit != null ? Number(input.defaultDeposit) : undefined,
       code: String(input.code).trim().toUpperCase(),
       requiresSide: Boolean(input.requiresSide),
       bookingKind: String(input.bookingKind).trim().toUpperCase() === 'BEACH' ? 'BEACH' : 'TABLE',
@@ -43,6 +47,10 @@ async function updatePositionType(id, input) {
 
   const data = {};
   if (input.name !== undefined) data.name = input.name;
+  if (input.description !== undefined) data.description = input.description;
+  if (input.photoUrl !== undefined) data.photoUrl = input.photoUrl;
+  if (input.defaultPrice !== undefined) data.defaultPrice = input.defaultPrice != null ? Number(input.defaultPrice) : null;
+  if (input.defaultDeposit !== undefined) data.defaultDeposit = input.defaultDeposit != null ? Number(input.defaultDeposit) : null;
   if (input.code !== undefined) data.code = String(input.code).trim().toUpperCase();
   if (input.requiresSide !== undefined) data.requiresSide = Boolean(input.requiresSide);
   if (input.bookingKind !== undefined) data.bookingKind = String(input.bookingKind).trim().toUpperCase() === 'BEACH' ? 'BEACH' : 'TABLE';

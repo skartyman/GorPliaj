@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { mapApi } from '../lib/api';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { holdsApi, mapApi } from '../lib/api';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint } from '../lib/map';
 import { localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
@@ -457,7 +457,7 @@ function PublicMapObjectGraphic({ object, meta, label }) {
 
 export default function MapPage() {
   const { t, locale } = useLocale();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [state, setState] = useState({ loading: true, error: '', result: null });
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
@@ -474,11 +474,27 @@ export default function MapPage() {
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
   const transformRef = useRef(transform);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const defaultDate = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10);
+  }, []);
+  const [date, setDate] = useState(searchParams.get('date') || defaultDate);
+  const [timeFrom, setTimeFrom] = useState(searchParams.get('timeFrom') || '12:00');
+  const [guests, setGuests] = useState(Number(searchParams.get('guests') || '2'));
+  const [holdAcquiring, setHoldAcquiring] = useState(false);
+  const [holdError, setHoldError] = useState('');
 
-  const date = searchParams.get('date') || new Date().toISOString().slice(0, 10);
-  const timeFrom = searchParams.get('timeFrom') || '12:00';
-  const guests = Number(searchParams.get('guests') || '0');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search);
+    next.set('date', date);
+    next.set('timeFrom', timeFrom);
+    next.set('guests', String(guests));
+    setSearchParams(next, { replace: true });
+  }, [date, timeFrom, guests]);
+
+  useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
   const mapId = searchParams.get('mapId') || '';
   const focusTableId = Number(searchParams.get('tableId') || '0');
   const focusObjectId = Number(searchParams.get('objectId') || '0');
@@ -718,6 +734,20 @@ export default function MapPage() {
     centerOnObject(object);
   }
 
+  async function acquireHoldAndNavigate(tableId, bookingKind) {
+    setHoldAcquiring(true);
+    setHoldError('');
+    try {
+      const hold = await holdsApi.create({ tableId, date, timeFrom, locale });
+      const kindParam = bookingKind === 'BEACH' ? '&kind=BEACH' : '';
+      navigate(`/booking?date=${date}&timeFrom=${timeFrom}&guests=${guests}&bookableUnitId=table:${tableId}&mapId=${state.result.map.id}&zoneId=${selectedTable?.zoneId || selectedObjectTable?.zoneId || ''}&flow=STANDARD${kindParam}&holdToken=${hold.holdToken}&holdExpiresAt=${encodeURIComponent(hold.expiresAt)}`);
+    } catch (error) {
+      setHoldError(error.message);
+    } finally {
+      setHoldAcquiring(false);
+    }
+  }
+
   useEffect(() => {
     if (!state.result || !transform.initial) return;
 
@@ -824,6 +854,26 @@ export default function MapPage() {
         </div>
       </div>
 
+      <div className="map-filter-bar" style={{ display: 'flex', gap: 12, padding: '0 0 12px', flexWrap: 'wrap', alignItems: 'end' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
+          {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
+          <input type="date" className="form-input" value={date} min={today} onChange={(e) => setDate(e.target.value)} style={{ fontSize: '0.85rem' }} />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
+          {t('mapTime') || (locale === 'ua' ? 'Час' : locale === 'ru' ? 'Время' : 'Time')}
+          <input type="time" className="form-input" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} style={{ fontSize: '0.85rem' }} />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
+          {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
+          <input type="number" className="form-input" value={guests} min={1} max={20} onChange={(e) => setGuests(Number(e.target.value) || 0)} style={{ fontSize: '0.85rem', width: 70 }} />
+        </label>
+        {timeFrom > '13:00' ? (
+          <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
+            {locale === 'ua' ? 'Пляжні послуги — до 13:00' : locale === 'ru' ? 'Пляжные услуги — до 13:00' : 'Beach services — until 1:00 PM'}
+          </p>
+        ) : null}
+      </div>
+
       <div className="map-container map-preview-container">
         <article className="map-zone-board">
           <div className="map-controls">
@@ -915,7 +965,9 @@ export default function MapPage() {
                   />
 
                   {renderObjects.map((object) => {
-                    const table = object.type === 'TABLE' && object.tableId ? tableById.get(object.tableId) : null;
+                    const isTable = object.type === 'TABLE';
+                    const table = isTable && object.tableId ? tableById.get(object.tableId) : null;
+                    const linkedTable = !isTable && object.tableId ? tableById.get(object.tableId) : null;
                     const objectLabel = localizeField(object.label, locale) || object.type;
                     const meta = parseMetaJson(object.metaJson);
                     if (table) {
@@ -958,7 +1010,7 @@ export default function MapPage() {
                       <Component
                         key={object.id}
                         type={isSelectableObject ? 'button' : undefined}
-                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''}`}
+                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''} ${linkedTable ? linkedTable.status : ''} ${linkedTable && !tableFitsGuests(linkedTable) ? 'no-fit' : ''}`}
                         style={{
                           left: object.x,
                           top: object.y,
@@ -1021,17 +1073,29 @@ export default function MapPage() {
               <p className="muted">
                 {t('mapSeats')}: {selectedTable.seatsMin}-{selectedTable.seatsMax}
               </p>
-              <Link
-                className="btn btn-primary"
-                to={`/booking?date=${date}&guests=${searchParams.get('guests') || ''}&timeFrom=${timeFrom}&tableId=${selectedTable.id}&mapId=${state.result.map.id}&zoneId=${selectedTable.zoneId}`}
-              >
-                {t('mapGoToBooking')}
-              </Link>
+              {selectedTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                <p className="muted" style={{ color: 'var(--danger)' }}>
+                  {locale === 'ua' ? 'Пляжні послуги доступні до 13:00. Оберіть час до 13:00 або іншу дату.' : locale === 'ru' ? 'Пляжные услуги доступны до 13:00. Выберите время до 13:00 или другую дату.' : 'Beach services are bookable until 1:00 PM. Choose a time before 1:00 PM or another date.'}
+                </p>
+              ) : null}
+              {selectedTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                <span className="btn btn-primary disabled">{t('mapGoToBooking')}</span>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={holdAcquiring}
+                  onClick={() => acquireHoldAndNavigate(selectedTable.id, selectedTable.bookingKind)}
+                >
+                  {holdAcquiring ? t('mapBooking') : t('mapGoToBooking')}
+                </button>
+              )}
             </>
           ) : selectedObject ? (
             <>
               <p>
                 <strong>{selectedObjectLabel}</strong>
+                {selectedObjectTable ? <span className="muted"> ({selectedObjectTable.code})</span> : null}
               </p>
               {selectedObjectTable?.positionType ? (
                 <p className="muted">{positionTypeLabel(selectedObjectTable.positionType, locale)}</p>
@@ -1046,12 +1110,12 @@ export default function MapPage() {
               ) : null}
               {selectedObjectMeta.price !== '' && selectedObjectMeta.price !== null && selectedObjectMeta.price !== undefined ? (
                 <p className="muted">
-                  Price: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}
+                  {t('mapPrice')}: {selectedObjectMeta.price} {selectedObjectMeta.priceUnit || 'UAH'}
                 </p>
               ) : null}
               {selectedObjectTable?.deposit || selectedObjectMeta.depositRequired || selectedObjectMeta.depositAmount ? (
                 <p className="muted">
-                  Deposit: {selectedObjectTable?.deposit || selectedObjectMeta.depositAmount || 'required'} {selectedObjectTable?.deposit || selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}
+                  {t('mapDeposit')}: {selectedObjectTable?.deposit || selectedObjectMeta.depositAmount || 'required'} {selectedObjectTable?.deposit || selectedObjectMeta.depositAmount ? (selectedObjectMeta.priceUnit || 'UAH') : ''}
                 </p>
               ) : null}
               {selectedObjectTable ? (
@@ -1060,17 +1124,28 @@ export default function MapPage() {
                     {t('mapSeats')}: {selectedObjectTable.seatsMin}-{selectedObjectTable.seatsMax}
                   </p>
                   <p className="muted">
-                    Status: {selectedObjectTable.status === 'free' && tableFitsGuests(selectedObjectTable) ? t('mapFree') : t('mapBusy')}
+                    {t('mapStatus')}: {selectedObjectTable.status === 'free' && tableFitsGuests(selectedObjectTable) ? t('mapFree') : t('mapBusy')}
                   </p>
+                  {selectedObjectTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                    <p className="muted" style={{ color: 'var(--danger)' }}>
+                      {locale === 'ua' ? 'Пляжні послуги доступні до 13:00. Оберіть час до 13:00 або іншу дату.' : locale === 'ru' ? 'Пляжные услуги доступны до 13:00. Выберите время до 13:00 или другую дату.' : 'Beach services are bookable until 1:00 PM. Choose a time before 1:00 PM or another date.'}
+                    </p>
+                  ) : null}
                   {selectedObjectCanBook ? (
-                    <Link
+                    selectedObjectTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                      <span className="btn btn-primary disabled">{t('mapGoToBooking')}</span>
+                    ) : (
+                    <button
                       className="btn btn-primary"
-                      to={`/booking?date=${date}&guests=${searchParams.get('guests') || ''}&timeFrom=${timeFrom}&tableId=${selectedObjectTable.id}&mapId=${state.result.map.id}&zoneId=${selectedObjectTable.zoneId}&objectId=${selectedObject.id}`}
+                      type="button"
+                      disabled={holdAcquiring}
+                      onClick={() => acquireHoldAndNavigate(selectedObjectTable.id, selectedObjectTable.bookingKind)}
                     >
-                      {t('mapGoToBooking')}
-                    </Link>
+                      {holdAcquiring ? t('mapBooking') : t('mapGoToBooking')}
+                    </button>
+                    )
                   ) : (
-                    <p className="muted">This object is not available for the selected date, time, or guest count.</p>
+                    <p className="muted">{locale === 'ua' ? 'Ця позиція недоступна для обраної дати, часу або кількості гостей.' : locale === 'ru' ? 'Эта позиция недоступна для выбранной даты, времени или количества гостей.' : 'This object is not available for the selected date, time, or guest count.'}</p>
                   )}
                 </>
               ) : (
@@ -1080,7 +1155,7 @@ export default function MapPage() {
           ) : (
             <p className="muted">{t('mapSelectHint')}</p>
           )}
-          <p className="muted source-note">{t('mapSource')}</p>
+          {holdError ? <p className="muted" style={{ color: 'var(--danger)', marginTop: 8 }}>{holdError}</p> : null}
         </aside>
       </div>
     </>

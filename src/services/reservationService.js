@@ -1,6 +1,9 @@
+const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const venueTableOverrideService = require('./venueTableOverrideService');
+const { localizeMessage } = require('../utils/localization');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
+const HOLD_TTL_MS = 15 * 60 * 1000;
 
 function matchesGuestCapacity(target, guests) {
   const normalizedGuests = Number(guests || 0);
@@ -220,6 +223,82 @@ async function findReservationConflict({ tableId, reservationDate, timeFrom, tim
   });
 }
 
+async function findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo }) {
+  const { start, end } = getDateRange(reservationDate);
+
+  return prisma.tableHold.findFirst({
+    where: {
+      tableId,
+      reservationDate: {
+        gte: start,
+        lt: end
+      },
+      status: 'ACTIVE',
+      expiresAt: { gt: new Date() },
+      timeFrom: { lt: timeTo },
+      timeTo: { gt: timeFrom }
+    },
+    select: { id: true, holdToken: true }
+  });
+}
+
+async function createTableHold({ tableId, reservationDate, timeFrom, timeTo, locale }) {
+  const existingReservation = await findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
+  if (existingReservation) {
+    const error = new Error(localizeMessage('hold.conflict.reservation', locale));
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const existingHold = await findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo });
+  if (existingHold) {
+    const error = new Error(localizeMessage('hold.conflict.hold', locale));
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const holdToken = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+
+  const hold = await prisma.tableHold.create({
+    data: {
+      tableId,
+      reservationDate,
+      timeFrom,
+      timeTo,
+      holdToken,
+      expiresAt,
+      status: 'ACTIVE'
+    }
+  });
+
+  return { holdToken, expiresAt: hold.expiresAt };
+}
+
+async function releaseTableHold(holdToken) {
+  try {
+    await prisma.tableHold.updateMany({
+      where: { holdToken, status: 'ACTIVE' },
+      data: { status: 'RELEASED' }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function consumeTableHold(holdToken, reservationId) {
+  try {
+    await prisma.tableHold.updateMany({
+      where: { holdToken, status: 'ACTIVE' },
+      data: { status: 'CONSUMED', reservationId }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function getMapAvailability({ mapId, reservationDate, timeFrom, timeTo }) {
   const { start, end } = getDateRange(reservationDate);
 
@@ -319,6 +398,10 @@ module.exports = {
   getPublicReservationByTicketCode,
   matchesGuestCapacity,
   findReservationConflict,
+  findTableHoldConflict,
+  createTableHold,
+  releaseTableHold,
+  consumeTableHold,
   getMapAvailability,
   updateReservationStatus,
   deleteReservation

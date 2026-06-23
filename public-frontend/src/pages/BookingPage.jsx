@@ -1,9 +1,10 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { bookingsApi, eventsApi, mapApi } from '../lib/api';
+import { bookingsApi, eventsApi, holdsApi, mapApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
+
 
 function toDateOnly(value) {
   if (!value) return '';
@@ -13,6 +14,15 @@ function toDateOnly(value) {
 function toTimeOnly(value) {
   if (!value) return '';
   return new Date(value).toISOString().slice(11, 16);
+}
+
+function getDefaultTime(formDate, bookingKind) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (bookingKind !== 'TABLE' || formDate !== today) return '12:00';
+  const now = new Date();
+  const rounded = new Date(Math.ceil(now.getTime() / 900000) * 900000);
+  rounded.setMinutes(rounded.getMinutes() + 15);
+  return `${String(rounded.getHours()).padStart(2, '0')}:${String(rounded.getMinutes()).padStart(2, '0')}`;
 }
 
 function toDateKeyFromLocalDate(date) {
@@ -199,40 +209,28 @@ const BOOKING_KIND_OPTIONS = [
   }
 ];
 
-let positionTypeOptions = null;
-
-async function loadPositionTypes() {
-  try {
-    const response = await fetch('/api/admin/position-types');
-    const body = await response.json();
-    if (Array.isArray(body)) {
-      positionTypeOptions = body.reduce((map, pt) => {
-        map[pt.value?.toUpperCase()] = pt.name || { ua: pt.value, ru: pt.value, en: pt.value };
-        return map;
-      }, {});
-    }
-  } catch (e) {
-    // keep fallback
-  }
-}
-
 export default function BookingPage() {
   const { locale } = useLocale();
   const [searchParams] = useSearchParams();
   const c = (values) => localizedCopy(values, locale);
   const today = new Date().toISOString().slice(0, 10);
+  const defaultDate = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+  const currentTime = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
 
   const lockedEventSlug = searchParams.get('event') || '';
   const returnedReservationCode = searchParams.get('reservation') || '';
   const returnedReservationToken = searchParams.get('t') || '';
   const flowFromQuery = searchParams.get('flow') === 'EVENT' ? 'EVENT' : 'STANDARD';
   const lockedToEvent = Boolean(lockedEventSlug);
+  const holdToken = searchParams.get('holdToken') || '';
+  const holdExpiresAt = searchParams.get('holdExpiresAt') || '';
 
   const [bookingFlow, setBookingFlow] = useState(lockedToEvent ? 'EVENT' : flowFromQuery);
   const [selectedEventSlug, setSelectedEventSlug] = useState(lockedEventSlug);
   const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'BEACH' && !lockedToEvent ? 'BEACH' : 'TABLE');
   const [mapsState, setMapsState] = useState({ loading: true, error: '', maps: [] });
   const [unitsState, setUnitsState] = useState({ loading: false, error: '', map: null, zones: [], units: [] });
+  const [positionTypes, setPositionTypes] = useState([]);
   const [eventOptionsState, setEventOptionsState] = useState({ loading: false, error: '', events: [] });
   const [selected, setSelected] = useState({
     mapId: Number(searchParams.get('mapId') || '0'),
@@ -241,9 +239,9 @@ export default function BookingPage() {
   });
   const [selectedTypeKey, setSelectedTypeKey] = useState('');
   const [form, setForm] = useState({
-    date: searchParams.get('date') || today,
+    date: searchParams.get('date') || defaultDate,
     guests: Number(searchParams.get('guests') || '2'),
-    timeFrom: searchParams.get('timeFrom') || '12:00',
+    timeFrom: searchParams.get('timeFrom') || getDefaultTime(searchParams.get('date') || defaultDate, bookingKind),
     customerName: '',
     customerPhone: '',
     customerEmail: '',
@@ -264,6 +262,8 @@ export default function BookingPage() {
   const [eventBookingPrompt, setEventBookingPrompt] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
+  const initialBookableUnitId = useRef(searchParams.get('bookableUnitId') || '');
+  const hasAutoAdvanced = useRef(false);
 
   function canProceedFromStep() {
     if (currentStep === 1) {
@@ -273,6 +273,8 @@ export default function BookingPage() {
     if (currentStep === 2) {
       if (!form.date || !form.guests || form.guests < 1) return false;
       if (bookingFlow !== 'EVENT' && !form.timeFrom) return false;
+      if (resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00') return false;
+      if (resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime) return false;
       return true;
     }
     if (currentStep === 3) {
@@ -338,7 +340,11 @@ export default function BookingPage() {
   );
 
   useEffect(() => {
-    loadPositionTypes();
+    fetch('/api/position-types')
+      .then((r) => r.json())
+      .then((body) => { if (Array.isArray(body)) setPositionTypes(body); })
+      .catch(() => {});
+
     let cancelled = false;
     setEventOptionsState((current) => ({ ...current, loading: true, error: '' }));
 
@@ -567,6 +573,15 @@ export default function BookingPage() {
   );
 
   useEffect(() => {
+    if (!hasAutoAdvanced.current && initialBookableUnitId.current && selectedUnit) {
+      if (resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00') return;
+      if (resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime) return;
+      hasAutoAdvanced.current = true;
+      setCurrentStep(4);
+    }
+  }, [selectedUnit, resolvedBookingKind, form.date, form.timeFrom, today, currentTime]);
+
+  useEffect(() => {
     if (!formNavRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyBar(!!selectedUnit && !entry.isIntersecting),
@@ -577,13 +592,24 @@ export default function BookingPage() {
   }, [selectedUnit]);
 
   useEffect(() => {
+    if (!holdToken) return;
+    return () => { holdsApi.release(holdToken).catch(() => {}); };
+  }, [holdToken]);
+
+  useEffect(() => {
     if (!selectedUnit) { setHoldTimeLeft(0); return; }
-    setHoldTimeLeft(15 * 60);
-    const interval = setInterval(() => {
-      setHoldTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [selectedUnit]);
+    if (holdExpiresAt) {
+      const expires = new Date(holdExpiresAt).getTime();
+      function tick() { setHoldTimeLeft(Math.max(0, Math.floor((expires - Date.now()) / 1000))); }
+      tick();
+      const interval = setInterval(tick, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setHoldTimeLeft(15 * 60);
+      const interval = setInterval(() => { setHoldTimeLeft((prev) => (prev > 0 ? prev - 1 : 0)); }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedUnit, holdExpiresAt]);
 
   const holdTimerDisplay = holdTimeLeft > 0
     ? `${String(Math.floor(holdTimeLeft / 60)).padStart(2, '0')}:${String(holdTimeLeft % 60).padStart(2, '0')}`
@@ -625,20 +651,29 @@ export default function BookingPage() {
     return c({ ua: 'Недоступно', ru: 'Недоступно', en: 'Unavailable' });
   }
 
+  function getPositionType(value) {
+    return positionTypes.find((pt) => pt.value?.toUpperCase() === String(value || '').toUpperCase()) || null;
+  }
+
   function positionTypeLabel(value) {
-    const type = String(value || '').toUpperCase();
-    if (positionTypeOptions && positionTypeOptions[type]) {
-      return localizedCopy(positionTypeOptions[type], locale);
-    }
-    const labels = {
-      BUNGALOW: { ua: 'Бунгало', ru: 'Бунгало', en: 'Bungalow' },
-      KROVAT: { ua: 'Ліжко', ru: 'Кровать', en: 'Daybed' },
-      PIER: { ua: 'Пірс', ru: 'Пирс', en: 'Pier' },
-      SUNBED: { ua: 'Шезлонг', ru: 'Шезлонг', en: 'Sunbed' }
-    };
-    const label = labels[type];
-    if (label) return localizedCopy(label, locale);
-    return type;
+    const pt = getPositionType(value);
+    if (pt) return localizedCopy(pt.name, locale);
+    return String(value || '');
+  }
+
+  function positionTypeDescription(value) {
+    const pt = getPositionType(value);
+    return pt?.description ? localizedCopy(pt.description, locale) : '';
+  }
+
+  function positionTypePhoto(value) {
+    const pt = getPositionType(value);
+    return pt?.photoUrl || '';
+  }
+
+  function positionTypePrice(value) {
+    const pt = getPositionType(value);
+    return pt?.defaultPrice ? Number(pt.defaultPrice) : 0;
   }
 
   const unitTypeGroups = useMemo(() => {
@@ -714,20 +749,6 @@ export default function BookingPage() {
     });
   }, [selectedType]);
 
-  function buildMapPreviewHref(unit) {
-    const params = new URLSearchParams({
-      date: form.date,
-      timeFrom: form.timeFrom,
-      guests: String(form.guests),
-      mapId: String(selected.mapId)
-    });
-
-    if (unit?.tableId) params.set('tableId', String(unit.tableId));
-    if (unit?.objectId) params.set('objectId', String(unit.objectId));
-
-    return `/map-preview?${params.toString()}`;
-  }
-
   function openEventBooking(event, date) {
     if (!event?.slug) return;
     const targetDate = date || toLocalDateKey(event.startAt);
@@ -795,6 +816,24 @@ export default function BookingPage() {
   async function submitBooking(event) {
     event.preventDefault();
 
+    if (resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00') {
+      setErrorMessage(c({
+        ua: 'Пляжні послуги доступні для бронювання до 13:00. Після 13:00 — приходьте на місце.',
+        ru: 'Пляжные услуги доступны для бронирования до 13:00. После 13:00 — приходите на место.',
+        en: 'Beach services are bookable until 13:00. After 13:00 — please come to the venue.'
+      }));
+      return;
+    }
+
+    if (resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime) {
+      setErrorMessage(c({
+        ua: 'Обраний час вже минув. Оберіть пізніший час або іншу дату.',
+        ru: 'Выбранное время уже прошло. Выберите более позднее время или другую дату.',
+        en: 'The selected time has already passed. Choose a later time or another date.'
+      }));
+      return;
+    }
+
     if (!selectedUnit) {
       setErrorMessage(c({
         ua: 'Спочатку оберіть вільну позицію.',
@@ -831,7 +870,9 @@ export default function BookingPage() {
         reservationDate: form.date,
         timeFrom: form.timeFrom,
         commentCustomer: form.commentCustomer,
-        eventSlug: activeEventSlug || undefined
+        eventSlug: activeEventSlug || undefined,
+        holdToken: holdToken || undefined,
+        locale
       });
 
       setPaymentUrl(result.paymentUrl || '');
@@ -1126,6 +1167,42 @@ export default function BookingPage() {
           </div>
         ) : null}
 
+        {resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00' ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
+              {c({
+                ua: 'Пляжні послуги доступні для бронювання до 13:00. Після 13:00 — приходьте на місце.',
+                ru: 'Пляжные услуги доступны для бронирования до 13:00. После 13:00 — приходите на место.',
+                en: 'Beach services are bookable until 13:00. After 13:00 — please come to the venue.'
+              })}
+            </p>
+          </div>
+        ) : null}
+
+        {resolvedBookingKind === 'BEACH' && form.date === today && currentTime > '13:00' ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
+              {c({
+                ua: 'Сьогодні пляжні послуги вже недоступні для бронювання. Оберіть дату завтра або пізніше.',
+                ru: 'Сегодня пляжные услуги уже недоступны для бронирования. Выберите дату завтра или позже.',
+                en: 'Beach services are no longer available for booking today. Please choose tomorrow or a later date.'
+              })}
+            </p>
+          </div>
+        ) : null}
+
+        {resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
+              {c({
+                ua: 'Обраний час вже минув. Оберіть пізніший час або іншу дату.',
+                ru: 'Выбранное время уже прошло. Выберите более позднее время или другую дату.',
+                en: 'The selected time has already passed. Choose a later time or another date.'
+              })}
+            </p>
+          </div>
+        ) : null}
+
         {standardBeachAlertEvent ? (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
@@ -1140,47 +1217,12 @@ export default function BookingPage() {
 </>)}
 
         {currentStep === 3 && (<>
+        {mapsState.loading ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <div className="state-msg">{c({ ua: 'Завантажуємо доступні місця...', ru: 'Загружаем доступные места...', en: 'Loading available places...' })}</div>
+          </div>
+        ) : unitsState.zones.length > 0 ? (<>
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: bookingFlow === 'EVENT' ? 'Оберіть вільний стіл на карті' : '4. Карта розміщення', ru: bookingFlow === 'EVENT' ? 'Выберите свободный стол на карте' : '4. Карта размещения', en: bookingFlow === 'EVENT' ? 'Choose an available table on the map' : '4. Venue map' })}</label>
-          {bookingFlow !== 'EVENT' || activeEventDateOption ? (
-            <>
-              <div className="booking-map-grid">
-                {mapsState.maps.map((map) => (
-                  <button
-                    key={map.id}
-                    type="button"
-                    className={`booking-map-card${selected.mapId === map.id ? ' active' : ''}`}
-                    onClick={() => setSelected((current) => ({ ...current, mapId: map.id, zoneId: 0, bookableUnitId: '' }))}
-                  >
-                    <strong>{localizeField(map.name, locale)}</strong>
-                    <span>
-                      {localizeField(map.description, locale) || (
-                        map.usageMode === 'EVENING'
-                          ? c({ ua: 'Вечірня карта', ru: 'Вечерняя карта', en: 'Evening map' })
-                          : c({ ua: 'Денна карта', ru: 'Дневная карта', en: 'Day map' })
-                      )}
-                    </span>
-                    <span>{c({ ua: 'Доступно позицій', ru: 'Доступно позиций', en: 'Available positions' })}: {map.unitCounts?.total || 0}</span>
-                  </button>
-                ))}
-              </div>
-              {mapsState.loading ? <div className="state-msg">{c({ ua: 'Завантажуємо карти...', ru: 'Загружаем карты...', en: 'Loading maps...' })}</div> : null}
-              {mapsState.error ? <div className="state-msg state-error">{mapsState.error}</div> : null}
-              {!mapsState.loading && !mapsState.error && !mapsState.maps.length ? (
-                <div className="state-msg">
-                  {c({
-                    ua: 'Для цього сценарію та кількості гостей зараз немає доступних карт.',
-                    ru: 'Для этого сценария и количества гостей сейчас нет доступных карт.',
-                    en: 'No venue maps are available for this flow and guest count right now.'
-                  })}
-                </div>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-
-        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '5. Оберіть зону', ru: '5. Выберите зону', en: '5. Choose a zone' })}</label>
           <div className="booking-zone-tabs">
             {unitsState.zones.map((zone) => (
               <button
@@ -1198,111 +1240,133 @@ export default function BookingPage() {
               </button>
             ))}
           </div>
-          {unitsState.loading ? <div className="state-msg">{c({ ua: 'Оновлюємо доступні позиції...', ru: 'Обновляем доступные позиции...', en: 'Refreshing available positions...' })}</div> : null}
-          {unitsState.error ? <div className="state-msg state-error">{unitsState.error}</div> : null}
-          {!unitsState.loading && !unitsState.error && !!selected.mapId && !unitsState.zones.length ? (
-            <div className="state-msg">
-              {c({
-                ua: 'На цій карті ще немає зон для обраного сценарію.',
-                ru: 'На этой карте еще нет зон для выбранного сценария.',
-                en: 'This map does not yet have zones for the selected flow.'
-              })}
-            </div>
-          ) : null}
         </div>
 
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-          <label>{c({ ua: '6. Вільні типи позицій', ru: '6. Свободные типы позиций', en: '6. Available position types' })}</label>
-          <div className="booking-unit-grid">
+          <div className="booking-type-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {unitTypeGroups.map((group) => {
-              const localizedName = group.label;
-              const representative = group.representative;
+              const freeCount = group.units.filter((u) => u.status === 'free').length;
               return (
                 <button
                   key={group.key}
                   type="button"
-                  className={`booking-unit-card${selectedTypeKey === group.key ? ' active' : ''}`}
+                  className={`booking-type-chip${selectedTypeKey === group.key ? ' active' : ''}`}
                   onClick={() => setSelectedTypeKey(group.key)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 20,
+                    border: selectedTypeKey === group.key ? '2px solid var(--primary)' : '1px solid var(--line)',
+                    background: selectedTypeKey === group.key ? 'var(--primary-bg)' : 'transparent',
+                    cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap'
+                  }}
                 >
-                  <div className="booking-unit-card-media">
-                    {representative.photoUrl ? (
-                      <img src={representative.photoUrl} alt={localizedName} />
-                    ) : (
-                      <div className="booking-unit-card-fallback">{localizedName}</div>
-                    )}
-                    <span className="booking-unit-status status-free">
-                      {group.units.filter((unit) => unit.status === 'free').length} {c({ ua: 'варіантів', ru: 'вариантов', en: 'options' })}
-                    </span>
-                  </div>
-                  <div className="booking-unit-card-body">
-                    <strong>{localizedName}</strong>
-                    <span>{group.units.slice(0, 3).map((item) => item.code).filter(Boolean).join(', ')}{group.units.length > 3 ? '...' : ''}</span>
-                    <span>{Number(representative.seatsMin)}-{Number(representative.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
-                    <span>
-                      {representative.depositAmount > 0
-                        ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(representative.depositAmount)}`
-                        : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}
-                    </span>
-                  </div>
+                  {group.label} · <strong>{freeCount}</strong>
                 </button>
               );
             })}
-            {!unitsState.loading && !unitTypeGroups.length ? (
-              <div className="state-msg">
-                {c({
-                  ua: 'У цій зоні немає доступних варіантів під обрані параметри.',
-                  ru: 'В этой зоне нет доступных вариантов под выбранные параметры.',
-                  en: 'There are no available options in this zone for the selected parameters.'
-                })}
+          </div>
+        </div>
+
+        {selectedType ? (() => {
+          const baseType = selectedType.representative?.positionType || '';
+          const ptPhoto = positionTypePhoto(baseType);
+          const ptDesc = positionTypeDescription(baseType);
+          const ptPrice = positionTypePrice(baseType);
+          const photo = ptPhoto || selectedType.representative.photoUrl;
+          const typePrice = ptPrice > 0 ? ptPrice : (selectedType.representative.priceLabel || null);
+          return (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            {photo || typePrice || ptDesc ? (
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
+                {photo ? (
+                  <img src={photo} alt=""
+                    style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                ) : null}
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.95rem' }}>{selectedType.label}</strong>
+                  {typePrice ? (
+                    <span style={{ marginLeft: 8, fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600 }}>
+                      {typeof typePrice === 'string' ? typePrice : money(typePrice)}
+                    </span>
+                  ) : null}
+                  {ptDesc ? <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.8rem', lineHeight: 1.4 }}>{ptDesc}</p> : null}
+                </div>
               </div>
             ) : null}
-          </div>
 
-          {selectedType ? (
-            <div className="booking-variants-panel">
-              <div className="booking-variants-head">
-                <div>
-                  <span className="eyebrow">{c({ ua: '7. Варіанти типу', ru: '7. Варианты типа', en: '7. Type variants' })}</span>
-                  <strong>{selectedType.label}</strong>
-                </div>
-                <span className="booking-variants-count">
-                  {selectedType.units.length} {c({ ua: 'позицій', ru: 'позиций', en: 'positions' })}
-                </span>
-              </div>
-              <div className="booking-variants-list">
+            {selectedType.units.filter((u) => u.status === 'free').length > 0 || selectedType.units.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {selectedType.units.map((unit) => {
-                  const localizedName = getUnitDisplayName(unit, locale);
                   const isActive = selected.bookableUnitId === unit.id;
                   return (
-                    <article key={unit.id} className={`booking-variant-row${isActive ? ' active' : ''}`}>
-                      <div className="booking-variant-copy">
-                        <strong>{unit.code || localizedName}</strong>
-                        <span>{localizedName}</span>
-                        {unit.rowSortOrder != null ? <span className="muted small">{c({ ua: 'Ряд', ru: 'Ряд', en: 'Row' })} {unit.rowSortOrder}</span> : null}
-                        <span>{unitStatusLabel(unit.status)} · {Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
+                    <button
+                      key={unit.id}
+                      type="button"
+                      className={`booking-variant-row${isActive ? ' active' : ''}`}
+                      disabled={unit.status !== 'free'}
+                      onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', borderRadius: 8,
+                        border: isActive ? '1px solid var(--primary)' : '1px solid var(--line)',
+                        background: isActive ? 'var(--primary-bg)' : 'transparent',
+                        cursor: unit.status === 'free' ? 'pointer' : 'default',
+                        opacity: unit.status !== 'free' ? 0.5 : 1,
+                        textAlign: 'left', width: '100%',
+                        transition: 'border-color 0.15s, background 0.15s'
+                      }}
+                    >
+                      <div>
+                        <strong>{unit.code || getUnitDisplayName(unit, locale)}</strong>
+                        <span style={{ marginLeft: 8, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                          {Number(unit.seatsMin)}-{Number(unit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}
+                        </span>
                       </div>
-                      <div className="booking-variant-actions">
-                        <Link className="btn btn-secondary btn-small" to={buildMapPreviewHref(unit)}>
-                          {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
-                        </Link>
-                        <button
-                          type="button"
-                          className={`btn btn-small ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                          disabled={unit.status !== 'free'}
-                          onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
-                        >
-                          {isActive
-                            ? c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })
-                            : c({ ua: 'Обрати', ru: 'Выбрать', en: 'Select' })}
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {isActive && unit.tableId ? (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}`, '_blank'); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}`, '_blank'); } }}
+                            style={{ fontSize: '0.75rem', color: 'var(--primary)', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--primary)' }}
+                          >
+                            {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
+                          </span>
+                        ) : null}
+                        <span style={{ fontSize: '0.8rem', color: unit.status === 'free' ? 'var(--primary)' : 'var(--danger)' }}>
+                          {isActive ? c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' }) : unitStatusLabel(unit.status)}
+                        </span>
                       </div>
-                    </article>
+                    </button>
                   );
                 })}
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : (
+              <p className="muted">{c({ ua: 'Немає вільних місць цього типу.', ru: 'Нет свободных мест этого типа.', en: 'No available places of this type.' })}</p>
+            )}
+          </div>);
+        })() : (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <p className="muted">{c({ ua: 'Оберіть тип позиції.', ru: 'Выберите тип позиции.', en: 'Select a position type.' })}</p>
+          </div>
+        )}
+        </>) : (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            {unitsState.loading ? (
+              <div className="state-msg">{c({ ua: 'Оновлюємо доступні позиції...', ru: 'Обновляем доступные позиции...', en: 'Refreshing available positions...' })}</div>
+            ) : unitsState.error ? (
+              <div className="state-msg state-error">{unitsState.error}</div>
+            ) : (
+              <div className="state-msg">
+                {c({
+                  ua: 'Для цього сценарію та кількості гостей зараз немає доступних місць.',
+                  ru: 'Для этого сценария и количества гостей сейчас нет доступных мест.',
+                  en: 'No available seats for this flow and guest count right now.'
+                })}
+              </div>
+            )}
+          </div>
+        )}
 </>)}
 
         {currentStep === 4 && (<>
@@ -1427,21 +1491,11 @@ export default function BookingPage() {
         {successMessage && <div className="state-msg state-success">{successMessage}</div>}
       </form>
 
-      {selectedMap && unitsState.map ? (
-        <div className="booking-summary-panel booking-map-note">
+      {reservationAccess?.ticketCode ? (
+        <div className="booking-summary-panel">
           <p className="muted" style={{ margin: 0 }}>
-            {c({ ua: 'Активна карта', ru: 'Активная карта', en: 'Active map' })}: <strong>{localizeField(selectedMap.name, locale)}</strong>
+            {c({ ua: 'Код бронювання', ru: 'Код бронирования', en: 'Booking code' })}: <strong>{reservationAccess.ticketCode}</strong>
           </p>
-          <p className="muted" style={{ margin: 0 }}>
-            {unitsState.map.usageMode === 'EVENING'
-              ? c({ ua: 'Вечірній режим: насамперед для подій та вечірніх посадок.', ru: 'Вечерний режим: прежде всего для событий и вечерних посадок.', en: 'Evening mode: primarily for events and evening seating.' })
-              : c({ ua: 'Денний режим: підходить і для столів, і для пляжного відпочинку.', ru: 'Дневной режим: подходит и для столов, и для пляжного отдыха.', en: 'Day mode: suitable for both tables and beach leisure.' })}
-          </p>
-          {reservationAccess?.ticketCode ? (
-            <p className="muted" style={{ margin: 0 }}>
-              {c({ ua: 'Код бронювання', ru: 'Код бронирования', en: 'Booking code' })}: <strong>{reservationAccess.ticketCode}</strong>
-            </p>
-          ) : null}
         </div>
       ) : null}
 

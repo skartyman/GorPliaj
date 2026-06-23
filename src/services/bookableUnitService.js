@@ -115,13 +115,31 @@ function getUnitPhotoUrl(table, objectMeta = {}) {
   );
 }
 
-function buildBookableUnit(table, linkedObject) {
+function buildBookableUnit(table, linkedObject, positionTypeMap = {}) {
   const meta = parseMeta(linkedObject?.metaJson);
-  const depositAmount = Number(table.deposit || meta.depositAmount || meta.deposit || 0);
   const bookingKind = inferBookingKind(table, meta);
+  const positionType = table.positionType || linkedObject?.type || null;
+  const ptConfig = positionType ? (positionTypeMap[positionType.toUpperCase()] || {}) : {};
+
+  const depositAmount = Number(
+    table.deposit
+    || meta.depositAmount
+    || meta.deposit
+    || ptConfig.defaultDeposit
+    || 0
+  );
+  const defaultPrice = ptConfig.defaultPrice ? Number(ptConfig.defaultPrice) : 0;
+  const priceFromMeta = meta.price ? `${meta.price} ${meta.priceUnit || 'UAH'}` : null;
+  const priceLabel = priceFromMeta || (defaultPrice > 0 ? `${defaultPrice} UAH` : null);
+
   const seatsMin = Number(table.seatsMin || meta.capacityMin || 1);
   const seatsMax = Number(table.seatsMax || meta.capacityMax || seatsMin || 1);
   const photoGroupKey = buildPhotoGroupKey(table, meta);
+
+  const mapX = linkedObject?.x != null ? Number(linkedObject.x) : null;
+  const mapY = linkedObject?.y != null ? Number(linkedObject.y) : null;
+  const mapObjWidth = linkedObject?.width != null ? Number(linkedObject.width) : 32;
+  const mapObjHeight = linkedObject?.height != null ? Number(linkedObject.height) : 32;
 
   return {
     id: `table:${table.id}`,
@@ -129,8 +147,12 @@ function buildBookableUnit(table, linkedObject) {
     objectId: linkedObject?.id || null,
     mapId: table.mapId,
     zoneId: table.zoneId,
+    mapX,
+    mapY,
+    mapObjWidth,
+    mapObjHeight,
     bookingKind,
-    positionType: table.positionType || linkedObject?.type || null,
+    positionType,
     side: table.positionSide || null,
     rowId: table.rowId ? Number(table.rowId) : null,
     rowSortOrder: table.row?.sortOrder != null ? Number(table.row.sortOrder) : null,
@@ -143,7 +165,7 @@ function buildBookableUnit(table, linkedObject) {
     capacityLabel: meta.capacityLabel || null,
     depositRequired: depositAmount > 0 || Boolean(meta.depositRequired),
     depositAmount: depositAmount > 0 ? depositAmount : 0,
-    priceLabel: meta.price ? `${meta.price} ${meta.priceUnit || 'UAH'}` : null,
+    priceLabel,
     features: Array.isArray(meta.features) ? meta.features : [],
     description: localizeField(table.serviceDescription, 'ua') || localizeField(meta.description, 'ua')
       ? pickLocalizedValue(table.serviceDescription, meta.description || '')
@@ -189,7 +211,7 @@ async function loadActiveMaps() {
   });
 }
 
-function buildUnitsFromMap(map) {
+function buildUnitsFromMap(map, positionTypeMap = {}) {
   const objectByTableId = new Map(
     map.mapObjects
       .filter((object) => object.tableId)
@@ -197,7 +219,7 @@ function buildUnitsFromMap(map) {
   );
 
   const units = map.tables
-    .map((table) => buildBookableUnit(table, objectByTableId.get(table.id)))
+    .map((table) => buildBookableUnit(table, objectByTableId.get(table.id), positionTypeMap))
     .map((unit, _, allUnits) => {
       if (unit.photoUrl || !unit.photoGroupKey) {
         return unit;
@@ -307,9 +329,14 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
     tables: effectiveTables
   };
 
+  const positionTypes = await prisma.positionType.findMany({ where: { isActive: true } });
+  const positionTypeMap = Object.fromEntries(
+    positionTypes.map((pt) => [pt.value.toUpperCase(), pt])
+  );
+
   const busy = new Set(availability.busyTableIds || []);
   const held = new Set(availability.heldTableIds || []);
-  const units = buildUnitsFromMap(effectiveMap)
+  const units = buildUnitsFromMap(effectiveMap, positionTypeMap)
     .map((unit) => ({
       ...unit,
       status: !unit.isActive || !unit.isBookable
@@ -332,7 +359,11 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
       slug: map.slug,
       name: normalizeLocalizedValue(map.name),
       description: map.description,
-      usageMode: inferMapUsageMode(map)
+      usageMode: inferMapUsageMode(map),
+      width: map.width,
+      height: map.height,
+      backgroundColor: map.backgroundColor,
+      backgroundImage: map.backgroundImage
     },
     zones: map.zones.map((zone) => ({
       id: zone.id,

@@ -12,6 +12,7 @@ const {
 } = require('../utils/ticketSignature');
 const { generateTicketPdf } = require('../services/ticketPdfService');
 const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+const { localizeMessage } = require('../utils/localization');
 
 const LEGACY_STATUS_ALIASES = {
   new: 'PENDING',
@@ -250,9 +251,18 @@ async function createReservation(req, res) {
       return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
     }
 
-    const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
-    if (conflict) {
-      return res.status(409).json({ message: 'This position is already booked for the selected time.' });
+    const locale = req.body?.locale || 'ua';
+    const holdToken = normalizeText(req.body.holdToken);
+    if (holdToken) {
+      const conflict = await reservationService.findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo });
+      if (conflict && conflict.holdToken !== holdToken) {
+        return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
+      }
+    } else {
+      const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
+      if (conflict) {
+        return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
+      }
     }
 
     const objectId = Number(req.body.objectId || bookableUnit?.objectId || 0);
@@ -317,6 +327,10 @@ async function createReservation(req, res) {
       source: event ? 'EVENT' : 'WEB',
       ticketCode
     });
+
+    if (holdToken) {
+      await reservationService.consumeTableHold(holdToken, reservation.id);
+    }
 
     const access = buildPublicReservationAccess(reservation);
     let checkout = null;

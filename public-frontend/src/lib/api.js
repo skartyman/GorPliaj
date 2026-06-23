@@ -86,6 +86,18 @@ export const bookingsApi = {
     request(`/reservations/${encodeURIComponent(ticketCode)}/status?t=${encodeURIComponent(token)}`)
 };
 
+export const holdsApi = {
+  create: ({ tableId, date, timeFrom, timeTo }) =>
+    request('/holds', {
+      method: 'POST',
+      body: JSON.stringify({ tableId, date, timeFrom, timeTo })
+    }),
+  release: (holdToken) =>
+    request(`/holds/${encodeURIComponent(holdToken)}`, {
+      method: 'DELETE'
+    })
+};
+
 export const settingsApi = {
   getPublic: () => request('/settings'),
   updatePublic: (data) => request('/settings', {

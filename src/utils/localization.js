@@ -47,9 +47,49 @@ function localizeField(value, locale = 'ua') {
   return normalized[locale] || normalized.ua || normalized.ru || normalized.en || '';
 }
 
+const MESSAGES = {
+  'hold.conflict.reservation': {
+    ua: 'Ця позиція вже заброньована на обраний час.',
+    ru: 'Эта позиция уже забронирована на выбранное время.',
+    en: 'This position is already booked for the selected time.'
+  },
+  'hold.conflict.hold': {
+    ua: 'Цю позицію тимчасово утримує інший відвідувач.',
+    ru: 'Эту позицию временно удерживает другой посетитель.',
+    en: 'This position is temporarily held by another visitor.'
+  },
+  'hold.invalid.params': {
+    ua: 'Некоректні параметри для утримання позиції.',
+    ru: 'Некорректные параметры для удержания позиции.',
+    en: 'Invalid hold parameters.'
+  },
+  'hold.time.order': {
+    ua: 'Час початку має бути до часу завершення.',
+    ru: 'Время начала должно быть до времени завершения.',
+    en: 'Start time must be before end time.'
+  },
+  'reservation.conflict': {
+    ua: 'Ця позиція вже зайнята на обраний час.',
+    ru: 'Эта позиция уже занята на выбранное время.',
+    en: 'This position is already booked for the selected time.'
+  },
+  'general.error': {
+    ua: 'Сталася помилка. Спробуйте ще раз.',
+    ru: 'Произошла ошибка. Попробуйте еще раз.',
+    en: 'An error occurred. Please try again.'
+  }
+};
+
+function localizeMessage(key, locale = 'ua') {
+  const msg = MESSAGES[key];
+  if (!msg) return key;
+  return msg[locale] || msg.ua || msg.en || key;
+}
+
 module.exports = {
   LOCALES,
   cleanText,
   localizeField,
-  normalizeLocalizedField
+  normalizeLocalizedField,
+  localizeMessage
 };

@@ -109,6 +109,20 @@ async function getSettings(req, res) {
   }
 }
 
+async function listPositionTypes(req, res) {
+  try {
+    const prisma = require('../lib/prisma');
+    const types = await prisma.positionType.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' }
+    });
+    res.json(types);
+  } catch (error) {
+    console.error('[publicController.listPositionTypes]', error);
+    res.status(500).json({ message: 'Unable to load position types.' });
+  }
+}
+
 module.exports = {
   getHealth,
   getMenu,
@@ -116,5 +130,6 @@ module.exports = {
   getEvents,
   getEventBySlug,
   getNews,
-  getSettings
+  getSettings,
+  listPositionTypes
 };
