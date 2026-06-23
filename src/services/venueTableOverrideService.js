@@ -679,7 +679,7 @@ async function deleteTable(tableId) {
       return { type: 'NOT_FOUND', message: 'Position not found.' };
     }
     if (error.code === 'P2003') {
-      return { type: 'INVALID', message: 'Cannot delete position with active reservations.' };
+      return { type: 'CONFLICT', message: 'This position has active reservations and cannot be deleted.' };
     }
     throw error;
   }

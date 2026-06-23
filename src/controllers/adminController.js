@@ -742,6 +742,9 @@ async function deleteAdminTable(req, res) {
     if (result.type === 'INVALID') {
       return res.status(400).json({ message: result.message });
     }
+    if (result.type === 'CONFLICT') {
+      return res.status(409).json({ message: result.message });
+    }
     if (result.type === 'NOT_FOUND') {
       return res.status(404).json({ message: result.message });
     }
