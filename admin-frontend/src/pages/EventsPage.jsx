@@ -483,8 +483,8 @@ export default function EventsPage() {
       label: t('eventsAdmin.columns.actions'),
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
-          <button type="button" className="btn btn-small btn-danger" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>{t('eventsAdmin.form.delete')}</button>
+          <button type="button" onClick={() => startEdit(row)}>{t('common.edit')}</button>
+          <button type="button" disabled={savingKey === `delete-${row.id}`} onClick={() => removeEvent(row)}>{t('eventsAdmin.form.delete')}</button>
         </div>
       )
     }
@@ -550,7 +550,6 @@ export default function EventsPage() {
                   </span>
                   <button
                     type="button"
-                    className="btn btn-small btn-secondary"
                     onClick={(clickEvent) => {
                       clickEvent.stopPropagation();
                       startEdit(event);
@@ -638,8 +637,8 @@ export default function EventsPage() {
                     <div key={key} className="admin-inline-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
                       <span style={{ fontSize: 13 }}>{name ? `${name} · ` : ''}{startStr}{endStr ? ` — ${endStr}` : ''}</span>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" className="btn-link btn-small" onClick={() => handleEditSession(editId ? session.id : idx)}>{t('common.edit')}</button>
-                        <button type="button" className="btn-link btn-small btn-link-danger" onClick={() => handleDeleteSession(editId ? session.id : idx)}>{t('common.delete')}</button>
+                        <button type="button" onClick={() => handleEditSession(editId ? session.id : idx)}>{t('common.edit')}</button>
+                        <button type="button" onClick={() => handleDeleteSession(editId ? session.id : idx)}>{t('common.delete')}</button>
                       </div>
                     </div>
                   );
@@ -724,7 +723,7 @@ export default function EventsPage() {
                   </label>
                 )}
                 <div style={{ marginTop: 4 }}>
-                  <button type="button" className="btn-link btn-small" onClick={() => setShowPosterUrl(!showPosterUrl)}>
+                  <button type="button" onClick={() => setShowPosterUrl(!showPosterUrl)}>
                     {showPosterUrl ? t('eventsAdmin.form.fields.posterUrl') : t('eventsAdmin.orPasteUrl')}
                   </button>
                   {showPosterUrl ? (
@@ -765,11 +764,11 @@ export default function EventsPage() {
                             {sessionDate ? ` · ${sessionDate}` : ''}
                           </span>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <button type="button" className="btn-link btn-small" onClick={() => toggleTicketType(tt.id, !tt.isActive)} style={{ color: tt.isActive ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                            <button type="button" onClick={() => toggleTicketType(tt.id, !tt.isActive)} style={{ color: tt.isActive ? 'var(--color-danger)' : 'var(--color-success)' }}>
                               {tt.isActive ? t('eventsAdmin.hide') : t('eventsAdmin.show')}
                             </button>
-                            <button type="button" className="btn-link btn-small" onClick={() => handleEditTicketType(tt.id)}>{t('common.edit')}</button>
-                            <button type="button" className="btn-link btn-small btn-link-danger" onClick={() => { if (window.confirm(t('eventsAdmin.errors.confirmDeleteTariff'))) deleteTicketType(tt.id); }}>{t('common.delete')}</button>
+                            <button type="button" onClick={() => handleEditTicketType(tt.id)}>{t('common.edit')}</button>
+                            <button type="button" onClick={() => { if (window.confirm(t('eventsAdmin.errors.confirmDeleteTariff'))) deleteTicketType(tt.id); }}>{t('common.delete')}</button>
                           </div>
                         </div>
                       );

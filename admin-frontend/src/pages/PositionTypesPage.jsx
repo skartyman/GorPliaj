@@ -116,8 +116,8 @@ export default function PositionTypesPage() {
       key: 'actions', label: '',
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
-          <button type="button" className="btn btn-small btn-danger" disabled={saving} onClick={() => removeType(row.id)}>{t('common.delete')}</button>
+          <button type="button" onClick={() => startEdit(row)}>{t('common.edit')}</button>
+          <button type="button" disabled={saving} onClick={() => removeType(row.id)}>{t('common.delete')}</button>
         </div>
       )
     }
