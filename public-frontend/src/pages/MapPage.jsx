@@ -1120,6 +1120,7 @@ export default function MapPage() {
                         onClick={isSelectableObject ? () => selectObject(object) : undefined}
                       >
                         <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
+                        {linkedTable ? <span className="status-dot" /> : null}
                       </Component>
                     );
                   })}

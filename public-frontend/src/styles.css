@@ -1836,15 +1836,28 @@ h3 {
 .public-map-table.held.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #e65100, 0 0 20px rgba(0,0,0,0.5); }
 .public-map-table.busy.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #b71c1c, 0 0 20px rgba(0,0,0,0.5); }
 .public-map-table.unavailable.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #616161, 0 0 20px rgba(0,0,0,0.5); }
-.public-map-object.free { background: rgba(76,175,80,0.35); outline: 2px solid #4caf50; outline-offset: -2px; }
-.public-map-object.held { background: rgba(255,152,0,0.35); outline: 2px solid #ff9800; outline-offset: -2px; }
-.public-map-object.busy { background: rgba(244,67,54,0.35); outline: 2px solid #f44336; outline-offset: -2px; }
-.public-map-object.unavailable { background: rgba(158,158,158,0.25); outline: 2px solid #9e9e9e; outline-offset: -2px; opacity: 0.5; }
+.public-map-object:not(.selectable) { pointer-events: none; }
+.public-map-object .status-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.public-map-object.free .status-dot { background: #22c55e; }
+.public-map-object.held .status-dot { background: #f59e0b; }
+.public-map-object.busy .status-dot { background: #ef4444; }
+.public-map-object.unavailable .status-dot { background: #9ca3af; }
 .public-map-object.no-fit { outline: 2px dashed #ff5722; outline-offset: -3px; }
 .public-map-object.free.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #4caf50, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.held.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #ff9800, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.busy.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #f44336, 0 0 20px rgba(0,0,0,0.4); }
-.public-map-object.unavailable.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9e9e9e, 0 0 20px rgba(0,0,0,0.4); }
+.public-map-object.unavailable.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9ca3af, 0 0 20px rgba(0,0,0,0.4); }
 
 .map-side-panel {
   background: var(--bg-secondary);
