@@ -1443,18 +1443,14 @@ export default function MapPage() {
                           return null;
                         }
                         return (
-                          <button
+                          <div
                             key={object.id}
-                            type="button"
-                            className={`interactive-map-object manageable object-${String(object.type || 'custom').toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''} ${object.isActive === false ? 'inactive' : ''}`.trim()}
+                            className={`interactive-map-object ${hasAsset ? 'has-asset' : ''} ${object.isActive === false ? 'inactive' : ''}`.trim()}
                             style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                             title={objectLabel}
-                            tabIndex={0}
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={() => selectObject(object)}
                           >
                             <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
-                          </button>
+                          </div>
                         );
                       }
 
@@ -1473,7 +1469,7 @@ export default function MapPage() {
                           }}
                           title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
                           onPointerDown={(event) => event.stopPropagation()}
-                          onClick={() => selectObject(object)}
+                          onClick={() => { setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
                         >
                           <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                           {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
@@ -1518,298 +1514,128 @@ export default function MapPage() {
                   <div className="detail-row"><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
                   <div className="detail-row"><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedTable.deposit || '—'}</strong></div>
                   <div className="detail-row"><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedTable.zoneId)?.name, language) || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">{t('map.fields.bookable')}</span><strong>{selectedTable.isBookable ? t('map.fields.yes') : t('map.fields.no')}</strong></div>
                   <div className="detail-row"><span className="muted">{t('map.fields.status')}</span><strong><StatusPill status={selectedStatus} /></strong></div>
                 </div>
+
+                {selectedStatus === 'FREE' ? (
+                  <div className="actions">
+                    <button type="button" className="btn" onClick={() => handleFreeTableArrive(selectedTable)}>Гості прийшли</button>
+                    <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Створити бронь</button>
+                  </div>
+                ) : null}
 
                 {!selectedReservations.length ? <p className="muted">{t('map.noActiveReservations')}</p> : null}
                 {selectedReservations.length ? (
                   <ul className="plain-list compact">
-                    {selectedReservations.slice(0, 3).map((reservation) => (
+                    {selectedReservations.slice(0, 5).map((reservation) => (
                       <li key={reservation.id}>
                         <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
                         {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)} • <StatusPill status={reservation.status} />
+                        {reservation.status !== 'COMPLETED' && reservation.status !== 'CANCELLED' ? (
+                          <span className="table-countdown" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }}>{formatCountdown(reservation)}</span>
+                        ) : null}
+                        {reservation.paidInCash ? <span className="paid-cash-badge" style={{ marginLeft: 6 }}>Готівка</span> : null}
+                        <span className="reservation-inline-actions">
+                          {reservation.status === 'PENDING' ? (
+                            <>
+                              <button type="button" className="btn btn-small" onClick={() => updateReservationStatusOnMap(reservation.id, 'CONFIRMED')}>Confirm</button>
+                              <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                            </>
+                          ) : null}
+                          {reservation.status === 'CONFIRMED' ? (
+                            <>
+                              <button type="button" className="btn btn-small btn-success" onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Прийшли</button>
+                              <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                            </>
+                          ) : null}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 ) : null}
 
-                <div className="actions">
-                  <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>{t('map.fields.prepareBooking')}</button>
-                </div>
-              </div>
-            ) : selectedObject ? (
-              <div
-                className="table-bottom-sheet object-management-sheet"
-                ref={objectManagementRef}
-                role="dialog"
-                aria-live="polite"
-                aria-label="Object business settings"
-                tabIndex={-1}
-              >
-                <div className="table-sheet-head">
-                  <div>
-                    <span className="eyebrow">Керування позицією</span>
-                    <h4>{selectedObject.table?.code || localizeField(selectedObject.table?.name, language) || selectedObject.meta?.tableCode || mapObjectLabel(selectedObject, t, language)}</h4>
-                  </div>
-                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedObjectId(null)}>Закрити</button>
-                </div>
+                {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
+                {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
 
-                <div className="object-admin-form">
-                  {selectedObjectForm.photoUrl ? (
-                    <div className="object-admin-photo">
-                      <img src={selectedObjectForm.photoUrl} alt={mapObjectLabel(selectedObject, t, language)} />
-                    </div>
-                  ) : null}
-                  <label>
-                    Зона
-                    <select
-                      ref={objectPrimaryFieldRef}
-                      value={selectedObjectForm.zoneId}
-                      onChange={handleObjectZoneChange}
-                    >
-                      <option value="">Не вибрано</option>
-                      {(state.mapData?.zones || []).map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Код позиції
-                    <input
-                      type="text"
-                      value={selectedObjectForm.tableCode}
-                      placeholder={suggestedObjectCode || 'P1'}
-                      onChange={(event) => setSelectedObjectForm((current) => ({ ...current, tableCode: event.target.value.toUpperCase() }))}
-                    />
-                    {selectedZonePrefix ? (
-                      <span className="object-form-hint">
-                        {getZoneCodeHint(selectedZonePrefix)}
-                        {suggestedObjectCode ? ` · наступний: ${suggestedObjectCode}` : ''}
-                      </span>
-                    ) : null}
-                  </label>
-                  <label>
-                    Номер столу
-                    <select
-                      value={selectedObjectForm.tableId}
-                      onChange={handleObjectTableChange}
-                    >
-                      <option value="">Не прив’язано</option>
-                      {objectTableOptions.map((table) => (
-                        <option key={table.id} value={table.id}>
-                          {table.code || localizeField(table.name, language) || `#${table.id}`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Ціна
-                    <input type="number" min="0" step="1" value={selectedObjectForm.price} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, price: event.target.value }))} />
-                  </label>
-                  <label>
-                    Валюта
-                    <input type="text" value={selectedObjectForm.priceUnit} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, priceUnit: event.target.value }))} />
-                  </label>
-                  <label>
-                    Мин. гостей
-                    <input type="number" min="1" step="1" value={selectedObjectForm.seatsMin} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, seatsMin: event.target.value }))} />
-                  </label>
-                  <label>
-                    Макс. гостей
-                    <input type="number" min="1" step="1" value={selectedObjectForm.seatsMax} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, seatsMax: event.target.value }))} />
-                  </label>
-                  <label className="checkbox-label inline">
-                    <input type="checkbox" checked={selectedObjectForm.isBookable} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, isBookable: event.target.checked }))} />
-                    Доступно для брони
-                  </label>
-                  <label className="checkbox-label inline">
-                    <input type="checkbox" checked={selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositRequired: event.target.checked }))} />
-                    Потрібна застава
-                  </label>
-                  <label>
-                    Сума застави
-                    <input type="number" min="0" step="1" value={selectedObjectForm.depositAmount} disabled={!selectedObjectForm.depositRequired} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, depositAmount: event.target.value }))} />
-                  </label>
-                  <label className="object-admin-form-wide">
-                    URL фото
-                    <input type="url" value={selectedObjectForm.photoUrl} onChange={(event) => setSelectedObjectForm((current) => ({ ...current, photoUrl: event.target.value }))} />
-                  </label>
-                  <label className="btn btn-secondary btn-small object-upload-button">
-                    Завантажити фото
-                    <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadSelectedObjectPhoto} />
-                  </label>
-                </div>
-
-                {selectedObject.table?.isBookable ? (
-                  <div className="booking-admin-panel">
-                    <div className="table-sheet-head">
-                      <div>
-                        <span className="eyebrow">Ручна бронь</span>
-                        <h4>{getPositionDisplayName(selectedObject.table, language)}</h4>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={() => {
-                          if (bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id) {
-                            closeBookingForm();
-                            return;
-                          }
-
-                          onBookTable(selectedObject.table);
-                        }}
-                      >
-                        {bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id ? 'Скасувати' : 'Створити бронь'}
+                {bookingFormState.open && bookingFormState.form?.tableId === selectedTable.id ? (
+                  <form className="object-admin-form booking-admin-form" onSubmit={submitBookingForm}>
+                    <label>
+                      Ім'я гостя
+                      <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} />
+                    </label>
+                    <label>
+                      Телефон
+                      <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} />
+                    </label>
+                    <label>
+                      Email
+                      <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} />
+                    </label>
+                    <label>
+                      Гостей
+                      <input type="number" min={selectedTable.seatsMin || 1} max={selectedTable.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} />
+                    </label>
+                    <label>
+                      Дата
+                      <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} />
+                    </label>
+                    <label>
+                      Початок
+                      <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} />
+                    </label>
+                    <label>
+                      Кінець
+                      <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} />
+                    </label>
+                    <label>
+                      Джерело
+                      <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)}>
+                        <option value="WALK_IN">Walk-in</option>
+                        <option value="PHONE">Phone</option>
+                        <option value="INSTAGRAM">Instagram</option>
+                        <option value="FACEBOOK">Facebook</option>
+                        <option value="WEB">Web</option>
+                      </select>
+                    </label>
+                    <label>
+                      Статус
+                      <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)}>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                      </select>
+                    </label>
+                    <label className="checkbox-label inline">
+                      <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} />
+                      Є депозит
+                    </label>
+                    <label>
+                      Сума депозиту
+                      <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
+                    </label>
+                    <label className="checkbox-label inline">
+                      <input type="checkbox" checked={Boolean(bookingFormState.form.paidInCash)} onChange={(event) => updateBookingForm('paidInCash', event.target.checked)} />
+                      Гість платить готівкою
+                    </label>
+                    <label className="object-admin-form-wide">
+                      Коментар гостя
+                      <textarea rows="3" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)} />
+                    </label>
+                    <label className="object-admin-form-wide">
+                      Коментар адміністратора
+                      <textarea rows="3" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} />
+                    </label>
+                    <div className="actions booking-admin-actions object-admin-form-wide">
+                      <button type="button" className="btn btn-secondary" onClick={closeBookingForm}>Скасувати</button>
+                      <button type="submit" className="btn" disabled={bookingFormState.saving}>
+                        {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
                       </button>
                     </div>
-
-                    <div className="details-grid compact table-sheet-grid">
-                      <div className="detail-row"><span className="muted">Тип</span><strong>{getBookingKindBadgeLabel(selectedObject.table?.bookingKind, language)}</strong></div>
-                      <div className="detail-row"><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedObject.table?.zoneId)?.name, language) || '—'}</strong></div>
-                      <div className="detail-row"><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedObject.table?.seatsMin || '—'}-{selectedObject.table?.seatsMax || '—'}</strong></div>
-                      <div className="detail-row"><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedObject.table?.deposit || '—'}</strong></div>
-                    </div>
-
-                    {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
-                    {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
-
-                    {bookingFormState.open && bookingFormState.form?.tableId === selectedObject.table?.id ? (
-                      <form className="object-admin-form booking-admin-form" onSubmit={submitBookingForm}>
-                        <label>
-                          Ім'я гостя
-                          <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} />
-                        </label>
-                        <label>
-                          Телефон
-                          <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} />
-                        </label>
-                        <label>
-                          Email
-                          <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} />
-                        </label>
-                        <label>
-                          Гостей
-                          <input type="number" min={selectedObject.table?.seatsMin || 1} max={selectedObject.table?.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} />
-                        </label>
-                        <label>
-                          Дата
-                          <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} />
-                        </label>
-                        <label>
-                          Початок
-                          <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} />
-                        </label>
-                        <label>
-                          Кінець
-                          <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} />
-                        </label>
-                        <label>
-                          Джерело
-                          <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)}>
-                            <option value="WALK_IN">Walk-in</option>
-                            <option value="PHONE">Phone</option>
-                            <option value="INSTAGRAM">Instagram</option>
-                            <option value="FACEBOOK">Facebook</option>
-                            <option value="WEB">Web</option>
-                          </select>
-                        </label>
-                        <label>
-                          Статус
-                          <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)}>
-                            <option value="PENDING">Pending</option>
-                            <option value="CONFIRMED">Confirmed</option>
-                          </select>
-                        </label>
-                        <label className="checkbox-label inline">
-                          <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} />
-                          Є депозит
-                        </label>
-                        <label>
-                          Сума депозиту
-                          <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
-                        </label>
-                        <label className="checkbox-label inline">
-                          <input type="checkbox" checked={Boolean(bookingFormState.form.paidInCash)} onChange={(event) => updateBookingForm('paidInCash', event.target.checked)} />
-                          Гість платить готівкою
-                        </label>
-                        <label className="object-admin-form-wide">
-                          Коментар гостя
-                          <textarea rows="3" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)} />
-                        </label>
-                        <label className="object-admin-form-wide">
-                          Коментар адміністратора
-                          <textarea rows="3" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} />
-                        </label>
-                        <div className="actions booking-admin-actions object-admin-form-wide">
-                          <button type="button" className="btn btn-secondary" onClick={closeBookingForm}>Скасувати</button>
-                          <button type="submit" className="btn" disabled={bookingFormState.saving}>
-                            {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
-                          </button>
-                        </div>
-                      </form>
-                    ) : null}
+                  </form>
+                ) : !bookingFormState.open ? (
+                  <div className="actions">
+                    <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Створити бронь</button>
                   </div>
                 ) : null}
-
-                <details className="object-admin-details">
-                  <summary>Технічні дані</summary>
-                  <div className="details-grid compact table-sheet-grid">
-                    <div className="detail-row"><span className="muted">Тип</span><strong>{selectedObject.type || '—'}</strong></div>
-                    <div className="detail-row"><span className="muted">Режим</span><strong>{selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Робочий об’єкт' : 'Декор'}</strong></div>
-                    <div className="detail-row"><span className="muted">Активний</span><strong>{selectedObject.isActive === false ? 'Сховано від клієнта' : 'Видимий'}</strong></div>
-                    <div className="detail-row"><span className="muted">Номер столу</span><strong>{selectedObject.table?.code || localizeField(selectedObject.table?.name, language) || 'Не прив’язано'}</strong></div>
-                    <div className="detail-row"><span className="muted">Назва столу</span><strong>{localizeField(selectedObject.table?.name, language) || '—'}</strong></div>
-                    <div className="detail-row"><span className="muted">SVG</span><strong>{selectedObject.meta?.svgUrl || selectedObject.meta?.svgCode ? 'Додано' : 'Немає'}</strong></div>
-                    <div className="detail-row"><span className="muted">Ціна</span><strong>{selectedObject.meta?.price !== '' && selectedObject.meta?.price !== null && selectedObject.meta?.price !== undefined ? `${selectedObject.meta.price} ${selectedObject.meta?.priceUnit || 'UAH'}` : 'Не задано'}</strong></div>
-                  </div>
-                </details>
-
-                {selectedObjectReservations.length ? (
-                  <details className="object-reservation-list">
-                    <summary>Пов’язані бронювання ({selectedObjectReservations.length})</summary>
-                    <ul className="plain-list compact">
-                      {selectedObjectReservations.slice(0, 5).map((reservation) => (
-                        <li key={reservation.id}>
-                          <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
-                          {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)} • <StatusPill status={reservation.status} />
-                          <span className="reservation-inline-actions">
-                            {reservation.status === 'PENDING' ? (
-                              <>
-                                <button type="button" className="btn btn-small" onClick={() => updateReservationStatusOnMap(reservation.id, 'CONFIRMED')}>Confirm</button>
-                                <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
-                              </>
-                            ) : null}
-                            {reservation.status === 'CONFIRMED' ? (
-                              <>
-                                <button type="button" className="btn btn-small btn-success" onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Complete</button>
-                                <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
-                              </>
-                            ) : null}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
-
-                {objectActionState.error ? <p className="error">{objectActionState.error}</p> : null}
-                <div className="actions">
-                  <button type="button" className="btn btn-primary" onClick={saveSelectedObjectSettings} disabled={objectActionState.saving}>
-                    Зберегти налаштування
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectActive} disabled={objectActionState.saving}>
-                    {selectedObject.isActive === false ? 'Показати клієнту' : 'Сховати від клієнта'}
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={toggleSelectedObjectMode} disabled={objectActionState.saving}>
-                    {selectedObject.meta?.interactionMode === 'SELECTABLE' || selectedObject.meta?.isSelectable ? 'Зробити декором' : 'Зробити клікабельним'}
-                  </button>
-                  <button type="button" className="btn" onClick={() => window.location.assign('/admin/map-editor')}>
-                    Відкрити редактор
-                  </button>
-                </div>
               </div>
             ) : null}
           </>
