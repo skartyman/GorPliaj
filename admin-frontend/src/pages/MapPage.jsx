@@ -694,6 +694,12 @@ export default function MapPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    function globalClick(e) { console.log('[MAP] GLOBAL CLICK', e.target.tagName, e.target.className); }
+    document.addEventListener('click', globalClick, true);
+    return () => document.removeEventListener('click', globalClick, true);
+  }, []);
+
   async function handleFreeTableArrive(table) {
     if (!table) return;
     const result = await apiRequest(`/api/admin/tables/${table.id}/arrive`, { method: 'POST' });
