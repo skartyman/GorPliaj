@@ -54,6 +54,18 @@ function normalizeOverridePayload(payload = {}) {
     }
   }
 
+  if (Object.prototype.hasOwnProperty.call(payload, 'price')) {
+    if (payload.price === '' || payload.price === null || payload.price === undefined) {
+      normalized.price = null;
+    } else {
+      const price = Number(payload.price);
+      if (!Number.isFinite(price) || price < 0) {
+        return { valid: false, message: 'Price must be a non-negative number.' };
+      }
+      normalized.price = price;
+    }
+  }
+
   if (Object.prototype.hasOwnProperty.call(payload, 'isActive')) {
     normalized.isActive = payload.isActive === null || payload.isActive === undefined ? null : Boolean(payload.isActive);
   }
@@ -74,7 +86,7 @@ function normalizeOverridePayload(payload = {}) {
 }
 
 function hasAnyOverrideValue(override) {
-  return ['deposit', 'isActive', 'isBookable', 'photoUrl', 'note'].some((field) => override[field] !== null && override[field] !== undefined);
+  return ['deposit', 'price', 'isActive', 'isBookable', 'photoUrl', 'note'].some((field) => override[field] !== null && override[field] !== undefined);
 }
 
 function serializeOverride(override) {
@@ -86,6 +98,7 @@ function serializeOverride(override) {
     eventId: override.eventId || null,
     ruleDate: override.ruleDate || null,
     deposit: override.deposit === null || override.deposit === undefined ? null : Number(override.deposit),
+    price: override.price === null || override.price === undefined ? null : Number(override.price),
     isActive: override.isActive ?? null,
     isBookable: override.isBookable ?? null,
     photoUrl: override.photoUrl || null,
@@ -109,6 +122,7 @@ function applyOverrideToTable(table, override) {
   return {
     ...table,
     deposit: override.deposit !== null && override.deposit !== undefined ? override.deposit : table.deposit,
+    price: override.price !== null && override.price !== undefined ? override.price : table.price,
     isActive: override.isActive !== null && override.isActive !== undefined ? override.isActive : table.isActive,
     isBookable: override.isBookable !== null && override.isBookable !== undefined ? override.isBookable : table.isBookable,
     photoUrl: override.photoUrl !== null && override.photoUrl !== undefined ? override.photoUrl : table.photoUrl,
@@ -202,6 +216,18 @@ async function updateTableBaseSettings({ tableId, patch }) {
       return { type: 'INVALID', message: 'Deposit must be a non-negative number.' };
     }
     data.deposit = deposit;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'price')) {
+    if (patch.price === '' || patch.price === null || patch.price === undefined) {
+      data.price = null;
+    } else {
+      const price = Number(patch.price);
+      if (!Number.isFinite(price) || price < 0) {
+        return { type: 'INVALID', message: 'Price must be a non-negative number.' };
+      }
+      data.price = price;
+    }
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, 'isActive')) {
@@ -523,6 +549,9 @@ async function listReservationPositionsManagement({
           code: table.code || null,
           bookingKind: table.bookingKind,
           positionType: table.positionType,
+          positionSide: table.positionSide || null,
+          deposit: Number(table.deposit || 0),
+          price: table.price === null || table.price === undefined ? null : Number(table.price),
           seatsMin: table.seatsMin,
           seatsMax: table.seatsMax,
           map: {
@@ -542,12 +571,14 @@ async function listReservationPositionsManagement({
           serviceName: normalizeLocalizedField(table.serviceName),
           base: {
             deposit: Number(table.deposit || 0),
+            price: table.price === null || table.price === undefined ? null : Number(table.price),
             isActive: Boolean(table.isActive),
             isBookable: Boolean(table.isBookable),
             photoUrl: table.photoUrl || null
           },
           effective: {
             deposit: Number(effectiveTable.deposit || 0),
+            price: effectiveTable.price === null || effectiveTable.price === undefined ? null : Number(effectiveTable.price),
             isActive: Boolean(effectiveTable.isActive),
             isBookable: Boolean(effectiveTable.isBookable),
             photoUrl: effectiveTable.photoUrl || null
@@ -641,6 +672,7 @@ async function createTable({ mapId, data }) {
     seatsMin: Math.max(0, Number(data.seatsMin) || 0),
     seatsMax: Math.max(0, Number(data.seatsMax) || 0),
     deposit: Number(data.deposit) || 0,
+    price: data.price ?? null,
     isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
     isBookable: data.isBookable !== undefined ? Boolean(data.isBookable) : true,
     sortOrder: Number(data.sortOrder) || 0,

@@ -16,6 +16,8 @@ const {
   createAdminReservation,
   verifyAdminReservation,
   arriveAdminReservation,
+  arriveByTicketCodeAdminReservation,
+  createAdminTableArrive,
   listAdminMaps,
   createAdminMapVariant,
   deleteAdminMapVariant,
@@ -131,10 +133,12 @@ router.delete('/reservation-positions/:tableId/override', requireAdminAuth, requ
 router.post('/tables', requireAdminAuth, requirePermission('map:edit'), createAdminTable);
 router.delete('/tables/:id', requireAdminAuth, requirePermission('map:edit'), deleteAdminTable);
 router.post('/tables/batch', requireAdminAuth, requirePermission('map:edit'), batchUpdateAdminTables);
+router.post('/tables/:tableId/arrive', requireAdminAuth, requirePermission('reservations:arrive'), createAdminTableArrive);
 router.get('/reservations/verify/:ticketCode', requireAdminAuth, requirePermission('reservations:verify'), verifyAdminReservation);
 router.get('/reservations/:id', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationById);
 router.post('/reservations', requireAdminAuth, createAdminReservation);
 router.patch('/reservations/:id/status', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationStatus);
+router.post('/reservations/arrive-by-ticket/:ticketCode', requireAdminAuth, requirePermission('reservations:arrive'), arriveByTicketCodeAdminReservation);
 router.post('/reservations/:id/arrive', requireAdminAuth, requirePermission('reservations:arrive'), arriveAdminReservation);
 router.delete('/reservations/:id', requireAdminAuth, requirePermission('reservations:delete'), deleteAdminReservation);
 

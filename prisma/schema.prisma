@@ -75,6 +75,7 @@ model VenueTable {
   seatsMin     Int
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
+  price        Decimal?      @db.Decimal(10, 2)
   isActive     Boolean       @default(true)
   isBookable   Boolean       @default(true)
   sortOrder    Int           @default(0)
@@ -100,6 +101,7 @@ model VenueTableOverride {
   eventId     Int?
   ruleDate    DateTime?
   deposit     Decimal?  @db.Decimal(10, 2)
+  price       Decimal?  @db.Decimal(10, 2)
   isActive    Boolean?
   isBookable  Boolean?
   photoUrl    String?
@@ -190,6 +192,7 @@ model Reservation {
   commentAdmin    String?
   depositRequired Boolean           @default(false)
   depositAmount   Decimal?          @db.Decimal(10, 2)
+  paidInCash      Boolean           @default(false)
   expiresAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

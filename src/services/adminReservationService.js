@@ -31,7 +31,8 @@ function getAdminReservations() {
           serviceDescription: true,
           seatsMin: true,
           seatsMax: true,
-          deposit: true
+          deposit: true,
+          price: true
         }
       },
       zone: {

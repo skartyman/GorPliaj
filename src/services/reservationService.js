@@ -46,6 +46,7 @@ function createReservation(payload) {
     commentAdmin,
     depositRequired,
     depositAmount,
+    paidInCash,
     status,
     source,
     ticketCode
@@ -69,6 +70,7 @@ function createReservation(payload) {
       commentAdmin: commentAdmin || null,
       depositRequired: Boolean(depositRequired),
       depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount,
+      paidInCash: Boolean(paidInCash),
       status: status || undefined,
       source: source || undefined,
       ticketCode: ticketCode || undefined

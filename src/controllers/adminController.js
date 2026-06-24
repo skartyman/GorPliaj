@@ -519,6 +519,69 @@ async function updateAdminMapEditor(req, res) {
   }
 }
 
+async function createAdminTableArrive(req, res) {
+  try {
+    const tableId = Number(req.params.tableId);
+    if (!Number.isInteger(tableId) || tableId <= 0) {
+      return res.status(400).json({ message: 'Invalid table id.' });
+    }
+
+    const table = await prisma.venueTable.findUnique({
+      where: { id: tableId },
+      select: { id: true, mapId: true, zoneId: true, bookingKind: true, seatsMin: true, name: true, code: true }
+    });
+    if (!table) {
+      return res.status(404).json({ message: 'Table not found.' });
+    }
+
+    const arrivedGuests = req.body.arrivedGuests ? Number(req.body.arrivedGuests) : table.seatsMin || 1;
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const timeFrom = new Date(now);
+    timeFrom.setSeconds(0, 0);
+    const timeTo = new Date(todayStr + 'T23:59:00');
+
+    const ticketCode = generateTicketCode();
+
+    const reservation = await reservationService.createReservation({
+      tableId: table.id,
+      mapId: table.mapId,
+      zoneId: table.zoneId,
+      bookingKind: table.bookingKind || 'TABLE',
+      customerName: req.body.customerName || '',
+      customerPhone: req.body.customerPhone || '',
+      guests: arrivedGuests,
+      reservationDate: new Date(todayStr + 'T00:00:00'),
+      timeFrom,
+      timeTo,
+      status: 'COMPLETED',
+      source: 'WALK_IN',
+      ticketCode,
+      depositRequired: false,
+      depositAmount: null,
+      paidInCash: false
+    });
+
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { arrivedAt: now, arrivedGuests }
+    });
+
+    const updated = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+      include: {
+        table: { select: { id: true, code: true, name: true } },
+        zone: { select: { id: true, name: true } }
+      }
+    });
+
+    return res.status(201).json({ reservation: updated });
+  } catch (error) {
+    console.error('[adminController.createAdminTableArrive] Failed to mark table arrival.', error);
+    return res.status(500).json({ message: 'Unable to mark table arrival.' });
+  }
+}
+
 async function createAdminReservation(req, res) {
   try {
     const body = req.body || {};
@@ -607,6 +670,7 @@ async function createAdminReservation(req, res) {
       commentAdmin: body.commentAdmin || null,
       depositRequired: depositAmount > 0,
       depositAmount: depositAmount > 0 ? depositAmount : null,
+      paidInCash: Boolean(body.paidInCash),
       status: body.status || 'PENDING',
       source: source || undefined,
       ticketCode
@@ -714,6 +778,50 @@ async function arriveAdminReservation(req, res) {
   }
 }
 
+async function arriveByTicketCodeAdminReservation(req, res) {
+  try {
+    const ticketCode = String(req.params.ticketCode || '').trim();
+    if (!ticketCode) {
+      return res.status(400).json({ message: 'Ticket code is required.' });
+    }
+
+    const existing = await prisma.reservation.findFirst({
+      where: { ticketCode },
+      select: { id: true, arrivedAt: true, status: true, customerName: true, tableId: true }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Бронь не знайдено.' });
+    }
+
+    if (existing.arrivedAt) {
+      return res.status(409).json({ message: 'Гості вже на місці.' });
+    }
+
+    if (existing.status === 'CANCELLED') {
+      return res.status(409).json({ message: 'Бронь скасована.' });
+    }
+
+    const reservation = await prisma.reservation.update({
+      where: { id: existing.id },
+      data: {
+        arrivedAt: new Date(),
+        arrivedGuests: req.body.arrivedGuests ? Number(req.body.arrivedGuests) : undefined,
+        status: 'COMPLETED'
+      },
+      include: {
+        table: { select: { id: true, code: true, name: true } },
+        zone: { select: { id: true, name: true } }
+      }
+    });
+
+    return res.json({ reservation, message: 'Гості на місці.' });
+  } catch (error) {
+    console.error('[adminController.arriveByTicketCodeAdminReservation] Failed.', error);
+    return res.status(500).json({ message: 'Не вдалося підтвердити прибуття.' });
+  }
+}
+
 async function createAdminTable(req, res) {
   try {
     const result = await venueTableOverrideService.createTable({
@@ -790,6 +898,7 @@ module.exports = {
   createAdminReservation,
   verifyAdminReservation,
   arriveAdminReservation,
+  arriveByTicketCodeAdminReservation,
   listAdminMaps,
   createAdminMapVariant,
   deleteAdminMapVariant,
@@ -800,5 +909,6 @@ module.exports = {
   updateAdminMapEditor,
   createAdminTable,
   deleteAdminTable,
-  batchUpdateAdminTables
+  batchUpdateAdminTables,
+  createAdminTableArrive
 };
