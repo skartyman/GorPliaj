@@ -98,7 +98,7 @@ export function useInteractiveMap({
 
   useEffect(() => {
     if (!containerRef.current) return;
-    console.log('[MAP] listeners attach');
+    console.log('[MAP] listeners attach', performance.now().toFixed(0));
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;

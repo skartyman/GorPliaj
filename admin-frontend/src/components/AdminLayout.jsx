@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
@@ -62,6 +62,10 @@ export default function AdminLayout({ children }) {
     return path.startsWith('/admin/map-editor') || path === '/admin/map';
   });
   const { t, toggleLanguage } = useAdminI18n();
+  const diagRef2 = useRef({ pathname: '', tRef: null, userRef: null });
+  const d2 = diagRef2.current;
+  if (d2.pathname !== location.pathname) { console.warn('[DIAG] AdminLayout pathname changed', d2.pathname, '->', location.pathname); d2.pathname = location.pathname; }
+  if (d2.tRef !== t) { console.warn('[DIAG] AdminLayout t REF changed'); d2.tRef = t; }
   const title = useMemo(() => pageTitle(location.pathname, t), [location.pathname, t]);
   const isMapFullscreen = location.pathname.startsWith('/admin/map-editor') || location.pathname === '/admin/map';
   const navItems = useMemo(() => getNavItems(user?.role), [user?.role]);
@@ -77,7 +81,7 @@ export default function AdminLayout({ children }) {
     }
   }, [isMapFullscreen, location.pathname]);
 
-  console.log('[MAP] AdminLayout rendered', window.location.pathname);
+  console.log('[MAP] AdminLayout rendered', window.location.pathname, performance.now().toFixed(0));
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);

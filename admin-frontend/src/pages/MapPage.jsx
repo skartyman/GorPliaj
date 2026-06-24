@@ -566,7 +566,7 @@ function formatCountdown(reservation) {
 }
 
 export default function MapPage() {
-  console.log('[MAP] MapPage rendered');
+  console.log('[MAP] MapPage rendered', performance.now().toFixed(0));
   const [state, setState] = useState({
     loading: true,
     error: '',
