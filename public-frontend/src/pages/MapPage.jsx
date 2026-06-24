@@ -30,12 +30,7 @@ function parseStyleJson(styleJson) {
       borderColor: typeof style?.borderColor === 'string' ? style.borderColor : undefined,
       color: typeof style?.color === 'string' ? style.color : undefined,
       borderRadius: Number.isFinite(style?.borderRadius) ? `${style.borderRadius}px` : undefined,
-      opacity: Number.isFinite(style?.opacity) ? Math.max(0.2, Math.min(1, style.opacity)) : undefined,
-      fontSize: Number.isFinite(style?.fontSize) ? style.fontSize : undefined,
-      textAlign: typeof style?.textAlign === 'string' ? style.textAlign : undefined,
-      containerPadding: Number.isFinite(style?.containerPadding) ? style.containerPadding : undefined,
-      lineColor: typeof style?.lineColor === 'string' ? style.lineColor : undefined,
-      annotationLine: style?.annotationLine && typeof style.annotationLine === 'object' ? style.annotationLine : undefined
+      opacity: Number.isFinite(style?.opacity) ? Math.max(0.2, Math.min(1, style.opacity)) : undefined
     };
   } catch {
     return {};
@@ -66,6 +61,10 @@ function parseMetaJson(metaJson) {
       opacity: Number.isFinite(Number(parsed.opacity)) ? Number(parsed.opacity) : 1,
       strokeColor: typeof parsed.strokeColor === 'string' ? parsed.strokeColor : '',
       strokeWidth: Number.isFinite(Number(parsed.strokeWidth)) ? Number(parsed.strokeWidth) : 2,
+      text: typeof parsed.text === 'string' ? parsed.text : '',
+      fontSize: Number.isFinite(Number(parsed.fontSize)) ? Number(parsed.fontSize) : undefined,
+      fontColor: typeof parsed.fontColor === 'string' ? parsed.fontColor : undefined,
+      calloutLine: typeof parsed.calloutLine === 'string' ? parsed.calloutLine : '',
       price: parsed.price ?? parsed.objectPrice ?? '',
       priceUnit: typeof parsed.priceUnit === 'string' ? parsed.priceUnit : '',
       depositRequired: Boolean(parsed.depositRequired),
@@ -461,110 +460,68 @@ function PublicMapObjectGraphic({ object, meta, label }) {
   );
 }
 
-function annotationLineStart(object, target) {
-  if (!target) return null;
-  const cx = object.x + object.width / 2;
-  const cy = object.y + object.height / 2;
-  const dx = target.x - cx;
-  const dy = target.y - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-  const absDx = Math.abs(dx);
-  const absDy = Math.abs(dy);
+function MapTextObject({ object, style, meta, label }) {
+  const textContent = meta?.text || label || '';
+  const fontSize = meta?.fontSize || style?.fontSize || 14;
+  const fontColor = meta?.fontColor || style?.color || '#1e293b';
+  const calloutDir = meta?.calloutLine || '';
+
   const halfW = object.width / 2;
   const halfH = object.height / 2;
-  let t;
-  if (halfW <= 0 || halfH <= 0) return { x: cx, y: cy };
-  if (absDx * halfH > absDy * halfW) {
-    t = halfW / absDx;
-  } else {
-    t = halfH / absDy;
+  const ext = 40;
+
+  let calloutLine = null;
+  if (calloutDir === 'UP') {
+    calloutLine = <line x1={halfW} y1={0} x2={halfW} y2={-ext} stroke={fontColor} strokeWidth={1.5} />;
+  } else if (calloutDir === 'DOWN') {
+    calloutLine = <line x1={halfW} y1={object.height} x2={halfW} y2={object.height + ext} stroke={fontColor} strokeWidth={1.5} />;
+  } else if (calloutDir === 'LEFT') {
+    calloutLine = <line x1={0} y1={halfH} x2={-ext} y2={halfH} stroke={fontColor} strokeWidth={1.5} />;
+  } else if (calloutDir === 'RIGHT') {
+    calloutLine = <line x1={object.width} y1={halfH} x2={object.width + ext} y2={halfH} stroke={fontColor} strokeWidth={1.5} />;
   }
-  return {
-    x: cx + dx * t,
-    y: cy + dy * t
-  };
-}
-
-function MapTextObject({ object, style, meta, label }) {
-  const lineTarget = meta?.annotationLine || style?.annotationLine;
-  const fontSize = style?.fontSize || 14;
-  const textAlign = style?.textAlign || 'left';
-  const containerPadding = style?.containerPadding ?? 6;
-  const lineColor = style?.lineColor || '#94a3b8';
-  const color = style?.color || '#1e293b';
-  const background = style?.background;
-  const borderColor = style?.borderColor;
-  const borderRadius = style?.borderRadius;
-  const opacity = style?.opacity;
-
-  const textContainerStyle = {
-    background: background || undefined,
-    border: borderColor ? `1px solid ${borderColor}` : undefined,
-    borderRadius: borderRadius || undefined,
-    padding: containerPadding,
-    color,
-    fontSize: `${fontSize}px`,
-    textAlign: textAlign === 'top' || textAlign === 'bottom' ? 'left' : textAlign,
-    lineHeight: 1.3,
-    maxWidth: '100%',
-    overflow: 'hidden',
-    wordBreak: 'break-word',
-    whiteSpace: 'pre-wrap',
-    position: 'relative',
-    zIndex: 1,
-    opacity
-  };
-
-  let lineStart = null;
-  if (lineTarget) {
-    lineStart = annotationLineStart(object, lineTarget);
-  }
-
-  const alignItems = textAlign === 'top' ? 'flex-start'
-    : textAlign === 'bottom' ? 'flex-end'
-    : textAlign === 'center' ? 'center'
-    : 'flex-start';
-
-  const justifyContent = textAlign === 'center' ? 'center'
-    : textAlign === 'right' ? 'flex-end'
-    : 'flex-start';
 
   return (
     <div style={{
-      position: 'absolute',
-      left: 0, top: 0, right: 0, bottom: 0,
+      width: '100%',
+      height: '100%',
+      position: 'relative',
       display: 'flex',
-      alignItems,
-      justifyContent,
-      pointerEvents: 'none',
-      overflow: 'visible'
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'visible',
+      pointerEvents: 'none'
     }}>
-      {lineStart && lineTarget ? (
-        <svg
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: object.width,
-            height: object.height,
-            pointerEvents: 'none',
-            overflow: 'visible',
-            zIndex: 0
-          }}
-        >
-          <line
-            x1={lineStart.x - object.x}
-            y1={lineStart.y - object.y}
-            x2={lineTarget.x - object.x}
-            y2={lineTarget.y - object.y}
-            stroke={lineColor}
-            strokeWidth={1.5}
-            strokeDasharray="4 3"
-          />
+      {calloutLine ? (
+        <svg style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          overflow: 'visible', pointerEvents: 'none', zIndex: 0
+        }}>
+          {calloutLine}
         </svg>
       ) : null}
-      <div style={textContainerStyle}>
-        {label}
+      <div style={{
+        background: style?.background || 'rgba(255,248,240,0.9)',
+        border: style?.borderColor ? `1px solid ${style.borderColor}` : '1px solid #d4c5a9',
+        borderRadius: style?.borderRadius || '8px',
+        padding: '6px 10px',
+        opacity: style?.opacity,
+        maxWidth: '100%',
+        overflow: 'hidden',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        <span style={{
+          fontSize: `${fontSize}px`,
+          color: fontColor,
+          fontWeight: 600,
+          textAlign: 'center',
+          lineHeight: 1.3,
+          wordBreak: 'break-word',
+          whiteSpace: 'pre-wrap'
+        }}>
+          {textContent}
+        </span>
       </div>
     </div>
   );
@@ -1116,7 +1073,7 @@ export default function MapPage() {
 
                     if (object.type === 'TEXT') {
                       const style = parseStyleJson(object.styleJson);
-                      const { opacity: _opacity, fontSize: _fontSize, textAlign: _textAlign, containerPadding: _cp, lineColor: _lc, annotationLine: _al, ...outerStyle } = style;
+                      const { opacity: _opacity, ...outerStyle } = style;
                       return (
                         <div
                           key={object.id}
