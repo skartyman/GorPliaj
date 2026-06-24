@@ -2363,6 +2363,8 @@ export default function MapEditorPage() {
   const clipboardRef = useRef([]);
   const dragStateRef = useRef(null);
   const pendingSaveRef = useRef(null);
+  const rotationStateRef = useRef(null);
+  const resizeEdgeStateRef = useRef(null);
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
   const [textureAssets, setTextureAssets] = useState([]);
@@ -3649,6 +3651,158 @@ export default function MapEditorPage() {
     }));
   }
 
+  function getRotatedCorner(object, corner) {
+    const w = object.width;
+    const h = object.height;
+    const r = (object.rotation || 0) * Math.PI / 180;
+    const cx = Number(object.x) + w / 2;
+    const cy = Number(object.y) + h / 2;
+    const corners = {
+      topRight: { lx: w / 2, ly: -h / 2 },
+      topLeft: { lx: -w / 2, ly: -h / 2 },
+      bottomRight: { lx: w / 2, ly: h / 2 },
+      bottomLeft: { lx: -w / 2, ly: h / 2 }
+    };
+    const { lx, ly } = corners[corner] || corners.topRight;
+    const rx = lx * Math.cos(r) - ly * Math.sin(r);
+    const ry = lx * Math.sin(r) + ly * Math.cos(r);
+    return { x: cx + rx, y: cy + ry };
+  }
+
+  function handleRotationMouseDown(event) {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const object = selectedObject;
+    if (!object) return;
+    const scale = mapScale;
+    const canvasEl = document.querySelector('.map-editor-canvas');
+    if (!canvasEl) return;
+    const rect = canvasEl.getBoundingClientRect();
+    const cx = Number(object.x) + object.width / 2;
+    const cy = Number(object.y) + object.height / 2;
+    rotationStateRef.current = {
+      objectId: object.id,
+      centerX: cx,
+      centerY: cy,
+      initialRotation: object.rotation || 0,
+      initialAngle: Math.atan2(
+        (event.clientY - rect.top) / scale - cy,
+        (event.clientX - rect.left) / scale - cx
+      ),
+      before: snapshotState(editorState)
+    };
+    document.addEventListener('mousemove', handleRotationMouseMove);
+    document.addEventListener('mouseup', handleRotationMouseUp);
+  }
+
+  function handleRotationMouseMove(event) {
+    const state = rotationStateRef.current;
+    if (!state) return;
+    const canvasEl = document.querySelector('.map-editor-canvas');
+    if (!canvasEl) return;
+    const rect = canvasEl.getBoundingClientRect();
+    const scale = mapScale;
+    const currentAngle = Math.atan2(
+      (event.clientY - rect.top) / scale - state.centerY,
+      (event.clientX - rect.left) / scale - state.centerX
+    );
+    let delta = (currentAngle - state.initialAngle) * 180 / Math.PI;
+    if (event.shiftKey) {
+      delta = Math.round(delta / 15) * 15;
+    }
+    const newRotation = ((state.initialRotation + delta) % 360 + 360) % 360;
+    updateObject(state.objectId, (object) => ({
+      ...object,
+      rotation: Math.round(newRotation)
+    }), { recordHistory: false });
+  }
+
+  function handleRotationMouseUp() {
+    const state = rotationStateRef.current;
+    if (state) {
+      pushHistorySnapshot(state.before);
+    }
+    rotationStateRef.current = null;
+    document.removeEventListener('mousemove', handleRotationMouseMove);
+    document.removeEventListener('mouseup', handleRotationMouseUp);
+  }
+
+  function handleEdgeMouseDown(edge, event) {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const map = editorState.current?.map;
+    if (!map) return;
+    resizeEdgeStateRef.current = {
+      edge,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: Number(map.width) || 100,
+      startHeight: Number(map.height) || 100,
+      before: snapshotState(editorState)
+    };
+    document.addEventListener('mousemove', handleEdgeMouseMove);
+    document.addEventListener('mouseup', handleEdgeMouseUp);
+  }
+
+  function handleEdgeMouseMove(event) {
+    const state = resizeEdgeStateRef.current;
+    if (!state) return;
+    const scale = mapScale;
+    const dx = (event.clientX - state.startX) / scale;
+    const dy = (event.clientY - state.startY) / scale;
+    const edge = state.edge;
+    let newWidth = state.startWidth;
+    let newHeight = state.startHeight;
+    let shiftX = 0;
+    let shiftY = 0;
+    if (edge === 'right') {
+      newWidth = Math.max(Math.round((state.startWidth + dx) / 50) * 50, 100);
+    } else if (edge === 'left') {
+      const delta = Math.round(dx / 50) * 50;
+      shiftX = -delta;
+      newWidth = Math.max(state.startWidth + delta, 100);
+    } else if (edge === 'bottom') {
+      newHeight = Math.max(Math.round((state.startHeight + dy) / 50) * 50, 100);
+    } else if (edge === 'top') {
+      const delta = Math.round(dy / 50) * 50;
+      shiftY = -delta;
+      newHeight = Math.max(state.startHeight + delta, 100);
+    }
+    setEditorState((prev) => ({
+      ...prev,
+      current: {
+        ...prev.current,
+        map: {
+          ...prev.current.map,
+          width: newWidth,
+          height: newHeight
+        },
+        objects: (edge === 'top' || edge === 'left') && (shiftY || shiftX)
+          ? prev.current.objects.map((object) => ({
+              ...object,
+              x: Number(object.x) + shiftX,
+              y: Number(object.y) + shiftY
+            }))
+          : prev.current.objects
+      }
+    }));
+  }
+
+  function handleEdgeMouseUp() {
+    const state = resizeEdgeStateRef.current;
+    if (state) {
+      const map = editorState.current?.map;
+      if (map && (Number(map.width) !== state.startWidth || Number(map.height) !== state.startHeight)) {
+        pushHistorySnapshot(state.before);
+      }
+    }
+    resizeEdgeStateRef.current = null;
+    document.removeEventListener('mousemove', handleEdgeMouseMove);
+    document.removeEventListener('mouseup', handleEdgeMouseUp);
+  }
+
   function moveSelectedLayer(action) {
     if (!selectedObjects.length) {
       return;
@@ -4695,6 +4849,60 @@ export default function MapEditorPage() {
                       </Rnd>
                     );
                   })}
+
+                  {selectedObject && editorState.activeTool === 'SELECT' && !selectedObject.metaJson?.isLocked ? (
+                    (() => {
+                      const obj = selectedObject;
+                      const corner = getRotatedCorner(obj, 'topRight');
+                      const w = obj.width;
+                      const h = obj.height;
+                      const dist = Math.sqrt(w * w + h * h) / 2 || 1;
+                      const lx = w / 2;
+                      const ly = -h / 2;
+                      const r = (obj.rotation || 0) * Math.PI / 180;
+                      const rx = lx * Math.cos(r) - ly * Math.sin(r);
+                      const ry = lx * Math.sin(r) + ly * Math.cos(r);
+                      const ox = (rx / dist) * 16;
+                      const oy = (ry / dist) * 16;
+                      const handleX = corner.x + ox;
+                      const handleY = corner.y + oy;
+                      return (
+                        <>
+                          <svg
+                            style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 9999, overflow: 'visible' }}
+                          >
+                            <line
+                              x1={corner.x}
+                              y1={corner.y}
+                              x2={handleX}
+                              y2={handleY}
+                              stroke="#3b82f6"
+                              strokeWidth="1.5"
+                              strokeDasharray="3,2"
+                            />
+                          </svg>
+                          <div
+                            className="map-editor-rotation-handle"
+                            style={{ left: handleX - 8, top: handleY - 8, zIndex: 10000 }}
+                            onMouseDown={handleRotationMouseDown}
+                          >
+                            <svg viewBox="0 0 16 16" width="16" height="16">
+                              <circle cx="8" cy="8" r="7" fill="white" stroke="#3b82f6" strokeWidth="1.5" />
+                              <path d="M8 3.5 A4.5 4.5 0 1 1 3.5 8" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" />
+                              <path d="M5.5 5.5 L3.5 8 L6.5 9.5" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                        </>
+                      );
+                    })()
+                  ) : null}
+
+                  <div className="map-editor-edge-handles" style={{ zIndex: 9999 }}>
+                    <div className="map-editor-edge-handle map-editor-edge-top" onMouseDown={(e) => handleEdgeMouseDown('top', e)} />
+                    <div className="map-editor-edge-handle map-editor-edge-right" onMouseDown={(e) => handleEdgeMouseDown('right', e)} />
+                    <div className="map-editor-edge-handle map-editor-edge-bottom" onMouseDown={(e) => handleEdgeMouseDown('bottom', e)} />
+                    <div className="map-editor-edge-handle map-editor-edge-left" onMouseDown={(e) => handleEdgeMouseDown('left', e)} />
+                  </div>
                 </div>
                 </div>
               </div>

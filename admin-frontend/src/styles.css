@@ -1126,6 +1126,65 @@ textarea { resize: vertical; min-height: 96px; }
 .map-editor-object-hitbox.compact { inset: 14%; }
 .map-editor-object-visual { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
+.map-editor-rotation-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  cursor: grab;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+.map-editor-rotation-handle:active {
+  cursor: grabbing;
+}
+
+.map-editor-edge-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.map-editor-edge-handle {
+  position: absolute;
+  pointer-events: auto;
+}
+.map-editor-edge-top {
+  left: 6px;
+  right: 6px;
+  top: -5px;
+  height: 10px;
+  cursor: ns-resize;
+}
+.map-editor-edge-bottom {
+  left: 6px;
+  right: 6px;
+  bottom: -5px;
+  height: 10px;
+  cursor: ns-resize;
+}
+.map-editor-edge-left {
+  top: 6px;
+  bottom: 6px;
+  left: -5px;
+  width: 10px;
+  cursor: ew-resize;
+}
+.map-editor-edge-right {
+  top: 6px;
+  bottom: 6px;
+  right: -5px;
+  width: 10px;
+  cursor: ew-resize;
+}
+.map-editor-edge-top:active, .map-editor-edge-bottom:active {
+  cursor: ns-resize;
+}
+.map-editor-edge-left:active, .map-editor-edge-right:active {
+  cursor: ew-resize;
+}
+
 .map-editor-object {
   width: 100%;
   height: 100%;
