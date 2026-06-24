@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
-import DataTable from '../components/DataTable';
 import { apiRequest, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
@@ -100,6 +99,10 @@ export default function PositionsPage() {
       sortOrder: row.sortOrder || 0
     });
     setEditId(row.id);
+  }
+
+  function cancelEdit() {
+    resetForm();
   }
 
   async function submitForm(event) {
@@ -242,7 +245,7 @@ export default function PositionsPage() {
   });
 
   const positionTypes = allPositionTypes.length ? allPositionTypes : [...new Set(positions.map((p) => p.positionType).filter(Boolean))];
-  const allZonesForFilter = [...new Map(zones.map((z) => [z.id, z]))].values();
+  const allZonesForFilter = [...new Map(zones.map((z) => [z.id, z])).values()];
 
   const columns = [
     {
@@ -298,12 +301,89 @@ export default function PositionsPage() {
       label: t('positions.columns.actions'),
       render: (row) => (
         <div className="actions compact">
-          <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
+          {editId === row.id ? (
+            <span className="muted" style={{ fontSize: 12 }}>{t('positions.editing')}</span>
+          ) : (
+            <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
+          )}
           <button type="button" className="btn btn-small btn-danger" onClick={() => removePosition(row.id)}>{t('common.delete')}</button>
         </div>
       )
     }
   ];
+
+  function renderFormFields() {
+    const inputS = { fontSize: 12, padding: '2px 6px', height: 28 };
+    const selectS = { fontSize: 12, padding: '2px 6px', height: 28 };
+    return (
+      <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}>
+        <div style={{ display: 'contents' }}>
+          <label style={{ fontSize: 11, gridColumn: 'span 1' }}>
+            {t('positions.fields.code')}
+            <input style={inputS} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="A1" />
+          </label>
+          <label style={{ fontSize: 11, gridColumn: 'span 2' }}>
+            {t('positions.fields.name')}
+            <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+              <span style={{ fontSize: 10, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>UA</span>
+              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.ua} onChange={(e) => setForm({ ...form, name: { ...form.name, ua: e.target.value } })} placeholder="Назва UA" />
+              <span style={{ fontSize: 10, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>RU</span>
+              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.ru} onChange={(e) => setForm({ ...form, name: { ...form.name, ru: e.target.value } })} placeholder="Назва RU" />
+              <span style={{ fontSize: 10, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>EN</span>
+              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.en} onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })} placeholder="Назва EN" />
+            </div>
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.positionType')}
+            <select style={selectS} value={form.positionType} onChange={(e) => setForm({ ...form, positionType: e.target.value })}>
+              <option value="">—</option>
+              {positionTypes.map((pt) => (
+                <option key={pt} value={pt}>{pt}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.zone')}
+            <select style={selectS} value={form.zoneId} onChange={(e) => setForm({ ...form, zoneId: e.target.value })}>
+              <option value="">—</option>
+              {allZonesForFilter.map((z) => (
+                <option key={z.id} value={z.id}>{localizeField(z.name, language)}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.bookingKind')}
+            <select style={selectS} value={form.bookingKind} onChange={(e) => setForm({ ...form, bookingKind: e.target.value })}>
+              <option value="TABLE">{t('reservationMeta.bookingKind.TABLE')}</option>
+              <option value="BEACH">{t('reservationMeta.bookingKind.BEACH')}</option>
+            </select>
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.deposit')}
+            <input style={inputS} type="number" min="0" step="0.01" value={form.deposit} onChange={(e) => setForm({ ...form, deposit: e.target.value })} />
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.seatsMin')}
+            <input style={inputS} type="number" min="0" value={form.seatsMin} onChange={(e) => setForm({ ...form, seatsMin: e.target.value })} />
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.seatsMax')}
+            <input style={inputS} type="number" min="0" value={form.seatsMax} onChange={(e) => setForm({ ...form, seatsMax: e.target.value })} />
+          </label>
+          <div style={{ fontSize: 11, display: 'flex', gap: 8, alignItems: 'center', height: 28, alignSelf: 'end' }}>
+            <label className="menu-admin-checkbox" style={{ gap: 2 }}>
+              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+              <span style={{ fontSize: 11 }}>{t('positions.fields.isActive')}</span>
+            </label>
+            <label className="menu-admin-checkbox" style={{ gap: 2 }}>
+              <input type="checkbox" checked={form.isBookable} onChange={(e) => setForm({ ...form, isBookable: e.target.checked })} />
+              <span style={{ fontSize: 11 }}>{t('positions.fields.isBookable')}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -318,76 +398,21 @@ export default function PositionsPage() {
           <hr /><span>{t('positions.create')}</span>
         </div>
 
-        <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-          <div className="grid-two-col">
-            <label>
-              {t('positions.fields.map')} <span className="required">*</span>
-              <select value={form.mapId} onChange={(e) => setForm({ ...form, mapId: e.target.value })} required={!editId}>
-                <option value="">—</option>
-                {maps.map((m) => (
-                  <option key={m.id} value={m.id}>{localizeField(m.name, language)} ({m.usageMode})</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t('positions.fields.code')}
-              <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="A1" />
-            </label>
-            <label>
-              {t('positions.fields.positionType')}
-              <select value={form.positionType} onChange={(e) => setForm({ ...form, positionType: e.target.value })}>
-                <option value="">—</option>
-                {positionTypes.map((pt) => (
-                  <option key={pt} value={pt}>{pt}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t('positions.fields.zone')}
-              <select value={form.zoneId} onChange={(e) => setForm({ ...form, zoneId: e.target.value })}>
-                <option value="">—</option>
-                {allZonesForFilter.map((z) => (
-                  <option key={z.id} value={z.id}>{localizeField(z.name, language)}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {t('positions.fields.bookingKind')}
-              <select value={form.bookingKind} onChange={(e) => setForm({ ...form, bookingKind: e.target.value })}>
-                <option value="TABLE">{t('reservationMeta.bookingKind.TABLE')}</option>
-                <option value="BEACH">{t('reservationMeta.bookingKind.BEACH')}</option>
-              </select>
-            </label>
-            <label>
-              {t('positions.fields.deposit')}
-              <input type="number" min="0" step="0.01" value={form.deposit} onChange={(e) => setForm({ ...form, deposit: e.target.value })} />
-            </label>
-            <label>
-              {t('positions.fields.seatsMin')}
-              <input type="number" min="0" value={form.seatsMin} onChange={(e) => setForm({ ...form, seatsMin: e.target.value })} />
-            </label>
-            <label>
-              {t('positions.fields.seatsMax')}
-              <input type="number" min="0" value={form.seatsMax} onChange={(e) => setForm({ ...form, seatsMax: e.target.value })} />
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <label className="menu-admin-checkbox">
-              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-              <span>{t('positions.fields.isActive')}</span>
-            </label>
-            <label className="menu-admin-checkbox">
-              <input type="checkbox" checked={form.isBookable} onChange={(e) => setForm({ ...form, isBookable: e.target.checked })} />
-              <span>{t('positions.fields.isBookable')}</span>
-            </label>
-          </div>
+        <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          <label style={{ fontSize: 11, maxWidth: 320 }}>
+            {t('positions.fields.map')} <span className="required">*</span>
+            <select style={{ fontSize: 12, padding: '2px 6px', height: 28 }} value={form.mapId} onChange={(e) => setForm({ ...form, mapId: e.target.value })} required>
+              <option value="">—</option>
+              {maps.map((m) => (
+                <option key={m.id} value={m.id}>{localizeField(m.name, language)} ({m.usageMode})</option>
+              ))}
+            </select>
+          </label>
+          {renderFormFields()}
           <div className="actions" style={{ display: 'flex', gap: 8 }}>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? t('positions.saving') : (editId ? t('common.save') : t('common.create'))}
+            <button type="submit" className="btn btn-small btn-primary" disabled={saving}>
+              {saving ? t('positions.saving') : t('common.create')}
             </button>
-            {editId ? (
-              <button type="button" className="btn btn-secondary" onClick={resetForm}>{t('positionTypes.form.cancel')}</button>
-            ) : null}
           </div>
         </form>
 
@@ -466,8 +491,51 @@ export default function PositionsPage() {
           <p className="muted">{t('positions.loading')}</p>
         ) : state.error ? (
           <p className="state-error">{state.error}</p>
+        ) : !filteredPositions.length ? (
+          <p className="muted">{t('positions.empty')}</p>
         ) : (
-          <DataTable columns={columns} rows={filteredPositions} emptyText={t('positions.empty')} />
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  {columns.map((column) => (
+                    <th key={column.key}>{column.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPositions.map((row) => (
+                  <Fragment key={row.id}>
+                    <tr className={editId === row.id ? 'row-editing' : ''}>
+                      {columns.map((column) => (
+                        <td key={`${row.id}-${column.key}`}>
+                          {column.render ? column.render(row) : localizeField(row[column.key], language) || '—'}
+                        </td>
+                      ))}
+                    </tr>
+                    {editId === row.id ? (
+                      <tr className="inline-edit-row">
+                        <td colSpan={columns.length} style={{ padding: '8px 16px', background: 'var(--color-surface-alt, #f9fafb)' }}>
+                          <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted)', marginBottom: 4 }}>
+                              {t('positions.editing')} — <span style={{ fontFamily: 'monospace' }}>{row.code}</span>
+                            </div>
+                            {renderFormFields()}
+                            <div className="actions" style={{ display: 'flex', gap: 8 }}>
+                              <button type="submit" className="btn btn-primary" disabled={saving}>
+                                {saving ? t('positions.saving') : t('common.save')}
+                              </button>
+                              <button type="button" className="btn btn-secondary" onClick={cancelEdit}>{t('positionTypes.form.cancel')}</button>
+                            </div>
+                          </form>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </PageContainer>
     </AdminLayout>

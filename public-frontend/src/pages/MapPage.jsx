@@ -30,7 +30,12 @@ function parseStyleJson(styleJson) {
       borderColor: typeof style?.borderColor === 'string' ? style.borderColor : undefined,
       color: typeof style?.color === 'string' ? style.color : undefined,
       borderRadius: Number.isFinite(style?.borderRadius) ? `${style.borderRadius}px` : undefined,
-      opacity: Number.isFinite(style?.opacity) ? Math.max(0.2, Math.min(1, style.opacity)) : undefined
+      opacity: Number.isFinite(style?.opacity) ? Math.max(0.2, Math.min(1, style.opacity)) : undefined,
+      fontSize: Number.isFinite(style?.fontSize) ? style.fontSize : undefined,
+      textAlign: typeof style?.textAlign === 'string' ? style.textAlign : undefined,
+      containerPadding: Number.isFinite(style?.containerPadding) ? style.containerPadding : undefined,
+      lineColor: typeof style?.lineColor === 'string' ? style.lineColor : undefined,
+      annotationLine: style?.annotationLine && typeof style.annotationLine === 'object' ? style.annotationLine : undefined
     };
   } catch {
     return {};
@@ -268,6 +273,7 @@ function hasRenderableObjectGraphic(object, meta, label) {
     hasBuiltinTemplate(subType) ||
     object.type === 'PATH' ||
     object.type === 'LABEL' ||
+    object.type === 'TEXT' ||
     accent
   );
 }
@@ -451,6 +457,115 @@ function PublicMapObjectGraphic({ object, meta, label }) {
   return (
     <div className="public-map-object-asset" style={{ background: '#f1f5f9', border: '2px dashed #cbd5e1', borderRadius: 4 }}>
       <span style={{ fontSize: 11, color: '#475569' }}>{label}</span>
+    </div>
+  );
+}
+
+function annotationLineStart(object, target) {
+  if (!target) return null;
+  const cx = object.x + object.width / 2;
+  const cy = object.y + object.height / 2;
+  const dx = target.x - cx;
+  const dy = target.y - cy;
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+  const halfW = object.width / 2;
+  const halfH = object.height / 2;
+  let t;
+  if (halfW <= 0 || halfH <= 0) return { x: cx, y: cy };
+  if (absDx * halfH > absDy * halfW) {
+    t = halfW / absDx;
+  } else {
+    t = halfH / absDy;
+  }
+  return {
+    x: cx + dx * t,
+    y: cy + dy * t
+  };
+}
+
+function MapTextObject({ object, style, meta, label }) {
+  const lineTarget = meta?.annotationLine || style?.annotationLine;
+  const fontSize = style?.fontSize || 14;
+  const textAlign = style?.textAlign || 'left';
+  const containerPadding = style?.containerPadding ?? 6;
+  const lineColor = style?.lineColor || '#94a3b8';
+  const color = style?.color || '#1e293b';
+  const background = style?.background;
+  const borderColor = style?.borderColor;
+  const borderRadius = style?.borderRadius;
+  const opacity = style?.opacity;
+
+  const textContainerStyle = {
+    background: background || undefined,
+    border: borderColor ? `1px solid ${borderColor}` : undefined,
+    borderRadius: borderRadius || undefined,
+    padding: containerPadding,
+    color,
+    fontSize: `${fontSize}px`,
+    textAlign: textAlign === 'top' || textAlign === 'bottom' ? 'left' : textAlign,
+    lineHeight: 1.3,
+    maxWidth: '100%',
+    overflow: 'hidden',
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
+    position: 'relative',
+    zIndex: 1,
+    opacity
+  };
+
+  let lineStart = null;
+  if (lineTarget) {
+    lineStart = annotationLineStart(object, lineTarget);
+  }
+
+  const alignItems = textAlign === 'top' ? 'flex-start'
+    : textAlign === 'bottom' ? 'flex-end'
+    : textAlign === 'center' ? 'center'
+    : 'flex-start';
+
+  const justifyContent = textAlign === 'center' ? 'center'
+    : textAlign === 'right' ? 'flex-end'
+    : 'flex-start';
+
+  return (
+    <div style={{
+      position: 'absolute',
+      left: 0, top: 0, right: 0, bottom: 0,
+      display: 'flex',
+      alignItems,
+      justifyContent,
+      pointerEvents: 'none',
+      overflow: 'visible'
+    }}>
+      {lineStart && lineTarget ? (
+        <svg
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: object.width,
+            height: object.height,
+            pointerEvents: 'none',
+            overflow: 'visible',
+            zIndex: 0
+          }}
+        >
+          <line
+            x1={lineStart.x - object.x}
+            y1={lineStart.y - object.y}
+            x2={lineTarget.x - object.x}
+            y2={lineTarget.y - object.y}
+            stroke={lineColor}
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+          />
+        </svg>
+      ) : null}
+      <div style={textContainerStyle}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -997,6 +1112,28 @@ export default function MapPage() {
 
                     if (object.isActive === false) {
                       return null;
+                    }
+
+                    if (object.type === 'TEXT') {
+                      const style = parseStyleJson(object.styleJson);
+                      const { opacity: _opacity, fontSize: _fontSize, textAlign: _textAlign, containerPadding: _cp, lineColor: _lc, annotationLine: _al, ...outerStyle } = style;
+                      return (
+                        <div
+                          key={object.id}
+                          className="public-map-object object-text has-asset"
+                          style={{
+                            left: object.x,
+                            top: object.y,
+                            width: object.width,
+                            height: object.height,
+                            transform: `rotate(${object.rotation}deg)`,
+                            zIndex: getObjectZIndex(object),
+                            ...outerStyle
+                          }}
+                        >
+                          <MapTextObject object={object} style={style} meta={meta} label={objectLabel} />
+                        </div>
+                      );
                     }
 
                     const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
