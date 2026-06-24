@@ -724,10 +724,10 @@ export default function MapPage() {
     }
   }
 
-  const mapDimensions = {
+  const mapDimensions = useMemo(() => ({
     width: state.mapData?.map?.width || 1200,
     height: state.mapData?.map?.height || 760
-  };
+  }), [state.mapData?.map?.width, state.mapData?.map?.height]);
   const mapRenderFrame = useMemo(() => ({
     width: mapDimensions.width + MAP_PREVIEW_GUTTER * 2,
     height: mapDimensions.height + MAP_PREVIEW_GUTTER * 2,
