@@ -431,7 +431,7 @@ function normalizeTableInput(tableInput, existingTable = null) {
 
   for (const field of TABLE_EDITABLE_FIELDS) {
     if (field === 'photoUrl') {
-      normalized.photoUrl = String(tableInput?.photoUrl ?? existingTable?.photoUrl ?? '').trim() || null;
+      normalized.photoUrl = (tableInput?.photoUrl === undefined ? '' : String(tableInput.photoUrl)).trim() || null;
       continue;
     }
 
@@ -759,9 +759,11 @@ function validateEditorTables(tables) {
     }
 
     if (table.zoneId !== undefined && table.zoneId !== null && table.zoneId !== '') {
-      const zoneId = Number(table.zoneId);
-      if (!Number.isInteger(zoneId) || zoneId <= 0) {
-        return `Table ${normalizedId} contains an invalid zone id.`;
+      if (isExistingTable) {
+        const zoneId = Number(table.zoneId);
+        if (!Number.isInteger(zoneId) || zoneId <= 0) {
+          return `Table ${normalizedId} contains an invalid zone id.`;
+        }
       }
     } else {
       return `Table ${normalizedId} must include a zone id.`;
@@ -868,12 +870,23 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
 
   const zoneIds = new Set((map.zones || []).map((zone) => zone.id));
   const zonesById = new Map((map.zones || []).map((zone) => [zone.id, zone]));
+  for (const zone of zonesInput || []) {
+    const zoneId = Number(zone.id);
+    if (!Number.isInteger(zoneId) || zoneId <= 0) {
+      zoneIds.add(String(zone.id));
+    }
+  }
   if ((tablesInput || []).some((table) => {
     if (table.zoneId === undefined || table.zoneId === null || table.zoneId === '') {
       return false;
     }
 
-    return !zoneIds.has(Number(table.zoneId));
+    const zoneIdNum = Number(table.zoneId);
+    if (!Number.isInteger(zoneIdNum) || zoneIdNum <= 0) {
+      return false;
+    }
+
+    return !zoneIds.has(zoneIdNum);
   })) {
     return { type: 'INVALID', message: 'Tables payload references an unknown zone id.' };
   }
@@ -1021,6 +1034,7 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
     );
   }
 
+  const newZoneInputs = [];
   for (const zone of zonesInput || []) {
     const zoneId = Number(zone.id);
     const isExistingZone = Number.isInteger(zoneId) && zoneId > 0;
@@ -1036,22 +1050,30 @@ async function updateAdminMapEditor(mapId, objects, mapInput = {}, tablesInput =
       continue;
     }
 
-    operations.push(
-      (tx) => tx.zone.create({
-        data: {
-          mapId,
-          ...normalizedZone
-        }
-      })
-    );
+    newZoneInputs.push({ input: zone, data: normalizedZone });
   }
 
-  if (operations.length || newTableInputs.length) {
+  if (operations.length || newTableInputs.length || newZoneInputs.length) {
     await prisma.$transaction(async (tx) => {
-      const createdTableIdMap = new Map();
+      const createdZoneIdMap = new Map();
+      for (const { input, data } of newZoneInputs) {
+        const createdZone = await tx.zone.create({
+          data: { mapId, ...data },
+          select: { id: true }
+        });
+        createdZoneIdMap.set(String(input.id), createdZone.id);
+      }
 
+      const createdTableIdMap = new Map();
       for (const table of newTableInputs) {
-        const normalizedTable = normalizeTableInput(table, null);
+        const rawZoneId = table.zoneId === undefined || table.zoneId === null || table.zoneId === '' ? null : String(table.zoneId);
+        const resolvedZoneId = rawZoneId !== null && createdZoneIdMap.has(rawZoneId)
+          ? createdZoneIdMap.get(rawZoneId)
+          : Number(rawZoneId);
+        const normalizedTable = normalizeTableInput(
+          { ...table, zoneId: Number.isFinite(resolvedZoneId) ? resolvedZoneId : table.zoneId },
+          null
+        );
         const createdTable = await tx.venueTable.create({
           data: {
             mapId,
