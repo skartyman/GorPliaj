@@ -657,7 +657,7 @@ export default function MapPage() {
         availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
       }));
     });
-  }, [t]);
+  }, []);
 
   async function loadMapData() {
     if (!selectedMapId) return;
@@ -687,7 +687,7 @@ export default function MapPage() {
     loadMapData().catch(() => {
       setState((prev) => ({ ...prev, loading: false, error: t('map.errors.load'), mapData: null, reservations: [], availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] } }));
     });
-  }, [selectedMapId, selectedDate, t]);
+  }, [selectedMapId, selectedDate]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);

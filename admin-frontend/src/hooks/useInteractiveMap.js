@@ -112,7 +112,10 @@ export function useInteractiveMap({
         const centered = getCenteredTranslate(nextViewport, worldWidth, worldHeight, seedScale);
         const nextTx = isPristine ? centered.translateX : current.translateX;
         const nextTy = isPristine ? centered.translateY : current.translateY;
-        return clampTranslate(nextTx, nextTy, seedScale, nextViewport);
+        const result = clampTranslate(nextTx, nextTy, seedScale, nextViewport);
+        return result.scale === current.scale && result.translateX === current.translateX && result.translateY === current.translateY
+          ? current
+          : result;
       });
     });
     observer.observe(containerRef.current);
@@ -120,7 +123,12 @@ export function useInteractiveMap({
   }, [clampTranslate, fitWorldHeight, fitWorldWidth, worldHeight, worldWidth]);
 
   useEffect(() => {
-    setTransform((current) => clampTranslate(current.translateX, current.translateY, current.scale));
+    setTransform((current) => {
+      const result = clampTranslate(current.translateX, current.translateY, current.scale);
+      return result.scale === current.scale && result.translateX === current.translateX && result.translateY === current.translateY
+        ? current
+        : result;
+    });
   }, [clampTranslate]);
 
   const zoomAtPoint = useCallback(
