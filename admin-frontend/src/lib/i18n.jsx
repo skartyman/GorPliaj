@@ -389,13 +389,16 @@ const translations = {
       deleteTexture: 'Прибрати',
       noTextures: 'Завантажених текстур поки немає.',
       expandWidth: '+500 ширина',
-      expandHeight: '+500 висота',
+      expandDown: '+500 вниз',
+      expandUp: '+500 вверх',
       sendToBottom: 'Під усі',
       sendBackward: 'Нижче',
       bringForward: 'Вище',
       bringToTop: 'Поверх усіх',
       lockObject: 'Закріпити',
       unlockObject: 'Відкріпити',
+      lockAll: 'Закріпити всі',
+      unlockAll: 'Відкріпити всі',
       addObjectButton: 'Додати об’єкт',
       createObjectButton: 'Створити об’єкт',
       newObjectDefault: 'Новий об’єкт',
@@ -411,11 +414,13 @@ const translations = {
       propertiesDescription: 'Точні координати та параметри активного об’єкта.',
       noSelection: 'Оберіть об’єкт на схемі, щоб редагувати його властивості.',
       unassignedTable: 'Без прив’язки до столу',
+      newTextDefault: 'Новий текст',
       newLabelDefault: 'Новий текст',
       lineDefault: 'Лінія',
       uploadAsset: 'Завантажити',
       sections: {
         general: 'Основне',
+        text: 'Текст',
         graphics: 'Графіка',
         transform: 'Позиція'
       },
@@ -423,7 +428,8 @@ const translations = {
         select: 'Вибір',
         pan: 'Огляд',
         line: 'Лінія',
-        polygon: 'Полігон'
+        polygon: 'Полігон',
+        text: 'Текст'
       },
       tabs: {
         properties: 'Властивості',
@@ -452,7 +458,11 @@ const translations = {
         svgUrl: 'SVG / зображення',
         svgCode: 'SVG-код',
         strokeWidth: 'Товщина лінії',
-        strokeColor: 'Колір лінії'
+        strokeColor: 'Колір лінії',
+        text: 'Текст підпису',
+        fontSize: 'Розмір шрифту',
+        fontColor: 'Колір шрифту',
+        calloutLine: 'Напрямок виноски'
       },
       objectType: {
         TABLE: 'Стіл',
@@ -466,7 +476,8 @@ const translations = {
         DECOR: 'Декор',
         STAIRS: 'Сходи',
         PATH: 'Доріжка',
-        CUSTOM: 'Об’єкт'
+        CUSTOM: 'Об’єкт',
+        TEXT: 'Текст'
       },
       errors: {
         load: 'Не вдалося завантажити редактор карти.',
@@ -767,6 +778,7 @@ const translations = {
       saved: 'Збережено',
       deleted: 'Видалено',
       create: 'Створити позицію',
+      editing: 'Редагування',
       deleteConfirm: 'Видалити цю позицію?',
       bulk: {
         setDeposit: 'Встановити депозит',

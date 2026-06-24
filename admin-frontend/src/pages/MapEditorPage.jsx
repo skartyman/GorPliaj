@@ -20,7 +20,7 @@ const STATIC_TYPE_ACCENTS = {
   PATH: 'path'
 };
 
-const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'STAIRS', 'PATH', 'DECOR', 'LABEL'];
+const CREATION_ACTIONS = ['TABLE', 'BAR', 'STAGE', 'ENTRANCE', 'WC', 'STAIRS', 'PATH', 'DECOR', 'LABEL', 'TEXT'];
 const SURFACE_PRESETS = [
   { key: 'WOOD_PATH', label: 'Wooden path', objectType: 'CUSTOM', objectLabel: 'Wooden path', width: 240, height: 56 },
   { key: 'DECK', label: 'Wooden deck', objectType: 'CUSTOM', objectLabel: 'Deck', width: 260, height: 120 },
@@ -52,6 +52,16 @@ const TEXTURE_CHOICES = [
 ];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', section: 'General' },
+  { key: 'text', type: 'text', section: 'Text' },
+  { key: 'fontSize', type: 'number', section: 'Text', step: 1 },
+  { key: 'fontColor', type: 'color', section: 'Text' },
+  { key: 'calloutLine', type: 'select', section: 'Text', options: [
+    { value: '', label: 'Без линии' },
+    { value: 'UP', label: 'Вверх' },
+    { value: 'DOWN', label: 'Вниз' },
+    { value: 'LEFT', label: 'Влево' },
+    { value: 'RIGHT', label: 'Вправо' }
+  ]},
   { key: 'interactionMode', type: 'select', section: 'General', options: [
     { value: 'DECOR', label: 'Декор' },
     { value: 'SELECTABLE', label: 'Вибирається гостем' }
@@ -82,7 +92,11 @@ const META_PROPERTY_FIELDS = new Set([
   'svgUrl',
   'svgCode',
   'strokeWidth',
-  'strokeColor'
+  'strokeColor',
+  'text',
+  'fontSize',
+  'fontColor',
+  'calloutLine'
 ]);
 const MIN_MAP_SCALE = 0.25;
 const MAX_MAP_SCALE = 1.75;
@@ -109,6 +123,7 @@ const RND_RESIZE_HANDLE_STYLES = {
 };
 const SECTION_LABEL_KEYS = {
   General: 'mapEditor.sections.general',
+  Text: 'mapEditor.sections.text',
   Graphics: 'mapEditor.sections.graphics',
   Transform: 'mapEditor.sections.transform'
 };
@@ -121,7 +136,8 @@ const CREATION_PRESETS = {
   STAIRS: { width: 120, height: 84 },
   PATH: { width: 220, height: 44 },
   DECOR: { width: 120, height: 88 },
-  LABEL: { width: 180, height: 60 }
+  LABEL: { width: 180, height: 60 },
+  TEXT: { width: 200, height: 80 }
 };
 
 const POSITION_TYPES = [
@@ -477,6 +493,79 @@ function ActionIcon({ name }) {
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" strokeWidth="1.8" />
           <path d="m16 16 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'select':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 3l14 8-6 2-2 6z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'pan':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 7v10M7 12h10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'line':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <line x1="6" y1="18" x2="18" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="6" cy="18" r="1.5" fill="currentColor" />
+          <circle cx="18" cy="6" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    case 'polygon':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <polygon points="12,3 21,9 18,19 6,19 3,9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'text':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <polygon points="12,3 21,9 18,19 6,19 3,9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+          <text x="12" y="15" textAnchor="middle" fill="currentColor" fontSize="10" fontWeight="bold">T</text>
+        </svg>
+      );
+    case 'zoomIn':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 9v6M9 12h6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="m17 17 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'zoomOut':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M9 12h6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="m17 17 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'fit':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 12h8M12 8v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'lockAll':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="11" width="16" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M7 11V8a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 15v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'unlockAll':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="11" width="16" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M7 11V8.5A4.5 4.5 0 0 1 16 8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 15v2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       );
     default:
@@ -944,7 +1033,10 @@ function MapSettings({ map, onMapFieldChange, t }) {
             {t('mapEditor.expandWidth')}
           </button>
           <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('height', Number(map.height) + 500)}>
-            {t('mapEditor.expandHeight')}
+            {t('mapEditor.expandDown')}
+          </button>
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => onMapFieldChange('expandUp', 500)}>
+            {t('mapEditor.expandUp')}
           </button>
         </div>
 
@@ -1685,7 +1777,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected,
   const zone = table?.zoneId ? zoneMap.get(table.zoneId) : null;
   const accent = getObjectAccent(object, language);
 
-  const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor, isLocked } = object.metaJson || {};
+  const { subType, svgUrl, svgCode, texture, textureUrl, opacity, strokeWidth, strokeColor } = object.metaJson || {};
   const effectiveSvgUrl = svgUrl || (String(subType || '').toUpperCase() === 'BED' ? DEFAULT_BED_ASSET_URL : '');
   const objectOpacity = Number.isFinite(Number(opacity)) ? Number(opacity) : 1;
 
@@ -1866,6 +1958,61 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected,
             <span className="muted small">{localizeField(object.label, language)}</span>
           </div>
         );
+      case 'TEXT': {
+        const textContent = object.metaJson?.text || localizeField(object.label, language) || '';
+        const fontSize = Number(object.metaJson?.fontSize) || 14;
+        const fontColor = object.metaJson?.fontColor || '#1a0e08';
+        const calloutDir = object.metaJson?.calloutLine || '';
+        const cx = object.width / 2;
+        const cy = object.height / 2;
+        let calloutLine = null;
+        let calloutCircle = null;
+
+        if (calloutDir === 'UP') {
+          calloutLine = <line x1={cx} y1={cy} x2={cx} y2={-40} stroke={fontColor} strokeWidth="1.5" />;
+          calloutCircle = <circle cx={cx} cy={-40} r="4" fill={fontColor} />;
+        } else if (calloutDir === 'DOWN') {
+          calloutLine = <line x1={cx} y1={cy} x2={cx} y2={object.height + 40} stroke={fontColor} strokeWidth="1.5" />;
+          calloutCircle = <circle cx={cx} cy={object.height + 40} r="4" fill={fontColor} />;
+        } else if (calloutDir === 'LEFT') {
+          calloutLine = <line x1={cx} y1={cy} x2={-40} y2={cy} stroke={fontColor} strokeWidth="1.5" />;
+          calloutCircle = <circle cx={-40} cy={cy} r="4" fill={fontColor} />;
+        } else if (calloutDir === 'RIGHT') {
+          calloutLine = <line x1={cx} y1={cy} x2={object.width + 40} y2={cy} stroke={fontColor} strokeWidth="1.5" />;
+          calloutCircle = <circle cx={object.width + 40} cy={cy} r="4" fill={fontColor} />;
+        }
+
+        return (
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
+              {calloutLine}
+              {calloutCircle}
+            </svg>
+            <div style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(255,248,240,0.9)',
+              border: `1px solid ${isSelected ? '#2563eb' : '#d4c5a9'}`,
+              borderRadius: '8px',
+              padding: '6px 10px',
+              boxShadow: isSelected ? '0 0 0 2px rgba(37,99,235,0.3)' : '0 1px 4px rgba(0,0,0,0.06)',
+              overflow: 'hidden'
+            }}>
+              <span style={{
+                fontSize: `${fontSize}px`,
+                color: fontColor,
+                fontWeight: 600,
+                textAlign: 'center',
+                lineHeight: 1.3,
+                wordBreak: 'break-word'
+              }}>{textContent}</span>
+            </div>
+          </div>
+        );
+      }
       default:
         return (
           <div className={`map-editor-object-v2 ${accent} ${isSelected ? 'selected' : ''}`} style={{ width: '100%', height: '100%' }}>
@@ -1886,43 +2033,6 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected,
         transition: 'none'
       }}
     >
-      {isLocked ? (
-        <div
-          title="Locked"
-          style={{
-            position: 'absolute',
-            top: 6,
-            right: 6,
-            width: 18,
-            height: 18,
-            borderRadius: '50%',
-            background: '#0f172a',
-            color: '#fff',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-            zIndex: 5
-          }}
-        >
-          #
-        </div>
-      ) : null}
-      <button
-        type="button"
-        className="map-object-lock-toggle"
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onToggleLock?.();
-        }}
-        title={isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
-        aria-label={isLocked ? t('mapEditor.unlockObject') : t('mapEditor.lockObject')}
-      >
-        <ActionIcon name={isLocked ? 'lock' : 'unlock'} />
-      </button>
       <div className="map-editor-object-visual">
         {renderObjectContent()}
       </div>
@@ -2297,6 +2407,20 @@ export default function MapEditorPage() {
           cursor: point
         }
       }));
+      return;
+    }
+
+    if (editorState.activeTool === 'TEXT') {
+      const { x, y } = getCanvasPoint(e, mapScale);
+      createObject('TEXT', {
+        x, y,
+        label: t('mapEditor.newTextDefault'),
+        interactionMode: 'DECOR',
+        text: t('mapEditor.newTextDefault'),
+        fontSize: 14,
+        fontColor: '#1a0e08',
+        calloutLine: ''
+      });
       return;
     }
 
@@ -2742,6 +2866,28 @@ export default function MapEditorPage() {
       ? { ...categories, OTHER: { label: 'Інше', items: uncategorized } }
       : categories;
   }, [customObjectAssets]);
+  const allLocked = useMemo(() => {
+    return objects.length > 0 && objects.every((object) => object.metaJson?.isLocked);
+  }, [objects]);
+
+  function toggleAllLocked() {
+    const nextLocked = !allLocked;
+    updateCurrent((prev) => ({
+      current: {
+        ...prev.current,
+        objects: prev.current.objects.map((object) =>
+          normalizeObject(
+            {
+              ...object,
+              metaJson: { ...(object.metaJson || {}), isLocked: nextLocked }
+            },
+            prev.current.map
+          )
+        )
+      }
+    }));
+  }
+
   const hasChanges = useMemo(() => {
     if (!editorState.original || !editorState.current) {
       return false;
@@ -3249,6 +3395,26 @@ export default function MapEditorPage() {
   }
 
   function handleMapFieldChange(field, value, options = {}) {
+    if (field === 'expandUp') {
+      const shiftY = Number(value) || 500;
+      updateCurrent((prev) => ({
+        current: {
+          ...prev.current,
+          map: {
+            ...prev.current.map,
+            height: Math.max(roundCoordinate(Number(prev.current.map.height) + shiftY), 100)
+          },
+          objects: prev.current.objects.map((object) =>
+            normalizeObject(
+              { ...object, y: (Number(object.y) || 0) + shiftY },
+              prev.current.map
+            )
+          )
+        }
+      }));
+      return;
+    }
+
     updateCurrent((prev) => {
       const next = {
         current: {
@@ -4086,24 +4252,7 @@ export default function MapEditorPage() {
                   </option>
                 ))}
               </select>
-            <div className="map-editor-zoom-controls" aria-label="Map zoom controls">
-              <button type="button" className="btn btn-secondary btn-small" onClick={() => changeMapScale(-MAP_SCALE_STEP)}>
-                -
-              </button>
-              <button type="button" className="btn btn-secondary btn-small" onClick={fitMapToViewport}>
-                {t('mapEditor.zoomFit')}
-              </button>
-              <button type="button" className="btn btn-secondary btn-small" onClick={() => {
-                setMapAutoFit(false);
-                setMapScale(1);
-              }}>
-                {t('mapEditor.zoomActual')}
-              </button>
-              <button type="button" className="btn btn-secondary btn-small" onClick={() => changeMapScale(MAP_SCALE_STEP)}>
-                +
-              </button>
-              <span className="map-editor-zoom-value">{Math.round(mapScale * 100)}%</span>
-            </div>
+            {''}
           </div>
 
           <div className="map-editor-toolbar-group map-editor-toolbar-meta">
@@ -4257,7 +4406,7 @@ export default function MapEditorPage() {
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'SELECT' }))}
                 title={t('mapEditor.tools.select')}
               >
-                <i className="icon-select">S</i>
+                <ActionIcon name="select" />
                 <span>{t('mapEditor.tools.select')}</span>
               </button>
               <button 
@@ -4265,7 +4414,7 @@ export default function MapEditorPage() {
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'PAN' }))}
                 title={t('mapEditor.tools.pan')}
               >
-                <i className="icon-pan">P</i>
+                <ActionIcon name="pan" />
                 <span>{t('mapEditor.tools.pan')}</span>
               </button>
               <button 
@@ -4273,7 +4422,7 @@ export default function MapEditorPage() {
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'LINE' }))}
                 title={t('mapEditor.tools.line')}
               >
-                <i className="icon-line">L</i>
+                <ActionIcon name="line" />
                 <span>{t('mapEditor.tools.line')}</span>
               </button>
               <button
@@ -4281,8 +4430,16 @@ export default function MapEditorPage() {
                 onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'POLYGON', polygonDraft: null }))}
                 title={t('mapEditor.tools.polygon')}
               >
-                <i className="icon-polygon">G</i>
+                <ActionIcon name="polygon" />
                 <span>{t('mapEditor.tools.polygon')}</span>
+              </button>
+              <button
+                className={`tool-button ${editorState.activeTool === 'TEXT' ? 'active' : ''}`}
+                onClick={() => setEditorState(prev => ({ ...prev, activeTool: 'TEXT' }))}
+                title={t('mapEditor.tools.text')}
+              >
+                <ActionIcon name="text" />
+                <span>{t('mapEditor.tools.text')}</span>
               </button>
 
               <div className="separator" style={{ width: '40px', height: '1px', background: '#e2e8f0', margin: '12px 0' }} />
@@ -4291,8 +4448,58 @@ export default function MapEditorPage() {
                 className={`tool-button ${editorState.activeTab === 'ASSETS' ? 'active' : ''}`}
                 onClick={() => openInspector('ASSETS')}
               >
-                <i className="icon-assets">A</i>
+                <i className="icon-assets">+</i>
                 <span>{t('mapEditor.tabs.assets')}</span>
+              </button>
+
+              <div className="separator" style={{ width: '40px', height: '1px', background: '#e2e8f0', margin: '12px 0' }} />
+              
+              <div className="map-editor-tools-zoom">
+                <button
+                  type="button"
+                  className="tool-button tool-button-zoom"
+                  onClick={() => changeMapScale(MAP_SCALE_STEP)}
+                  title={t('mapEditor.zoomIn')}
+                >
+                  <ActionIcon name="zoomIn" />
+                </button>
+                <span className="map-editor-zoom-value">{Math.round(mapScale * 100)}%</span>
+                <button
+                  type="button"
+                  className="tool-button tool-button-zoom"
+                  onClick={() => changeMapScale(-MAP_SCALE_STEP)}
+                  title={t('mapEditor.zoomOut')}
+                >
+                  <ActionIcon name="zoomOut" />
+                </button>
+                <button
+                  type="button"
+                  className="tool-button tool-button-zoom"
+                  onClick={fitMapToViewport}
+                  title={t('mapEditor.zoomFit')}
+                >
+                  <ActionIcon name="fit" />
+                </button>
+                <button
+                  type="button"
+                  className="tool-button tool-button-zoom"
+                  onClick={() => { setMapAutoFit(false); setMapScale(1); }}
+                  title={t('mapEditor.zoomActual')}
+                >
+                  <span style={{ fontSize: '10px', fontWeight: 700 }}>1:1</span>
+                </button>
+              </div>
+
+              <div className="separator" style={{ width: '40px', height: '1px', background: '#e2e8f0', margin: '12px 0' }} />
+
+              <button
+                type="button"
+                className={`tool-button ${allLocked ? 'active' : ''}`}
+                onClick={toggleAllLocked}
+                title={allLocked ? t('mapEditor.unlockAll') : t('mapEditor.lockAll')}
+              >
+                <ActionIcon name={allLocked ? 'lockAll' : 'unlockAll'} />
+                <span>{allLocked ? t('mapEditor.unlockAll') : t('mapEditor.lockAll')}</span>
               </button>
             </aside>
 
@@ -4340,7 +4547,7 @@ export default function MapEditorPage() {
                     position: 'absolute',
                     left: `${MAP_OVERFLOW_GUTTER * mapScale}px`,
                     top: `${MAP_OVERFLOW_GUTTER * mapScale}px`,
-                    cursor: ['LINE', 'POLYGON', 'ZONE_POLYGON'].includes(editorState.activeTool) ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
+                    cursor: ['LINE', 'POLYGON', 'ZONE_POLYGON', 'TEXT'].includes(editorState.activeTool) ? 'crosshair' : (editorState.activeTool === 'PAN' ? 'grab' : 'default')
                   }}
                   onMouseDown={handleCanvasMouseDown}
                   onMouseMove={handleCanvasMouseMove}

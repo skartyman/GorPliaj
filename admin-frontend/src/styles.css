@@ -1523,6 +1523,20 @@ textarea { resize: vertical; min-height: 96px; }
 }
 .tool-button:hover { background: var(--bg-page); color: var(--text-primary); }
 .tool-button.active { background: rgba(200, 146, 65, 0.1); border-color: var(--accent-gold); color: var(--accent-gold); }
+.tool-button svg { width: 20px; height: 20px; }
+.tool-button > span:last-child { font-size: 8px; line-height: 1; }
+
+.tool-button-zoom { width: 40px; height: 36px; }
+.tool-button-zoom svg { width: 16px; height: 16px; }
+.tool-button-zoom > span:last-child { font-size: 8px; line-height: 1; }
+
+.map-editor-tools-zoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+}
 
 .inspector-tabs { display: flex; border-bottom: 1px solid var(--border-light); background: var(--bg-page); flex: 0 0 auto; }
 .inspector-tab {
@@ -1659,6 +1673,8 @@ textarea { resize: vertical; min-height: 96px; }
   .map-editor-tools .separator { width: 1px !important; height: 36px !important; margin: 0 4px !important; flex: 0 0 1px; }
   .map-editor-viewport { grid-area: viewport; }
   .tool-button { width: 56px; height: 52px; flex: 0 0 56px; }
+  .map-editor-tools-zoom { flex-direction: row; padding: 0; gap: 0; }
+  .tool-button-zoom { width: 40px; height: 44px; flex: 0 0 40px; }
   .map-editor-canvas-container { padding: 12px; }
   .map-editor-inspector {
     top: auto;
