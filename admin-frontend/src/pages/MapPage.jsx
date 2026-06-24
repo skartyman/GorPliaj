@@ -566,6 +566,7 @@ function formatCountdown(reservation) {
 }
 
 export default function MapPage() {
+  console.log('[MAP] MapPage rendered');
   const [state, setState] = useState({
     loading: true,
     error: '',
@@ -990,6 +991,7 @@ export default function MapPage() {
   }
 
   function focusWholeMap() {
+    console.log('[MAP] focusWholeMap clicked');
     setActiveZoneFocusId('all');
     actions.fitToView();
   }
@@ -1376,9 +1378,9 @@ export default function MapPage() {
                 </div>
               ) : null}
               <div className="interactive-map-controls">
-                <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
-                <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>
-                <button type="button" className="map-control fit" onClick={focusWholeMap} aria-label="Fit map">⤢</button>
+                <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom+'); actions.zoomIn(); }} aria-label="Zoom in">+</button>
+                <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom-'); actions.zoomOut(); }} aria-label="Zoom out">−</button>
+                <button type="button" className="map-control fit" onClick={() => { console.log('[MAP] fit'); focusWholeMap(); }} aria-label="Fit map">⤢</button>
                 <span className="map-zoom-indicator">
                   {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
                 </span>
@@ -1468,8 +1470,8 @@ export default function MapPage() {
                             borderRadius: tableShape === 'ROUND' ? 999 : 12
                           }}
                           title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onClick={() => { setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
+                          onPointerDown={(event) => { console.log('[MAP] table pdown', object.tableId); event.stopPropagation(); }}
+                          onClick={() => { console.log('[MAP] table click', object.tableId); setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
                         >
                           <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                           {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
