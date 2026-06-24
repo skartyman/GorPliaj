@@ -52,22 +52,22 @@ const TEXTURE_CHOICES = [
   { value: 'dark_wood', label: 'Темне дерево' }
 ];
 const PROPERTY_FIELDS = [
-  { key: 'label', type: 'text', section: 'General' },
-  { key: 'text', type: 'text', section: 'Text' },
-  { key: 'fontSize', type: 'number', section: 'Text', step: 1 },
-  { key: 'fontColor', type: 'color', section: 'Text' },
-  { key: 'calloutLine', type: 'select', section: 'Text', options: [
+  { key: 'label', type: 'text', section: 'General', hint: 'Назва на карті' },
+  { key: 'text', type: 'text', section: 'Text', hint: 'Текст, який побачить гість' },
+  { key: 'fontSize', type: 'number', section: 'Text', step: 1, hint: 'Розмір шрифту в пікселях' },
+  { key: 'fontColor', type: 'color', section: 'Text', hint: 'Колір тексту та виносної лінії' },
+  { key: 'calloutLine', type: 'select', section: 'Text', hint: 'Напрямок виносної лінії від об\'єкта', options: [
     { value: '', label: 'Без линии' },
     { value: 'UP', label: 'Вверх' },
     { value: 'DOWN', label: 'Вниз' },
     { value: 'LEFT', label: 'Влево' },
     { value: 'RIGHT', label: 'Вправо' }
   ]},
-  { key: 'interactionMode', type: 'select', section: 'General', options: [
+  { key: 'interactionMode', type: 'select', section: 'General', hint: 'Чи може гість обрати цей об\'єкт', options: [
     { value: 'DECOR', label: 'Декор' },
     { value: 'SELECTABLE', label: 'Вибирається гостем' }
   ]},
-  { key: 'texture', type: 'select', section: 'Graphics', options: [
+  { key: 'texture', type: 'select', section: 'Graphics', hint: 'Фонова текстура', options: [
     { value: '', label: 'Без текстури' },
     { value: 'grass', label: 'Трава' },
     { value: 'sand', label: 'Пісок' },
@@ -75,16 +75,16 @@ const PROPERTY_FIELDS = [
     { value: 'wood', label: 'Дерево' },
     { value: 'dark_wood', label: 'Темне дерево' }
   ]},
-  { key: 'opacity', type: 'percent', section: 'Graphics', step: 1 },
-  { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>' },
-  { key: 'strokeWidth', type: 'number', section: 'Graphics', step: 1 },
-  { key: 'strokeColor', type: 'color', section: 'Graphics' },
-  { key: 'x', type: 'number', section: 'Transform', step: 1 },
-  { key: 'y', type: 'number', section: 'Transform', step: 1 },
-  { key: 'width', type: 'number', section: 'Transform', step: 1 },
-  { key: 'height', type: 'number', section: 'Transform', step: 1 },
-  { key: 'rotation', type: 'number', section: 'Transform', step: 1 },
-  { key: 'zIndex', type: 'number', section: 'Transform', step: 1 }
+  { key: 'opacity', type: 'percent', section: 'Graphics', step: 1, hint: 'Прозорість об\'єкта (0–100%)' },
+  { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>', hint: 'SVG-код для кастомного зображення' },
+  { key: 'strokeWidth', type: 'number', section: 'Graphics', step: 1, hint: 'Товщина обводки в пікселях' },
+  { key: 'strokeColor', type: 'color', section: 'Graphics', hint: 'Колір обводки' },
+  { key: 'x', type: 'number', section: 'Transform', step: 1, hint: 'Координата X на карті' },
+  { key: 'y', type: 'number', section: 'Transform', step: 1, hint: 'Координата Y на карті' },
+  { key: 'width', type: 'number', section: 'Transform', step: 1, hint: 'Ширина об\'єкта' },
+  { key: 'height', type: 'number', section: 'Transform', step: 1, hint: 'Висота об\'єкта' },
+  { key: 'rotation', type: 'number', section: 'Transform', step: 1, hint: 'Поворот у градусах' },
+  { key: 'zIndex', type: 'number', section: 'Transform', step: 1, hint: 'Порядок відображення (вище = поверх)' }
 ];
 const META_PROPERTY_FIELDS = new Set([
   'interactionMode',
@@ -128,6 +128,12 @@ const SECTION_LABEL_KEYS = {
   Text: 'mapEditor.sections.text',
   Graphics: 'mapEditor.sections.graphics',
   Transform: 'mapEditor.sections.transform'
+};
+const SECTION_DESC_KEYS = {
+  General: 'mapEditor.sections.generalDesc',
+  Text: 'mapEditor.sections.textDesc',
+  Graphics: 'mapEditor.sections.graphicsDesc',
+  Transform: 'mapEditor.sections.transformDesc'
 };
 const CREATION_PRESETS = {
   TABLE: { width: 108, height: 72 },
@@ -1303,11 +1309,12 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, t
 
       <div className="editor-inspector-sections">
         {sections.map(section => (
-          <div key={section} className="inspector-section" style={{ marginBottom: '16px' }}>
-            <h5 style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
-              {t(SECTION_LABEL_KEYS[section] || section)}
-            </h5>
-            <div className="editor-form-grid">
+          <details key={section} className="map-settings-accordion" open>
+            <summary>
+              <strong>{t(SECTION_LABEL_KEYS[section] || section)}</strong>
+              <span className="muted small">{t(SECTION_DESC_KEYS[section] || '')}</span>
+            </summary>
+            <div className="editor-form-grid" style={{ marginTop: '8px' }}>
               {PROPERTY_FIELDS.filter(f => f.section === section).map((field) => (
                 <label
                   key={field.key}
@@ -1319,6 +1326,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, t
                   ].filter(Boolean).join(' ')}
                 >
                   <span style={{ display: 'block', marginBottom: '4px' }}>{t(`mapEditor.fields.${field.key}`)}</span>
+                  {field.hint ? <span className="muted small" style={{ display: 'block', marginBottom: '4px', fontSize: '10px' }}>{field.hint}</span> : null}
                   {field.key === 'texture' ? (
                     <div className="texture-choice-grid">
                       {TEXTURE_CHOICES.map((choice) => (
@@ -1372,7 +1380,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, t
                 </label>
               ))}
             </div>
-          </div>
+          </details>
         ))} 
         <input id="svgUrl-upload" type="file" accept=".svg,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }} onChange={(event) => uploadFileToField(event, 'svgUrl')} />
 

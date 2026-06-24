@@ -420,9 +420,13 @@ const translations = {
       uploadAsset: 'Завантажити',
       sections: {
         general: 'Основне',
+        generalDesc: 'Назва, поведінка при кліку',
         text: 'Текст',
+        textDesc: 'Вміст, шрифт, колір, виносна лінія',
         graphics: 'Графіка',
-        transform: 'Позиція'
+        graphicsDesc: 'Текстура, прозорість, SVG, обводка',
+        transform: 'Позиція',
+        transformDesc: 'Координати, розмір, поворот на карті'
       },
       tools: {
         select: 'Вибір',
