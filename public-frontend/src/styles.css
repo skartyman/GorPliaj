@@ -1854,10 +1854,12 @@ h3 {
 .public-map-object.busy .status-dot { background: #ef4444; }
 .public-map-object.unavailable .status-dot { background: #9ca3af; }
 .public-map-object.no-fit { outline: 2px dashed #ff5722; outline-offset: -3px; }
+.public-map-object.no-fit .status-dot { background: #9ca3af; }
 .public-map-object.free.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #4caf50, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.held.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #ff9800, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.busy.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #f44336, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.unavailable.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9ca3af, 0 0 20px rgba(0,0,0,0.4); }
+.public-map-object.no-fit.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9ca3af, 0 0 20px rgba(0,0,0,0.4); }
 
 .map-side-panel {
   background: var(--bg-secondary);
