@@ -553,6 +553,18 @@ function getNextZoneCode(zoneId, tables, zones, map, language) {
   return `${prefix}${maxNumber + 1}`;
 }
 
+function formatCountdown(reservation) {
+  if (!reservation?.timeFrom) return '';
+  const [h, m] = reservation.timeFrom.split(':').map(Number);
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  const diff = target.getTime() - Date.now();
+  if (diff <= 0) return '00:00';
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 export default function MapPage() {
   const [state, setState] = useState({
     loading: true,
@@ -565,6 +577,10 @@ export default function MapPage() {
   const [selectedMapId, setSelectedMapId] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(getDateKey());
+  const [now, setNow] = useState(new Date());
+  const [qrTicketCode, setQrTicketCode] = useState('');
+  const [qrResult, setQrResult] = useState(null);
   const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
   const [objectActionState, setObjectActionState] = useState({ saving: false, error: '' });
   const [bookingFormState, setBookingFormState] = useState({
@@ -589,6 +605,7 @@ export default function MapPage() {
   });
   const objectManagementRef = useRef(null);
   const objectPrimaryFieldRef = useRef(null);
+  const loadMapDataRef = useRef();
   const { t, language } = useAdminI18n();
 
   useEffect(() => {
@@ -641,60 +658,64 @@ export default function MapPage() {
     });
   }, [t]);
 
-  useEffect(() => {
-    if (!selectedMapId) {
+  async function loadMapData() {
+    if (!selectedMapId) return;
+    setState((prev) => ({ ...prev, loading: true, error: '' }));
+    const [mapResult, reservationsResult, availabilityResult] = await Promise.all([
+      apiRequest(`/api/maps/${selectedMapId}`),
+      apiRequest('/api/admin/reservations'),
+      apiRequest(`/api/maps/${selectedMapId}/availability?date=${selectedDate}&timeFrom=${getTimeKey(new Date())}`)
+    ]);
+    if (!mapResult.response.ok) {
+      setState((prev) => ({ ...prev, loading: false, error: mapResult.body?.message || t('map.errors.load'), mapData: null, reservations: [], availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] } }));
       return;
     }
+    setState((prev) => ({
+      ...prev,
+      loading: false,
+      error: '',
+      mapData: mapResult.body,
+      reservations: reservationsResult.response.ok && Array.isArray(reservationsResult.body) ? reservationsResult.body : [],
+      availability: availabilityResult.response.ok && availabilityResult.body ? availabilityResult.body : { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
+    }));
+  }
 
-    async function loadMapData() {
-      setState((prev) => ({
-        ...prev,
-        loading: true,
-        error: ''
-      }));
+  loadMapDataRef.current = loadMapData;
 
-      const [mapResult, reservationsResult, availabilityResult] = await Promise.all([
-        apiRequest(`/api/maps/${selectedMapId}`),
-        apiRequest('/api/admin/reservations'),
-        apiRequest(`/api/maps/${selectedMapId}/availability?date=${getDateKey()}&timeFrom=${getTimeKey(new Date())}`)
-      ]);
-
-      if (!mapResult.response.ok) {
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          error: mapResult.body?.message || t('map.errors.load'),
-          mapData: null,
-          reservations: [],
-          availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-        }));
-        return;
-      }
-
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        error: '',
-        mapData: mapResult.body,
-        reservations: reservationsResult.response.ok && Array.isArray(reservationsResult.body) ? reservationsResult.body : [],
-        availability:
-          availabilityResult.response.ok && availabilityResult.body
-            ? availabilityResult.body
-            : { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-      }));
-    }
-
+  useEffect(() => {
     loadMapData().catch(() => {
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        error: t('map.errors.load'),
-        mapData: null,
-        reservations: [],
-        availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] }
-      }));
+      setState((prev) => ({ ...prev, loading: false, error: t('map.errors.load'), mapData: null, reservations: [], availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] } }));
     });
-  }, [selectedMapId, t]);
+  }, [selectedMapId, selectedDate, t]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleFreeTableArrive(table) {
+    if (!table) return;
+    const result = await apiRequest(`/api/admin/tables/${table.id}/arrive`, { method: 'POST' });
+    if (result.response.ok) {
+      loadMapData();
+    } else {
+      alert(result.body?.message || 'Помилка');
+    }
+  }
+
+  async function handleQRArrive() {
+    const code = qrTicketCode.trim();
+    if (!code) return;
+    setQrResult({ type: 'loading', message: 'Перевіряємо...' });
+    const result = await apiRequest(`/api/admin/reservations/arrive-by-ticket/${encodeURIComponent(code)}`, { method: 'POST' });
+    if (result.response.ok) {
+      setQrResult({ type: 'success', message: 'Гостя відмічено!' });
+      setQrTicketCode('');
+      loadMapData();
+    } else {
+      setQrResult({ type: 'error', message: result.body?.message || 'Не вдалося відмітити гостя' });
+    }
+  }
 
   const mapDimensions = {
     width: state.mapData?.map?.width || 1200,
@@ -745,10 +766,9 @@ export default function MapPage() {
 
   const reservationsByTable = useMemo(() => {
     const grouped = {};
-    const todayKey = getDateKey();
 
     state.reservations.forEach((reservation) => {
-      if (String(reservation.reservationDate).slice(0, 10) !== todayKey || !reservation.table?.id) {
+      if (String(reservation.reservationDate).slice(0, 10) !== selectedDate || !reservation.table?.id) {
         return;
       }
 
@@ -759,7 +779,7 @@ export default function MapPage() {
     });
 
     return grouped;
-  }, [state.reservations]);
+  }, [state.reservations, selectedDate]);
 
   const heldTableIds = useMemo(() => new Set(state.availability.heldTableIds || []), [state.availability.heldTableIds]);
   const busyTableIds = useMemo(() => new Set(state.availability.busyTableIds || []), [state.availability.busyTableIds]);
@@ -928,7 +948,8 @@ export default function MapPage() {
       commentCustomer: '',
       commentAdmin: '',
       depositRequired: Number(table.deposit || 0) > 0,
-      depositAmount: Number(table.deposit || 0) > 0 ? Number(table.deposit || 0) : ''
+      depositAmount: Number(table.deposit || 0) > 0 ? Number(table.deposit || 0) : '',
+      paidInCash: false
     };
   }
 
@@ -1217,7 +1238,8 @@ export default function MapPage() {
       ...bookingFormState.form,
       guests: Number(bookingFormState.form.guests),
       depositRequired: Boolean(bookingFormState.form.depositRequired),
-      depositAmount: bookingFormState.form.depositRequired ? Number(bookingFormState.form.depositAmount || 0) : 0
+      depositAmount: bookingFormState.form.depositRequired ? Number(bookingFormState.form.depositAmount || 0) : 0,
+      paidInCash: Boolean(bookingFormState.form.paidInCash)
     };
 
     const result = await apiRequest('/api/admin/reservations', {
@@ -1262,9 +1284,7 @@ export default function MapPage() {
           <div className="page-hero-copy">
             <span className="eyebrow">{t('map.eyebrow')}</span>
             <h3>{t('map.heroTitle')}</h3>
-            <p className="muted">{t('map.heroDescription')}</p>
           </div>
-          <div className="hero-inline-note">{t('map.note')}</div>
         </section>
 
         {state.loading ? <div className="map-state">{t('map.loading')}</div> : null}
@@ -1276,6 +1296,45 @@ export default function MapPage() {
 
         {!state.loading && !state.error && state.mapData?.map ? (
           <>
+            <div className="map-header-controls">
+              <input
+                type="date"
+                className="map-date-picker"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+              <button type="button" className="btn" onClick={() => loadMapDataRef.current()}>
+                Оновити
+              </button>
+              <div className="qr-search">
+                <input
+                  type="text"
+                  placeholder="Код квитка"
+                  value={qrTicketCode}
+                  onChange={(e) => setQrTicketCode(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleQRArrive(); }}
+                />
+                <button type="button" className="btn" onClick={handleQRArrive}>Scan QR</button>
+              </div>
+            </div>
+
+            {qrResult ? (
+              <div className={`qr-result ${qrResult.type}`}>
+                {qrResult.type === 'loading' ? '⏳' : null}
+                {qrResult.type === 'success' ? '✅' : null}
+                {qrResult.type === 'error' ? '❌' : null}
+                {' '}{qrResult.message}
+                <button type="button" className="btn btn-small" onClick={() => setQrResult(null)} style={{ marginLeft: 8 }}>✕</button>
+              </div>
+            ) : null}
+
+            <div className="map-stats">
+              <span className="stat free">Вільно: {state.availability.freeTableIds?.length ?? 0}</span>
+              <span className="stat pending">Очікує: {state.availability.heldTableIds?.length ?? 0}</span>
+              <span className="stat confirmed">Підтв.: {(state.availability.busyTableIds?.length ?? 0) - (state.availability.heldTableIds?.length ?? 0)}</span>
+              <span className="stat total">Всього: {state.mapData.tables?.length ?? 0}</span>
+            </div>
+
             {state.maps.length > 1 ? (
               <div className="map-variant-tabs" aria-label="Map variants">
                 {state.maps.map((mapItem) => (
@@ -1291,14 +1350,6 @@ export default function MapPage() {
                 ))}
               </div>
             ) : null}
-
-            <div className="map-meta muted">
-              {t('map.meta', {
-                map: localizeField(state.mapData.map?.name, language) || '—',
-                zones: state.mapData.zones?.length || 0,
-                tables: state.mapData.tables?.length || 0
-              })}
-            </div>
 
             <div className="interactive-map-shell">
               {zoneFocusItems.length ? (
@@ -1409,6 +1460,7 @@ export default function MapPage() {
 
                       const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
                       const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
+                      const activeReservation = (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status));
 
                       return (
                         <button
@@ -1424,6 +1476,20 @@ export default function MapPage() {
                           onClick={() => selectObject(object)}
                         >
                           <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
+                          {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
+                            <span className="table-countdown">{formatCountdown(activeReservation)}</span>
+                          ) : null}
+                          {status === 'FREE' ? (
+                            <span
+                              className="table-arrive-btn"
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => { e.stopPropagation(); handleFreeTableArrive(object.table); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleFreeTableArrive(object.table); } }}
+                            >
+                              Гості прийшли
+                            </span>
+                          ) : null}
                         </button>
                       );
                     })}
@@ -1664,6 +1730,10 @@ export default function MapPage() {
                         <label>
                           Сума депозиту
                           <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
+                        </label>
+                        <label className="checkbox-label inline">
+                          <input type="checkbox" checked={Boolean(bookingFormState.form.paidInCash)} onChange={(event) => updateBookingForm('paidInCash', event.target.checked)} />
+                          Гість платить готівкою
                         </label>
                         <label className="object-admin-form-wide">
                           Коментар гостя

@@ -7,19 +7,13 @@ function clamp(value, min, max) {
 }
 
 function getFitWidthScale(viewportWidth, worldWidth) {
-  if (!viewportWidth || !worldWidth) {
-    return 1;
-  }
-
+  if (!viewportWidth || !worldWidth) return 1;
   return viewportWidth / worldWidth;
 }
 
 function getFitViewScale(viewport, worldWidth, worldHeight) {
   const fitWidthScale = getFitWidthScale(viewport.width, worldWidth);
-  if (!viewport.width || !viewport.height || !worldWidth || !worldHeight) {
-    return fitWidthScale;
-  }
-
+  if (!viewport.width || !viewport.height || !worldWidth || !worldHeight) return fitWidthScale;
   return Math.min(viewport.width / worldWidth, viewport.height / worldHeight, 1);
 }
 
@@ -41,10 +35,11 @@ function getDistance(a, b) {
 }
 
 function getCenter(a, b) {
-  return {
-    x: (a.clientX + b.clientX) / 2,
-    y: (a.clientY + b.clientY) / 2
-  };
+  return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+}
+
+function isInteractiveTarget(el) {
+  return el && el.closest('button, a, input, select, textarea, [role="button"]');
 }
 
 export function useInteractiveMap({
@@ -63,9 +58,13 @@ export function useInteractiveMap({
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0 });
 
-  const fitViewScale = useMemo(() => {
-    return getFitViewScale(viewport, fitWorldWidth, fitWorldHeight);
-  }, [fitWorldHeight, fitWorldWidth, viewport]);
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
+
+  const fitViewScale = useMemo(
+    () => getFitViewScale(viewport, fitWorldWidth, fitWorldHeight),
+    [fitWorldHeight, fitWorldWidth, viewport]
+  );
 
   const minScale = useMemo(
     () => getMinScale(viewport, fitWorldWidth, fitWorldHeight, minScaleProp),
@@ -82,17 +81,11 @@ export function useInteractiveMap({
 
       const rawXMin = nextViewport.width - scaledWidth - edgeLimit;
       const rawXMax = edgeLimit;
-      const xBounds = {
-        min: Math.min(rawXMin, rawXMax),
-        max: Math.max(rawXMin, rawXMax)
-      };
+      const xBounds = { min: Math.min(rawXMin, rawXMax), max: Math.max(rawXMin, rawXMax) };
 
       const rawYMin = nextViewport.height - scaledHeight - edgeLimit;
       const rawYMax = edgeLimit;
-      const yBounds = {
-        min: Math.min(rawYMin, rawYMax),
-        max: Math.max(rawYMin, rawYMax)
-      };
+      const yBounds = { min: Math.min(rawYMin, rawYMax), max: Math.max(rawYMin, rawYMax) };
 
       return {
         scale: boundedScale,
@@ -104,20 +97,11 @@ export function useInteractiveMap({
   );
 
   useEffect(() => {
-    if (!containerRef.current) {
-      return undefined;
-    }
-
+    if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) {
-        return;
-      }
-      const nextViewport = {
-        width: entry.contentRect.width,
-        height: entry.contentRect.height
-      };
-
+      if (!entry) return;
+      const nextViewport = { width: entry.contentRect.width, height: entry.contentRect.height };
       setViewport((current) =>
         current.width === nextViewport.width && current.height === nextViewport.height ? current : nextViewport
       );
@@ -130,7 +114,6 @@ export function useInteractiveMap({
         return clampTranslate(nextTx, nextTy, seedScale, nextViewport);
       });
     });
-
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [clampTranslate, fitWorldHeight, fitWorldWidth, worldHeight, worldWidth]);
@@ -141,10 +124,9 @@ export function useInteractiveMap({
 
   const zoomAtPoint = useCallback(
     (nextScale, clientX, clientY) => {
-      if (!containerRef.current) {
-        return;
-      }
-      const rect = containerRef.current.getBoundingClientRect();
+      const node = containerRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
       const focalX = clientX - rect.left;
       const focalY = clientY - rect.top;
 
@@ -152,7 +134,6 @@ export function useInteractiveMap({
         const boundedScale = clamp(nextScale, minScale, maxScale);
         const worldX = (focalX - current.translateX) / current.scale;
         const worldY = (focalY - current.translateY) / current.scale;
-
         const nextTranslateX = focalX - worldX * boundedScale;
         const nextTranslateY = focalY - worldY * boundedScale;
         return clampTranslate(nextTranslateX, nextTranslateY, boundedScale);
@@ -161,49 +142,42 @@ export function useInteractiveMap({
     [clampTranslate, maxScale, minScale]
   );
 
-  const onPointerDown = useCallback((event) => {
-    if (!containerRef.current) {
-      return;
-    }
+  const zoomAtPointRef = useRef(zoomAtPoint);
+  zoomAtPointRef.current = zoomAtPoint;
 
-    event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    pointersRef.current.set(event.pointerId, event);
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
 
-    if (pointersRef.current.size === 1) {
-      panStartRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-        translateX: transform.translateX,
-        translateY: transform.translateY
-      };
-      pinchStartRef.current = null;
-      return;
-    }
+    function onPointerDown(event) {
+      if (isInteractiveTarget(event.target)) return;
+      event.preventDefault();
+      node.setPointerCapture(event.pointerId);
+      pointersRef.current.set(event.pointerId, event);
 
-    if (pointersRef.current.size === 2) {
-      const [first, second] = [...pointersRef.current.values()];
-      pinchStartRef.current = {
-        distance: Math.max(getDistance(first, second), 1),
-        scale: transform.scale
-      };
-      panStartRef.current = null;
-    }
-  }, [transform.scale, transform.translateX, transform.translateY]);
-
-  const onPointerMove = useCallback(
-    (event) => {
-      if (!pointersRef.current.has(event.pointerId)) {
+      if (pointersRef.current.size === 1) {
+        const t = transformRef.current;
+        panStartRef.current = { x: event.clientX, y: event.clientY, translateX: t.translateX, translateY: t.translateY };
+        pinchStartRef.current = null;
         return;
       }
 
+      if (pointersRef.current.size === 2) {
+        const [first, second] = [...pointersRef.current.values()];
+        pinchStartRef.current = { distance: Math.max(getDistance(first, second), 1), scale: transformRef.current.scale };
+        panStartRef.current = null;
+      }
+    }
+
+    function onPointerMove(event) {
+      if (!pointersRef.current.has(event.pointerId)) return;
+      if (isInteractiveTarget(event.target)) return;
       event.preventDefault();
       pointersRef.current.set(event.pointerId, event);
 
       if (pointersRef.current.size === 1 && panStartRef.current) {
         const deltaX = event.clientX - panStartRef.current.x;
         const deltaY = event.clientY - panStartRef.current.y;
-
         setTransform((current) =>
           clampTranslate(panStartRef.current.translateX + deltaX, panStartRef.current.translateY + deltaY, current.scale)
         );
@@ -216,56 +190,58 @@ export function useInteractiveMap({
         const ratio = nextDistance / pinchStartRef.current.distance;
         const nextScale = pinchStartRef.current.scale * ratio;
         const center = getCenter(first, second);
-        zoomAtPoint(nextScale, center.x, center.y);
+        zoomAtPointRef.current(nextScale, center.x, center.y);
       }
-    },
-    [clampTranslate, zoomAtPoint]
-  );
-
-  const onPointerUp = useCallback((event) => {
-    pointersRef.current.delete(event.pointerId);
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-
-    if (pointersRef.current.size === 1) {
-      const [remaining] = [...pointersRef.current.values()];
-      panStartRef.current = {
-        x: remaining.clientX,
-        y: remaining.clientY,
-        translateX: transform.translateX,
-        translateY: transform.translateY
-      };
-      pinchStartRef.current = null;
-      return;
     }
 
-    if (!pointersRef.current.size) {
-      panStartRef.current = null;
-      pinchStartRef.current = null;
-    }
-  }, [transform.translateX, transform.translateY]);
+    function onPointerUp(event) {
+      pointersRef.current.delete(event.pointerId);
+      try { node.releasePointerCapture(event.pointerId); } catch {}
 
-  const onWheel = useCallback(
-    (event) => {
+      if (pointersRef.current.size === 1) {
+        const [remaining] = [...pointersRef.current.values()];
+        const t = transformRef.current;
+        panStartRef.current = { x: remaining.clientX, y: remaining.clientY, translateX: t.translateX, translateY: t.translateY };
+        pinchStartRef.current = null;
+        return;
+      }
+
+      if (!pointersRef.current.size) {
+        panStartRef.current = null;
+        pinchStartRef.current = null;
+      }
+    }
+
+    function onWheel(event) {
       event.preventDefault();
       const zoomFactor = event.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP;
-      zoomAtPoint(transform.scale * zoomFactor, event.clientX, event.clientY);
-    },
-    [transform.scale, zoomAtPoint]
-  );
+      zoomAtPointRef.current(transformRef.current.scale * zoomFactor, event.clientX, event.clientY);
+    }
+
+    node.addEventListener('pointerdown', onPointerDown);
+    node.addEventListener('pointermove', onPointerMove);
+    node.addEventListener('pointerup', onPointerUp);
+    node.addEventListener('pointercancel', onPointerUp);
+    node.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      node.removeEventListener('pointerdown', onPointerDown);
+      node.removeEventListener('pointermove', onPointerMove);
+      node.removeEventListener('pointerup', onPointerUp);
+      node.removeEventListener('pointercancel', onPointerUp);
+      node.removeEventListener('wheel', onWheel);
+    };
+  }, [clampTranslate]);
 
   const zoomIn = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) {
-      return;
-    }
+    if (!rect) return;
     zoomAtPoint(transform.scale * ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
   }, [transform.scale, zoomAtPoint]);
 
   const zoomOut = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) {
-      return;
-    }
+    if (!rect) return;
     zoomAtPoint(transform.scale / ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
   }, [transform.scale, zoomAtPoint]);
 
@@ -275,10 +251,7 @@ export function useInteractiveMap({
   }, [clampTranslate, fitViewScale, viewport, worldHeight, worldWidth]);
 
   const focusRect = useCallback((rect, padding = 48) => {
-    if (!rect || !viewport.width || !viewport.height) {
-      return;
-    }
-
+    if (!rect || !viewport.width || !viewport.height) return;
     const width = Math.max(Number(rect.width) || 0, 1);
     const height = Math.max(Number(rect.height) || 0, 1);
     const availableWidth = Math.max(viewport.width - padding * 2, 1);
@@ -288,7 +261,6 @@ export function useInteractiveMap({
     const centerY = (Number(rect.y) || 0) + height / 2;
     const nextTranslateX = viewport.width / 2 - centerX * nextScale;
     const nextTranslateY = viewport.height / 2 - centerY * nextScale;
-
     setTransform(clampTranslate(nextTranslateX, nextTranslateY, nextScale));
   }, [clampTranslate, maxScale, minScale, viewport]);
 
@@ -297,18 +269,7 @@ export function useInteractiveMap({
     transform,
     minScale,
     maxScale,
-    handlers: {
-      onPointerDown,
-      onPointerMove,
-      onPointerUp,
-      onPointerCancel: onPointerUp,
-      onWheel
-    },
-    actions: {
-      zoomIn,
-      zoomOut,
-      fitToView,
-      focusRect
-    }
+    handlers: {},
+    actions: { zoomIn, zoomOut, fitToView, focusRect }
   };
 }
