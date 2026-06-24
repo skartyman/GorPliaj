@@ -227,12 +227,13 @@ function getPolygonFill(meta) {
   if (meta.texture === 'sand') return '#fef3c7';
   if (meta.texture === 'water') return '#bfdbfe';
   if (meta.texture === 'wood') return '#d6a766';
+  if (meta.texture === 'dark_wood') return '#5D4037';
   if (meta.texture === 'grass') return '#bbf7d0';
   return '#e2e8f0';
 }
 
 function hasBuiltinTexture(texture) {
-  return ['sand', 'water', 'wood', 'grass'].includes(String(texture || '').toLowerCase());
+  return ['sand', 'water', 'wood', 'dark_wood', 'grass'].includes(String(texture || '').toLowerCase());
 }
 
 function BuiltinTexturePattern({ id, texture }) {
@@ -268,6 +269,14 @@ function BuiltinTexturePattern({ id, texture }) {
           <rect width="100" height="20" fill="#fef3c7" />
           <line x1="0" y1="19" x2="100" y2="19" stroke="#fcd34d" strokeWidth="1" />
           <path d="M20,10 Q50,5 80,10" stroke="#f59e0b" fill="none" strokeWidth="0.5" opacity="0.2" />
+        </pattern>
+      );
+    case 'dark_wood':
+      return (
+        <pattern id={id} x="0" y="0" width="100" height="20" patternUnits="userSpaceOnUse">
+          <rect width="100" height="20" fill="#3E2723" />
+          <line x1="0" y1="19" x2="100" y2="19" stroke="#5D4037" strokeWidth="1" />
+          <path d="M20,10 Q50,5 80,10" stroke="#4E342E" fill="none" strokeWidth="0.5" opacity="0.3" />
         </pattern>
       );
     default:

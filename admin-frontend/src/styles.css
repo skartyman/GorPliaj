@@ -1293,6 +1293,7 @@ textarea { resize: vertical; min-height: 96px; }
 .texture-sand { background: linear-gradient(180deg, #FEF9C3 0%, #FDE68A 100%), radial-gradient(circle at 20% 30%, rgba(234, 179, 8, 0.18) 0 2px, transparent 3px), radial-gradient(circle at 70% 60%, rgba(234, 179, 8, 0.16) 0 2px, transparent 3px); }
 .texture-water { background: linear-gradient(180deg, #E0F2FE 0%, #BAE6FD 100%), repeating-linear-gradient(180deg, rgba(59, 130, 246, 0.18) 0 4px, transparent 4px 8px); }
 .texture-wood { background: linear-gradient(180deg, #FFEDD5 0%, #FED7AA 100%), repeating-linear-gradient(90deg, rgba(180, 83, 9, 0.28) 0 6px, transparent 6px 18px); }
+.texture-dark_wood { background: linear-gradient(180deg, #5D4037 0%, #3E2723 100%), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 6px, transparent 6px 18px); }
 
 .inspector-asset-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--bg-page); }
 .inspector-asset-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

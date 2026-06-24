@@ -48,7 +48,8 @@ const TEXTURE_CHOICES = [
   { value: 'grass', label: 'Трава' },
   { value: 'sand', label: 'Пісок' },
   { value: 'water', label: 'Вода' },
-  { value: 'wood', label: 'Дерево' }
+  { value: 'wood', label: 'Дерево' },
+  { value: 'dark_wood', label: 'Темне дерево' }
 ];
 const PROPERTY_FIELDS = [
   { key: 'label', type: 'text', section: 'General' },
@@ -71,7 +72,8 @@ const PROPERTY_FIELDS = [
     { value: 'grass', label: 'Трава' },
     { value: 'sand', label: 'Пісок' },
     { value: 'water', label: 'Вода' },
-    { value: 'wood', label: 'Дерево' }
+    { value: 'wood', label: 'Дерево' },
+    { value: 'dark_wood', label: 'Темне дерево' }
   ]},
   { key: 'opacity', type: 'percent', section: 'Graphics', step: 1 },
   { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>' },
@@ -1743,6 +1745,13 @@ function SVGDefinitions() {
           <line x1="0" y1="19" x2="100" y2="19" stroke="#fcd34d" strokeWidth="1" />
           <path d="M20,10 Q50,5 80,10" stroke="#f59e0b" fill="none" strokeWidth="0.5" opacity="0.2" />
         </pattern>
+
+        {/* Dark Wood Pattern */}
+        <pattern id="pattern-dark_wood" x="0" y="0" width="100" height="20" patternUnits="userSpaceOnUse">
+          <rect width="100" height="20" fill="#3E2723" />
+          <line x1="0" y1="19" x2="100" y2="19" stroke="#5D4037" strokeWidth="1" />
+          <path d="M20,10 Q50,5 80,10" stroke="#4E342E" fill="none" strokeWidth="0.5" opacity="0.3" />
+        </pattern>
       </defs>
     </svg>
   );
@@ -1753,6 +1762,7 @@ function getTextureFill({ texture, textureUrl, fallback = '#f1f5f9' }) {
   if (texture === 'sand') return 'url(#pattern-sand)';
   if (texture === 'water') return 'url(#pattern-water)';
   if (texture === 'wood') return 'url(#pattern-wood)';
+  if (texture === 'dark_wood') return 'url(#pattern-dark_wood)';
   if (texture === 'grass') return 'url(#pattern-grass)';
   return fallback;
 }
