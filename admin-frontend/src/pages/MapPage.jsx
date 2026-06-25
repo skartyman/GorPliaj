@@ -1504,6 +1504,8 @@ export default function MapPage() {
                         return (
                           <div
                             key={object.id}
+                            role={isBookable ? 'button' : undefined}
+                            tabIndex={isBookable ? 0 : undefined}
                             className={classNames}
                             style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                             title={objectLabel}
