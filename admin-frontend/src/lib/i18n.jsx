@@ -608,6 +608,7 @@ const translations = {
         pending: 'Очікує',
         confirmed: 'Підтверджений',
         held: 'Утриманий',
+        completed: 'Зайнято',
         unavailable: 'Недоступний'
       },
       fields: {
