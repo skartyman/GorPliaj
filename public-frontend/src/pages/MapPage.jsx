@@ -709,7 +709,12 @@ export default function MapPage() {
   const navigate = useNavigate();
 
   const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'BEACH' ? 'BEACH' : 'TABLE');
-  const [usageMode, setUsageMode] = useState(searchParams.get('usageMode') === 'EVENING' ? 'EVENING' : 'DAY');
+  const [usageMode, setUsageMode] = useState(
+    searchParams.get('usageMode') === 'EVENING'
+      || (searchParams.get('timeFrom') && searchParams.get('timeFrom') > '16:00')
+      ? 'EVENING'
+      : 'DAY'
+  );
 
   const resolvedBookingKind = usageMode === 'EVENING' ? 'TABLE' : bookingKind;
   const timeSlots = useMemo(() => {

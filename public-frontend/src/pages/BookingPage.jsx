@@ -1606,8 +1606,8 @@ export default function BookingPage() {
                           <span
                             role="button"
                             tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}`, '_blank'); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}`, '_blank'); } }}
+                            onClick={(e) => { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}`, '_blank'); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}`, '_blank'); } }}
                             style={{ fontSize: '0.75rem', color: 'var(--primary)', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--primary)' }}
                           >
                             {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
