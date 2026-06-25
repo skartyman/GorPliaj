@@ -30,7 +30,6 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/map-editor', labelKey: 'nav.mapEditor', icon: IconMapEditor, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/map', labelKey: 'nav.map', icon: IconMap, roles: ['*'] },
   { to: '/admin/positions', labelKey: 'nav.positions', icon: IconTable, roles: ['admin', 'manager', 'owner'] },
-  { to: '/admin/position-types', labelKey: 'nav.positionTypes', icon: IconTag, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/menu', labelKey: 'nav.menu', icon: IconMenu, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/events', labelKey: 'nav.events', icon: IconEvents, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
   { to: '/admin/ticket-sales', labelKey: 'nav.ticketSales', icon: IconTicket, roles: ['admin', 'manager', 'owner'] },

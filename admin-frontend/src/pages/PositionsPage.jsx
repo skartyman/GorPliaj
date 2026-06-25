@@ -47,6 +47,7 @@ export default function PositionsPage() {
   const [bulkValue, setBulkValue] = useState('');
 
   const [allPositionTypes, setAllPositionTypes] = useState([]);
+  const [savingTypeIds, setSavingTypeIds] = useState([]);
 
   async function loadPositions() {
     const params = new URLSearchParams();
@@ -70,7 +71,39 @@ export default function PositionsPage() {
   async function loadPositionTypes() {
     const { response, body } = await apiRequest('/api/admin/position-types');
     if (response.ok && Array.isArray(body)) {
-      setAllPositionTypes(body.map((pt) => pt.value).filter(Boolean));
+      setAllPositionTypes(body);
+    }
+  }
+
+  function handleTypePriceChange(id, field, value) {
+    setAllPositionTypes((prev) =>
+      prev.map((pt) => (pt.id === id ? { ...pt, [field]: value } : pt))
+    );
+  }
+
+  async function savePositionTypePrices(pt) {
+    setSavingTypeIds((prev) => [...prev, pt.id]);
+    setFeedback('');
+    setFeedbackType('');
+
+    const payload = {
+      defaultPrice: pt.defaultPrice !== '' && pt.defaultPrice != null ? Number(pt.defaultPrice) : null,
+      defaultDeposit: pt.defaultDeposit !== '' && pt.defaultDeposit != null ? Number(pt.defaultDeposit) : null
+    };
+
+    const { response, body } = await apiRequest(`/api/admin/position-types/${pt.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+
+    setSavingTypeIds((prev) => prev.filter((id) => id !== pt.id));
+    if (response.ok) {
+      setFeedback(t('positionTypes.feedback.saved') || 'Ціни успішно збережено');
+      setFeedbackType('success');
+      await loadPositionTypes();
+    } else {
+      setFeedback(body.message || t('positionTypes.errors.save') || 'Помилка збереження цін');
+      setFeedbackType('error');
     }
   }
 
@@ -249,7 +282,7 @@ export default function PositionsPage() {
     return true;
   });
 
-  const positionTypes = allPositionTypes.length ? allPositionTypes : [...new Set(positions.map((p) => p.positionType).filter(Boolean))];
+  const positionTypes = allPositionTypes.length ? allPositionTypes.map((pt) => pt.value).filter(Boolean) : [...new Set(positions.map((p) => p.positionType).filter(Boolean))];
   const allZonesForFilter = [...new Map(zones.map((z) => [z.id, z])).values()];
 
   const columns = [
@@ -402,164 +435,236 @@ export default function PositionsPage() {
   return (
     <AdminLayout>
       <PageContainer title={t('positions.title')} description={t('positions.description')}>
-        <div style={{ display: 'flex', gap: 16, borderBottom: '1px solid var(--line, #e5e7eb)', paddingBottom: 0, marginBottom: 16 }}>
-          <NavLink to="/admin/positions" end style={({ isActive }) => ({ textDecoration: 'none', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--primary, #eab308)' : 'var(--text-muted, #666)', borderBottom: isActive ? '2px solid var(--primary, #eab308)' : 'none', padding: '8px 4px', display: 'inline-block' })}>
-            {t('positions.title')}
-          </NavLink>
-          <NavLink to="/admin/position-types" end style={({ isActive }) => ({ textDecoration: 'none', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--primary, #eab308)' : 'var(--text-muted, #666)', borderBottom: isActive ? '2px solid var(--primary, #eab308)' : 'none', padding: '8px 4px', display: 'inline-block' })}>
-            {t('positionTypes.title')}
-          </NavLink>
-        </div>
         {feedback ? (
           <div className="feedback-bar" style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)', background: feedbackType === 'error' ? '#fef2f2' : feedbackType === 'warning' ? '#fffbeb' : '#f0fdf4', border: '1px solid', borderColor: feedbackType === 'error' ? '#fecaca' : feedbackType === 'warning' ? '#fde68a' : '#bbf7d0', color: feedbackType === 'error' ? '#dc2626' : feedbackType === 'warning' ? '#92400e' : '#16a34a' }}>
             {feedback}
           </div>
         ) : null}
 
-        <div className="admin-section-divider" style={{ marginTop: 0 }}>
-          <hr /><span>{t('positions.create')}</span>
-        </div>
-
-        <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <label style={{ fontSize: 11, maxWidth: 320 }}>
-            {t('positions.fields.map')} <span className="required">*</span>
-            <select style={{ fontSize: 12, padding: '2px 6px', height: 28 }} value={form.mapId} onChange={(e) => setForm({ ...form, mapId: e.target.value })} required>
-              <option value="">—</option>
-              {maps.map((m) => (
-                <option key={m.id} value={m.id}>{localizeField(m.name, language)} ({m.usageMode})</option>
-              ))}
-            </select>
-          </label>
-          {renderFormFields()}
-          <div className="actions" style={{ display: 'flex', gap: 8 }}>
-            <button type="submit" className="btn btn-small btn-primary" disabled={saving}>
-              {saving ? t('positions.saving') : t('common.create')}
-            </button>
+        <details className="admin-collapsible" open={!!editId}>
+          <summary>{editId ? t('positions.editing') : t('positions.create')}</summary>
+          <div className="admin-collapsible-content">
+            <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 11, maxWidth: 320 }}>
+                {t('positions.fields.map')} <span className="required">*</span>
+                <select style={{ fontSize: 12, padding: '2px 6px', height: 28 }} value={form.mapId} onChange={(e) => setForm({ ...form, mapId: e.target.value })} required>
+                  <option value="">—</option>
+                  {maps.map((m) => (
+                    <option key={m.id} value={m.id}>{localizeField(m.name, language)} ({m.usageMode})</option>
+                  ))}
+                </select>
+              </label>
+              {renderFormFields()}
+              <div className="actions" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button type="submit" className="btn btn-small btn-primary" disabled={saving}>
+                  {saving ? t('positions.saving') : (editId ? t('common.save') : t('common.create'))}
+                </button>
+                {editId ? (
+                  <button type="button" className="btn btn-small btn-secondary" onClick={cancelEdit}>
+                    {t('positionTypes.form.cancel') || 'Скасувати'}
+                  </button>
+                ) : null}
+              </div>
+            </form>
           </div>
-        </form>
+        </details>
 
-        <div className="admin-section-divider">
-          <hr /><span>{t('positions.title')}</span>
-        </div>
+        <details className="admin-collapsible">
+          <summary>{t('positionTypes.title') || 'Ціни по типам послуг'}</summary>
+          <div className="admin-collapsible-content">
+            {allPositionTypes.length === 0 ? (
+              <p className="muted">{t('positionTypes.loading') || 'Завантаження...'}</p>
+            ) : (
+              <div className="table-wrap">
+                <table className="admin-table compact">
+                  <thead>
+                    <tr>
+                      <th>{t('positionTypes.columns.value') || 'Код'}</th>
+                      <th>{t('positionTypes.columns.name') || 'Назва'}</th>
+                      <th>{t('positionTypes.form.fields.bookingKind') || 'Тип'}</th>
+                      <th>{t('positionTypes.form.fields.defaultPrice') || 'Ціна за замовчуванням'} ({t('positionTypes.currency') || 'грн'})</th>
+                      <th>{t('positionTypes.form.fields.defaultDeposit') || 'Депозит за замовчуванням'} ({t('positionTypes.currency') || 'грн'})</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allPositionTypes.map((pt) => {
+                      const isSaving = savingTypeIds.includes(pt.id);
+                      return (
+                        <tr key={pt.id}>
+                          <td><strong>{pt.value}</strong></td>
+                          <td>{localizeField(pt.name, language) || '—'}</td>
+                          <td>
+                            <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'var(--color-surface-alt, #f3f4f6)', color: 'var(--color-text-muted)' }}>
+                              {t(`positionTypes.bookingKind.${pt.bookingKind}`) || pt.bookingKind}
+                            </span>
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={pt.defaultPrice != null ? pt.defaultPrice : ''}
+                              onChange={(e) => handleTypePriceChange(pt.id, 'defaultPrice', e.target.value)}
+                              placeholder="—"
+                              style={{ width: '100%', maxWidth: 110, fontSize: 12, padding: '2px 6px', height: 26 }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={pt.defaultDeposit != null ? pt.defaultDeposit : ''}
+                              onChange={(e) => handleTypePriceChange(pt.id, 'defaultDeposit', e.target.value)}
+                              placeholder="—"
+                              style={{ width: '100%', maxWidth: 110, fontSize: 12, padding: '2px 6px', height: 26 }}
+                            />
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="btn btn-small btn-primary"
+                              disabled={isSaving}
+                              onClick={() => savePositionTypePrices(pt)}
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                            >
+                              {isSaving ? t('positionTypes.form.saving') : t('common.save')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </details>
 
-        <div className="admin-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-          <select value={filters.mapId} onChange={(e) => setFilters({ ...filters, mapId: e.target.value })} style={{ fontSize: 12 }}>
-            <option value="">{t('positions.filters.all')} ({t('positions.filters.map')})</option>
-            {maps.map((m) => (
-              <option key={m.id} value={m.id}>{localizeField(m.name, language)}</option>
-            ))}
-          </select>
-          <select value={filters.zoneId} onChange={(e) => setFilters({ ...filters, zoneId: e.target.value })} style={{ fontSize: 12 }}>
-            <option value="">{t('positions.filters.all')} ({t('positions.filters.zone')})</option>
-            {allZonesForFilter.map((z) => (
-              <option key={z.id} value={z.id}>{localizeField(z.name, language)}</option>
-            ))}
-          </select>
-          <select value={filters.positionType} onChange={(e) => setFilters({ ...filters, positionType: e.target.value })} style={{ fontSize: 12 }}>
-            <option value="">{t('positions.filters.all')} ({t('positions.filters.positionType')})</option>
-            {positionTypes.map((pt) => (
-              <option key={pt} value={pt}>{pt}</option>
-            ))}
-          </select>
-          <select value={filters.bookingKind} onChange={(e) => setFilters({ ...filters, bookingKind: e.target.value })} style={{ fontSize: 12 }}>
-            <option value="">{t('positions.filters.all')} ({t('positions.filters.bookingKind')})</option>
-            <option value="TABLE">{t('reservationMeta.bookingKind.TABLE')}</option>
-            <option value="BEACH">{t('reservationMeta.bookingKind.BEACH')}</option>
-          </select>
-          <input value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder={t('positions.filters.search')} style={{ fontSize: 12, flex: '1 0 160px' }} />
-        </div>
-
-        {selectedIds.length > 0 ? (
-          <div className="admin-bulk-bar" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-            <span style={{ fontSize: 13 }}>{t('positions.bulk.selected', { count: selectedIds.length })}</span>
-            <select value={bulkAction} onChange={(e) => setBulkAction(e.target.value)} style={{ fontSize: 12 }}>
-              <option value="">—</option>
-              <option value="deposit">{t('positions.bulk.setDeposit')}</option>
-              <option value="price">{t('positions.bulk.setPrice')}</option>
-              <option value="zone">{t('positions.bulk.setZone')}</option>
-              <option value="bookingKind">{t('positions.bulk.setBookingKind')}</option>
-              <option value="active">{t('positions.bulk.setActive')}</option>
-            </select>
-            {bulkAction === 'deposit' || bulkAction === 'price' ? (
-              <input type="number" min="0" step="0.01" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder="0.00" style={{ fontSize: 12, width: 100 }} />
-            ) : null}
-            {bulkAction === 'zone' ? (
-              <select value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} style={{ fontSize: 12 }}>
-                <option value="">—</option>
+        <details className="admin-collapsible" open>
+          <summary>{t('positions.title')}</summary>
+          <div className="admin-collapsible-content">
+            <div className="admin-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              <select value={filters.mapId} onChange={(e) => setFilters({ ...filters, mapId: e.target.value })} style={{ fontSize: 12 }}>
+                <option value="">{t('positions.filters.all')} ({t('positions.filters.map')})</option>
+                {maps.map((m) => (
+                  <option key={m.id} value={m.id}>{localizeField(m.name, language)}</option>
+                ))}
+              </select>
+              <select value={filters.zoneId} onChange={(e) => setFilters({ ...filters, zoneId: e.target.value })} style={{ fontSize: 12 }}>
+                <option value="">{t('positions.filters.all')} ({t('positions.filters.zone')})</option>
                 {allZonesForFilter.map((z) => (
                   <option key={z.id} value={z.id}>{localizeField(z.name, language)}</option>
                 ))}
               </select>
-            ) : null}
-            {bulkAction === 'bookingKind' ? (
-              <select value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} style={{ fontSize: 12 }}>
-                <option value="">—</option>
+              <select value={filters.positionType} onChange={(e) => setFilters({ ...filters, positionType: e.target.value })} style={{ fontSize: 12 }}>
+                <option value="">{t('positions.filters.all')} ({t('positions.filters.positionType')})</option>
+                {positionTypes.map((pt) => (
+                  <option key={pt} value={pt}>{pt}</option>
+                ))}
+              </select>
+              <select value={filters.bookingKind} onChange={(e) => setFilters({ ...filters, bookingKind: e.target.value })} style={{ fontSize: 12 }}>
+                <option value="">{t('positions.filters.all')} ({t('positions.filters.bookingKind')})</option>
                 <option value="TABLE">{t('reservationMeta.bookingKind.TABLE')}</option>
                 <option value="BEACH">{t('reservationMeta.bookingKind.BEACH')}</option>
               </select>
-            ) : null}
-            {bulkAction === 'active' ? (
-              <select value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} style={{ fontSize: 12 }}>
-                <option value="true">{t('positions.bulk.setActive')}</option>
-                <option value="false">{t('positions.bulk.setInactive')}</option>
-              </select>
-            ) : null}
-            <button type="button" className="btn btn-small btn-primary" disabled={saving || !bulkAction} onClick={applyBulkAction}>
-              {t('positions.bulk.apply')}
-            </button>
-          </div>
-        ) : null}
+              <input value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder={t('positions.filters.search')} style={{ fontSize: 12, flex: '1 0 160px' }} />
+            </div>
 
-        {state.loading ? (
-          <p className="muted">{t('positions.loading')}</p>
-        ) : state.error ? (
-          <p className="state-error">{state.error}</p>
-        ) : !filteredPositions.length ? (
-          <p className="muted">{t('positions.empty')}</p>
-        ) : (
-          <div className="table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  {columns.map((column) => (
-                    <th key={column.key}>{column.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPositions.map((row) => (
-                  <Fragment key={row.id}>
-                    <tr className={editId === row.id ? 'row-editing' : ''}>
+            {selectedIds.length > 0 ? (
+              <div className="admin-bulk-bar" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                <span style={{ fontSize: 13 }}>{t('positions.bulk.selected', { count: selectedIds.length })}</span>
+                <select value={bulkAction} onChange={(e) => setBulkAction(e.target.value)} style={{ fontSize: 12 }}>
+                  <option value="">—</option>
+                  <option value="deposit">{t('positions.bulk.setDeposit')}</option>
+                  <option value="price">{t('positions.bulk.setPrice')}</option>
+                  <option value="zone">{t('positions.bulk.setZone')}</option>
+                  <option value="bookingKind">{t('positions.bulk.setBookingKind')}</option>
+                  <option value="active">{t('positions.bulk.setActive')}</option>
+                </select>
+                {bulkAction === 'deposit' || bulkAction === 'price' ? (
+                  <input type="number" min="0" step="0.01" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder="0.00" style={{ fontSize: 12, width: 100 }} />
+                ) : null}
+                {bulkAction === 'zone' ? (
+                  <select value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} style={{ fontSize: 12 }}>
+                    <option value="">—</option>
+                    {allZonesForFilter.map((z) => (
+                      <option key={z.id} value={z.id}>{localizeField(z.name, language)}</option>
+                    ))}
+                  </select>
+                ) : null}
+                {bulkAction === 'bookingKind' ? (
+                  <select value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} style={{ fontSize: 12 }}>
+                    <option value="">—</option>
+                    <option value="TABLE">{t('reservationMeta.bookingKind.TABLE')}</option>
+                    <option value="BEACH">{t('reservationMeta.bookingKind.BEACH')}</option>
+                  </select>
+                ) : null}
+                {bulkAction === 'active' ? (
+                  <select value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} style={{ fontSize: 12 }}>
+                    <option value="true">{t('positions.bulk.setActive')}</option>
+                    <option value="false">{t('positions.bulk.setInactive')}</option>
+                  </select>
+                ) : null}
+                <button type="button" className="btn btn-small btn-primary" disabled={saving || !bulkAction} onClick={applyBulkAction}>
+                  {t('positions.bulk.apply')}
+                </button>
+              </div>
+            ) : null}
+
+            {state.loading ? (
+              <p className="muted">{t('positions.loading')}</p>
+            ) : state.error ? (
+              <p className="state-error">{state.error}</p>
+            ) : !filteredPositions.length ? (
+              <p className="muted">{t('positions.empty')}</p>
+            ) : (
+              <div className="table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
                       {columns.map((column) => (
-                        <td key={`${row.id}-${column.key}`}>
-                          {column.render ? column.render(row) : localizeField(row[column.key], language) || '—'}
-                        </td>
+                        <th key={column.key}>{column.label}</th>
                       ))}
                     </tr>
-                    {editId === row.id ? (
-                      <tr className="inline-edit-row">
-                        <td colSpan={columns.length} style={{ padding: '8px 16px', background: 'var(--color-surface-alt, #f9fafb)' }}>
-                          <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted)', marginBottom: 4 }}>
-                              {t('positions.editing')} — <span style={{ fontFamily: 'monospace' }}>{row.code}</span>
-                            </div>
-                            {renderFormFields()}
-                            <div className="actions" style={{ display: 'flex', gap: 8 }}>
-                              <button type="submit" className="btn btn-primary" disabled={saving}>
-                                {saving ? t('positions.saving') : t('common.save')}
-                              </button>
-                              <button type="button" className="btn btn-secondary" onClick={cancelEdit}>{t('positionTypes.form.cancel')}</button>
-                            </div>
-                          </form>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {filteredPositions.map((row) => (
+                      <Fragment key={row.id}>
+                        <tr className={editId === row.id ? 'row-editing' : ''}>
+                          {columns.map((column) => (
+                            <td key={`${row.id}-${column.key}`}>
+                              {column.render ? column.render(row) : localizeField(row[column.key], language) || '—'}
+                            </td>
+                          ))}
+                        </tr>
+                        {editId === row.id ? (
+                          <tr className="inline-edit-row">
+                            <td colSpan={columns.length} style={{ padding: '8px 16px', background: 'var(--color-surface-alt, #f9fafb)' }}>
+                              <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted)', marginBottom: 4 }}>
+                                  {t('positions.editing')} — <span style={{ fontFamily: 'monospace' }}>{row.code}</span>
+                                </div>
+                                {renderFormFields()}
+                                <div className="actions" style={{ display: 'flex', gap: 8 }}>
+                                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? t('positions.saving') : t('common.save')}
+                                  </button>
+                                  <button type="button" className="btn btn-secondary" onClick={cancelEdit}>{t('positionTypes.form.cancel')}</button>
+                                </div>
+                              </form>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+        </details>
       </PageContainer>
     </AdminLayout>
   );
