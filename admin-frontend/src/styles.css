@@ -2316,3 +2316,69 @@ textarea { resize: vertical; min-height: 96px; }
     max-width: 280px;
   }
 }
+
+/* Bookable Map Object Status Badges (e.g., Beds, Bungalows) */
+.object-status-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-warm);
+  border-radius: 6px;
+  padding: 2px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+  z-index: 5;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.object-status-badge.free {
+  background: var(--success-bg);
+  border-color: var(--accent-olive);
+  color: var(--text-primary);
+}
+
+.object-status-badge.pending {
+  background: var(--warning-bg);
+  border-color: #EAB308;
+  color: var(--text-primary);
+}
+
+.object-status-badge.confirmed {
+  background: var(--info-bg);
+  border-color: var(--info-text);
+  color: var(--text-primary);
+}
+
+.object-status-badge.held {
+  background: #FFEDD5;
+  border-color: #F97316;
+  color: var(--text-primary);
+}
+
+.object-status-badge.unavailable {
+  background: var(--border-light);
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.object-code-text {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.object-countdown {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1;
+  white-space: nowrap;
+}
+

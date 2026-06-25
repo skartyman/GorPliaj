@@ -565,6 +565,25 @@ function formatCountdown(reservation) {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
+function ReservationCountdown({ reservation, className = 'table-countdown', style }) {
+  const [timeLeft, setTimeLeft] = useState(() => formatCountdown(reservation));
+
+  useEffect(() => {
+    setTimeLeft(formatCountdown(reservation));
+    const interval = setInterval(() => {
+      setTimeLeft(formatCountdown(reservation));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [reservation]);
+
+  if (!timeLeft || timeLeft === '00:00') return null;
+  return (
+    <span className={className} style={style}>
+      {timeLeft}
+    </span>
+  );
+}
+
 export default function MapPage() {
   console.log('[MAP] MapPage rendered', performance.now().toFixed(0));
   const [state, setState] = useState({
@@ -579,7 +598,6 @@ export default function MapPage() {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [selectedDate, setSelectedDate] = useState(getDateKey());
-  const [now, setNow] = useState(new Date());
   const [qrTicketCode, setQrTicketCode] = useState('');
   const [qrResult, setQrResult] = useState(null);
   const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
@@ -689,10 +707,7 @@ export default function MapPage() {
     });
   }, [selectedMapId, selectedDate]);
 
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+
 
   useEffect(() => {
     function globalClick(e) { console.log('[MAP] GLOBAL CLICK', e.target.tagName, e.target.className); }
@@ -1226,6 +1241,7 @@ export default function MapPage() {
         reservation.id === id ? { ...reservation, status: result.body?.reservation?.status || status } : reservation
       )
     }));
+    loadMapData();
   }
 
   async function submitBookingForm(event) {
@@ -1275,6 +1291,7 @@ export default function MapPage() {
       success: 'Бронь створено.',
       open: false
     }));
+    loadMapData();
   }
 
   return (
@@ -1450,14 +1467,50 @@ export default function MapPage() {
                         if (!hasAsset) {
                           return null;
                         }
+
+                        const isBookable = !!object.tableId;
+                        const status = isBookable
+                          ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
+                          : null;
+                        const activeReservation = isBookable
+                          ? (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status))
+                          : null;
+                        const isSelected = isBookable && (selectedObjectId === object.id || selectedTableId === object.tableId);
+
+                        const classNames = [
+                          'interactive-map-object',
+                          hasAsset ? 'has-asset' : '',
+                          object.isActive === false ? 'inactive' : '',
+                          isBookable ? 'selectable' : '',
+                          isBookable ? status.toLowerCase() : '',
+                          isSelected ? 'selected' : ''
+                        ].filter(Boolean).join(' ');
+
                         return (
                           <div
                             key={object.id}
-                            className={`interactive-map-object ${hasAsset ? 'has-asset' : ''} ${object.isActive === false ? 'inactive' : ''}`.trim()}
+                            className={classNames}
                             style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
                             title={objectLabel}
+                            onPointerDown={isBookable ? (event) => {
+                              console.log('[MAP] object pdown', object.tableId);
+                              event.stopPropagation();
+                            } : undefined}
+                            onClick={isBookable ? () => {
+                              console.log('[MAP] object click', object.tableId);
+                              setSelectedTableId(object.tableId);
+                              setSelectedObjectId(null);
+                            } : undefined}
                           >
                             <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
+                            {isBookable && (
+                              <div className={`object-status-badge ${status.toLowerCase()}`}>
+                                <span className="object-code-text">{object.table?.code || '—'}</span>
+                                {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
+                                  <ReservationCountdown reservation={activeReservation} className="object-countdown" />
+                                ) : null}
+                              </div>
+                            )}
                           </div>
                         );
                       }
@@ -1481,7 +1534,7 @@ export default function MapPage() {
                         >
                           <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                           {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
-                            <span className="table-countdown">{formatCountdown(activeReservation)}</span>
+                            <ReservationCountdown reservation={activeReservation} />
                           ) : null}
                           {status === 'FREE' ? (
                             <span
@@ -1540,7 +1593,7 @@ export default function MapPage() {
                         <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
                         {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)} • <StatusPill status={reservation.status} />
                         {reservation.status !== 'COMPLETED' && reservation.status !== 'CANCELLED' ? (
-                          <span className="table-countdown" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }}>{formatCountdown(reservation)}</span>
+                          <ReservationCountdown reservation={reservation} style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} />
                         ) : null}
                         {reservation.paidInCash ? <span className="paid-cash-badge" style={{ marginLeft: 6 }}>Готівка</span> : null}
                         <span className="reservation-inline-actions">
