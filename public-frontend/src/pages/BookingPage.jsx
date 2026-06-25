@@ -595,14 +595,17 @@ export default function BookingPage() {
 
     let cancelled = false;
     setMapsState({ loading: true, error: '', maps: [] });
+    console.log('DEBUG_AGY: mapsState useEffect running', { canLoadMaps, usageMode, resolvedBookingKind, guests: form.guests });
 
     mapApi.list({ usageMode, bookingKind: resolvedBookingKind, guests: form.guests })
       .then((result) => {
         if (cancelled) return;
         const maps = Array.isArray(result?.maps) ? result.maps : [];
+        console.log('DEBUG_AGY: mapApi.list resolved', { mapsCount: maps.length });
         setMapsState({ loading: false, error: '', maps });
         setSelected((current) => {
           const preferred = maps.find((item) => item.id === current.mapId) || maps.find((item) => item.isDefault) || maps[0];
+          console.log('DEBUG_AGY: mapsState setSelected updating mapId from', current.mapId, 'to', preferred?.id || 0);
           return {
             mapId: preferred?.id || 0,
             zoneId: current.zoneId,
@@ -612,6 +615,7 @@ export default function BookingPage() {
       })
       .catch((error) => {
         if (cancelled) return;
+        console.error('DEBUG_AGY: mapApi.list failed', error);
         setMapsState({ loading: false, error: error.message, maps: [] });
       });
 
@@ -662,7 +666,9 @@ export default function BookingPage() {
   }, [bookingFlow, eventInfo?.id, eventDateOptions, mapsState.loading, mapsState.maps, form.guests]);
 
   useEffect(() => {
+    console.log('DEBUG_AGY: unitsState useEffect running', { mapId: selected.mapId, date: form.date, timeFrom: form.timeFrom, guests: form.guests, resolvedBookingKind });
     if (!selected.mapId || (bookingFlow === 'EVENT' && !activeEventDateOption)) {
+      console.log('DEBUG_AGY: unitsState useEffect early return (mapId is 0 or event date missing)', { mapId: selected.mapId });
       setUnitsState({ loading: false, error: '', map: null, zones: [], units: [] });
       return;
     }
@@ -681,6 +687,7 @@ export default function BookingPage() {
         if (cancelled) return;
         const zones = Array.isArray(result?.zones) ? result.zones : [];
         const units = Array.isArray(result?.units) ? result.units : [];
+        console.log('DEBUG_AGY: mapApi.bookableUnits resolved', { zonesCount: zones.length, unitsCount: units.length });
         setUnitsState({ loading: false, error: '', map: result.map || null, zones, units });
         setSelected((current) => {
           const activeZone = zones.find((zone) => zone.id === current.zoneId && zone.totalCount > 0)
@@ -972,10 +979,6 @@ export default function BookingPage() {
 
   function dismissEventBookingPrompt() {
     setEventBookingPrompt(null);
-    setForm((current) => ({
-      ...current,
-      date: today
-    }));
   }
 
   async function submitBooking(event) {
