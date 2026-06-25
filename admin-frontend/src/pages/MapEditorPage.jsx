@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
@@ -1821,7 +1821,7 @@ function MapObjectRenderer({ object, tableMap, zoneMap, t, language, isSelected,
     if (svgCode) {
       return (
         <div 
-          style={{ width: '100%', height: '100%', color: strokeColor || 'inherit' }} 
+          style={{ width: '100%', height: '100%', color: strokeColor || 'inherit', opacity: objectOpacity }} 
           dangerouslySetInnerHTML={{ __html: svgCode }} 
         />
       );

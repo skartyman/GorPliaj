@@ -2450,12 +2450,95 @@ textarea { resize: vertical; min-height: 96px; }
   color: #FFFFFF !important;
 }
 
-/* Selected: Prominent Gold Outline with Glow */
+/* Selected: Prominent Pulsing Gold & White Outline with Massive Glow */
 .interactive-map-table.selected, .interactive-map-object.selected {
-  box-shadow: 0 0 0 3px #C89241, 0 0 12px rgba(200, 146, 65, 0.6) !important;
-  transform: scale(1.05);
-  z-index: 10 !important;
+  outline: 4px solid #FFFFFF !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 6px #C89241, 0 0 25px 10px rgba(200, 146, 65, 0.9) !important;
+  transform: scale(1.08) !important;
+  z-index: 9999 !important;
+  animation: pulse-selected 2s infinite !important;
 }
+
+@keyframes pulse-selected {
+  0%, 100% {
+    box-shadow: 0 0 0 5px #C89241, 0 0 20px 6px rgba(200, 146, 65, 0.8) !important;
+    transform: scale(1.08) !important;
+  }
+  50% {
+    box-shadow: 0 0 0 7px #C89241, 0 0 30px 12px rgba(200, 146, 65, 0.95) !important;
+    transform: scale(1.12) !important;
+  }
+}
+
+/* Split Layout for Admin Map Page */
+.admin-map-page-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 20px;
+  align-items: start;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.admin-map-page-main {
+  min-width: 0; /* Prevents grid blowout */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-map-page-sidebar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 16px;
+}
+
+.admin-map-control-panel {
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  padding: 20px;
+  background: var(--bg-card);
+  box-shadow: 0 4px 12px var(--shadow-warm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-map-panel-placeholder {
+  border-radius: 16px;
+  border: 2px dashed var(--border-warm);
+  padding: 40px 20px;
+  background: rgba(255, 248, 240, 0.4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px var(--shadow-warm);
+}
+
+.admin-map-panel-placeholder svg {
+  width: 48px;
+  height: 48px;
+  color: var(--border-warm);
+}
+
+@media (max-width: 1024px) {
+  .admin-map-page-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .admin-map-page-sidebar {
+    position: static;
+  }
+}
+
 
 /* Countdown & Late Timer Badges */
 .table-countdown, .object-countdown {

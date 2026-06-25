@@ -1427,332 +1427,376 @@ export default function MapPage() {
               </div>
             ) : null}
 
-            <div className="interactive-map-shell">
-              {zoneFocusItems.length ? (
-                <div className="interactive-map-zone-tabs" aria-label="Map zones">
-                  <button
-                    type="button"
-                    className={`map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
-                    onClick={focusWholeMap}
-                    aria-pressed={activeZoneFocusId === 'all'}
-                  >
-                    Вся карта
-                  </button>
-                  {zoneFocusItems.map(({ zone, bounds }) => (
-                    <button
-                      key={zone.id}
-                      type="button"
-                      className={`map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
-                      onClick={() => focusZone(zone.id, bounds)}
-                      aria-pressed={activeZoneFocusId === String(zone.id)}
-                    >
-                      {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              <div className="interactive-map-controls">
-                <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom+'); actions.zoomIn(); }} aria-label="Zoom in">+</button>
-                <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom-'); actions.zoomOut(); }} aria-label="Zoom out">−</button>
-                <button type="button" className="map-control fit" onClick={() => { console.log('[MAP] fit'); focusWholeMap(); }} aria-label="Fit map">⤢</button>
-                <span className="map-zoom-indicator">
-                  {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
-                </span>
-              </div>
+            <div className="admin-map-page-layout">
+              <div className="admin-map-page-main">
+                <div className="interactive-map-shell">
+                  {zoneFocusItems.length ? (
+                    <div className="interactive-map-zone-tabs" aria-label="Map zones">
+                      <button
+                        type="button"
+                        className={`map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
+                        onClick={focusWholeMap}
+                        aria-pressed={activeZoneFocusId === 'all'}
+                      >
+                        Вся карта
+                      </button>
+                      {zoneFocusItems.map(({ zone, bounds }) => (
+                        <button
+                          key={zone.id}
+                          type="button"
+                          className={`map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
+                          onClick={() => focusZone(zone.id, bounds)}
+                          aria-pressed={activeZoneFocusId === String(zone.id)}
+                        >
+                          {zoneDisplayName(zone, language) || `Zone #${zone.id}`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="interactive-map-controls">
+                    <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom+'); actions.zoomIn(); }} aria-label="Zoom in">+</button>
+                    <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom-'); actions.zoomOut(); }} aria-label="Zoom out">−</button>
+                    <button type="button" className="map-control fit" onClick={() => { console.log('[MAP] fit'); focusWholeMap(); }} aria-label="Fit map">⤢</button>
+                    <span className="map-zoom-indicator">
+                      {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
+                    </span>
+                  </div>
 
-              <div
-                className="interactive-map-viewport"
-                ref={containerRef}
-                style={{
-                  height: computedViewportHeight
-                }}
-                {...handlers}
-              >
-                <div
-                  className="interactive-map-world"
-                  style={{
-                    width: mapRenderFrame.width,
-                    height: mapRenderFrame.height,
-                    backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
-                    transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
-                  }}
-                >
                   <div
-                    className="interactive-map-canvas"
+                    className="interactive-map-viewport"
+                    ref={containerRef}
                     style={{
-                      backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
-                      left: mapRenderFrame.offsetX,
-                      top: mapRenderFrame.offsetY,
-                      width: mapDimensions.width,
-                      height: mapDimensions.height
+                      height: computedViewportHeight
                     }}
+                    {...handlers}
                   >
                     <div
-                      className="interactive-map-background"
+                      className="interactive-map-world"
                       style={{
-                        left: 0,
-                        top: 0,
-                        width: mapDimensions.width,
-                        height: mapDimensions.height,
+                        width: mapRenderFrame.width,
+                        height: mapRenderFrame.height,
                         backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
-                        backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+                        transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
                       }}
-                    />
+                    >
+                      <div
+                        className="interactive-map-canvas"
+                        style={{
+                          backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
+                          left: mapRenderFrame.offsetX,
+                          top: mapRenderFrame.offsetY,
+                          width: mapDimensions.width,
+                          height: mapDimensions.height
+                        }}
+                      >
+                        <div
+                          className="interactive-map-background"
+                          style={{
+                            left: 0,
+                            top: 0,
+                            width: mapDimensions.width,
+                            height: mapDimensions.height,
+                            backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
+                            backgroundImage: state.mapData.map.backgroundImage ? `url(${state.mapData.map.backgroundImage})` : 'none'
+                          }}
+                        />
 
-                    {mapEntities.map((object) => {
-                      const rotation = Number(object.rotation) || 0;
-                      const meta = object.meta || {};
-                      const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
-                      const baseStyle = {
-                        left: object.x,
-                        top: object.y,
-                        width: object.width,
-                        height: object.height,
-                        transform: `rotate(${rotation}deg)`,
-                        zIndex: getObjectZIndex(object)
-                      };
+                        {mapEntities.map((object) => {
+                          const rotation = Number(object.rotation) || 0;
+                          const meta = object.meta || {};
+                          const isSelectableObject = meta.interactionMode === 'SELECTABLE' || meta.isSelectable;
+                          const baseStyle = {
+                            left: object.x,
+                            top: object.y,
+                            width: object.width,
+                            height: object.height,
+                            transform: `rotate(${rotation}deg)`,
+                            zIndex: getObjectZIndex(object)
+                          };
 
-                      if (!object.isTable) {
-                        const objectLabel = mapObjectLabel(object, t, language);
-                        const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
-                        if (!hasAsset) {
-                          return null;
-                        }
+                          if (!object.isTable) {
+                            const objectLabel = mapObjectLabel(object, t, language);
+                            const hasAsset = hasRenderableObjectGraphic(object, meta, objectLabel);
+                            if (!hasAsset) {
+                              return null;
+                            }
 
-                        const isBookable = !!object.tableId;
-                        const status = isBookable
-                          ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
-                          : null;
-                        const activeReservation = isBookable
-                          ? (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status))
-                          : null;
-                        const isSelected = isBookable && (selectedObjectId === object.id || selectedTableId === object.tableId);
+                            const isBookable = !!object.tableId;
+                            const status = isBookable
+                              ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
+                              : null;
+                            const activeReservation = isBookable
+                              ? (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status))
+                              : null;
+                            const isSelected = isBookable && (selectedObjectId === object.id || selectedTableId === object.tableId);
 
-                        const classNames = [
-                          'interactive-map-object',
-                          hasAsset ? 'has-asset' : '',
-                          object.isActive === false ? 'inactive' : '',
-                          isBookable ? 'selectable' : '',
-                          isBookable ? status.toLowerCase() : '',
-                          isSelected ? 'selected' : ''
-                        ].filter(Boolean).join(' ');
+                            const classNames = [
+                              'interactive-map-object',
+                              hasAsset ? 'has-asset' : '',
+                              object.isActive === false ? 'inactive' : '',
+                              isBookable ? 'selectable' : '',
+                              isBookable ? status.toLowerCase() : '',
+                              isSelected ? 'selected' : ''
+                            ].filter(Boolean).join(' ');
 
-                        return (
-                          <div
-                            key={object.id}
-                            role={isBookable ? 'button' : undefined}
-                            tabIndex={isBookable ? 0 : undefined}
-                            className={classNames}
-                            style={{ ...baseStyle, ...parseStyleJson(object.styleJson) }}
-                            title={objectLabel}
-                            onPointerDown={isBookable ? (event) => {
-                              console.log('[MAP] object pdown', object.tableId);
-                              event.stopPropagation();
-                            } : undefined}
-                            onClick={isBookable ? () => {
-                              console.log('[MAP] object click', object.tableId);
-                              setSelectedTableId(object.tableId);
-                              setSelectedObjectId(null);
-                            } : undefined}
-                          >
-                            <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
-                            {isBookable && (
-                              <div className={`object-status-badge ${status.toLowerCase()}`}>
-                                <span className="object-code-text">{object.table?.code || '—'}</span>
-                                {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
-                                  <ReservationCountdown reservation={activeReservation} className="object-countdown" />
+                            return (
+                              <div
+                                key={object.id}
+                                role={isBookable ? 'button' : undefined}
+                                tabIndex={isBookable ? 0 : undefined}
+                                className={classNames}
+                                style={{
+                                  ...baseStyle,
+                                  ...parseStyleJson(object.styleJson),
+                                  opacity: Number.isFinite(meta.opacity) ? meta.opacity : undefined
+                                }}
+                                title={objectLabel}
+                                onPointerDown={isBookable ? (event) => {
+                                  console.log('[MAP] object pdown', object.tableId);
+                                  event.stopPropagation();
+                                } : undefined}
+                                onClick={isBookable ? () => {
+                                  console.log('[MAP] object click', object.tableId);
+                                  setSelectedTableId(object.tableId);
+                                  setSelectedObjectId(null);
+                                } : undefined}
+                              >
+                                <MapObjectGraphic object={object} meta={meta} label={objectLabel} />
+                                {isBookable && (
+                                  <div className={`object-status-badge ${status.toLowerCase()}`}>
+                                    <span className="object-code-text">{object.table?.code || '—'}</span>
+                                    {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
+                                      <ReservationCountdown reservation={activeReservation} className="object-countdown" />
+                                    ) : null}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
+                          const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
+                          const activeReservation = (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status));
+
+                          return (
+                            <button
+                              key={object.id}
+                              type="button"
+                              className={`interactive-map-table ${status.toLowerCase()} ${selectedObjectId === object.id || selectedTableId === object.tableId ? 'selected' : ''}`}
+                              style={{
+                                ...baseStyle,
+                                borderRadius: tableShape === 'ROUND' ? 999 : 12
+                              }}
+                              title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
+                              onPointerDown={(event) => { console.log('[MAP] table pdown', object.tableId); event.stopPropagation(); }}
+                              onClick={() => { console.log('[MAP] table click', object.tableId); setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
+                            >
+                              <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
+                              {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
+                                <ReservationCountdown reservation={activeReservation} />
+                              ) : null}
+                              {status === 'FREE' ? (
+                                <span
+                                  className="table-arrive-btn"
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => { e.stopPropagation(); handleFreeTableArrive(object.table); }}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleFreeTableArrive(object.table); } }}
+                                >
+                                  Гості прийшли
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="map-legend">
+                  <span><i className="dot free" /> {t('map.legend.free')}</span>
+                  <span><i className="dot pending" /> {t('map.legend.pending')}</span>
+                  <span><i className="dot confirmed" /> {t('map.legend.confirmed')}</span>
+                  <span><i className="dot held" /> {t('map.legend.held')}</span>
+                  <span><i className="dot completed" /> {t('map.legend.completed') || 'Зайнято'}</span>
+                  <span><i className="dot unavailable" /> {t('map.legend.unavailable')}</span>
+                </div>
+              </div>
+
+              <div className="admin-map-page-sidebar">
+                {selectedTable ? (
+                  <div className="admin-map-control-panel" role="dialog" aria-live="polite">
+                    <div className="table-sheet-head">
+                      <h4 style={{ margin: 0 }}>{localizeField(selectedTable.name, language) || selectedTable.code || t('map.fields.table')}</h4>
+                      <button type="button" className="btn btn-secondary btn-small" onClick={() => setSelectedTableId(null)}>{t('map.fields.close')}</button>
+                    </div>
+
+                    <div className="details-grid compact table-sheet-grid" style={{ display: 'grid', gap: '8px', margin: '10px 0' }}>
+                      <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}><span className="muted">{t('map.fields.code')}</span><strong>{selectedTable.code || '—'}</strong></div>
+                      <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
+                      <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedTable.deposit || '—'} UAH</strong></div>
+                      <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedTable.zoneId)?.name, language) || '—'}</strong></div>
+                      <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', alignItems: 'center' }}><span className="muted">{t('map.fields.status')}</span><strong><StatusPill status={selectedStatus} /></strong></div>
+                    </div>
+
+                    {selectedStatus === 'FREE' && !bookingFormState.open ? (
+                      <div className="actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', marginTop: 8 }}>
+                        <button type="button" className="btn btn-success w-full" onClick={() => handleFreeTableArrive(selectedTable)}>Прийшли</button>
+                        <button type="button" className="btn w-full" onClick={() => onBookTable(selectedTable)}>Забронювати</button>
+                      </div>
+                    ) : null}
+
+                    {!selectedReservations.length && !bookingFormState.open ? (
+                      <p className="muted" style={{ margin: '8px 0 0', fontSize: '13px', textAlign: 'center', fontStyle: 'italic' }}>{t('map.noActiveReservations')}</p>
+                    ) : null}
+                    {selectedReservations.length && !bookingFormState.open ? (
+                      <div className="object-reservation-list-container" style={{ display: 'grid', gap: '8px' }}>
+                        <strong style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Активні броні:</strong>
+                        <ul className="plain-list compact" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 10 }}>
+                          {selectedReservations.slice(0, 5).map((reservation) => (
+                            <li key={reservation.id} style={{ padding: '10px', border: '1px solid var(--border-light)', borderRadius: 10, background: 'var(--bg-page)', display: 'grid', gap: 6 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Link to={`/admin/reservations/${reservation.id}`} style={{ fontWeight: 700, fontSize: '13px' }}>#{reservation.id}</Link>
+                                <StatusPill status={reservation.status} />
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                {reservation.customerName || t('common.guest')} • {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)}
+                              </div>
+                              {reservation.status !== 'COMPLETED' && reservation.status !== 'CANCELLED' ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <ReservationCountdown reservation={reservation} style={{ position: 'static', display: 'inline-block' }} />
+                                </div>
+                              ) : null}
+                              {reservation.paidInCash ? <span className="paid-cash-badge" style={{ display: 'inline-block', width: 'fit-content' }}>Готівка</span> : null}
+                              <div className="reservation-inline-actions" style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                {reservation.status === 'PENDING' ? (
+                                  <>
+                                    <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'CONFIRMED')}>Confirm</button>
+                                    <button type="button" className="btn btn-small btn-danger" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                                  </>
+                                ) : null}
+                                {reservation.status === 'CONFIRMED' ? (
+                                  <>
+                                    <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Прийшли</button>
+                                    <button type="button" className="btn btn-small btn-danger" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                                  </>
                                 ) : null}
                               </div>
-                            )}
-                          </div>
-                        );
-                      }
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
 
-                      const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
-                      const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
-                      const activeReservation = (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status));
+                    {bookingFormState.error ? <p className="error" style={{ fontSize: '13px', margin: '8px 0 0', color: 'var(--danger-text)', fontWeight: 600 }}>{bookingFormState.error}</p> : null}
+                    {bookingFormState.success ? <p className="success-message" style={{ fontSize: '13px', margin: '8px 0 0', color: 'var(--success-text)', fontWeight: 600 }}>{bookingFormState.success}</p> : null}
 
-                      return (
-                        <button
-                          key={object.id}
-                          type="button"
-                          className={`interactive-map-table ${status.toLowerCase()} ${selectedObjectId === object.id || selectedTableId === object.tableId ? 'selected' : ''}`}
-                          style={{
-                            ...baseStyle,
-                            borderRadius: tableShape === 'ROUND' ? 999 : 12
-                          }}
-                          title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
-                          onPointerDown={(event) => { console.log('[MAP] table pdown', object.tableId); event.stopPropagation(); }}
-                          onClick={() => { console.log('[MAP] table click', object.tableId); setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
-                        >
-                          <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
-                          {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
-                            <ReservationCountdown reservation={activeReservation} />
-                          ) : null}
-                          {status === 'FREE' ? (
-                            <span
-                              className="table-arrive-btn"
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => { e.stopPropagation(); handleFreeTableArrive(object.table); }}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleFreeTableArrive(object.table); } }}
-                            >
-                              Гості прийшли
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
+                    {bookingFormState.open && bookingFormState.form?.tableId === selectedTable.id ? (
+                      <form className="object-admin-form booking-admin-form" onSubmit={submitBookingForm} style={{ display: 'grid', gap: 10, marginTop: 4 }}>
+                        <label style={{ margin: 0, fontSize: '13px' }}>
+                          Ім'я гостя
+                          <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                        </label>
+                        <label style={{ margin: 0, fontSize: '13px' }}>
+                          Телефон
+                          <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                        </label>
+                        <label style={{ margin: 0, fontSize: '13px' }}>
+                          Email
+                          <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <label style={{ margin: 0, fontSize: '13px' }}>
+                            Гостей
+                            <input type="number" min={selectedTable.seatsMin || 1} max={selectedTable.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                          </label>
+                          <label style={{ margin: 0, fontSize: '13px' }}>
+                            Дата
+                            <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                          </label>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <label style={{ margin: 0, fontSize: '13px' }}>
+                            Початок
+                            <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                          </label>
+                          <label style={{ margin: 0, fontSize: '13px' }}>
+                            Кінець
+                            <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                          </label>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <label style={{ margin: 0, fontSize: '13px' }}>
+                            Джерело
+                            <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }}>
+                              <option value="WALK_IN">Walk-in</option>
+                              <option value="PHONE">Phone</option>
+                              <option value="INSTAGRAM">Instagram</option>
+                              <option value="FACEBOOK">Facebook</option>
+                              <option value="WEB">Web</option>
+                            </select>
+                          </label>
+                          <label style={{ margin: 0, fontSize: '13px' }}>
+                            Статус
+                            <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }}>
+                              <option value="PENDING">Pending</option>
+                              <option value="CONFIRMED">Confirmed</option>
+                            </select>
+                          </label>
+                        </div>
+                        <div style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.02)', border: '1px solid var(--border-light)', borderRadius: 10, display: 'grid', gap: 8 }}>
+                          <label className="checkbox-label inline" style={{ margin: 0, fontSize: '13px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} style={{ width: 'auto', margin: 0 }} />
+                            Є депозит
+                          </label>
+                          {bookingFormState.form.depositRequired && (
+                            <label style={{ margin: 0, fontSize: '13px' }}>
+                              Сума депозиту
+                              <input type="number" min="0" step="1" value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
+                            </label>
+                          )}
+                          <label className="checkbox-label inline" style={{ margin: 0, fontSize: '13px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="checkbox" checked={Boolean(bookingFormState.form.paidInCash)} onChange={(event) => updateBookingForm('paidInCash', event.target.checked)} style={{ width: 'auto', margin: 0 }} />
+                            Гість платить готівкою
+                          </label>
+                        </div>
+                        <label className="object-admin-form-wide" style={{ margin: 0, fontSize: '13px' }}>
+                          Коментар гостя
+                          <textarea rows="2" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)} style={{ marginTop: 4, minHeight: 50, padding: '8px 10px' }} />
+                        </label>
+                        <label className="object-admin-form-wide" style={{ margin: 0, fontSize: '13px' }}>
+                          Коментар адміністратора
+                          <textarea rows="2" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} style={{ marginTop: 4, minHeight: 50, padding: '8px 10px' }} />
+                        </label>
+                        <div className="actions booking-admin-actions object-admin-form-wide" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%', marginTop: 8 }}>
+                          <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={closeBookingForm}>Скасувати</button>
+                          <button type="submit" className="btn btn-success" style={{ width: '100%' }} disabled={bookingFormState.saving}>
+                            {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
                   </div>
-                </div>
+                ) : (
+                  <div className="admin-map-panel-placeholder">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                    <strong style={{ display: 'block', fontSize: '15px', color: 'var(--text-primary)' }}>
+                      {language === 'en' ? 'No Table Selected' : (language === 'ru' ? 'Позиция не выбрана' : 'Позицію не обрано')}
+                    </strong>
+                    <p className="muted" style={{ fontSize: '13px', margin: 0, lineHeight: 1.4 }}>
+                      {language === 'en'
+                        ? 'Select a table or bed on the map to view details, register guest arrivals, or manage bookings.'
+                        : (language === 'ru'
+                          ? 'Выберите стол или кровать на карте, чтобы просмотреть детали, отметить приход гостей или создать бронь.'
+                          : 'Оберіть стіл або ліжко на карті, щоб переглянути деталі, відмітити прихід гостей або створити бронь.')}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-
-            <div className="map-legend">
-              <span><i className="dot free" /> {t('map.legend.free')}</span>
-              <span><i className="dot pending" /> {t('map.legend.pending')}</span>
-              <span><i className="dot confirmed" /> {t('map.legend.confirmed')}</span>
-              <span><i className="dot held" /> {t('map.legend.held')}</span>
-              <span><i className="dot completed" /> {t('map.legend.completed') || 'Зайнято'}</span>
-              <span><i className="dot unavailable" /> {t('map.legend.unavailable')}</span>
-            </div>
-
-            {selectedTable ? (
-              <div className="table-bottom-sheet" role="dialog" aria-live="polite">
-                <div className="table-sheet-head">
-                  <h4>{localizeField(selectedTable.name, language) || selectedTable.code || t('map.fields.table')}</h4>
-                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedTableId(null)}>{t('map.fields.close')}</button>
-                </div>
-
-                <div className="details-grid compact table-sheet-grid">
-                  <div className="detail-row"><span className="muted">{t('map.fields.code')}</span><strong>{selectedTable.code || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">{t('map.fields.capacity')}</span><strong>{selectedTable.seatsMin || '—'}-{selectedTable.seatsMax || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">{t('map.fields.deposit')}</span><strong>{selectedTable.deposit || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">{t('map.fields.zone')}</span><strong>{localizeField(zoneMap.get(selectedTable.zoneId)?.name, language) || '—'}</strong></div>
-                  <div className="detail-row"><span className="muted">{t('map.fields.status')}</span><strong><StatusPill status={selectedStatus} /></strong></div>
-                </div>
-
-                {selectedStatus === 'FREE' ? (
-                  <div className="actions">
-                    <button type="button" className="btn" onClick={() => handleFreeTableArrive(selectedTable)}>Гості прийшли</button>
-                    <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Створити бронь</button>
-                  </div>
-                ) : null}
-
-                {!selectedReservations.length ? <p className="muted">{t('map.noActiveReservations')}</p> : null}
-                {selectedReservations.length ? (
-                  <ul className="plain-list compact">
-                    {selectedReservations.slice(0, 5).map((reservation) => (
-                      <li key={reservation.id}>
-                        <Link to={`/admin/reservations/${reservation.id}`}>#{reservation.id}</Link> • {reservation.customerName || t('common.guest')} •{' '}
-                        {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)} • <StatusPill status={reservation.status} />
-                        {reservation.status !== 'COMPLETED' && reservation.status !== 'CANCELLED' ? (
-                          <ReservationCountdown reservation={reservation} style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} />
-                        ) : null}
-                        {reservation.paidInCash ? <span className="paid-cash-badge" style={{ marginLeft: 6 }}>Готівка</span> : null}
-                        <span className="reservation-inline-actions">
-                          {reservation.status === 'PENDING' ? (
-                            <>
-                              <button type="button" className="btn btn-small" onClick={() => updateReservationStatusOnMap(reservation.id, 'CONFIRMED')}>Confirm</button>
-                              <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
-                            </>
-                          ) : null}
-                          {reservation.status === 'CONFIRMED' ? (
-                            <>
-                              <button type="button" className="btn btn-small btn-success" onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Прийшли</button>
-                              <button type="button" className="btn btn-small btn-danger" onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
-                            </>
-                          ) : null}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-
-                {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
-                {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
-
-                {bookingFormState.open && bookingFormState.form?.tableId === selectedTable.id ? (
-                  <form className="object-admin-form booking-admin-form" onSubmit={submitBookingForm}>
-                    <label>
-                      Ім'я гостя
-                      <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} />
-                    </label>
-                    <label>
-                      Телефон
-                      <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} />
-                    </label>
-                    <label>
-                      Email
-                      <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} />
-                    </label>
-                    <label>
-                      Гостей
-                      <input type="number" min={selectedTable.seatsMin || 1} max={selectedTable.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} />
-                    </label>
-                    <label>
-                      Дата
-                      <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} />
-                    </label>
-                    <label>
-                      Початок
-                      <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} />
-                    </label>
-                    <label>
-                      Кінець
-                      <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} />
-                    </label>
-                    <label>
-                      Джерело
-                      <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)}>
-                        <option value="WALK_IN">Walk-in</option>
-                        <option value="PHONE">Phone</option>
-                        <option value="INSTAGRAM">Instagram</option>
-                        <option value="FACEBOOK">Facebook</option>
-                        <option value="WEB">Web</option>
-                      </select>
-                    </label>
-                    <label>
-                      Статус
-                      <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)}>
-                        <option value="PENDING">Pending</option>
-                        <option value="CONFIRMED">Confirmed</option>
-                      </select>
-                    </label>
-                    <label className="checkbox-label inline">
-                      <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} />
-                      Є депозит
-                    </label>
-                    <label>
-                      Сума депозиту
-                      <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
-                    </label>
-                    <label className="checkbox-label inline">
-                      <input type="checkbox" checked={Boolean(bookingFormState.form.paidInCash)} onChange={(event) => updateBookingForm('paidInCash', event.target.checked)} />
-                      Гість платить готівкою
-                    </label>
-                    <label className="object-admin-form-wide">
-                      Коментар гостя
-                      <textarea rows="3" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)} />
-                    </label>
-                    <label className="object-admin-form-wide">
-                      Коментар адміністратора
-                      <textarea rows="3" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} />
-                    </label>
-                    <div className="actions booking-admin-actions object-admin-form-wide">
-                      <button type="button" className="btn btn-secondary" onClick={closeBookingForm}>Скасувати</button>
-                      <button type="submit" className="btn" disabled={bookingFormState.saving}>
-                        {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
-                      </button>
-                    </div>
-                  </form>
-                ) : !bookingFormState.open ? (
-                  <div className="actions">
-                    <button type="button" className="btn" onClick={() => onBookTable(selectedTable)}>Створити бронь</button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
           </>
         ) : null}
       </PageContainer>
