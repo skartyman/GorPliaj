@@ -123,16 +123,16 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .brand-logo {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
 .sidebar-collapsed .brand-logo {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 
 .sidebar-collapsed .brand-text {
