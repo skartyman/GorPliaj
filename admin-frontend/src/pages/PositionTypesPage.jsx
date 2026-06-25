@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import DataTable from '../components/DataTable';
@@ -126,6 +127,14 @@ export default function PositionTypesPage() {
   return (
     <AdminLayout>
       <PageContainer title={t('positionTypes.title')} description={t('positionTypes.description')}>
+        <div style={{ display: 'flex', gap: 16, borderBottom: '1px solid var(--line, #e5e7eb)', paddingBottom: 0, marginBottom: 16 }}>
+          <NavLink to="/admin/positions" end style={({ isActive }) => ({ textDecoration: 'none', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--primary, #eab308)' : 'var(--text-muted, #666)', borderBottom: isActive ? '2px solid var(--primary, #eab308)' : 'none', padding: '8px 4px', display: 'inline-block' })}>
+            {t('positions.title')}
+          </NavLink>
+          <NavLink to="/admin/position-types" end style={({ isActive }) => ({ textDecoration: 'none', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--primary, #eab308)' : 'var(--text-muted, #666)', borderBottom: isActive ? '2px solid var(--primary, #eab308)' : 'none', padding: '8px 4px', display: 'inline-block' })}>
+            {t('positionTypes.title')}
+          </NavLink>
+        </div>
         {feedback.message ? <p className={feedback.tone === 'error' ? 'error' : 'success'}>{feedback.message}</p> : null}
 
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>

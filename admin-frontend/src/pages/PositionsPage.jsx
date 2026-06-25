@@ -1,4 +1,5 @@
 import { useEffect, useState, Fragment } from 'react';
+import { NavLink } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import { apiRequest, localizeField } from '../lib/api';
@@ -15,6 +16,7 @@ function buildEmptyForm() {
     seatsMin: 0,
     seatsMax: 0,
     deposit: 0,
+    price: '',
     isActive: true,
     isBookable: true,
     photoUrl: '',
@@ -93,6 +95,7 @@ export default function PositionsPage() {
       seatsMin: row.seatsMin || 0,
       seatsMax: row.seatsMax || 0,
       deposit: Number(row.deposit) || 0,
+      price: row.price != null ? String(row.price) : '',
       isActive: row.isActive !== false,
       isBookable: row.isBookable !== false,
       photoUrl: row.photoUrl || '',
@@ -133,6 +136,7 @@ export default function PositionsPage() {
       seatsMin: Number(form.seatsMin),
       seatsMax: Number(form.seatsMax),
       deposit: Number(form.deposit),
+      price: form.price !== '' ? Number(form.price) : null,
       isActive: form.isActive,
       isBookable: form.isBookable,
       photoUrl: form.photoUrl,
@@ -201,6 +205,7 @@ export default function PositionsPage() {
     const updates = selectedIds.map((id) => {
       const patch = {};
       if (bulkAction === 'deposit') patch.deposit = Number(bulkValue) || 0;
+      if (bulkAction === 'price') patch.price = bulkValue !== '' ? Number(bulkValue) : null;
       if (bulkAction === 'zone') patch.zoneId = Number(bulkValue) || null;
       if (bulkAction === 'bookingKind') patch.bookingKind = bulkValue;
       if (bulkAction === 'active') patch.isActive = bulkValue === 'true';
@@ -287,6 +292,11 @@ export default function PositionsPage() {
       render: (row) => `${row.seatsMin || 0}–${row.seatsMax || 0}`
     },
     {
+      key: 'price',
+      label: t('positions.columns.price'),
+      render: (row) => (row.price != null && Number(row.price) > 0 ? `${Number(row.price).toFixed(2)} UAH` : '—')
+    },
+    {
       key: 'deposit',
       label: t('positions.columns.deposit'),
       render: (row) => (Number(row.deposit) > 0 ? `${Number(row.deposit).toFixed(2)} UAH` : '—')
@@ -359,6 +369,10 @@ export default function PositionsPage() {
             </select>
           </label>
           <label style={{ fontSize: 11 }}>
+            {t('positions.fields.price')}
+            <input style={inputS} type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="—" />
+          </label>
+          <label style={{ fontSize: 11 }}>
             {t('positions.fields.deposit')}
             <input style={inputS} type="number" min="0" step="0.01" value={form.deposit} onChange={(e) => setForm({ ...form, deposit: e.target.value })} />
           </label>
@@ -388,6 +402,14 @@ export default function PositionsPage() {
   return (
     <AdminLayout>
       <PageContainer title={t('positions.title')} description={t('positions.description')}>
+        <div style={{ display: 'flex', gap: 16, borderBottom: '1px solid var(--line, #e5e7eb)', paddingBottom: 0, marginBottom: 16 }}>
+          <NavLink to="/admin/positions" end style={({ isActive }) => ({ textDecoration: 'none', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--primary, #eab308)' : 'var(--text-muted, #666)', borderBottom: isActive ? '2px solid var(--primary, #eab308)' : 'none', padding: '8px 4px', display: 'inline-block' })}>
+            {t('positions.title')}
+          </NavLink>
+          <NavLink to="/admin/position-types" end style={({ isActive }) => ({ textDecoration: 'none', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--primary, #eab308)' : 'var(--text-muted, #666)', borderBottom: isActive ? '2px solid var(--primary, #eab308)' : 'none', padding: '8px 4px', display: 'inline-block' })}>
+            {t('positionTypes.title')}
+          </NavLink>
+        </div>
         {feedback ? (
           <div className="feedback-bar" style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)', background: feedbackType === 'error' ? '#fef2f2' : feedbackType === 'warning' ? '#fffbeb' : '#f0fdf4', border: '1px solid', borderColor: feedbackType === 'error' ? '#fecaca' : feedbackType === 'warning' ? '#fde68a' : '#bbf7d0', color: feedbackType === 'error' ? '#dc2626' : feedbackType === 'warning' ? '#92400e' : '#16a34a' }}>
             {feedback}
@@ -453,11 +475,12 @@ export default function PositionsPage() {
             <select value={bulkAction} onChange={(e) => setBulkAction(e.target.value)} style={{ fontSize: 12 }}>
               <option value="">—</option>
               <option value="deposit">{t('positions.bulk.setDeposit')}</option>
+              <option value="price">{t('positions.bulk.setPrice')}</option>
               <option value="zone">{t('positions.bulk.setZone')}</option>
               <option value="bookingKind">{t('positions.bulk.setBookingKind')}</option>
               <option value="active">{t('positions.bulk.setActive')}</option>
             </select>
-            {bulkAction === 'deposit' ? (
+            {bulkAction === 'deposit' || bulkAction === 'price' ? (
               <input type="number" min="0" step="0.01" value={bulkValue} onChange={(e) => setBulkValue(e.target.value)} placeholder="0.00" style={{ fontSize: 12, width: 100 }} />
             ) : null}
             {bulkAction === 'zone' ? (

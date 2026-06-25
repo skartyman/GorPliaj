@@ -55,7 +55,8 @@ const translations = {
       verifyTicket: 'Квитки',
       users: 'Користувачі',
       settings: 'Налаштування',
-      positions: 'Позиції'
+      positions: 'Позиції',
+      positionTypes: 'Типи та ціни'
     },
     login: {
       eyebrow: 'Доступ до адмінки',
@@ -803,6 +804,7 @@ const translations = {
         bookingKind: 'Тип бронювання',
         seats: 'Місця',
         deposit: 'Депозит',
+        price: 'Ціна',
         active: 'Активний',
         actions: 'Дії'
       },
@@ -823,6 +825,7 @@ const translations = {
         seatsMin: 'Мін. місць',
         seatsMax: 'Макс. місць',
         deposit: 'Депозит',
+        price: 'Ціна',
         isActive: 'Активний',
         isBookable: 'Доступний для броні',
         photoUrl: 'URL фото',
@@ -845,7 +848,7 @@ const translations = {
       }
     },
     positionTypes: {
-      title: 'Позиції',
+      title: 'Типи та ціни',
       description: 'Типи позицій: бунгало, ліжка, пірс, столи, тераса тощо',
       loading: 'Завантаження...',
       empty: 'Поки немає типів позицій.',

@@ -16,6 +16,7 @@ function IconSettings() { return <svg viewBox="0 0 24 24" fill="none" stroke="cu
 function IconUsers() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>; }
 function IconTicket() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>; }
 function IconTable() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="10" x2="10" y2="16"/><line x1="14" y1="10" x2="14" y2="16"/></svg>; }
+function IconTag() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>; }
 function IconHamburger() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>; }
 function IconBack() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>; }
 function IconChevronLeft() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>; }
@@ -29,6 +30,7 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/map-editor', labelKey: 'nav.mapEditor', icon: IconMapEditor, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/map', labelKey: 'nav.map', icon: IconMap, roles: ['*'] },
   { to: '/admin/positions', labelKey: 'nav.positions', icon: IconTable, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/position-types', labelKey: 'nav.positionTypes', icon: IconTag, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/menu', labelKey: 'nav.menu', icon: IconMenu, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/events', labelKey: 'nav.events', icon: IconEvents, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
   { to: '/admin/ticket-sales', labelKey: 'nav.ticketSales', icon: IconTicket, roles: ['admin', 'manager', 'owner'] },
