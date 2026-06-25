@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingsApi, eventsApi, holdsApi, mapApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
@@ -213,8 +213,21 @@ export default function BookingPage() {
   const { locale } = useLocale();
   const [searchParams] = useSearchParams();
   const c = (values) => localizedCopy(values, locale);
-  const today = new Date().toISOString().slice(0, 10);
-  const defaultDate = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+  const today = (() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
+  const defaultDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
   const currentTime = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
 
   const lockedEventSlug = searchParams.get('event') || '';
@@ -273,8 +286,11 @@ export default function BookingPage() {
     if (currentStep === 2) {
       if (!form.date || !form.guests || form.guests < 1) return false;
       if (bookingFlow !== 'EVENT' && !form.timeFrom) return false;
-      if (resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00') return false;
-      if (resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime) return false;
+      if (resolvedBookingKind === 'BEACH') {
+        if (form.timeFrom > '13:00') return false;
+        if (form.date === today && currentTime >= '12:00') return false;
+      }
+      if (form.date === today && form.timeFrom <= currentTime) return false;
       return true;
     }
     if (currentStep === 3) {
@@ -816,16 +832,26 @@ export default function BookingPage() {
   async function submitBooking(event) {
     event.preventDefault();
 
-    if (resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00') {
-      setErrorMessage(c({
-        ua: 'Пляжні послуги доступні для бронювання до 13:00. Після 13:00 — приходьте на місце.',
-        ru: 'Пляжные услуги доступны для бронирования до 13:00. После 13:00 — приходите на место.',
-        en: 'Beach services are bookable until 13:00. After 13:00 — please come to the venue.'
-      }));
-      return;
+    if (resolvedBookingKind === 'BEACH') {
+      if (form.timeFrom > '13:00') {
+        setErrorMessage(c({
+          ua: 'За правилами закладу, при бронюванні пляжних послуг обовʼязкова явка гостя — до 13:00.',
+          ru: 'По правилам заведения, при бронировании пляжных услуг обязательная явка гостя — до 13:00.',
+          en: 'According to venue rules, for beach services bookings, the guest must arrive before 13:00.'
+        }));
+        return;
+      }
+      if (form.date === today && currentTime >= '12:00') {
+        setErrorMessage(c({
+          ua: 'Бронювання пляжних послуг на сьогодні можливе лише до 12:00. Оберіть дату на завтра або пізніше.',
+          ru: 'Бронирование пляжных услуг на сегодня возможно только до 12:00. Выберите дату на завтра или позже.',
+          en: 'Beach services bookings for today are only available until 12:00. Please choose tomorrow or a later date.'
+        }));
+        return;
+      }
     }
 
-    if (resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime) {
+    if (form.date === today && form.timeFrom <= currentTime) {
       setErrorMessage(c({
         ua: 'Обраний час вже минув. Оберіть пізніший час або іншу дату.',
         ru: 'Выбранное время уже прошло. Выберите более позднее время или другую дату.',
@@ -1138,7 +1164,7 @@ export default function BookingPage() {
               type="date"
               className="form-input"
               value={form.date}
-              min={today}
+              min={resolvedBookingKind === 'BEACH' && currentTime >= '12:00' ? defaultDate : today}
               required
               onChange={(event) => handleStandardDateChange(event.target.value)}
             />
@@ -1171,27 +1197,27 @@ export default function BookingPage() {
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
               {c({
-                ua: 'Пляжні послуги доступні для бронювання до 13:00. Після 13:00 — приходьте на місце.',
-                ru: 'Пляжные услуги доступны для бронирования до 13:00. После 13:00 — приходите на место.',
-                en: 'Beach services are bookable until 13:00. After 13:00 — please come to the venue.'
+                ua: 'За правилами закладу, при бронюванні пляжних послуг обовʼязкова явка гостя — до 13:00. Якщо вы плануєте прийти пізніше 13:00, бронювання на сайті недоступне — ви можете сплатити на місці за наявності вільних місць.',
+                ru: 'По правилам заведения, при бронировании пляжных услуг обязательная явка гостя — до 13:00. Если вы планируете прийти позже 13:00, бронирование на сайте недоступно — вы можете оплатить на месте при наличии свободных мест.',
+                en: 'According to venue rules, for beach services bookings, the guest must arrive before 13:00. If you plan to arrive after 13:00, online booking is unavailable — you can pay on site subject to availability.'
               })}
             </p>
           </div>
         ) : null}
 
-        {resolvedBookingKind === 'BEACH' && form.date === today && currentTime > '13:00' ? (
+        {resolvedBookingKind === 'BEACH' && form.date === today && currentTime >= '12:00' ? (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
               {c({
-                ua: 'Сьогодні пляжні послуги вже недоступні для бронювання. Оберіть дату завтра або пізніше.',
-                ru: 'Сегодня пляжные услуги уже недоступны для бронирования. Выберите дату завтра или позже.',
-                en: 'Beach services are no longer available for booking today. Please choose tomorrow or a later date.'
+                ua: 'Бронювання пляжних послуг на сьогодні можливе лише до 12:00. Оберіть дату на завтра або пізніше.',
+                ru: 'Бронирование пляжных услуг на сегодня возможно только до 12:00. Выберите дату на завтра или позже.',
+                en: 'Beach services bookings for today are only available until 12:00. Please choose tomorrow or a later date.'
               })}
             </p>
           </div>
         ) : null}
 
-        {resolvedBookingKind !== 'BEACH' && form.date === today && form.timeFrom <= currentTime ? (
+        {form.date === today && form.timeFrom <= currentTime ? (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
               {c({

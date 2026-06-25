@@ -546,9 +546,24 @@ export default function MapPage() {
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
   const transformRef = useRef(transform);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
   const defaultDate = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10);
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+  const currentTime = useMemo(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }, []);
   const [date, setDate] = useState(searchParams.get('date') || defaultDate);
   const [timeFrom, setTimeFrom] = useState(searchParams.get('timeFrom') || '12:00');
@@ -939,9 +954,17 @@ export default function MapPage() {
           {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
           <input type="number" className="form-input" value={guests} min={1} max={20} onChange={(e) => setGuests(Number(e.target.value) || 0)} style={{ fontSize: '0.85rem', width: 70 }} />
         </label>
-        {timeFrom > '13:00' ? (
+        {date === today && timeFrom <= currentTime ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
-            {locale === 'ua' ? 'Пляжні послуги — до 13:00' : locale === 'ru' ? 'Пляжные услуги — до 13:00' : 'Beach services — until 1:00 PM'}
+            {locale === 'ua' ? 'Обраний час вже минув. Будь ласка, оберіть пізніший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Пожалуйста, выберите более позднее время.' : 'The selected time has already passed. Please choose a later time.'}
+          </p>
+        ) : date === today && currentTime >= '12:00' ? (
+          <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
+            {locale === 'ua' ? 'Бронювання пляжних послуг на сьогодні закрите (після 12:00).' : locale === 'ru' ? 'Бронирование пляжных услуг на сегодня закрыто (после 12:00).' : 'Beach services bookings for today are closed (after 12:00).'}
+          </p>
+        ) : timeFrom > '13:00' ? (
+          <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
+            {locale === 'ua' ? 'За правилами закладу, при бронюванні пляжу явка обовʼязкова до 13:00.' : locale === 'ru' ? 'По правилам заведения, при бронировании пляжа явка обязательна до 13:00.' : 'According to venue rules, arrival for beach bookings is mandatory before 13:00.'}
           </p>
         ) : null}
       </div>
@@ -1191,12 +1214,20 @@ export default function MapPage() {
               <p className="muted">
                 {t('mapSeats')}: {selectedTable.seatsMin}-{selectedTable.seatsMax}
               </p>
-              {selectedTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
-                <p className="muted" style={{ color: 'var(--danger)' }}>
-                  {locale === 'ua' ? 'Пляжні послуги доступні до 13:00. Оберіть час до 13:00 або іншу дату.' : locale === 'ru' ? 'Пляжные услуги доступны до 13:00. Выберите время до 13:00 или другую дату.' : 'Beach services are bookable until 1:00 PM. Choose a time before 1:00 PM or another date.'}
+              {date === today && timeFrom <= currentTime ? (
+                <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                  {locale === 'ua' ? 'Обраний час вже минув. Оберіть інший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Выберите другое время.' : 'Selected time has already passed. Please choose another time.'}
+                </p>
+              ) : selectedTable.bookingKind === 'BEACH' && date === today && currentTime >= '12:00' ? (
+                <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                  {locale === 'ua' ? 'Бронювання пляжу на сьогодні закрите (після 12:00). Оберіть іншу дату.' : locale === 'ru' ? 'Бронирование пляжа на сегодня закрыто (после 12:00). Выберите другую дату.' : 'Beach services bookings for today are closed (after 12:00). Please choose another date.'}
+                </p>
+              ) : selectedTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                  {locale === 'ua' ? 'За правилами закладу, обовʼязкова явка гостя — до 13:00. Оберіть час до 13:00 або іншу дату.' : locale === 'ru' ? 'По правилам заведения, обязательная явка гостя — до 13:00. Выберите время до 13:00 или другую дату.' : 'According to venue rules, arrival is mandatory before 13:00. Choose a time before 13:00 or another date.'}
                 </p>
               ) : null}
-              {selectedTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+              {((date === today && timeFrom <= currentTime) || (selectedTable.bookingKind === 'BEACH' && (timeFrom > '13:00' || (date === today && currentTime >= '12:00')))) ? (
                 <span className="btn btn-primary disabled">{t('mapGoToBooking')}</span>
               ) : (
                 <button
@@ -1244,23 +1275,31 @@ export default function MapPage() {
                   <p className="muted">
                     {t('mapStatus')}: {selectedObjectTable.status === 'free' && tableFitsGuests(selectedObjectTable) ? t('mapFree') : t('mapBusy')}
                   </p>
-                  {selectedObjectTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
-                    <p className="muted" style={{ color: 'var(--danger)' }}>
-                      {locale === 'ua' ? 'Пляжні послуги доступні до 13:00. Оберіть час до 13:00 або іншу дату.' : locale === 'ru' ? 'Пляжные услуги доступны до 13:00. Выберите время до 13:00 или другую дату.' : 'Beach services are bookable until 1:00 PM. Choose a time before 1:00 PM or another date.'}
+                  {date === today && timeFrom <= currentTime ? (
+                    <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                      {locale === 'ua' ? 'Обраний час вже минув. Оберіть інший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Выберите другое время.' : 'Selected time has already passed. Please choose another time.'}
+                    </p>
+                  ) : selectedObjectTable.bookingKind === 'BEACH' && date === today && currentTime >= '12:00' ? (
+                    <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                      {locale === 'ua' ? 'Бронювання пляжу на сьогодні закрите (після 12:00). Оберіть іншу дату.' : locale === 'ru' ? 'Бронирование пляжа на сегодня закрыто (после 12:00). Выберите другую дату.' : 'Beach services bookings for today are closed (after 12:00). Please choose another date.'}
+                    </p>
+                  ) : selectedObjectTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                    <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                      {locale === 'ua' ? 'За правилами закладу, обовʼязкова явка гостя — до 13:00. Оберіть час до 13:00 або іншу дату.' : locale === 'ru' ? 'По правилам заведения, обязательная явка гостя — до 13:00. Выберите время до 13:00 или другую дату.' : 'According to venue rules, arrival is mandatory before 13:00. Choose a time before 13:00 or another date.'}
                     </p>
                   ) : null}
                   {selectedObjectCanBook ? (
-                    selectedObjectTable.bookingKind === 'BEACH' && timeFrom > '13:00' ? (
+                    ((date === today && timeFrom <= currentTime) || (selectedObjectTable.bookingKind === 'BEACH' && (timeFrom > '13:00' || (date === today && currentTime >= '12:00')))) ? (
                       <span className="btn btn-primary disabled">{t('mapGoToBooking')}</span>
                     ) : (
-                    <button
-                      className="btn btn-primary"
-                      type="button"
-                      disabled={holdAcquiring}
-                      onClick={() => acquireHoldAndNavigate(selectedObjectTable.id, selectedObjectTable.bookingKind)}
-                    >
-                      {holdAcquiring ? t('mapBooking') : t('mapGoToBooking')}
-                    </button>
+                      <button
+                        className="btn btn-primary"
+                        type="button"
+                        disabled={holdAcquiring}
+                        onClick={() => acquireHoldAndNavigate(selectedObjectTable.id, selectedObjectTable.bookingKind)}
+                      >
+                        {holdAcquiring ? t('mapBooking') : t('mapGoToBooking')}
+                      </button>
                     )
                   ) : (
                     <p className="muted">{locale === 'ua' ? 'Ця позиція недоступна для обраної дати, часу або кількості гостей.' : locale === 'ru' ? 'Эта позиция недоступна для выбранной даты, времени или количества гостей.' : 'This object is not available for the selected date, time, or guest count.'}</p>
