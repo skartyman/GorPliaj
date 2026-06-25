@@ -3551,7 +3551,7 @@ h3 {
 }
 
 @media (max-width: 900px) {
-  .map-side-panel.mobile-sheet {
+  .map-side-panel {
     display: none;
     position: relative;
     width: 100%;
@@ -3568,13 +3568,13 @@ h3 {
     margin: 20px 0 0;
   }
 
-  .map-side-panel.mobile-sheet.is-open {
+  .map-side-panel.is-open {
     display: block;
     transform: none;
   }
 
   /* Remove drag handle indicator since it is no longer a bottom sheet */
-  .map-side-panel.mobile-sheet::before {
+  .map-side-panel::before {
     display: none;
   }
 }
