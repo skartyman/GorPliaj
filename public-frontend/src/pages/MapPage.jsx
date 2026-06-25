@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { holdsApi, mapApi } from '../lib/api';
-import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint } from '../lib/map';
+import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import { localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
@@ -819,7 +819,9 @@ export default function MapPage() {
   useEffect(() => {
     if (!state.result || !viewportSize.width || !viewportSize.height) return;
 
-    const fit = getInitialViewTransform(mapDimensions.width, mapDimensions.height, viewportSize.width, viewportSize.height, MAP_PADDING);
+    const padding = isMobileViewport ? 8 : MAP_PADDING;
+    const bounds = getUsefulContentBounds(state.result.map);
+    const fit = getInitialViewTransform(mapDimensions.width, mapDimensions.height, viewportSize.width, viewportSize.height, padding, bounds);
     const initial = {
       ...fit,
       translateX: (viewportSize.width - mapRenderFrame.width * fit.scale) / 2,
@@ -836,7 +838,7 @@ export default function MapPage() {
       maxScale,
       initial
     });
-  }, [mapDimensions.height, mapDimensions.width, mapRenderFrame.height, mapRenderFrame.width, state.result, viewportSize.height, viewportSize.width]);
+  }, [mapDimensions.height, mapDimensions.width, mapRenderFrame.height, mapRenderFrame.width, state.result, viewportSize.height, viewportSize.width, isMobileViewport]);
 
   useEffect(() => {
     if (!state.result) return;
@@ -981,7 +983,7 @@ export default function MapPage() {
     const center = getObjectCenter(object);
     const rect = viewportRef.current.getBoundingClientRect();
     const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * transform.scale;
-    const targetY = rect.height * (isMobileViewport ? 0.38 : 0.5) - (center.y + mapRenderFrame.offsetY) * transform.scale;
+    const targetY = rect.height * 0.5 - (center.y + mapRenderFrame.offsetY) * transform.scale;
     applyTransform(transform.scale, targetX, targetY);
   }
 
@@ -1045,9 +1047,19 @@ export default function MapPage() {
       if (targetTable) {
         focusedFromQueryRef.current = focusKey;
         selectTable(targetTable.id);
+        return;
       }
     }
-  }, [focusObjectId, focusTableId, renderObjects, state.result, tableById, transform.initial]);
+
+    // Auto-focus on Left Beach (Zone 1) on load if bookingKind is BEACH and no specific table is focused
+    if (bookingKind === 'BEACH') {
+      const leftBeachFocus = zoneFocusItems.find(item => item.zone.id === 1 || String(item.zone.id) === '1');
+      if (leftBeachFocus) {
+        focusedFromQueryRef.current = focusKey;
+        focusZoneBounds(leftBeachFocus.zone.id, leftBeachFocus.bounds);
+      }
+    }
+  }, [focusObjectId, focusTableId, renderObjects, state.result, tableById, transform.initial, bookingKind, zoneFocusItems]);
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;

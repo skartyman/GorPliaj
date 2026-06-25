@@ -699,8 +699,8 @@ export default function BookingPage() {
             || zones.find((zone) => zone.totalCount > 0);
           const scopedUnits = units.filter((unit) => unit.zoneId === (activeZone?.id || current.zoneId));
           const activeUnit = scopedUnits.find((unit) => unit.id === current.bookableUnitId)
-            || scopedUnits.find((unit) => unit.status === 'free')
-            || scopedUnits[0];
+            || (initialBookableUnitId.current ? scopedUnits.find((unit) => unit.id === initialBookableUnitId.current) : null)
+            || null;
           return {
             ...current,
             zoneId: activeZone?.id || 0,
@@ -1513,7 +1513,7 @@ export default function BookingPage() {
                 onClick={() => setSelected((current) => ({
                   ...current,
                   zoneId: zone.id,
-                  bookableUnitId: unitsState.units.find((unit) => unit.zoneId === zone.id && unit.status === 'free')?.id || ''
+                  bookableUnitId: ''
                 }))}
               >
                 {localizeField(zone.name, locale)} <span>{zone.availableCount}</span>
