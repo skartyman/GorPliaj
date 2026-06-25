@@ -124,6 +124,10 @@ model PositionType {
   photoUrl        String?
   defaultPrice    Decimal?        @db.Decimal(10, 2)
   defaultDeposit  Decimal?        @db.Decimal(10, 2)
+  priceWeekday    Decimal?        @db.Decimal(10, 2)
+  priceWeekend    Decimal?        @db.Decimal(10, 2)
+  depositWeekday  Decimal?        @db.Decimal(10, 2)
+  depositWeekend  Decimal?        @db.Decimal(10, 2)
   code            String
   requiresSide    Boolean         @default(false)
   bookingKind     String

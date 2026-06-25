@@ -88,7 +88,11 @@ export default function PositionsPage() {
 
     const payload = {
       defaultPrice: pt.defaultPrice !== '' && pt.defaultPrice != null ? Number(pt.defaultPrice) : null,
-      defaultDeposit: pt.defaultDeposit !== '' && pt.defaultDeposit != null ? Number(pt.defaultDeposit) : null
+      defaultDeposit: pt.defaultDeposit !== '' && pt.defaultDeposit != null ? Number(pt.defaultDeposit) : null,
+      priceWeekday: pt.priceWeekday !== '' && pt.priceWeekday != null ? Number(pt.priceWeekday) : null,
+      priceWeekend: pt.priceWeekend !== '' && pt.priceWeekend != null ? Number(pt.priceWeekend) : null,
+      depositWeekday: pt.depositWeekday !== '' && pt.depositWeekday != null ? Number(pt.depositWeekday) : null,
+      depositWeekend: pt.depositWeekend !== '' && pt.depositWeekend != null ? Number(pt.depositWeekend) : null
     };
 
     const { response, body } = await apiRequest(`/api/admin/position-types/${pt.id}`, {
@@ -482,8 +486,12 @@ export default function PositionsPage() {
                       <th>{t('positionTypes.columns.value') || 'Код'}</th>
                       <th>{t('positionTypes.columns.name') || 'Назва'}</th>
                       <th>{t('positionTypes.form.fields.bookingKind') || 'Тип'}</th>
-                      <th>{t('positionTypes.form.fields.defaultPrice') || 'Ціна за замовчуванням'} ({t('positionTypes.currency') || 'грн'})</th>
-                      <th>{t('positionTypes.form.fields.defaultDeposit') || 'Депозит за замовчуванням'} ({t('positionTypes.currency') || 'грн'})</th>
+                      <th>{t('positionTypes.form.fields.defaultPrice') || 'Базова ціна'}</th>
+                      <th>{t('positionTypes.form.fields.priceWeekday') || 'Ціна (будні)'}</th>
+                      <th>{t('positionTypes.form.fields.priceWeekend') || 'Ціна (вихідні)'}</th>
+                      <th>{t('positionTypes.form.fields.defaultDeposit') || 'Базовий депозит'}</th>
+                      <th>{t('positionTypes.form.fields.depositWeekday') || 'Деп. (будні)'}</th>
+                      <th>{t('positionTypes.form.fields.depositWeekend') || 'Деп. (вихідні)'}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -507,7 +515,29 @@ export default function PositionsPage() {
                               value={pt.defaultPrice != null ? pt.defaultPrice : ''}
                               onChange={(e) => handleTypePriceChange(pt.id, 'defaultPrice', e.target.value)}
                               placeholder="—"
-                              style={{ width: '100%', maxWidth: 110, fontSize: 12, padding: '2px 6px', height: 26 }}
+                              style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={pt.priceWeekday != null ? pt.priceWeekday : ''}
+                              onChange={(e) => handleTypePriceChange(pt.id, 'priceWeekday', e.target.value)}
+                              placeholder="—"
+                              style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={pt.priceWeekend != null ? pt.priceWeekend : ''}
+                              onChange={(e) => handleTypePriceChange(pt.id, 'priceWeekend', e.target.value)}
+                              placeholder="—"
+                              style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
                             />
                           </td>
                           <td>
@@ -518,7 +548,29 @@ export default function PositionsPage() {
                               value={pt.defaultDeposit != null ? pt.defaultDeposit : ''}
                               onChange={(e) => handleTypePriceChange(pt.id, 'defaultDeposit', e.target.value)}
                               placeholder="—"
-                              style={{ width: '100%', maxWidth: 110, fontSize: 12, padding: '2px 6px', height: 26 }}
+                              style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={pt.depositWeekday != null ? pt.depositWeekday : ''}
+                              onChange={(e) => handleTypePriceChange(pt.id, 'depositWeekday', e.target.value)}
+                              placeholder="—"
+                              style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={pt.depositWeekend != null ? pt.depositWeekend : ''}
+                              onChange={(e) => handleTypePriceChange(pt.id, 'depositWeekend', e.target.value)}
+                              placeholder="—"
+                              style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
                             />
                           </td>
                           <td style={{ textAlign: 'right' }}>

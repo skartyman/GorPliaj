@@ -149,7 +149,7 @@ export default function MapPreview({ mapData, mapObjects = [], units, selectedTa
   if (!mapData || !containerRef) {
     return (
       <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '0.85rem', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-        Завантаження карти...
+        Завантаження мапи закладу...
       </div>
     );
   }
@@ -233,7 +233,7 @@ export default function MapPreview({ mapData, mapObjects = [], units, selectedTa
 
       <div style={{ marginTop: 6, textAlign: 'center' }}>
         <button type="button" className="btn btn-secondary btn-small" onClick={onOpenFullMap}>
-          Відкрити повну карту
+          Відкрити повну мапу закладу
         </button>
       </div>
     </div>

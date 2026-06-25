@@ -45,8 +45,8 @@ const translations = {
     nav: {
       dashboard: 'Дашборд',
       reservations: 'Бронювання',
-      map: 'Карта',
-      mapEditor: 'Редактор карти',
+      map: 'Мапа закладу',
+      mapEditor: 'Редактор мапи',
       menu: 'Меню',
       events: 'Події',
       news: 'Новини',

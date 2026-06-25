@@ -14,8 +14,8 @@
   --sidebar-expanded: 220px;
   --header-height: 64px;
   --bottom-nav-height: 72px;
-  --radius: 0px;
-  --radius-sm: 0px;
+  --radius: 8px;
+  --radius-sm: 4px;
   --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.45);
   --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.3);
   --transition: 220ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -785,30 +785,42 @@ h3 {
   justify-content: center;
 }
 
-/* ===== Map Scheme Section ===== */
-.map-scheme-section {
+/* ===== Promo Grid Section (Prices & News side-by-side on desktop) ===== */
+.promo-grid-section {
   margin-bottom: 56px;
 }
 
-.map-scheme-container {
-  border: 1px solid var(--line);
-  background: var(--bg-secondary);
-  position: relative;
-  overflow: hidden;
+.promo-grid {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: 1fr;
+  align-items: start;
 }
 
-.map-scheme-image {
+@media (min-width: 768px) {
+  .promo-grid {
+    grid-template-columns: 1.15fr 1fr; /* Two balanced columns on tablet/desktop */
+  }
+}
+
+.promo-prices-container {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: transparent;
+  box-shadow: var(--shadow-md);
+}
+
+.promo-prices-image {
   width: 100%;
   height: auto;
   display: block;
-  object-fit: contain;
-  max-height: 600px;
-  margin: 0 auto;
+  object-fit: cover;
   transition: transform var(--transition);
 }
 
-.map-scheme-image:hover {
-  transform: scale(1.01);
+.promo-prices-image:hover {
+  transform: scale(1.02);
 }
 
 /* ===== Photo Gallery ===== */

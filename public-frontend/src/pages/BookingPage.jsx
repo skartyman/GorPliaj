@@ -1345,7 +1345,7 @@ export default function BookingPage() {
         {bookingFlow === 'EVENT' && !activeEventSlug && !eventOptionsState.loading ? (
           <div className="state-msg" style={{ gridColumn: '1 / -1' }}>
             {c({
-              ua: 'Спочатку оберіть подію, після цього відкриються вечірні карти та вільні столи.',
+              ua: 'Спочатку оберіть подію, після цього відкриються вечірні мапи закладу та вільні столи.',
               ru: 'Сначала выберите событие, после этого откроются вечерние карты и свободные столы.',
               en: 'Choose an event first to load evening maps and available tables.'
             })}
@@ -1614,7 +1614,7 @@ export default function BookingPage() {
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}`, '_blank'); } }}
                             style={{ fontSize: '0.75rem', color: 'var(--primary)', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--primary)' }}
                           >
-                            {c({ ua: 'На карті', ru: 'На карте', en: 'On map' })}
+                            {c({ ua: 'На мапі закладу', ru: 'На карте', en: 'On map' })}
                           </span>
                         ) : null}
                         <span style={{ fontSize: '0.8rem', color: unit.status === 'free' ? 'var(--primary)' : 'var(--danger)' }}>
@@ -1672,6 +1672,22 @@ export default function BookingPage() {
                     : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}
                 </span>
               </div>
+              {selectedUnit.tableId ? (
+                <div className="booking-selected-actions" style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${selectedUnit.tableId}&usageMode=${usageMode}`, '_blank')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                      <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    {c({ ua: 'Показати на мапі закладу', ru: 'Показать на карте заведения', en: 'Show on venue map' })}
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

@@ -74,13 +74,34 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Venue Map */}
-      <section className="content-section map-scheme-section">
-        <div className="section-header">
-          <h2>{c({ ua: 'Схема комплексу', ru: 'Схема комплекса', en: 'Venue Layout' })}</h2>
-        </div>
-        <div className="map-scheme-container">
-          <img src="/icons/public-map.png" alt={c({ ua: 'Схема комплексу', ru: 'Схема комплекса', en: 'Venue Layout' })} className="map-scheme-image" loading="lazy" />
+      {/* Services Prices & News Section */}
+      <section className="content-section promo-grid-section">
+        <div className="promo-grid">
+          <div className="promo-prices-card">
+            <div className="section-header">
+              <h2>{c({ ua: 'Вартість послуг', ru: 'Стоимость услуг', en: 'Service Prices' })}</h2>
+            </div>
+            <div className="promo-prices-container">
+              <img src="/icons/public-map.png" alt={c({ ua: 'Вартість послуг', ru: 'Стоимость услуг', en: 'Service Prices' })} className="promo-prices-image" loading="lazy" />
+            </div>
+          </div>
+          <div className="promo-news-card">
+            <div className="section-header">
+              <h2>{c({ ua: 'Новини', ru: 'Новости', en: 'News' })}</h2>
+            </div>
+            <div className="news-list">
+              {newsCards.map((item) => {
+                const title = localizeField(item.title, locale);
+                const summary = localizeField(item.summary, locale);
+                return (
+                  <article key={item.id} className="news-item">
+                    <h3>{title}</h3>
+                    <p>{summary}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -165,22 +186,6 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* News */}
-      <section className="content-section">
-        <h2>{c({ ua: 'Новини', ru: 'Новости', en: 'News' })}</h2>
-        <div className="news-list">
-          {newsCards.map((item) => {
-            const title = localizeField(item.title, locale);
-            const summary = localizeField(item.summary, locale);
-            return (
-              <article key={item.id} className="news-item">
-                <h3>{title}</h3>
-                <p>{summary}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
 
       {/* About / Info */}
       <section className="content-section">

@@ -28,6 +28,10 @@ async function createPositionType(input) {
       photoUrl: input.photoUrl || undefined,
       defaultPrice: input.defaultPrice != null ? Number(input.defaultPrice) : undefined,
       defaultDeposit: input.defaultDeposit != null ? Number(input.defaultDeposit) : undefined,
+      priceWeekday: input.priceWeekday != null ? Number(input.priceWeekday) : undefined,
+      priceWeekend: input.priceWeekend != null ? Number(input.priceWeekend) : undefined,
+      depositWeekday: input.depositWeekday != null ? Number(input.depositWeekday) : undefined,
+      depositWeekend: input.depositWeekend != null ? Number(input.depositWeekend) : undefined,
       code: String(input.code).trim().toUpperCase(),
       requiresSide: Boolean(input.requiresSide),
       bookingKind: String(input.bookingKind).trim().toUpperCase() === 'BEACH' ? 'BEACH' : 'TABLE',
@@ -51,6 +55,10 @@ async function updatePositionType(id, input) {
   if (input.photoUrl !== undefined) data.photoUrl = input.photoUrl;
   if (input.defaultPrice !== undefined) data.defaultPrice = input.defaultPrice != null ? Number(input.defaultPrice) : null;
   if (input.defaultDeposit !== undefined) data.defaultDeposit = input.defaultDeposit != null ? Number(input.defaultDeposit) : null;
+  if (input.priceWeekday !== undefined) data.priceWeekday = input.priceWeekday != null ? Number(input.priceWeekday) : null;
+  if (input.priceWeekend !== undefined) data.priceWeekend = input.priceWeekend != null ? Number(input.priceWeekend) : null;
+  if (input.depositWeekday !== undefined) data.depositWeekday = input.depositWeekday != null ? Number(input.depositWeekday) : null;
+  if (input.depositWeekend !== undefined) data.depositWeekend = input.depositWeekend != null ? Number(input.depositWeekend) : null;
   if (input.code !== undefined) data.code = String(input.code).trim().toUpperCase();
   if (input.requiresSide !== undefined) data.requiresSide = Boolean(input.requiresSide);
   if (input.bookingKind !== undefined) data.bookingKind = String(input.bookingKind).trim().toUpperCase() === 'BEACH' ? 'BEACH' : 'TABLE';

@@ -104,6 +104,14 @@ function inferBeachKindFromPositionType(positionType) {
   return BEACH_TYPES.has(String(positionType || '').toUpperCase()) ? 'BEACH' : 'TABLE';
 }
 
+function isWeekend(dateStringOrDate) {
+  if (!dateStringOrDate) return false;
+  const date = new Date(dateStringOrDate);
+  if (isNaN(date.getTime())) return false;
+  const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+  return day === 0 || day === 6;
+}
+
 function getUnitPhotoUrl(table, objectMeta = {}) {
   return (
     table.photoUrl
@@ -115,22 +123,44 @@ function getUnitPhotoUrl(table, objectMeta = {}) {
   );
 }
 
-function buildBookableUnit(table, linkedObject, positionTypeMap = {}) {
+function buildBookableUnit(table, linkedObject, positionTypeMap = {}, reservationDate = null) {
   const meta = parseMeta(linkedObject?.metaJson);
   const bookingKind = inferBookingKind(table, meta);
   const positionType = table.positionType || linkedObject?.type || null;
   const ptConfig = positionType ? (positionTypeMap[positionType.toUpperCase()] || {}) : {};
 
-  const depositAmount = Number(
-    table.deposit
-    || meta.depositAmount
-    || meta.deposit
-    || ptConfig.defaultDeposit
-    || 0
-  );
-  const defaultPrice = ptConfig.defaultPrice ? Number(ptConfig.defaultPrice) : 0;
+  const isWk = isWeekend(reservationDate);
+
+  // Resolve price
+  let resolvedPrice = 0;
+  if (isWk && ptConfig.priceWeekend && Number(ptConfig.priceWeekend) > 0) {
+    resolvedPrice = Number(ptConfig.priceWeekend);
+  } else if (!isWk && ptConfig.priceWeekday && Number(ptConfig.priceWeekday) > 0) {
+    resolvedPrice = Number(ptConfig.priceWeekday);
+  } else if (table.price && Number(table.price) > 0) {
+    resolvedPrice = Number(table.price);
+  } else if (ptConfig.defaultPrice && Number(ptConfig.defaultPrice) > 0) {
+    resolvedPrice = Number(ptConfig.defaultPrice);
+  }
+
+  // Resolve deposit
+  let resolvedDeposit = 0;
+  if (isWk && ptConfig.depositWeekend && Number(ptConfig.depositWeekend) > 0) {
+    resolvedDeposit = Number(ptConfig.depositWeekend);
+  } else if (!isWk && ptConfig.depositWeekday && Number(ptConfig.depositWeekday) > 0) {
+    resolvedDeposit = Number(ptConfig.depositWeekday);
+  } else if (table.deposit && Number(table.deposit) > 0) {
+    resolvedDeposit = Number(table.deposit);
+  } else if (ptConfig.defaultDeposit && Number(ptConfig.defaultDeposit) > 0) {
+    resolvedDeposit = Number(ptConfig.defaultDeposit);
+  } else if (meta.depositAmount && Number(meta.depositAmount) > 0) {
+    resolvedDeposit = Number(meta.depositAmount);
+  } else if (meta.deposit && Number(meta.deposit) > 0) {
+    resolvedDeposit = Number(meta.deposit);
+  }
+
   const priceFromMeta = meta.price ? `${meta.price} ${meta.priceUnit || 'UAH'}` : null;
-  const priceLabel = priceFromMeta || (defaultPrice > 0 ? `${defaultPrice} UAH` : null);
+  const priceLabel = priceFromMeta || (resolvedPrice > 0 ? `${resolvedPrice} UAH` : null);
 
   const seatsMin = Number(table.seatsMin || meta.capacityMin || 1);
   const seatsMax = Number(table.seatsMax || meta.capacityMax || seatsMin || 1);
@@ -163,8 +193,8 @@ function buildBookableUnit(table, linkedObject, positionTypeMap = {}) {
     seatsMin,
     seatsMax,
     capacityLabel: meta.capacityLabel || null,
-    depositRequired: depositAmount > 0 || Boolean(meta.depositRequired),
-    depositAmount: depositAmount > 0 ? depositAmount : 0,
+    depositRequired: resolvedDeposit > 0 || Boolean(meta.depositRequired),
+    depositAmount: resolvedDeposit,
     priceLabel,
     features: Array.isArray(meta.features) ? meta.features : [],
     description: localizeField(table.serviceDescription, 'ua') || localizeField(meta.description, 'ua')
@@ -211,7 +241,7 @@ async function loadActiveMaps() {
   });
 }
 
-function buildUnitsFromMap(map, positionTypeMap = {}) {
+function buildUnitsFromMap(map, positionTypeMap = {}, reservationDate = null) {
   const objectByTableId = new Map(
     map.mapObjects
       .filter((object) => object.tableId)
@@ -219,7 +249,7 @@ function buildUnitsFromMap(map, positionTypeMap = {}) {
   );
 
   const units = map.tables
-    .map((table) => buildBookableUnit(table, objectByTableId.get(table.id), positionTypeMap))
+    .map((table) => buildBookableUnit(table, objectByTableId.get(table.id), positionTypeMap, reservationDate))
     .map((unit, _, allUnits) => {
       if (unit.photoUrl || !unit.photoGroupKey) {
         return unit;
@@ -336,7 +366,7 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
 
   const busy = new Set(availability.busyTableIds || []);
   const held = new Set(availability.heldTableIds || []);
-  const units = buildUnitsFromMap(effectiveMap, positionTypeMap)
+  const units = buildUnitsFromMap(effectiveMap, positionTypeMap, reservationDate)
     .map((unit) => ({
       ...unit,
       status: !unit.isActive || !unit.isBookable
@@ -411,7 +441,12 @@ async function getReservationUnit({ bookableUnitId, mapId, reservationDate = nul
     return null;
   }
 
-  const unit = buildBookableUnit(effectiveTable, table.mapObjects[0] || null);
+  const positionTypes = await prisma.positionType.findMany({ where: { isActive: true } });
+  const positionTypeMap = Object.fromEntries(
+    positionTypes.map((pt) => [pt.value.toUpperCase(), pt])
+  );
+
+  const unit = buildBookableUnit(effectiveTable, table.mapObjects[0] || null, positionTypeMap, reservationDate);
   return {
     ...unit,
     id: bookableUnitId
