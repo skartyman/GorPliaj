@@ -1153,6 +1153,29 @@ export default function MapPage() {
         </article>
 
         <aside className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable || selectedObject ? 'is-open' : ''}`}>
+          {(selectedTable || selectedObject) ? (
+            <button
+              type="button"
+              className="panel-close-btn"
+              onClick={() => { setSelectedTableId(null); setSelectedObjectId(null); }}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                color: 'var(--text-muted, #64748b)',
+                cursor: 'pointer',
+                lineHeight: 1,
+                padding: '4px 8px',
+                zIndex: 10
+              }}
+              aria-label="Close panel"
+            >
+              ×
+            </button>
+          ) : null}
           <h3>{t('mapSelectedTitle')}</h3>
           {selectedTable ? (
             <>
