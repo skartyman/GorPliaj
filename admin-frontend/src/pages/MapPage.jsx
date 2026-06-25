@@ -43,6 +43,11 @@ function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTab
   }
 
   const reservations = reservationsByTable[table.id] || [];
+  
+  if (reservations.some((reservation) => reservation.status === 'COMPLETED')) {
+    return 'COMPLETED';
+  }
+
   if (reservations.some((reservation) => reservation.status === 'PENDING')) {
     return 'PENDING';
   }
@@ -554,35 +559,66 @@ function getNextZoneCode(zoneId, tables, zones, map, language) {
 }
 
 function formatCountdown(reservation) {
-  if (!reservation?.timeFrom) return '';
+  if (!reservation?.timeFrom) return null;
   const [h, m] = reservation.timeFrom.split(':').map(Number);
   const target = new Date();
+  
+  if (reservation.reservationDate) {
+    const resDate = new Date(reservation.reservationDate);
+    if (!isNaN(resDate.getTime())) {
+      target.setFullYear(resDate.getFullYear(), resDate.getMonth(), resDate.getDate());
+    }
+  }
   target.setHours(h, m, 0, 0);
+  
   const diff = target.getTime() - Date.now();
-  if (diff <= 0) return '00:00';
-  const mins = Math.floor(diff / 60000);
-  const secs = Math.floor((diff % 60000) / 1000);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  
+  if (diff > 0) {
+    const mins = Math.floor(diff / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return {
+      text: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+      type: 'countdown',
+      val: diff
+    };
+  } else {
+    if (['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'].includes(reservation.status)) {
+      const lateMs = Math.abs(diff);
+      const mins = Math.floor(lateMs / 60000);
+      const secs = Math.floor((lateMs % 60000) / 1000);
+      return {
+        text: `+${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+        type: 'late',
+        val: lateMs
+      };
+    }
+    return null;
+  }
 }
 
 function ReservationCountdown({ reservation, className = 'table-countdown', style }) {
-  const [timeLeft, setTimeLeft] = useState(() => formatCountdown(reservation));
+  const [timerData, setTimerData] = useState(() => formatCountdown(reservation));
 
   useEffect(() => {
-    setTimeLeft(formatCountdown(reservation));
+    setTimerData(formatCountdown(reservation));
     const interval = setInterval(() => {
-      setTimeLeft(formatCountdown(reservation));
+      setTimerData(formatCountdown(reservation));
     }, 1000);
     return () => clearInterval(interval);
   }, [reservation]);
 
-  if (!timeLeft || timeLeft === '00:00') return null;
+  if (!timerData) return null;
+
+  const isLate = timerData.type === 'late';
+  const typeClass = isLate ? 'timer-late' : 'timer-countdown';
+
   return (
-    <span className={className} style={style}>
-      {timeLeft}
+    <span className={`${className} ${typeClass}`} style={style}>
+      {isLate ? '⚠️ ' : ''}{timerData.text}
     </span>
   );
 }
+
 
 export default function MapPage() {
   console.log('[MAP] MapPage rendered', performance.now().toFixed(0));
@@ -1577,6 +1613,7 @@ export default function MapPage() {
               <span><i className="dot pending" /> {t('map.legend.pending')}</span>
               <span><i className="dot confirmed" /> {t('map.legend.confirmed')}</span>
               <span><i className="dot held" /> {t('map.legend.held')}</span>
+              <span><i className="dot completed" /> {t('map.legend.completed') || 'Зайнято'}</span>
               <span><i className="dot unavailable" /> {t('map.legend.unavailable')}</span>
             </div>
 

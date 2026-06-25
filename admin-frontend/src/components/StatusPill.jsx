@@ -2,11 +2,11 @@ import { useAdminI18n } from '../lib/i18n';
 
 const STATUS_CLASS_MAP = {
   PENDING: 'pending',
-  CONFIRMED: 'success',
+  CONFIRMED: 'info',
   AWAITING_PAYMENT: 'pending',
   HELD: 'warning',
-  SEATED: 'success',
-  COMPLETED: 'success',
+  SEATED: 'completed',
+  COMPLETED: 'completed',
   CANCELLED: 'danger',
   NO_SHOW: 'danger',
   UNAVAILABLE: 'neutral',

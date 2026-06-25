@@ -702,6 +702,8 @@ textarea { resize: vertical; min-height: 96px; }
 .status-pill.pending { background: var(--warning-bg); color: var(--warning-text); }
 .status-pill.neutral { background: var(--border-light); color: var(--text-secondary); }
 .status-pill.warning { background: var(--warning-bg); color: var(--warning-text); }
+.status-pill.info { background: var(--info-bg); color: var(--info-text); }
+.status-pill.completed { background: #F3E8FF; color: #6B21A8; }
 
 .details-grid {
   display: grid;
@@ -2380,5 +2382,141 @@ textarea { resize: vertical; min-height: 96px; }
   color: var(--text-secondary);
   line-height: 1;
   white-space: nowrap;
+}
+
+/* High-Visibility Solid Status Color System for Tables and Badges */
+.interactive-map-table, .object-status-badge {
+  transition: all 150ms ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Free: Solid Emerald Green */
+.interactive-map-table.free, .object-status-badge.free {
+  background: #10B981 !important;
+  border-color: #059669 !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.free span, .object-status-badge.free .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* Pending: Solid Amber/Yellow */
+.interactive-map-table.pending, .object-status-badge.pending {
+  background: #F59E0B !important;
+  border-color: #D97706 !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.pending span, .object-status-badge.pending .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* Confirmed: Solid Royal Blue */
+.interactive-map-table.confirmed, .object-status-badge.confirmed {
+  background: #3B82F6 !important;
+  border-color: #2563EB !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.confirmed span, .object-status-badge.confirmed .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* Held: Solid Bright Orange */
+.interactive-map-table.held, .object-status-badge.held {
+  background: #F97316 !important;
+  border-color: #EA580C !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.held span, .object-status-badge.held .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* Occupied/Arrived (Completed): Solid Premium Indigo/Purple */
+.interactive-map-table.completed, .object-status-badge.completed {
+  background: #8B5CF6 !important;
+  border-color: #6D28D9 !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.completed span, .object-status-badge.completed .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* Unavailable: Solid Slate Gray */
+.interactive-map-table.unavailable, .object-status-badge.unavailable {
+  background: #64748B !important;
+  border-color: #475569 !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.unavailable span, .object-status-badge.unavailable .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* Selected: Prominent Gold Outline with Glow */
+.interactive-map-table.selected, .interactive-map-object.selected {
+  box-shadow: 0 0 0 3px #C89241, 0 0 12px rgba(200, 146, 65, 0.6) !important;
+  transform: scale(1.05);
+  z-index: 10 !important;
+}
+
+/* Countdown & Late Timer Badges */
+.table-countdown, .object-countdown {
+  font-family: var(--font-sans);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 15;
+}
+
+/* Standard Countdown - Elegant Dark Slate Pill */
+.table-countdown.timer-countdown {
+  background: #1E293B !important;
+  color: #F8FAFC !important;
+  border: 1px solid #334155;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+.object-countdown.timer-countdown {
+  background: #1E293B !important;
+  color: #F8FAFC !important;
+  border: 1px solid #334155;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  margin-top: 2px;
+}
+
+/* Overdue/Late Timer - Bright Pulsing Crimson Red Badge */
+.table-countdown.timer-late {
+  background: #EF4444 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #DC2626;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  animation: pulse-red 1.5s infinite;
+}
+.object-countdown.timer-late {
+  background: #EF4444 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #DC2626;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  margin-top: 2px;
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
