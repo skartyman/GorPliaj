@@ -57,6 +57,55 @@ export default function EventDetailPage() {
   const metaDescription = localizeField(state.event?.shortDescription, locale);
   useMeta(state.event ? `${metaTitle} · GorPliaj` : 'Event · GorPliaj', metaDescription || 'Event details.');
 
+  const isDisco80s = useMemo(() => {
+    if (!state.event) return false;
+    const slugLower = (state.event.slug || '').toLowerCase();
+    
+    if (slugLower.includes('disco') || slugLower.includes('disko')) {
+      if (slugLower.includes('80')) {
+        return true;
+      }
+    }
+    
+    const titleObj = state.event.title || {};
+    const titlesToCheck = typeof titleObj === 'string' 
+      ? [titleObj] 
+      : [titleObj.ua, titleObj.ru, titleObj.en].filter(Boolean);
+      
+    return titlesToCheck.some(t => {
+      const tLower = t.toLowerCase();
+      return (tLower.includes('диско') || tLower.includes('disco') || tLower.includes('дискотека')) && 
+             (tLower.includes('80') || tLower.includes('восьмидесят'));
+    });
+  }, [state.event]);
+
+  useEffect(() => {
+    if (isDisco80s) {
+      if (!window.fbq) {
+        !(function (f, b, e, v, n, t, s) {
+          if (f.fbq) return;
+          n = f.fbq = function () {
+            n.callMethod
+              ? n.callMethod.apply(n, arguments)
+              : n.queue.push(arguments);
+          };
+          if (!f._fbq) f._fbq = n;
+          n.push = n;
+          n.loaded = !0;
+          n.version = '2.0';
+          n.queue = [];
+          t = b.createElement(e);
+          t.async = !0;
+          t.src = v;
+          s = b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t, s);
+        })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        window.fbq('init', '1374599834512979');
+      }
+      window.fbq('track', 'PageView');
+    }
+  }, [isDisco80s]);
+
   useEffect(() => {
     if (!slug) return;
     eventsApi
@@ -208,6 +257,17 @@ export default function EventDetailPage() {
 
   return (
     <>
+      {isDisco80s && (
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1374599834512979&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+      )}
       <Link to="/events" className="text-link event-back-link">
         ← {c({ ua: 'Назад до афіші', ru: 'Назад к афише', en: 'Back to events' })}
       </Link>
