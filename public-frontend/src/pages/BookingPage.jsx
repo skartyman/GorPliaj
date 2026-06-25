@@ -1352,51 +1352,36 @@ export default function BookingPage() {
           </div>
         ) : null}
 
-        {bookingFlow === 'EVENT' && activeEventSlug ? (
-          eventHasMultipleDates && !activeEventDateOption ? (
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>{c({ ua: 'Оберіть дату події', ru: 'Выберите дату события', en: 'Choose an event date' })}</label>
-              <div className="booking-event-date-grid">
-                {eventDateOptions.map((option) => {
-                  const availabilityKnown = Object.prototype.hasOwnProperty.call(eventDateAvailability, option.key);
-                  const isAvailable = eventDateAvailability[option.key] !== false;
+        {bookingFlow === 'EVENT' && activeEventSlug && eventHasMultipleDates ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label>{c({ ua: 'Оберіть дату події', ru: 'Выберите дату события', en: 'Choose an event date' })}</label>
+            <div className="booking-event-date-grid">
+              {eventDateOptions.map((option) => {
+                const availabilityKnown = Object.prototype.hasOwnProperty.call(eventDateAvailability, option.key);
+                const isAvailable = eventDateAvailability[option.key] !== false;
+                const isActive = selectedEventDateKey === option.key || form.date === option.date;
 
-                  return (
-                    <button
-                      key={option.key}
-                      type="button"
-                      className={`booking-event-date-card${availabilityKnown && !isAvailable ? ' unavailable' : ''}`}
-                      disabled={availabilityKnown && !isAvailable}
-                      onClick={() => selectEventDate(option)}
-                    >
-                      <strong>{option.label}</strong>
-                      <span className={`booking-event-date-status${availabilityKnown ? (isAvailable ? ' available' : ' unavailable') : ''}`}>
-                        {availabilityKnown
-                          ? (isAvailable
-                            ? c({ ua: 'Доступні столи', ru: 'Доступные столы', en: 'Tables available' })
-                            : c({ ua: 'Місць немає', ru: 'Мест нет', en: 'No seats available' }))
-                          : c({ ua: 'Перевіряємо…', ru: 'Проверяем…', en: 'Checking…' })}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : activeEventDateOption ? (
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <div className="booking-event-inline-date">
-                <span className="booking-event-date-static">{activeEventDateOption.fullLabel}</span>
-                {eventHasMultipleDates ? (
-                  <button type="button" className="booking-event-change-link" onClick={resetEventDateSelection}>
-                    {c({ ua: 'Змінити дату', ru: 'Изменить дату', en: 'Change date' })}
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className={`booking-event-date-card${isActive ? ' active' : ''}${availabilityKnown && !isAvailable ? ' unavailable' : ''}`}
+                    disabled={availabilityKnown && !isAvailable}
+                    onClick={() => selectEventDate(option)}
+                  >
+                    <strong>{option.label}</strong>
+                    <span className={`booking-event-date-status${availabilityKnown ? (isAvailable ? ' available' : ' unavailable') : ''}`}>
+                      {availabilityKnown
+                        ? (isAvailable
+                          ? c({ ua: 'Доступні столи', ru: 'Доступные столы', en: 'Tables available' })
+                          : c({ ua: 'Місць немає', ru: 'Мест нет', en: 'No seats available' }))
+                        : c({ ua: 'Перевіряємо…', ru: 'Проверяем…', en: 'Checking…' })}
+                    </span>
                   </button>
-                ) : null}
-              </div>
-              <p className="booking-compact-note" style={{ marginTop: 12 }}>
-                {c({ ua: 'Для цієї події доступні тільки вечірні столи.', ru: 'Для этого события доступны только вечерние столы.', en: 'Only evening tables are available for this event.' })}
-              </p>
+                );
+              })}
             </div>
-          ) : null
+          </div>
         ) : null}
 </>)}
 
