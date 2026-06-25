@@ -190,21 +190,107 @@ const BOOKING_FLOW_OPTIONS = [
   }
 ];
 
+function generateTimeSlots(date, today, currentTime, bookingKind) {
+  if (date === today && currentTime >= '12:00' && bookingKind === 'BEACH') {
+    return [];
+  }
+  const slots = [];
+  const startHour = 9;
+  const endHour = bookingKind === 'BEACH' ? 13 : 20;
+
+  for (let hour = startHour; hour <= endHour; hour++) {
+    for (const min of ['00', '30']) {
+      if (bookingKind === 'BEACH' && hour === 13 && min === '30') continue;
+      if (bookingKind === 'TABLE' && hour === 20 && min === '30') continue;
+      
+      const timeStr = `${String(hour).padStart(2, '0')}:${min}`;
+      if (date === today && timeStr <= currentTime) {
+        continue;
+      }
+      slots.push(timeStr);
+    }
+  }
+  return slots;
+}
+
+function VisualSchedule({ bookingKind, locale }) {
+  const isBeach = bookingKind === 'BEACH';
+  const startHour = 8;
+  const endHour = 22;
+  const totalHours = endHour - startHour;
+
+  const activeStart = 9;
+  const activeEnd = isBeach ? 13 : 20;
+
+  const leftPercent = ((activeStart - startHour) / totalHours) * 100;
+  const widthPercent = ((activeEnd - activeStart) / totalHours) * 100;
+
+  const label = isBeach
+    ? {
+        ua: 'Обовʼязкова явка гостя: 09:00 - 13:00',
+        ru: 'Обязательная явка гостя: 09:00 - 13:00',
+        en: 'Mandatory guest arrival: 09:00 - 13:00'
+      }
+    : {
+        ua: 'Графік бронювання столів: 09:00 - 20:00',
+        ru: 'График бронирования столов: 09:00 - 20:00',
+        en: 'Table booking hours: 09:00 - 20:00'
+      };
+
+  const getCopy = (dict) => dict[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || dict['en'];
+
+  return (
+    <div className="visual-schedule" style={{
+      marginTop: '10px',
+      padding: '10px 12px',
+      borderRadius: '10px',
+      background: 'var(--bg)',
+      border: '1px solid var(--line)',
+      width: '100%',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text)' }}>
+        <span>{getCopy(label)}</span>
+      </div>
+      
+      <div style={{ position: 'relative', height: '6px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '3px', overflow: 'hidden', margin: '8px 0 4px' }}>
+        <div style={{
+          position: 'absolute',
+          left: `${leftPercent}%`,
+          width: `${widthPercent}%`,
+          height: '100%',
+          backgroundColor: isBeach ? 'var(--brand)' : 'var(--success)',
+          borderRadius: '3px'
+        }} />
+      </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>
+        <span>08:00</span>
+        <span style={{ color: isBeach ? 'var(--brand)' : 'inherit', fontWeight: isBeach ? '700' : '500' }}>09:00</span>
+        {isBeach && <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>}
+        {!isBeach && <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>}
+        <span>22:00</span>
+      </div>
+    </div>
+  );
+}
+
+
 const BOOKING_KIND_OPTIONS = [
   {
     value: 'TABLE',
     copy: {
-      ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірні посадки.' },
-      ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерние посадки.' },
-      en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening seating.' }
+      ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірні посадки.', schedule: 'Графік бронювання: 09:00 - 20:00' },
+      ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерние посадки.', schedule: 'График бронирования: 09:00 - 20:00' },
+      en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening seating.', schedule: 'Booking hours: 09:00 - 20:00' }
     }
   },
   {
     value: 'BEACH',
     copy: {
-      ua: { title: 'Пляж', body: 'Бунгало, ліжка та інші пляжні послуги.' },
-      ru: { title: 'Пляж', body: 'Бунгало, кровати и другие пляжные услуги.' },
-      en: { title: 'Beach', body: 'Bungalows, daybeds, and other beach services.' }
+      ua: { title: 'Пляж', body: 'Бунгало, ліжка та інші пляжні послуги.', schedule: 'Графік: обовʼязкова явка з 09:00 до 13:00' },
+      ru: { title: 'Пляж', body: 'Бунгало, кровати и другие пляжные услуги.', schedule: 'График: обязательная явка с 09:00 до 13:00' },
+      en: { title: 'Beach', body: 'Bungalows, daybeds, and other beach services.', schedule: 'Schedule: mandatory arrival 09:00 - 13:00' }
     }
   }
 ];
@@ -343,6 +429,20 @@ export default function BookingPage() {
 
     return matchedEventForStandardDate;
   }, [bookingFlow, bookingKind, matchedEventForStandardDate]);
+
+  const timeSlots = useMemo(() => {
+    return generateTimeSlots(form.date, today, currentTime, resolvedBookingKind);
+  }, [form.date, today, currentTime, resolvedBookingKind]);
+
+  useEffect(() => {
+    if (timeSlots.length > 0) {
+      if (!timeSlots.includes(form.timeFrom)) {
+        setForm(current => ({ ...current, timeFrom: timeSlots[0] }));
+      }
+    } else {
+      setForm(current => ({ ...current, timeFrom: '' }));
+    }
+  }, [timeSlots, form.timeFrom]);
 
   useMeta(
     resolvedBookingKind === 'BEACH'
@@ -1065,9 +1165,11 @@ export default function BookingPage() {
                       setBookingKind(option.value);
                       setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
                     }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
                   >
                     <strong>{localized.title}</strong>
                     <span>{localized.body}</span>
+                    <VisualSchedule bookingKind={option.value} locale={locale} />
                   </button>
                 );
               })}
@@ -1181,16 +1283,34 @@ export default function BookingPage() {
         </div>
 
         {bookingFlow !== 'EVENT' ? (
-          <div className="form-group">
-            <label>{c({ ua: 'Час початку', ru: 'Время начала', en: 'Start time' })}</label>
-            <input
-              type="time"
-              className="form-input"
-              value={form.timeFrom}
-              required
-              onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
-            />
-          </div>
+          <>
+            <div className="form-group">
+              <label>{c({ ua: 'Час початку', ru: 'Время начала', en: 'Start time' })}</label>
+              {timeSlots.length === 0 ? (
+                <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: '8px 0 0' }}>
+                  {c({
+                    ua: 'Немає доступного часу на сьогодні.',
+                    ru: 'Нет доступного времени на сегодня.',
+                    en: 'No booking times available for today.'
+                  })}
+                </p>
+              ) : (
+                <select
+                  className="form-input"
+                  value={form.timeFrom}
+                  required
+                  onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
+                >
+                  {timeSlots.map((slot) => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+              <VisualSchedule bookingKind={resolvedBookingKind} locale={locale} />
+            </div>
+          </>
         ) : null}
 
         {resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00' ? (

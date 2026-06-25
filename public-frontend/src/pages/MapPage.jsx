@@ -206,6 +206,92 @@ function zoneDisplayName(zone, locale) {
   return localizeField(zone?.name, locale) || localizeField(zone?.name, 'ua') || '';
 }
 
+function generateTimeSlots(date, today, currentTime, bookingKind) {
+  if (date === today && currentTime >= '12:00' && bookingKind === 'BEACH') {
+    return [];
+  }
+  const slots = [];
+  const startHour = 9;
+  const endHour = bookingKind === 'BEACH' ? 13 : 20;
+
+  for (let hour = startHour; hour <= endHour; hour++) {
+    for (const min of ['00', '30']) {
+      if (bookingKind === 'BEACH' && hour === 13 && min === '30') continue;
+      if (bookingKind === 'TABLE' && hour === 20 && min === '30') continue;
+      
+      const timeStr = `${String(hour).padStart(2, '0')}:${min}`;
+      if (date === today && timeStr <= currentTime) {
+        continue;
+      }
+      slots.push(timeStr);
+    }
+  }
+  return slots;
+}
+
+function VisualSchedule({ bookingKind, locale }) {
+  const isBeach = bookingKind === 'BEACH';
+  const startHour = 8;
+  const endHour = 22;
+  const totalHours = endHour - startHour;
+
+  const activeStart = 9;
+  const activeEnd = isBeach ? 13 : 20;
+
+  const leftPercent = ((activeStart - startHour) / totalHours) * 100;
+  const widthPercent = ((activeEnd - activeStart) / totalHours) * 100;
+
+  const label = isBeach
+    ? {
+        ua: 'Обовʼязкова явка гостя: 09:00 - 13:00',
+        ru: 'Обязательная явка гостя: 09:00 - 13:00',
+        en: 'Mandatory guest arrival: 09:00 - 13:00'
+      }
+    : {
+        ua: 'Графік бронювання столів: 09:00 - 20:00',
+        ru: 'График бронирования столов: 09:00 - 20:00',
+        en: 'Table booking hours: 09:00 - 20:00'
+      };
+
+  const getCopy = (dict) => dict[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || dict['en'];
+
+  return (
+    <div className="visual-schedule" style={{
+      marginTop: '10px',
+      padding: '10px 12px',
+      borderRadius: '10px',
+      background: 'var(--bg)',
+      border: '1px solid var(--line)',
+      width: '100%',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text)' }}>
+        <span>{getCopy(label)}</span>
+      </div>
+      
+      <div style={{ position: 'relative', height: '6px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '3px', overflow: 'hidden', margin: '8px 0 4px' }}>
+        <div style={{
+          position: 'absolute',
+          left: `${leftPercent}%`,
+          width: `${widthPercent}%`,
+          height: '100%',
+          backgroundColor: isBeach ? 'var(--brand)' : 'var(--success)',
+          borderRadius: '3px'
+        }} />
+      </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>
+        <span>08:00</span>
+        <span style={{ color: isBeach ? 'var(--brand)' : 'inherit', fontWeight: isBeach ? '700' : '500' }}>09:00</span>
+        {isBeach && <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>}
+        {!isBeach && <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>}
+        <span>22:00</span>
+      </div>
+    </div>
+  );
+}
+
+
 function BuiltinTexturePattern({ id, texture }) {
   switch (String(texture || '').toLowerCase()) {
     case 'grass':
@@ -572,6 +658,21 @@ export default function MapPage() {
   const [holdError, setHoldError] = useState('');
 
   const navigate = useNavigate();
+
+  const resolvedBookingKind = state.result?.map?.bookingKind || 'TABLE';
+  const timeSlots = useMemo(() => {
+    return generateTimeSlots(date, today, currentTime, resolvedBookingKind);
+  }, [date, today, currentTime, resolvedBookingKind]);
+
+  useEffect(() => {
+    if (timeSlots.length > 0) {
+      if (!timeSlots.includes(timeFrom)) {
+        setTimeFrom(timeSlots[0]);
+      }
+    } else {
+      setTimeFrom('');
+    }
+  }, [timeSlots, timeFrom]);
 
   useEffect(() => {
     const next = new URLSearchParams(window.location.search);
@@ -944,29 +1045,46 @@ export default function MapPage() {
       <div className="map-filter-bar" style={{ display: 'flex', gap: 12, padding: '0 0 12px', flexWrap: 'wrap', alignItems: 'end' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
-          <input type="date" className="form-input" value={date} min={today} onChange={(e) => setDate(e.target.value)} style={{ fontSize: '0.85rem' }} />
+          <input type="date" className="form-input" value={date} min={today} onChange={(e) => setDate(e.target.value)} style={{ fontSize: '0.85rem', height: 38 }} />
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapTime') || (locale === 'ua' ? 'Час' : locale === 'ru' ? 'Время' : 'Time')}
-          <input type="time" className="form-input" value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} style={{ fontSize: '0.85rem' }} />
+          {timeSlots.length === 0 ? (
+            <span style={{ fontSize: '0.8rem', color: 'var(--danger)', height: 38, display: 'flex', alignItems: 'center' }}>
+              {locale === 'ua' ? 'Немає часу' : locale === 'ru' ? 'Нет времени' : 'No times'}
+            </span>
+          ) : (
+            <select
+              className="form-input"
+              value={timeFrom}
+              onChange={(e) => setTimeFrom(e.target.value)}
+              style={{ fontSize: '0.85rem', height: 38, padding: '0 8px', minWidth: 90 }}
+            >
+              {timeSlots.map((slot) => (
+                <option key={slot} value={slot}>{slot}</option>
+              ))}
+            </select>
+          )}
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
-          <input type="number" className="form-input" value={guests} min={1} max={20} onChange={(e) => setGuests(Number(e.target.value) || 0)} style={{ fontSize: '0.85rem', width: 70 }} />
+          <input type="number" className="form-input" value={guests} min={1} max={20} onChange={(e) => setGuests(Number(e.target.value) || 0)} style={{ fontSize: '0.85rem', width: 70, height: 38 }} />
         </label>
         {date === today && timeFrom <= currentTime ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'Обраний час вже минув. Будь ласка, оберіть пізніший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Пожалуйста, выберите более позднее время.' : 'The selected time has already passed. Please choose a later time.'}
           </p>
-        ) : date === today && currentTime >= '12:00' ? (
+        ) : date === today && currentTime >= '12:00' && resolvedBookingKind === 'BEACH' ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'Бронювання пляжних послуг на сьогодні закрите (після 12:00).' : locale === 'ru' ? 'Бронирование пляжных услуг на сегодня закрыто (после 12:00).' : 'Beach services bookings for today are closed (after 12:00).'}
           </p>
-        ) : timeFrom > '13:00' ? (
+        ) : timeFrom > '13:00' && resolvedBookingKind === 'BEACH' ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'За правилами закладу, при бронюванні пляжу явка обовʼязкова до 13:00.' : locale === 'ru' ? 'По правилам заведения, при бронировании пляжа явка обязательна до 13:00.' : 'According to venue rules, arrival for beach bookings is mandatory before 13:00.'}
           </p>
         ) : null}
+        
+        <VisualSchedule bookingKind={resolvedBookingKind} locale={locale} />
       </div>
 
       <div className="map-container map-preview-container">
