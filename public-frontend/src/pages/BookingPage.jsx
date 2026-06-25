@@ -902,12 +902,20 @@ export default function BookingPage() {
     }
 
     setSelectedTypeKey((current) => {
+      if (selected.bookableUnitId) {
+        const matchingGroup = unitTypeGroups.find((group) =>
+          group.units.some((unit) => unit.id === selected.bookableUnitId)
+        );
+        if (matchingGroup) {
+          return matchingGroup.key;
+        }
+      }
       if (current && unitTypeGroups.some((group) => group.key === current)) {
         return current;
       }
       return unitTypeGroups[0].key;
     });
-  }, [unitTypeGroups]);
+  }, [unitTypeGroups, selected.bookableUnitId]);
 
   useEffect(() => {
     if (!selectedType) return;
@@ -916,11 +924,9 @@ export default function BookingPage() {
       if (current.bookableUnitId && selectedType.units.some((unit) => unit.id === current.bookableUnitId)) {
         return current;
       }
-
-      const preferredUnit = selectedType.units.find((unit) => unit.status === 'free') || selectedType.units[0];
       return {
         ...current,
-        bookableUnitId: preferredUnit?.id || ''
+        bookableUnitId: ''
       };
     });
   }, [selectedType]);
@@ -953,6 +959,7 @@ export default function BookingPage() {
       timeFrom: option.timeFrom || current.timeFrom
     }));
     setSelected((current) => ({ ...current, zoneId: 0, bookableUnitId: '' }));
+    setCurrentStep(2);
   }
 
   function resetEventDateSelection() {
@@ -1220,6 +1227,7 @@ export default function BookingPage() {
                     onClick={() => {
                       setBookingKind(option.value);
                       setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                      setCurrentStep(2);
                     }}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}
                   >
@@ -1418,7 +1426,7 @@ export default function BookingPage() {
 
         {bookingFlow !== 'EVENT' ? (
           <>
-            <div className="form-group">
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>{c({ ua: 'Час початку', ru: 'Время начала', en: 'Start time' })}</label>
               {timeSlots.length === 0 ? (
                 <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: '8px 0 0' }}>
@@ -1429,16 +1437,24 @@ export default function BookingPage() {
                   })}
                 </p>
               ) : (
-                <select
-                  className="form-input"
-                  value={form.timeFrom}
-                  required
-                  onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
-                >
-                  {timeSlots.map((slot) => (
-                    <option key={slot} value={slot}>{slot}</option>
-                  ))}
-                </select>
+                <div className="booking-time-slots-grid">
+                  {timeSlots.map((slot) => {
+                    const isActive = form.timeFrom === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        className={`booking-time-slot-btn${isActive ? ' active' : ''}`}
+                        onClick={() => {
+                          setForm((current) => ({ ...current, timeFrom: slot }));
+                          setCurrentStep(3);
+                        }}
+                      >
+                        {slot}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
@@ -1583,7 +1599,10 @@ export default function BookingPage() {
                       type="button"
                       className={`booking-variant-row${isActive ? ' active' : ''}`}
                       disabled={unit.status !== 'free'}
-                      onClick={() => setSelected((current) => ({ ...current, bookableUnitId: unit.id }))}
+                      onClick={() => {
+                        setSelected((current) => ({ ...current, bookableUnitId: unit.id }));
+                        setCurrentStep(4);
+                      }}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '10px 14px', borderRadius: 8,
