@@ -708,13 +708,10 @@ export default function MapPage() {
 
   const navigate = useNavigate();
 
-  const resolvedBookingKind = useMemo(() => {
-    if (!state.result?.map) return 'TABLE';
-    const hasBeachTable = state.result.map.zones?.some((zone) =>
-      zone.tables?.some((table) => table.bookingKind === 'BEACH')
-    );
-    return hasBeachTable ? 'BEACH' : 'TABLE';
-  }, [state.result]);
+  const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'BEACH' ? 'BEACH' : 'TABLE');
+  const [usageMode, setUsageMode] = useState(searchParams.get('usageMode') === 'EVENING' ? 'EVENING' : 'DAY');
+
+  const resolvedBookingKind = usageMode === 'EVENING' ? 'TABLE' : bookingKind;
   const timeSlots = useMemo(() => {
     return generateTimeSlots(date, today, currentTime, resolvedBookingKind);
   }, [date, today, currentTime, resolvedBookingKind]);
@@ -734,8 +731,38 @@ export default function MapPage() {
     next.set('date', date);
     next.set('timeFrom', timeFrom);
     next.set('guests', String(guests));
+    next.set('kind', resolvedBookingKind);
+    next.set('usageMode', usageMode);
     setSearchParams(next, { replace: true });
-  }, [date, timeFrom, guests]);
+  }, [date, timeFrom, guests, resolvedBookingKind, usageMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    mapApi.list({ usageMode, bookingKind: resolvedBookingKind, guests })
+      .then((result) => {
+        if (cancelled) return;
+        const maps = Array.isArray(result?.maps) ? result.maps : [];
+        const preferred = maps.find((item) => String(item.id) === String(searchParams.get('mapId')))
+          || maps.find((item) => item.isDefault)
+          || maps[0];
+          
+        if (preferred) {
+          const next = new URLSearchParams(window.location.search);
+          next.set('mapId', String(preferred.id));
+          next.set('date', date);
+          next.set('timeFrom', timeFrom);
+          next.set('guests', String(guests));
+          next.set('kind', resolvedBookingKind);
+          next.set('usageMode', usageMode);
+          setSearchParams(next, { replace: true });
+        }
+      })
+      .catch(() => {});
+      
+    return () => {
+      cancelled = true;
+    };
+  }, [usageMode, resolvedBookingKind, guests]);
 
   useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
   const mapId = searchParams.get('mapId') || '';
@@ -1125,6 +1152,45 @@ export default function MapPage() {
           {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
           <input type="number" className="form-input" value={guests} min={1} max={20} onChange={(e) => setGuests(Number(e.target.value) || 0)} style={{ fontSize: '0.85rem', width: 70, height: 38 }} />
         </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
+          {locale === 'ua' ? 'Час доби' : locale === 'ru' ? 'Время суток' : 'Time of day'}
+          <select
+            className="form-input"
+            value={usageMode}
+            onChange={(e) => {
+              const nextMode = e.target.value;
+              setUsageMode(nextMode);
+              if (nextMode === 'EVENING') {
+                setBookingKind('TABLE');
+                if (timeFrom < '17:00') {
+                  setTimeFrom('18:00');
+                }
+              } else {
+                if (timeFrom > '16:00') {
+                  setTimeFrom('12:00');
+                }
+              }
+            }}
+            style={{ fontSize: '0.85rem', height: 38, padding: '0 8px', minWidth: 100 }}
+          >
+            <option value="DAY">{locale === 'ua' ? 'День' : locale === 'ru' ? 'День' : 'Day'}</option>
+            <option value="EVENING">{locale === 'ua' ? 'Вечір' : locale === 'ru' ? 'Вечер' : 'Evening'}</option>
+          </select>
+        </label>
+        {usageMode === 'DAY' && (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
+            {locale === 'ua' ? 'Тип броні' : locale === 'ru' ? 'Тип брони' : 'Booking type'}
+            <select
+              className="form-input"
+              value={bookingKind}
+              onChange={(e) => setBookingKind(e.target.value)}
+              style={{ fontSize: '0.85rem', height: 38, padding: '0 8px', minWidth: 110 }}
+            >
+              <option value="TABLE">{locale === 'ua' ? 'Стіл' : locale === 'ru' ? 'Стол' : 'Table'}</option>
+              <option value="BEACH">{locale === 'ua' ? 'Пляж' : locale === 'ru' ? 'Пляж' : 'Beach'}</option>
+            </select>
+          </label>
+        )}
         {date === today && timeFrom <= currentTime ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'Обраний час вже минув. Будь ласка, оберіть пізніший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Пожалуйста, выберите более позднее время.' : 'The selected time has already passed. Please choose a later time.'}
@@ -1236,6 +1302,8 @@ export default function MapPage() {
                     const isTable = object.type === 'TABLE';
                     const table = isTable && object.tableId ? tableById.get(object.tableId) : null;
                     const linkedTable = !isTable && object.tableId ? tableById.get(object.tableId) : null;
+                    if (table && table.bookingKind !== resolvedBookingKind) return null;
+                    if (linkedTable && linkedTable.bookingKind !== resolvedBookingKind) return null;
                     const objectLabel = localizeField(object.label, locale) || object.type;
                     const meta = parseMetaJson(object.metaJson);
                     if (table) {
