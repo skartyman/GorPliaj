@@ -809,7 +809,22 @@ export default function MapPage() {
   const mapEntities = useMemo(() => {
     const objects = state.mapData?.objects || [];
 
-    return objects.map((object) => {
+    // Find all tableIds that are represented by non-TABLE objects (e.g. CUSTOM, DECOR graphics)
+    const customRepresentedTableIds = new Set(
+      objects
+        .filter((obj) => obj.type !== 'TABLE' && obj.tableId)
+        .map((obj) => obj.tableId)
+    );
+
+    // Filter out TABLE objects that are already represented by custom graphics
+    const filteredObjects = objects.filter((obj) => {
+      if (obj.type === 'TABLE' && obj.tableId && customRepresentedTableIds.has(obj.tableId)) {
+        return false; // Skip this duplicate table button
+      }
+      return true;
+    });
+
+    return filteredObjects.map((object) => {
       const isTable = object.type === 'TABLE';
       const table = object.tableId ? tableMap.get(object.tableId) : null;
       const meta = parseMetaJson(object.metaJson);
