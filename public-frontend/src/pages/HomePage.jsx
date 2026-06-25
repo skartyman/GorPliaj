@@ -74,6 +74,16 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Venue Map */}
+      <section className="content-section map-scheme-section">
+        <div className="section-header">
+          <h2>{c({ ua: 'Схема комплексу', ru: 'Схема комплекса', en: 'Venue Layout' })}</h2>
+        </div>
+        <div className="map-scheme-container">
+          <img src="/icons/public-map.png" alt={c({ ua: 'Схема комплексу', ru: 'Схема комплекса', en: 'Venue Layout' })} className="map-scheme-image" loading="lazy" />
+        </div>
+      </section>
+
       {/* Events */}
       <section className="content-section">
         <div className="section-header">
