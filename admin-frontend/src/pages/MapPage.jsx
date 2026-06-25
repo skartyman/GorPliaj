@@ -788,6 +788,8 @@ export default function MapPage() {
     offsetY: MAP_PREVIEW_GUTTER
   }), [mapDimensions.height, mapDimensions.width]);
 
+  const [computedViewportHeight, setComputedViewportHeight] = useState('auto');
+
   const { containerRef, containerNode, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
     worldWidth: mapRenderFrame.width,
     worldHeight: mapRenderFrame.height,
