@@ -713,9 +713,11 @@ export default function MapPage() {
     });
   }, []);
 
-  async function loadMapData() {
+  async function loadMapData(silent = false) {
     if (!selectedMapId) return;
-    setState((prev) => ({ ...prev, loading: true, error: '' }));
+    if (!silent) {
+      setState((prev) => ({ ...prev, loading: true, error: '' }));
+    }
     const [mapResult, reservationsResult, availabilityResult] = await Promise.all([
       apiRequest(`/api/maps/${selectedMapId}`),
       apiRequest('/api/admin/reservations'),
@@ -755,7 +757,7 @@ export default function MapPage() {
     if (!table) return;
     const result = await apiRequest(`/api/admin/tables/${table.id}/arrive`, { method: 'POST' });
     if (result.response.ok) {
-      loadMapData();
+      loadMapData(true);
     } else {
       alert(result.body?.message || 'Помилка');
     }
@@ -769,9 +771,9 @@ export default function MapPage() {
     if (result.response.ok) {
       setQrResult({ type: 'success', message: 'Гостя відмічено!' });
       setQrTicketCode('');
-      loadMapData();
+      loadMapData(true);
     } else {
-      setQrResult({ type: 'error', message: result.body?.message || 'Не вдалося відмітити гостя' });
+      setQrResult({ type: 'error', message: result.body?.message || 'Не вдалося відмітить гостя' });
     }
   }
 
@@ -786,10 +788,17 @@ export default function MapPage() {
     offsetY: MAP_PREVIEW_GUTTER
   }), [mapDimensions.height, mapDimensions.width]);
 
-  const [computedViewportHeight, setComputedViewportHeight] = useState('auto');
+  const { containerRef, containerNode, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
+    worldWidth: mapRenderFrame.width,
+    worldHeight: mapRenderFrame.height,
+    fitWorldWidth: mapDimensions.width,
+    fitWorldHeight: mapDimensions.height,
+    minScale: 0.22,
+    maxScale: 3
+  });
 
   useEffect(() => {
-    const node = containerRef.current;
+    const node = containerNode;
     if (!node) return;
     const update = () => {
       const w = node.offsetWidth;
@@ -802,16 +811,7 @@ export default function MapPage() {
     const ro = new ResizeObserver(update);
     ro.observe(node);
     return () => ro.disconnect();
-  }, [mapDimensions]);
-
-  const { containerRef, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
-    worldWidth: mapRenderFrame.width,
-    worldHeight: mapRenderFrame.height,
-    fitWorldWidth: mapDimensions.width,
-    fitWorldHeight: mapDimensions.height,
-    minScale: 0.22,
-    maxScale: 3
-  });
+  }, [containerNode, mapDimensions]);
 
   const tableMap = useMemo(
     () => new Map((state.mapData?.tables || []).map((table) => [table.id, table])),
@@ -1292,7 +1292,7 @@ export default function MapPage() {
         reservation.id === id ? { ...reservation, status: result.body?.reservation?.status || status } : reservation
       )
     }));
-    loadMapData();
+    loadMapData(true);
   }
 
   async function submitBookingForm(event) {
@@ -1342,7 +1342,7 @@ export default function MapPage() {
       success: 'Бронь створено.',
       open: false
     }));
-    loadMapData();
+    loadMapData(true);
   }
 
   return (
@@ -1363,14 +1363,14 @@ export default function MapPage() {
           </div>
         </section>
 
-        {state.loading ? <div className="map-state">{t('map.loading')}</div> : null}
+        {state.loading && !state.mapData ? <div className="map-state">{t('map.loading')}</div> : null}
         {state.error ? <div className="map-state error">{state.error}</div> : null}
 
         {!state.loading && !state.error && !state.mapData?.map ? (
           <div className="map-state muted">Map is empty. Add map data in editor.</div>
         ) : null}
 
-        {!state.loading && !state.error && state.mapData?.map ? (
+        {!state.error && state.mapData?.map ? (
           <>
             <div className="map-header-controls">
               <input

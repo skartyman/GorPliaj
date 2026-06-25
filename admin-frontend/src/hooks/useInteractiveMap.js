@@ -50,7 +50,11 @@ export function useInteractiveMap({
   minScale: minScaleProp = 0.6,
   maxScale = 3.2
 }) {
-  const containerRef = useRef(null);
+  const [containerNode, setContainerNode] = useState(null);
+  const containerRef = useCallback((node) => {
+    setContainerNode(node);
+  }, []);
+
   const pointersRef = useRef(new Map());
   const panStartRef = useRef(null);
   const pinchStartRef = useRef(null);
@@ -97,7 +101,7 @@ export function useInteractiveMap({
   );
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerNode) return;
     console.log('[MAP] listeners attach', performance.now().toFixed(0));
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -118,9 +122,9 @@ export function useInteractiveMap({
           : result;
       });
     });
-    observer.observe(containerRef.current);
+    observer.observe(containerNode);
     return () => observer.disconnect();
-  }, [clampTranslate, fitWorldHeight, fitWorldWidth, worldHeight, worldWidth]);
+  }, [containerNode, clampTranslate, fitWorldHeight, fitWorldWidth, worldHeight, worldWidth]);
 
   useEffect(() => {
     setTransform((current) => {
@@ -133,7 +137,7 @@ export function useInteractiveMap({
 
   const zoomAtPoint = useCallback(
     (nextScale, clientX, clientY) => {
-      const node = containerRef.current;
+      const node = containerNode;
       if (!node) return;
       const rect = node.getBoundingClientRect();
       const focalX = clientX - rect.left;
@@ -148,14 +152,14 @@ export function useInteractiveMap({
         return clampTranslate(nextTranslateX, nextTranslateY, boundedScale);
       });
     },
-    [clampTranslate, maxScale, minScale]
+    [containerNode, clampTranslate, maxScale, minScale]
   );
 
   const zoomAtPointRef = useRef(zoomAtPoint);
   zoomAtPointRef.current = zoomAtPoint;
 
   useEffect(() => {
-    const node = containerRef.current;
+    const node = containerNode;
     if (!node) return;
 
     function onPointerDown(event) {
@@ -240,19 +244,19 @@ export function useInteractiveMap({
       node.removeEventListener('pointercancel', onPointerUp);
       node.removeEventListener('wheel', onWheel);
     };
-  }, [clampTranslate]);
+  }, [containerNode, clampTranslate]);
 
   const zoomIn = useCallback(() => {
-    const rect = containerRef.current?.getBoundingClientRect();
+    const rect = containerNode?.getBoundingClientRect();
     if (!rect) return;
     zoomAtPoint(transform.scale * ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  }, [transform.scale, zoomAtPoint]);
+  }, [containerNode, transform.scale, zoomAtPoint]);
 
   const zoomOut = useCallback(() => {
-    const rect = containerRef.current?.getBoundingClientRect();
+    const rect = containerNode?.getBoundingClientRect();
     if (!rect) return;
     zoomAtPoint(transform.scale / ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  }, [transform.scale, zoomAtPoint]);
+  }, [containerNode, transform.scale, zoomAtPoint]);
 
   const fitToView = useCallback(() => {
     const centered = getCenteredTranslate(viewport, worldWidth, worldHeight, fitViewScale);
@@ -275,6 +279,7 @@ export function useInteractiveMap({
 
   return {
     containerRef,
+    containerNode,
     transform,
     minScale,
     maxScale,
