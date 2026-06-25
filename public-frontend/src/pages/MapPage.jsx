@@ -233,24 +233,25 @@ function VisualSchedule({ bookingKind, locale }) {
   const isBeach = bookingKind === 'BEACH';
   const startHour = 8;
   const endHour = 22;
-  const totalHours = endHour - startHour;
+  const totalHours = endHour - startHour; // 14
 
   const activeStart = 9;
-  const activeEnd = isBeach ? 13 : 20;
+  const tableWidthPercent = ((20 - 9) / totalHours) * 100;
+  const beachArrivalWidthPercent = ((13 - 9) / totalHours) * 100;
+  const beachLeisureWidthPercent = ((20 - 13) / totalHours) * 100;
 
   const leftPercent = ((activeStart - startHour) / totalHours) * 100;
-  const widthPercent = ((activeEnd - activeStart) / totalHours) * 100;
 
   const label = isBeach
     ? {
-        ua: 'Обовʼязкова явка гостя: 09:00 - 13:00',
-        ru: 'Обязательная явка гостя: 09:00 - 13:00',
-        en: 'Mandatory guest arrival: 09:00 - 13:00'
+        ua: 'Пляж: бронь на весь день (обовʼязкова явка 09:00 - 13:00)',
+        ru: 'Пляж: бронь на весь день (обязательная явка 09:00 - 13:00)',
+        en: 'Beach: full day booking (mandatory arrival 09:00 - 13:00)'
       }
     : {
-        ua: 'Графік бронювання столів: 09:00 - 20:00',
-        ru: 'График бронирования столов: 09:00 - 20:00',
-        en: 'Table booking hours: 09:00 - 20:00'
+        ua: 'Столи: час бронювання 09:00 - 20:00',
+        ru: 'Столы: время бронирования 09:00 - 20:00',
+        en: 'Tables: booking hours 09:00 - 20:00'
       };
 
   const getCopy = (dict) => dict[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || dict['en'];
@@ -269,24 +270,72 @@ function VisualSchedule({ bookingKind, locale }) {
         <span>{getCopy(label)}</span>
       </div>
       
-      <div style={{ position: 'relative', height: '6px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '3px', overflow: 'hidden', margin: '8px 0 4px' }}>
-        <div style={{
-          position: 'absolute',
-          left: `${leftPercent}%`,
-          width: `${widthPercent}%`,
-          height: '100%',
-          backgroundColor: isBeach ? 'var(--brand)' : 'var(--success)',
-          borderRadius: '3px'
-        }} />
+      {/* The timeline bar */}
+      <div style={{ position: 'relative', height: '8px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 4px' }}>
+        {isBeach ? (
+          <>
+            {/* Beach Arrival Window: 09:00 - 13:00 (Solid Gold/Brand) */}
+            <div style={{
+              position: 'absolute',
+              left: `${leftPercent}%`,
+              width: `${beachArrivalWidthPercent}%`,
+              height: '100%',
+              backgroundColor: 'var(--brand)',
+              borderRadius: '4px 0 0 4px'
+            }} title={getCopy({ ua: 'Обовʼязкова явка', ru: 'Обязательная явка', en: 'Mandatory arrival' })} />
+            
+            {/* Beach Rest Window: 13:00 - 20:00 (Semi-transparent Brand) */}
+            <div style={{
+              position: 'absolute',
+              left: `${((13 - startHour) / totalHours) * 100}%`,
+              width: `${beachLeisureWidthPercent}%`,
+              height: '100%',
+              backgroundColor: 'var(--brand)',
+              opacity: 0.35,
+              borderRadius: '0 4px 4px 0'
+            }} title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })} />
+          </>
+        ) : (
+          /* Table Booking Window: 09:00 - 20:00 (Solid Green) */
+          <div style={{
+            position: 'absolute',
+            left: `${leftPercent}%`,
+            width: `${tableWidthPercent}%`,
+            height: '100%',
+            backgroundColor: 'var(--success)',
+            borderRadius: '4px'
+          }} />
+        )}
       </div>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>
+      {/* Time marks & legends */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500', marginTop: '6px' }}>
         <span>08:00</span>
         <span style={{ color: isBeach ? 'var(--brand)' : 'inherit', fontWeight: isBeach ? '700' : '500' }}>09:00</span>
-        {isBeach && <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>}
-        {!isBeach && <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>}
+        {isBeach ? (
+          <>
+            <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>
+            <span style={{ color: 'var(--brand)', opacity: 0.8 }}>20:00</span>
+          </>
+        ) : (
+          <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>
+        )}
         <span>22:00</span>
       </div>
+
+      {/* Mini legend showing what the colors mean for Beach */}
+      {isBeach && (
+        <div style={{ display: 'flex', gap: 10, marginTop: '6px', fontSize: '0.62rem', color: 'var(--muted)', flexWrap: 'wrap', borderTop: '1px solid var(--line)', paddingTop: '6px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, backgroundColor: 'var(--brand)', borderRadius: '2px' }} />
+            {getCopy({ ua: 'Реєстрація (явка)', ru: 'Регистрация (явка)', en: 'Mandatory Check-in' })}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, backgroundColor: 'var(--brand)', opacity: 0.35, borderRadius: '2px' }} />
+            {getCopy({ ua: 'Час відпочинку (бронь діє)', ru: 'Время отдыха (бронь действует)', en: 'Rest Time (booking active)' })}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -659,7 +708,13 @@ export default function MapPage() {
 
   const navigate = useNavigate();
 
-  const resolvedBookingKind = state.result?.map?.bookingKind || 'TABLE';
+  const resolvedBookingKind = useMemo(() => {
+    if (!state.result?.map) return 'TABLE';
+    const hasBeachTable = state.result.map.zones?.some((zone) =>
+      zone.tables?.some((table) => table.bookingKind === 'BEACH')
+    );
+    return hasBeachTable ? 'BEACH' : 'TABLE';
+  }, [state.result]);
   const timeSlots = useMemo(() => {
     return generateTimeSlots(date, today, currentTime, resolvedBookingKind);
   }, [date, today, currentTime, resolvedBookingKind]);

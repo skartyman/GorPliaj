@@ -217,24 +217,25 @@ function VisualSchedule({ bookingKind, locale }) {
   const isBeach = bookingKind === 'BEACH';
   const startHour = 8;
   const endHour = 22;
-  const totalHours = endHour - startHour;
+  const totalHours = endHour - startHour; // 14
 
   const activeStart = 9;
-  const activeEnd = isBeach ? 13 : 20;
+  const tableWidthPercent = ((20 - 9) / totalHours) * 100;
+  const beachArrivalWidthPercent = ((13 - 9) / totalHours) * 100;
+  const beachLeisureWidthPercent = ((20 - 13) / totalHours) * 100;
 
   const leftPercent = ((activeStart - startHour) / totalHours) * 100;
-  const widthPercent = ((activeEnd - activeStart) / totalHours) * 100;
 
   const label = isBeach
     ? {
-        ua: 'Обовʼязкова явка гостя: 09:00 - 13:00',
-        ru: 'Обязательная явка гостя: 09:00 - 13:00',
-        en: 'Mandatory guest arrival: 09:00 - 13:00'
+        ua: 'Пляж: бронь на весь день (обовʼязкова явка 09:00 - 13:00)',
+        ru: 'Пляж: бронь на весь день (обязательная явка 09:00 - 13:00)',
+        en: 'Beach: full day booking (mandatory arrival 09:00 - 13:00)'
       }
     : {
-        ua: 'Графік бронювання столів: 09:00 - 20:00',
-        ru: 'График бронирования столов: 09:00 - 20:00',
-        en: 'Table booking hours: 09:00 - 20:00'
+        ua: 'Столи: час бронювання 09:00 - 20:00',
+        ru: 'Столы: время бронирования 09:00 - 20:00',
+        en: 'Tables: booking hours 09:00 - 20:00'
       };
 
   const getCopy = (dict) => dict[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || dict['en'];
@@ -253,24 +254,72 @@ function VisualSchedule({ bookingKind, locale }) {
         <span>{getCopy(label)}</span>
       </div>
       
-      <div style={{ position: 'relative', height: '6px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '3px', overflow: 'hidden', margin: '8px 0 4px' }}>
-        <div style={{
-          position: 'absolute',
-          left: `${leftPercent}%`,
-          width: `${widthPercent}%`,
-          height: '100%',
-          backgroundColor: isBeach ? 'var(--brand)' : 'var(--success)',
-          borderRadius: '3px'
-        }} />
+      {/* The timeline bar */}
+      <div style={{ position: 'relative', height: '8px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 4px' }}>
+        {isBeach ? (
+          <>
+            {/* Beach Arrival Window: 09:00 - 13:00 (Solid Gold/Brand) */}
+            <div style={{
+              position: 'absolute',
+              left: `${leftPercent}%`,
+              width: `${beachArrivalWidthPercent}%`,
+              height: '100%',
+              backgroundColor: 'var(--brand)',
+              borderRadius: '4px 0 0 4px'
+            }} title={getCopy({ ua: 'Обовʼязкова явка', ru: 'Обязательная явка', en: 'Mandatory arrival' })} />
+            
+            {/* Beach Rest Window: 13:00 - 20:00 (Semi-transparent Brand) */}
+            <div style={{
+              position: 'absolute',
+              left: `${((13 - startHour) / totalHours) * 100}%`,
+              width: `${beachLeisureWidthPercent}%`,
+              height: '100%',
+              backgroundColor: 'var(--brand)',
+              opacity: 0.35,
+              borderRadius: '0 4px 4px 0'
+            }} title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })} />
+          </>
+        ) : (
+          /* Table Booking Window: 09:00 - 20:00 (Solid Green) */
+          <div style={{
+            position: 'absolute',
+            left: `${leftPercent}%`,
+            width: `${tableWidthPercent}%`,
+            height: '100%',
+            backgroundColor: 'var(--success)',
+            borderRadius: '4px'
+          }} />
+        )}
       </div>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>
+      {/* Time marks & legends */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500', marginTop: '6px' }}>
         <span>08:00</span>
         <span style={{ color: isBeach ? 'var(--brand)' : 'inherit', fontWeight: isBeach ? '700' : '500' }}>09:00</span>
-        {isBeach && <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>}
-        {!isBeach && <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>}
+        {isBeach ? (
+          <>
+            <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>
+            <span style={{ color: 'var(--brand)', opacity: 0.8 }}>20:00</span>
+          </>
+        ) : (
+          <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>
+        )}
         <span>22:00</span>
       </div>
+
+      {/* Mini legend showing what the colors mean for Beach */}
+      {isBeach && (
+        <div style={{ display: 'flex', gap: 10, marginTop: '6px', fontSize: '0.62rem', color: 'var(--muted)', flexWrap: 'wrap', borderTop: '1px solid var(--line)', paddingTop: '6px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, backgroundColor: 'var(--brand)', borderRadius: '2px' }} />
+            {getCopy({ ua: 'Реєстрація (явка)', ru: 'Регистрация (явка)', en: 'Mandatory Check-in' })}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, backgroundColor: 'var(--brand)', opacity: 0.35, borderRadius: '2px' }} />
+            {getCopy({ ua: 'Час відпочинку (бронь діє)', ru: 'Время отдыха (бронь действует)', en: 'Rest Time (booking active)' })}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1165,8 +1214,41 @@ export default function BookingPage() {
                       setBookingKind(option.value);
                       setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
                     }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}
                   >
+                    <div style={{
+                      color: bookingKind === option.value ? 'var(--brand)' : 'var(--muted)',
+                      transition: 'color var(--transition)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      padding: '8px 0 0'
+                    }}>
+                      {option.value === 'TABLE' ? (
+                        <svg viewBox="0 0 100 60" width="72" height="44" style={{ display: 'block' }}>
+                          {/* Table top */}
+                          <ellipse cx="50" cy="25" rx="32" ry="11" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                          {/* Table legs */}
+                          <line x1="35" y1="25" x2="35" y2="48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                          <line x1="65" y1="25" x2="65" y2="48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                          <line x1="50" y1="35" x2="50" y2="48" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+                          {/* Chairs schematic */}
+                          <path d="M12 20h6v12h-6zM82 20h6v12h-6z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" opacity="0.6" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 100 60" width="72" height="44" style={{ display: 'block' }}>
+                          {/* Umbrella */}
+                          <path d="M25 44 L25 15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                          <path d="M8 20 C8 10, 42 10, 42 20 Z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+                          <path d="M8 20 Q25 16 42 20" stroke="currentColor" strokeWidth="1.5" fill="none" opacity="0.8" />
+                          <line x1="25" y1="10" x2="25" y2="20" stroke="currentColor" strokeWidth="1.5" opacity="0.8" />
+                          
+                          {/* Sunbed / Lounge Chair */}
+                          <path d="M45 42 L65 32 L85 32 L92 22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <line x1="53" y1="38" x2="53" y2="45" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                          <line x1="78" y1="32" x2="78" y2="45" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      )}
+                    </div>
                     <strong>{localized.title}</strong>
                     <span>{localized.body}</span>
                     <VisualSchedule bookingKind={option.value} locale={locale} />
