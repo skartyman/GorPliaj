@@ -8,6 +8,7 @@ import { useSettings } from '../state/settings';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import GalleryCarousel from '../components/GalleryCarousel';
 import WeatherBlock from '../components/WeatherBlock';
+import EventCard from '../components/EventCard';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
@@ -114,41 +115,9 @@ export default function HomePage() {
         </div>
         <div className="events-grid">
           {state.events.length ? (
-            state.events.map((event) => {
-              const eventTitle = localizeField(event.title, locale);
-              const cta = event.ctaType || '';
-              const hasBooking = cta === 'BOOKING' || cta === 'BOTH';
-              const hasTickets = cta === 'TICKETS' || cta === 'BOTH';
-              return (
-                <article key={event.id} className="event-card">
-                  <Link to={`/events/${event.slug}`} className="media-link">
-                    <img src={event.posterImage || '/icons/moonpirs.jpg'} alt={eventTitle} loading="lazy" />
-                    <div className="event-overlay">
-                      <p className="event-date">{formatEventDateRange(event.startAt, event.endAt)}</p>
-                      <h3>{eventTitle}</h3>
-                    </div>
-                  </Link>
-                  <div className="event-card-actions">
-                    {hasBooking ? (
-                      <Link className="btn btn-primary btn-small" to={`/booking?event=${event.slug}`}>
-                        {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
-                      </Link>
-                    ) : null}
-                    {hasTickets ? (
-                      event.ticketUrl ? (
-                        <a className="btn btn-secondary btn-small" href={event.ticketUrl} target="_blank" rel="noreferrer">
-                          {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
-                        </a>
-                      ) : (
-                        <Link className="btn btn-secondary btn-small" to={`/events/${event.slug}?focus=tickets`}>
-                          {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
-                        </Link>
-                      )
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })
+            state.events.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))
           ) : (
             <div className="state-msg">{c({ ua: 'Нові події скоро зʼявляться', ru: 'Новые события скоро появятся', en: 'New events coming soon' })}</div>
           )}
