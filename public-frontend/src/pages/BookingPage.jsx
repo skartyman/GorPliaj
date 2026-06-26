@@ -1224,8 +1224,10 @@ export default function BookingPage() {
                     type="button"
                     className={`booking-kind-card booking-kind-card-${option.value.toLowerCase()}${bookingKind === option.value ? ' active' : ''}`}
                     onClick={() => {
-                      setBookingKind(option.value);
-                      setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                      if (bookingKind !== option.value) {
+                        setBookingKind(option.value);
+                        setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                      }
                       setCurrentStep(2);
                     }}
                   >
@@ -1259,8 +1261,11 @@ export default function BookingPage() {
               className="form-input"
               value={selectedEventSlug}
               onChange={(event) => {
-                setSelectedEventSlug(event.target.value);
-                setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                const val = event.target.value;
+                if (selectedEventSlug !== val) {
+                  setSelectedEventSlug(val);
+                  setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
+                }
               }}
             >
               <option value="">{c({ ua: 'Оберіть подію', ru: 'Выберите событие', en: 'Choose an event' })}</option>
@@ -1431,9 +1436,15 @@ export default function BookingPage() {
 </>)}
 
         {currentStep === 3 && (<>
-        {mapsState.loading ? (
+        {(mapsState.loading || unitsState.loading || (mapsState.maps.length > 0 && !selected.mapId)) ? (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            <div className="state-msg">{c({ ua: 'Завантажуємо доступні місця...', ru: 'Загружаем доступные места...', en: 'Loading available places...' })}</div>
+            <div className="state-msg">
+              {c({
+                ua: 'Завантажуємо доступні місця...',
+                ru: 'Загружаем доступные места...',
+                en: 'Loading available places...'
+              })}
+            </div>
           </div>
         ) : unitsState.zones.length > 0 ? (<>
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -1569,9 +1580,7 @@ export default function BookingPage() {
         )}
         </>) : (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            {unitsState.loading ? (
-              <div className="state-msg">{c({ ua: 'Оновлюємо доступні позиції...', ru: 'Обновляем доступные позиции...', en: 'Refreshing available positions...' })}</div>
-            ) : unitsState.error ? (
+            {unitsState.error ? (
               <div className="state-msg state-error">{unitsState.error}</div>
             ) : (
               <div className="state-msg">
