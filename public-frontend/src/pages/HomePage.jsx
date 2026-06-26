@@ -106,7 +106,9 @@ export default function HomePage() {
         <div className="gallery-scroll">
           {menuPhotos.map((photo) => (
             <div key={photo} className="gallery-item">
-              <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" />
+              <Link to="/menu" style={{ display: 'block' }}>
+                <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" style={{ cursor: 'pointer' }} />
+              </Link>
             </div>
           ))}
         </div>
