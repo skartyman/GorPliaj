@@ -1595,6 +1595,16 @@ export default function BookingPage() {
                 <strong>{getUnitDisplayName(selectedUnit, locale)}</strong>
                 <span>{selectedMetaLine}</span>
                 {selectedUnit.rowSortOrder != null ? <span className="muted small">{c({ ua: 'Ряд', ru: 'Ряд', en: 'Row' })} {selectedUnit.rowSortOrder}</span> : null}
+                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                    📅 {formatUkrainianDate(form.date, { weekday: true })}
+                  </span>
+                  {form.timeFrom ? (
+                    <span className="muted">
+                      🕒 {c({ ua: 'Час', ru: 'Время', en: 'Time' })}: {form.timeFrom}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <div className="booking-selected-meta">
                 <span>{positionTypeLabel(selectedUnit.positionType)}</span>
