@@ -685,7 +685,7 @@ async function createAdminReservation(req, res) {
 
 async function verifyAdminReservation(req, res) {
   try {
-    const ticketCode = String(req.params.ticketCode || '').trim();
+    const ticketCode = String(req.params.ticketCode || '').trim().toUpperCase();
     const signature = String(req.query.t || '').trim();
     if (!ticketCode) {
       return res.status(400).json({ message: 'Ticket code is required.' });

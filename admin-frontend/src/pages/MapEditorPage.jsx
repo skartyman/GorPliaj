@@ -1014,6 +1014,42 @@ function MapSettings({ map, onMapFieldChange, t }) {
   return (
     <div className="editor-properties-stack">
       <div className="editor-form-grid map-settings-grid">
+        <label className="map-settings-span-2">
+          <span>Назва карти (UA)</span>
+          <input
+            type="text"
+            value={map.name?.ua || (typeof map.name === 'string' ? map.name : '')}
+            onChange={(event) => {
+              const currentName = typeof map.name === 'object' && map.name ? map.name : { ua: '', ru: '', en: '' };
+              onMapFieldChange('name', { ...currentName, ua: event.target.value });
+            }}
+          />
+        </label>
+
+        <label className="map-settings-span-2">
+          <span>Назва карти (RU)</span>
+          <input
+            type="text"
+            value={map.name?.ru || ''}
+            onChange={(event) => {
+              const currentName = typeof map.name === 'object' && map.name ? map.name : { ua: '', ru: '', en: '' };
+              onMapFieldChange('name', { ...currentName, ru: event.target.value });
+            }}
+          />
+        </label>
+
+        <label className="map-settings-span-2">
+          <span>Назва карти (EN)</span>
+          <input
+            type="text"
+            value={map.name?.en || ''}
+            onChange={(event) => {
+              const currentName = typeof map.name === 'object' && map.name ? map.name : { ua: '', ru: '', en: '' };
+              onMapFieldChange('name', { ...currentName, en: event.target.value });
+            }}
+          />
+        </label>
+
         <label>
           <span>{t('mapEditor.fields.mapWidth')}</span>
           <input
@@ -4047,6 +4083,8 @@ export default function MapEditorPage() {
 
     const payload = {
       map: {
+        name: stateToSave.current.map.name,
+        description: stateToSave.current.map.description || null,
         width: stateToSave.current.map.width,
         height: stateToSave.current.map.height,
         backgroundImage: stateToSave.current.map.backgroundImage || null,

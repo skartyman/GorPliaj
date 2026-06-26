@@ -74,9 +74,17 @@ export default function TicketVerificationPage() {
   function parseQrUrl(url) {
     try {
       const parsed = new URL(url);
-      const segments = parsed.pathname.split('/');
-      const ticketCode = segments[segments.length - 1];
+      
+      // Try to get ticket from query parameter first (new format)
+      let ticketCode = parsed.searchParams.get('ticket');
       const signature = parsed.searchParams.get('t') || '';
+      
+      // If not in query parameter, get it from the last segment of the path (old format)
+      if (!ticketCode) {
+        const segments = parsed.pathname.split('/');
+        ticketCode = segments[segments.length - 1];
+      }
+      
       if (!ticketCode || !/^GP(?:T)?-/i.test(ticketCode)) return null;
       return { ticketCode: ticketCode.toUpperCase(), signature };
     } catch {
@@ -335,8 +343,8 @@ export default function TicketVerificationPage() {
               <div><strong>{t('verifyTicket.guest')}:</strong> {verifyResult.customerName}</div>
               <div><strong>{t('verifyTicket.phone')}:</strong> {verifyResult.customerPhone}</div>
               {verifyResult.customerEmail && <div><strong>{t('verifyTicket.email')}:</strong> {verifyResult.customerEmail}</div>}
-              <div><strong>{t('verifyTicket.table')}:</strong> {verifyResult.table?.name || '—'}</div>
-              <div><strong>{t('verifyTicket.zone')}:</strong> {verifyResult.zone?.name || '—'}</div>
+              <div><strong>{t('verifyTicket.table')}:</strong> {localizeField(verifyResult.table?.name, language) || '—'}</div>
+              <div><strong>{t('verifyTicket.zone')}:</strong> {localizeField(verifyResult.zone?.name, language) || '—'}</div>
               <div><strong>{t('verifyTicket.guests')}:</strong> {verifyResult.guests}</div>
               <div><strong>{t('verifyTicket.date')}:</strong> {formatDate(verifyResult.reservationDate)}</div>
               <div><strong>{t('verifyTicket.time')}:</strong> {formatTime(verifyResult.timeFrom)} — {formatTime(verifyResult.timeTo)}</div>

@@ -120,7 +120,8 @@ async function listTickets(req, res) {
 
 async function verifyTicket(req, res) {
   try {
-    const ticket = await ticketSalesService.verifyTicket(req.params.code);
+    const ticketCode = String(req.params.code || '').trim().toUpperCase();
+    const ticket = await ticketSalesService.verifyTicket(ticketCode);
     if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
 
     const signature = String(req.query.t || '').trim();
@@ -138,7 +139,8 @@ async function verifyTicket(req, res) {
 
 async function useTicket(req, res) {
   try {
-    const result = await ticketSalesService.useTicket(req.params.code, Number(req.adminAuth.sub) || null);
+    const ticketCode = String(req.params.code || '').trim().toUpperCase();
+    const result = await ticketSalesService.useTicket(ticketCode, Number(req.adminAuth.sub) || null);
     if (result.type === 'NOT_FOUND') return res.status(404).json({ message: 'Ticket not found.' });
     if (result.type === 'INVALID_STATUS') {
       return res.status(409).json({ message: `Ticket cannot be used in status ${result.status}.`, status: result.status });

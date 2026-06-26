@@ -5,7 +5,7 @@ const { fitMapToObjects, getMapContentSize } = require('../utils/mapBounds');
 const positionTypeService = require('./adminPositionTypeService');
 
 const EDITABLE_FIELDS = ['label', 'x', 'y', 'width', 'height', 'rotation', 'zIndex', 'isActive', 'tableId', 'type', 'styleJson', 'metaJson'];
-const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor', 'usageMode'];
+const MAP_EDITABLE_FIELDS = ['width', 'height', 'backgroundImage', 'backgroundColor', 'usageMode', 'name', 'description'];
 const TABLE_EDITABLE_FIELDS = ['photoUrl', 'code', 'name', 'zoneId', 'bookingKind', 'positionType', 'positionSide', 'rowId', 'serviceName', 'serviceDescription', 'sortOrder', 'seatsMin', 'seatsMax', 'deposit', 'isActive', 'isBookable'];
 const VALID_OBJECT_TYPES = new Set(Object.values(MapObjectType));
 const VALID_POSITION_SIDES = new Set(Object.values(VenuePositionSide));
@@ -414,6 +414,11 @@ function normalizeMapInput(mapInput) {
 
     if (field === 'backgroundImage' || field === 'backgroundColor') {
       normalized[field] = String(mapInput?.[field] ?? '').trim() || null;
+      continue;
+    }
+
+    if (field === 'name' || field === 'description') {
+      normalized[field] = normalizeJsonValue(mapInput?.[field]);
       continue;
     }
 

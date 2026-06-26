@@ -560,17 +560,25 @@ function getNextZoneCode(zoneId, tables, zones, map, language) {
 
 function formatCountdown(reservation) {
   if (!reservation?.timeFrom) return null;
-  const [h, m] = reservation.timeFrom.split(':').map(Number);
-  const target = new Date();
   
-  if (reservation.reservationDate) {
-    const resDate = new Date(reservation.reservationDate);
-    if (!isNaN(resDate.getTime())) {
-      target.setFullYear(resDate.getFullYear(), resDate.getMonth(), resDate.getDate());
+  let target;
+  if (String(reservation.timeFrom).includes('T') || String(reservation.timeFrom).includes('-')) {
+    // It is a full ISO date-time string
+    target = new Date(reservation.timeFrom);
+  } else {
+    // It is a time string like "11:30" or "11:30:00"
+    const [h, m] = String(reservation.timeFrom).split(':').map(Number);
+    target = new Date();
+    if (reservation.reservationDate) {
+      const resDate = new Date(reservation.reservationDate);
+      if (!isNaN(resDate.getTime())) {
+        target.setFullYear(resDate.getFullYear(), resDate.getMonth(), resDate.getDate());
+      }
     }
+    target.setHours(h, m, 0, 0);
   }
-  target.setHours(h, m, 0, 0);
-  
+
+  if (isNaN(target.getTime())) return null;
   const diff = target.getTime() - Date.now();
   
   if (diff > 0) {

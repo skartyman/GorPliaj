@@ -239,7 +239,7 @@ export default function Layout() {
             </h3>
             <div className="footer-bottom-map">
               <iframe
-                src={settings?.mapEmbedUrl || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2772.5!2d30.69!3d46.43!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDbCsDI1JzQ4LjAiTiAzMMKwNDEnMjQuMCJF!5e0!3m2!1sru!2sua!4v1'}
+                src={settings?.mapEmbedUrl || 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2748.1101073081163!2d30.760074076162997!3d46.46632697110812!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40c6316da36953e3%3A0x2b70bc50fb4d0f2c!2z0JPQvtGA0L_Qu9GP0LY!5e0!3m2!1suk!2sua!4v1776606820066!5m2!1suk!2sua'}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -256,7 +256,25 @@ export default function Layout() {
               <NavLink to="/payment-returns">{paymentReturnsLinkText}</NavLink>
               <span className="footer-legal-note">{menuServiceNotice}</span>
             </div>
-            <span>{rightsText}</span>
+            <span>
+              {rightsText} · {localizedCopy({ ua: 'Розроблено ', ru: 'Разработано ', en: 'Developed by ' }, locale)}
+              <a
+                href="https://velych.pp.ua"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  fontWeight: '800',
+                  letterSpacing: '0.03em',
+                  marginLeft: '4px',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+              >
+                <span style={{ color: '#a3e635', marginRight: '2px', fontWeight: '800' }}>//</span>VELYCH.CO
+              </a>
+            </span>
           </div>
         </div>
       </footer>

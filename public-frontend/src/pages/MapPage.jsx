@@ -945,11 +945,14 @@ export default function MapPage() {
   function zoomTo(nextScale, pivotX, pivotY) {
     if (!viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
-    const boundedScale = clamp(nextScale, transform.minScale, transform.maxScale);
-    const localX = pivotX ?? rect.width / 2;
-    const localY = pivotY ?? rect.height / 2;
-    const anchored = zoomAroundViewportPoint(localX, localY, boundedScale, transform.scale, transform.translateX, transform.translateY);
-    applyTransform(boundedScale, anchored.translateX, anchored.translateY);
+    const boundedScale = clamp(nextScale, transform.minScale || 0.45, transform.maxScale || 3.5);
+    if (!Number.isFinite(boundedScale)) return;
+    const localX = Number.isFinite(pivotX) ? pivotX : rect.width / 2;
+    const localY = Number.isFinite(pivotY) ? pivotY : rect.height / 2;
+    const anchored = zoomAroundViewportPoint(localX, localY, boundedScale, transform.scale || 1, transform.translateX || 0, transform.translateY || 0);
+    if (Number.isFinite(anchored.translateX) && Number.isFinite(anchored.translateY)) {
+      applyTransform(boundedScale, anchored.translateX, anchored.translateY);
+    }
   }
 
   function fitWholeMap() {
@@ -1063,7 +1066,11 @@ export default function MapPage() {
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
-    viewportRef.current?.setPointerCapture(event.pointerId);
+    try {
+      viewportRef.current?.setPointerCapture(event.pointerId);
+    } catch (err) {
+      console.warn('Pointer capture failed:', err);
+    }
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 1) {
       dragStartRef.current = { x: event.clientX, y: event.clientY, translateX: transform.translateX, translateY: transform.translateY };
@@ -1071,12 +1078,14 @@ export default function MapPage() {
     }
     if (pointersRef.current.size === 2) {
       const [a, b] = Array.from(pointersRef.current.values());
-      pinchStartRef.current = {
-        distance: Math.hypot(a.x - b.x, a.y - b.y),
-        scale: transform.scale,
-        translateX: transform.translateX,
-        translateY: transform.translateY
-      };
+      if (a && b && Number.isFinite(a.x) && Number.isFinite(b.x)) {
+        pinchStartRef.current = {
+          distance: Math.hypot(a.x - b.x, a.y - b.y),
+          scale: transform.scale || 1,
+          translateX: transform.translateX || 0,
+          translateY: transform.translateY || 0
+        };
+      }
     }
   }
 
@@ -1093,30 +1102,42 @@ export default function MapPage() {
 
     if (pointersRef.current.size === 2 && viewportRef.current) {
       const [a, b] = Array.from(pointersRef.current.values());
+      if (!a || !b || !Number.isFinite(a.x) || !Number.isFinite(a.y) || !Number.isFinite(b.x) || !Number.isFinite(b.y)) return;
+
       const currentDistance = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
       const rect = viewportRef.current.getBoundingClientRect();
       const midpointX = (a.x + b.x) / 2 - rect.left;
       const midpointY = (a.y + b.y) / 2 - rect.top;
+      if (!Number.isFinite(midpointX) || !Number.isFinite(midpointY)) return;
+
       const nextScale = clamp(
-        pinchStartRef.current.scale * (1 + (currentDistance - pinchStartRef.current.distance) * PINCH_SENSITIVITY),
-        transform.minScale,
-        transform.maxScale
+        (pinchStartRef.current.scale || 1) * (1 + (currentDistance - (pinchStartRef.current.distance || 0)) * PINCH_SENSITIVITY),
+        transform.minScale || 0.45,
+        transform.maxScale || 3.5
       );
+      if (!Number.isFinite(nextScale)) return;
+
       const anchored = zoomAroundViewportPoint(
         midpointX,
         midpointY,
         nextScale,
-        pinchStartRef.current.scale,
-        pinchStartRef.current.translateX,
-        pinchStartRef.current.translateY
+        pinchStartRef.current.scale || 1,
+        pinchStartRef.current.translateX || 0,
+        pinchStartRef.current.translateY || 0
       );
-      applyTransform(nextScale, anchored.translateX, anchored.translateY);
+      if (Number.isFinite(anchored.translateX) && Number.isFinite(anchored.translateY)) {
+        applyTransform(nextScale, anchored.translateX, anchored.translateY);
+      }
     }
   }
 
   function handlePointerEnd(event) {
-    if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
-      viewportRef.current.releasePointerCapture(event.pointerId);
+    try {
+      if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
+        viewportRef.current.releasePointerCapture(event.pointerId);
+      }
+    } catch (err) {
+      console.warn('Pointer release failed:', err);
     }
     pointersRef.current.delete(event.pointerId);
     if (!pointersRef.current.size) {
@@ -1385,7 +1406,7 @@ export default function MapPage() {
                       <Component
                         key={object.id}
                         type={isSelectableObject ? 'button' : undefined}
-                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${selectedObjectId === object.id ? 'selected' : ''} ${linkedTable ? linkedTable.status : ''} ${linkedTable && !tableFitsGuests(linkedTable) ? 'no-fit' : ''}`}
+                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${(selectedObjectId === object.id || (selectedTableId && object.tableId === selectedTableId)) ? 'selected' : ''} ${linkedTable ? linkedTable.status : ''} ${linkedTable && !tableFitsGuests(linkedTable) ? 'no-fit' : ''}`}
                         style={{
                           left: object.x,
                           top: object.y,

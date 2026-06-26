@@ -428,7 +428,28 @@ async function listPublicEvents({ includePast = false, limit } = {}) {
   const events = await prisma.event.findMany({
     where: {
       status: 'PUBLISHED',
-      ...(includePast ? {} : { startAt: { gte: now } })
+      ...(includePast
+        ? {}
+        : {
+            OR: [
+              { startAt: { gte: now } },
+              { endAt: { gte: now } },
+              {
+                sessions: {
+                  some: {
+                    isActive: true,
+                    endsAt: { gte: now }
+                  }
+                }
+              }
+            ]
+          })
+    },
+    include: {
+      sessions: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { startsAt: 'asc' }, { id: 'asc' }]
+      }
     },
     orderBy: [{ startAt: 'asc' }, { id: 'asc' }],
     ...(Number.isInteger(limit) && limit > 0 ? { take: limit } : {})

@@ -34,13 +34,13 @@ function verifyTicketSignature(ticketCode, reservationDate, signature) {
 function buildVerifyUrl(ticketCode, reservationDate) {
   const baseUrl = process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev';
   const sig = generateTicketSignature(ticketCode, reservationDate);
-  return `${baseUrl}/api/admin/reservations/verify/${ticketCode}?t=${sig}`;
+  return `${baseUrl}/admin/verify-ticket?ticket=${encodeURIComponent(ticketCode)}&t=${sig}`;
 }
 
 function buildSaleTicketVerifyUrl(ticketCode) {
   const baseUrl = process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev';
   const sig = generateSaleTicketSignature(ticketCode);
-  return `${baseUrl}/api/admin/tickets/verify/${encodeURIComponent(ticketCode)}?t=${sig}`;
+  return `${baseUrl}/admin/verify-ticket?ticket=${encodeURIComponent(ticketCode)}&t=${sig}`;
 }
 
 function buildReservationStatusUrl(ticketCode, reservationDate) {
@@ -58,7 +58,7 @@ function buildReservationPdfUrl(ticketCode, reservationDate) {
 function buildDepositVerifyUrl(ticketCode, reservationDate) {
   const baseUrl = process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev';
   const sig = generateTicketSignature(ticketCode, reservationDate);
-  return `${baseUrl}/api/admin/reservations/verify/${encodeURIComponent(ticketCode)}?t=${sig}&view=deposit`;
+  return `${baseUrl}/admin/verify-ticket?ticket=${encodeURIComponent(ticketCode)}&t=${sig}&view=deposit`;
 }
 
 module.exports = {

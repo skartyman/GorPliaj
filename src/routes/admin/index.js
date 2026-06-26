@@ -134,7 +134,16 @@ router.post('/tables', requireAdminAuth, requirePermission('map:edit'), createAd
 router.delete('/tables/:id', requireAdminAuth, requirePermission('map:edit'), deleteAdminTable);
 router.post('/tables/batch', requireAdminAuth, requirePermission('map:edit'), batchUpdateAdminTables);
 router.post('/tables/:tableId/arrive', requireAdminAuth, requirePermission('reservations:arrive'), createAdminTableArrive);
-router.get('/reservations/verify/:ticketCode', requireAdminAuth, requirePermission('reservations:verify'), verifyAdminReservation);
+router.get('/reservations/verify/:ticketCode', (req, res, next) => {
+  if (req.headers.accept && req.headers.accept.includes('text/html')) {
+    const ticketCode = req.params.ticketCode;
+    const sig = req.query.t || '';
+    const view = req.query.view || '';
+    const redirectUrl = `/admin/verify-ticket?ticket=${encodeURIComponent(ticketCode)}&t=${encodeURIComponent(sig)}${view ? `&view=${encodeURIComponent(view)}` : ''}`;
+    return res.redirect(redirectUrl);
+  }
+  return next();
+}, requireAdminAuth, requirePermission('reservations:verify'), verifyAdminReservation);
 router.get('/reservations/:id', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationById);
 router.post('/reservations', requireAdminAuth, createAdminReservation);
 router.patch('/reservations/:id/status', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationStatus);
@@ -192,7 +201,14 @@ router.get('/ticket-orders/:id', requireAdminAuth, requirePermission('tickets:vi
 router.patch('/ticket-orders/:id/status', requireAdminAuth, requirePermission('tickets:manage'), updateOrderStatus);
 
 router.get('/tickets', requireAdminAuth, requirePermission('tickets:view'), listTickets);
-router.get('/tickets/verify/:code', requireAdminAuth, requirePermission('tickets:verify'), verifyTicket);
+router.get('/tickets/verify/:code', (req, res, next) => {
+  if (req.headers.accept && req.headers.accept.includes('text/html')) {
+    const code = req.params.code;
+    const sig = req.query.t || '';
+    return res.redirect(`/admin/verify-ticket?ticket=${encodeURIComponent(code)}&t=${encodeURIComponent(sig)}`);
+  }
+  return next();
+}, requireAdminAuth, requirePermission('tickets:verify'), verifyTicket);
 router.post('/tickets/verify/:code/use', requireAdminAuth, requirePermission('tickets:verify'), useTicket);
 
 router.get('/news', requireAdminAuth, requirePermission('news:view'), getAdminNews);

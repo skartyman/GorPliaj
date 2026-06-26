@@ -15,20 +15,19 @@ const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/z
 export default function HomePage() {
   const { t, locale } = useLocale();
   const { settings } = useSettings();
-  const [state, setState] = useState({ events: [], menuPreviewImages: [], news: [] });
+  const [state, setState] = useState({ events: [], menuPreviewImages: [] });
   useMeta(t('homeMetaTitle'), t('homeMetaDescription'));
 
   useEffect(() => {
     async function load() {
-      const [events, menu, news] = await Promise.allSettled([eventsApi.list(false), contentApi.menu(), contentApi.news()]);
+      const [events, menu] = await Promise.allSettled([eventsApi.list(false), contentApi.menu()]);
 
       setState({
         events: events.status === 'fulfilled' ? events.value.slice(0, 8) : [],
         menuPreviewImages:
           menu.status === 'fulfilled'
             ? menu.value.flatMap((category) => (Array.isArray(category?.items) ? category.items.map((item) => item?.imageUrl).filter(Boolean) : [])).slice(0, 8)
-            : [],
-        news: news.status === 'fulfilled' && Array.isArray(news.value) ? news.value.slice(0, 4) : []
+            : []
       });
     }
 
@@ -37,13 +36,6 @@ export default function HomePage() {
 
   const menuPhotos = state.menuPreviewImages.length ? state.menuPreviewImages : fallbackMenuPhotos;
   const c = (values) => localizedCopy(values, locale);
-  const newsCards = state.news.length
-    ? state.news
-    : [
-        { id: 1, title: c({ ua: 'Нові вечірні сети', ru: 'Новые вечерние сеты', en: 'New evening sets' }), summary: c({ ua: 'Оновили музичну програму на найближчі вихідні.', ru: 'Обновили музыкальную программу на ближайшие выходные.', en: 'Updated music program for the upcoming weekend.' }) },
-        { id: 2, title: c({ ua: 'Сезонне меню', ru: 'Сезонное меню', en: 'Seasonal menu' }), summary: c({ ua: 'Додали легкі страви та авторські коктейлі.', ru: 'Добавили лёгкие блюда и авторские коктейли.', en: 'Added light dishes and signature cocktails.' }) },
-        { id: 3, title: c({ ua: 'Літні бронювання', ru: 'Летние бронирования', en: 'Summer bookings' }), summary: c({ ua: 'Відкрили попереднє бронювання на вечірні дати.', ru: 'Открыли предварительную бронь на вечерние даты.', en: 'Opened advance booking for evening dates.' }) }
-      ];
 
   const isEn = locale === 'en';
   const heroTitle = localizeField(settings?.heroTitle, locale) || 'GorPliaj';
@@ -76,7 +68,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services Prices & News Section */}
+      {/* Services Prices & Events */}
       <section className="content-section promo-grid-section">
         <div className="promo-grid">
           <div className="promo-prices-card">
@@ -87,40 +79,36 @@ export default function HomePage() {
               <img src="/icons/public-map.png" alt={c({ ua: 'Вартість послуг', ru: 'Стоимость услуг', en: 'Service Prices' })} className="promo-prices-image" loading="lazy" />
             </div>
           </div>
-          <div className="promo-news-card">
+          <div className="promo-events-card">
             <div className="section-header">
-              <h2>{c({ ua: 'Новини', ru: 'Новости', en: 'News' })}</h2>
+              <h2>{c({ ua: 'Афіша', ru: 'Афиша', en: 'Events' })}</h2>
+              <Link to="/events" className="text-link">{c({ ua: 'Усі події', ru: 'Все события', en: 'All events' })} →</Link>
             </div>
-            <div className="news-list">
-              {newsCards.map((item) => {
-                const title = localizeField(item.title, locale);
-                const summary = localizeField(item.summary, locale);
-                return (
-                  <article key={item.id} className="news-item">
-                    <h3>{title}</h3>
-                    <p>{summary}</p>
-                  </article>
-                );
-              })}
+            <div className="events-grid promo-events-grid">
+              {state.events.length ? (
+                state.events.slice(0, 1).map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))
+              ) : (
+                <div className="state-msg">{c({ ua: 'Нові події скоро зʼявляться', ru: 'Новые события скоро появятся', en: 'New events coming soon' })}</div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Events */}
+      {/* Menu */}
       <section className="content-section">
         <div className="section-header">
-          <h2>{c({ ua: 'Афіша', ru: 'Афиша', en: 'Events' })}</h2>
-          <Link to="/events" className="text-link">{c({ ua: 'Усі події', ru: 'Все события', en: 'All events' })} →</Link>
+          <h2>{c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}</h2>
+          <Link to="/menu" className="text-link">{c({ ua: 'Повне меню', ru: 'Открыть меню', en: 'Full menu' })} →</Link>
         </div>
-        <div className="events-grid">
-          {state.events.length ? (
-            state.events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))
-          ) : (
-            <div className="state-msg">{c({ ua: 'Нові події скоро зʼявляться', ru: 'Новые события скоро появятся', en: 'New events coming soon' })}</div>
-          )}
+        <div className="gallery-scroll">
+          {menuPhotos.map((photo) => (
+            <div key={photo} className="gallery-item">
+              <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" />
+            </div>
+          ))}
         </div>
       </section>
 
@@ -140,21 +128,7 @@ export default function HomePage() {
           </div>
           <GalleryCarousel images={settings.galleryImages} />
         </section>
-      ) : (
-        <section className="content-section">
-          <div className="section-header">
-            <h2>{c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}</h2>
-            <Link to="/menu" className="text-link">{c({ ua: 'Повне меню', ru: 'Открыть меню', en: 'Full menu' })} →</Link>
-          </div>
-          <div className="gallery-scroll">
-            {menuPhotos.map((photo) => (
-              <div key={photo} className="gallery-item">
-                <img src={photo} alt={c({ ua: 'Позиція меню', ru: 'Позиция меню', en: 'Menu item' })} loading="lazy" />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      ) : null}
 
       <WeatherBlock />
 

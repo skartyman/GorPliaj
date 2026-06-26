@@ -304,6 +304,7 @@ async function updateTableBaseSettings({ tableId, patch }) {
 
   if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
     data.name = typeof patch.name === 'object' ? patch.name : { ua: String(patch.name || ''), ru: String(patch.name || ''), en: String(patch.name || '') };
+    data.serviceName = data.name;
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, 'zoneId')) {
@@ -737,7 +738,7 @@ async function createTable({ mapId, data }) {
     isBookable: data.isBookable !== undefined ? Boolean(data.isBookable) : true,
     sortOrder: Number(data.sortOrder) || 0,
     photoUrl: String(data.photoUrl || '').trim() || null,
-    serviceName: data.serviceName || { ua: '', ru: '', en: '' },
+    serviceName: data.serviceName || data.name || { ua: '', ru: '', en: '' },
     serviceDescription: data.serviceDescription || { ua: '', ru: '', en: '' }
   };
 

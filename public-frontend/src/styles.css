@@ -785,7 +785,7 @@ h3 {
   justify-content: center;
 }
 
-/* ===== Promo Grid Section (Prices & News side-by-side on desktop) ===== */
+/* ===== Promo Grid Section (Prices & Events side-by-side on desktop) ===== */
 .promo-grid-section {
   margin-bottom: 56px;
 }
@@ -794,29 +794,71 @@ h3 {
   display: grid;
   gap: 32px;
   grid-template-columns: 1fr;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (min-width: 768px) {
   .promo-grid {
-    grid-template-columns: 1.15fr 1fr; /* Two balanced columns on tablet/desktop */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.promo-prices-card,
+.promo-events-card {
+  min-width: 0;
+}
+
+.promo-prices-card,
+.promo-events-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.promo-prices-card .section-header,
+.promo-events-card .section-header {
+  min-height: 34px;
 }
 
 .promo-prices-container {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
-  background: transparent;
+  background: var(--bg-secondary);
   box-shadow: var(--shadow-md);
+  flex: 1;
+  min-height: 280px;
 }
 
 .promo-prices-image {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform var(--transition);
+}
+
+.promo-events-grid {
+  grid-template-columns: 1fr;
+  flex: 1;
+}
+
+.promo-events-grid .event-card,
+.promo-events-grid .state-msg {
+  height: 100%;
+  min-height: 280px;
+}
+
+.promo-events-grid .state-msg {
+  display: grid;
+  place-items: center;
+}
+
+@media (min-width: 768px) {
+  .promo-prices-container,
+  .promo-events-grid .event-card,
+  .promo-events-grid .state-msg {
+    min-height: 420px;
+  }
 }
 
 .promo-prices-image:hover {
@@ -1756,6 +1798,20 @@ h3 {
   margin-top: 22px;
 }
 
+.guest-modal-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(201, 168, 108, 0.6) !important; /* Semi-transparent brand gold */
+  color: #ffffff !important;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.guest-modal-actions .btn-secondary:hover {
+  background: rgba(201, 168, 108, 0.25) !important;
+  border-color: rgba(201, 168, 108, 0.9) !important;
+  box-shadow: 0 0 10px rgba(201, 168, 108, 0.2);
+}
+
 .event-rich-text {
   margin-top: 16px;
   line-height: 1.7;
@@ -1838,7 +1894,12 @@ h3 {
   gap: 8px;
   overflow-x: auto;
   padding: 2px 150px 8px 2px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.public-map-zone-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .public-map-zone-tab {
@@ -3240,6 +3301,41 @@ h3 {
   opacity: 0.82;
 }
 
+.footer-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--muted);
+}
+
+.footer-credit-link {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  background: #070707;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.footer-credit-link:hover {
+  color: #ffffff;
+}
+
+.footer-credit-mark {
+  margin-right: 3px;
+  color: #a3e635;
+  font-weight: 800;
+}
+
 .menu-legal-note,
 .menu-cart-note {
   margin-top: 12px;
@@ -4090,3 +4186,73 @@ h3 {
   }
 }
 
+/* Quick Date Switcher */
+.quick-date-switcher {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 4px 10px 4px;
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+
+.quick-date-switcher::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.quick-date-btn {
+  flex: 0 0 auto;
+  padding: 12px 18px;
+  background: var(--bg-secondary, #1a1b1e);
+  border: 1px solid var(--line, #2c2d30);
+  border-radius: var(--radius, 12px);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quick-date-btn:hover {
+  border-color: var(--brand, #c9a86c);
+  background: rgba(201, 168, 108, 0.08);
+  transform: translateY(-1px);
+}
+
+.quick-date-btn.active {
+  background: var(--brand, #c9a86c);
+  border-color: var(--brand, #c9a86c);
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(201, 168, 108, 0.25);
+  transform: translateY(-1px);
+}
+
+.quick-date-btn:active {
+  transform: translateY(1px);
+}
+
+.custom-date-picker-wrapper {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius, 12px);
+  border: 1px dashed var(--line, #2c2d30);
+}
+
+.custom-date-input {
+  border: 1px solid var(--line, #2c2d30);
+  background: var(--bg-secondary, #1a1b1e);
+  color: var(--text, #ffffff);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.custom-date-input:focus {
+  border-color: var(--brand, #c9a86c);
+}

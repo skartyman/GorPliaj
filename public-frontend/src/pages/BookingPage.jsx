@@ -438,6 +438,11 @@ export default function BookingPage() {
     setCurrentStep((s) => Math.min(s + 1, totalSteps));
   }
 
+  function handleBack() {
+    setSelected((current) => ({ ...current, bookableUnitId: '' }));
+    setCurrentStep((s) => s - 1);
+  }
+
   const [stepChanging, setStepChanging] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [holdTimeLeft, setHoldTimeLeft] = useState(0);
@@ -453,6 +458,46 @@ export default function BookingPage() {
 
   const activeEventSlug = bookingFlow === 'EVENT' ? (lockedEventSlug || selectedEventSlug) : '';
   const resolvedBookingKind = bookingFlow === 'EVENT' ? 'TABLE' : bookingKind;
+
+  const dateOptions = useMemo(() => {
+    const list = [];
+    const minDateStr = resolvedBookingKind === 'BEACH' && currentTime >= '12:00' ? defaultDate : today;
+    
+    let baseDate;
+    try {
+      baseDate = new Date(minDateStr);
+      if (isNaN(baseDate.getTime())) {
+        baseDate = new Date();
+      }
+    } catch {
+      baseDate = new Date();
+    }
+
+    // Generate 5 days starting from the minDate
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i);
+      
+      const dateStr = toDateKeyFromLocalDate(d);
+      if (!dateStr) continue;
+      
+      let label = '';
+      if (dateStr === today) {
+        label = c({ ua: 'Сьогодні', ru: 'Сегодня', en: 'Today' });
+      } else if (dateStr === defaultDate) {
+        label = c({ ua: 'Завтра', ru: 'Завтра', en: 'Tomorrow' });
+      } else {
+        const weekday = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'short' });
+        const dayMonth = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' });
+        const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        label = `${formattedWeekday}, ${dayMonth}`;
+      }
+      
+      list.push({ date: dateStr, label });
+    }
+    return list;
+  }, [resolvedBookingKind, currentTime, defaultDate, today, locale]);
+
   const usageMode = activeEventSlug
     ? 'EVENING'
     : (bookingFlow === 'STANDARD' && form.timeFrom && form.timeFrom > '16:00')
@@ -759,12 +804,12 @@ export default function BookingPage() {
   useEffect(() => {
     if (!formNavRef.current) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setShowStickyBar(!!selectedUnit && !entry.isIntersecting),
+      ([entry]) => setShowStickyBar(!!selectedUnit && !entry.isIntersecting && currentStep === 4),
       { threshold: 0, rootMargin: '0px 0px -80px 0px' }
     );
     observer.observe(formNavRef.current);
     return () => observer.disconnect();
-  }, [selectedUnit]);
+  }, [selectedUnit, currentStep]);
 
   useEffect(() => {
     if (!holdToken) return;
@@ -1327,14 +1372,36 @@ export default function BookingPage() {
         {bookingFlow !== 'EVENT' ? (
           <div className="form-group">
             <label>{c({ ua: '3. Дата', ru: '3. Дата', en: '3. Date' })}</label>
-            <input
-              type="date"
-              className="form-input"
-              value={form.date}
-              min={resolvedBookingKind === 'BEACH' && currentTime >= '12:00' ? defaultDate : today}
-              required
-              onChange={(event) => handleStandardDateChange(event.target.value)}
-            />
+            <div className="quick-date-switcher">
+              {dateOptions.map((opt) => {
+                const isActive = form.date === opt.date;
+                return (
+                  <button
+                    key={opt.date}
+                    type="button"
+                    className={`quick-date-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => handleStandardDateChange(opt.date)}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div className="custom-date-picker-wrapper" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted, #7c6b59)' }}>
+                {c({ ua: 'Або виберіть іншу дату:', ru: 'Или выберите другую дату:', en: 'Or choose another date:' })}
+              </span>
+              <input
+                type="date"
+                className="form-input custom-date-input"
+                value={form.date}
+                min={resolvedBookingKind === 'BEACH' && currentTime >= '12:00' ? defaultDate : today}
+                required
+                onChange={(event) => handleStandardDateChange(event.target.value)}
+                style={{ display: 'inline-block', width: 'auto', padding: '4px 8px', height: '32px', fontSize: '0.85rem' }}
+              />
+            </div>
           </div>
         ) : null}
 
@@ -1554,8 +1621,8 @@ export default function BookingPage() {
                           <span
                             role="button"
                             tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}`, '_blank'); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}`, '_blank'); } }}
+                            onClick={(e) => { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}&kind=${resolvedBookingKind}`, '_blank'); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${unit.tableId}&usageMode=${usageMode}&kind=${resolvedBookingKind}`, '_blank'); } }}
                             style={{ fontSize: '0.75rem', color: 'var(--primary)', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--primary)' }}
                           >
                             {c({ ua: 'На мапі закладу', ru: 'На карте', en: 'On map' })}
@@ -1629,7 +1696,7 @@ export default function BookingPage() {
                   <button
                     type="button"
                     className="btn btn-secondary btn-small"
-                    onClick={() => window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${selectedUnit.tableId}&usageMode=${usageMode}`, '_blank')}
+                    onClick={() => window.open(`/map-preview?date=${encodeURIComponent(form.date)}&timeFrom=${encodeURIComponent(form.timeFrom)}&guests=${form.guests}&mapId=${selected.mapId}&tableId=${selectedUnit.tableId}&usageMode=${usageMode}&kind=${resolvedBookingKind}`, '_blank')}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
@@ -1704,7 +1771,7 @@ export default function BookingPage() {
         <div ref={formNavRef}>
         {currentStep === 4 ? (
           <div className="btn-group">
-            <button type="button" className="btn btn-secondary" onClick={() => setCurrentStep((s) => s - 1)}>
+            <button type="button" className="btn btn-secondary" onClick={handleBack}>
               {c({ ua: 'Назад', ru: 'Назад', en: 'Back' })}
             </button>
             <button type="submit" className="btn btn-primary" disabled={mapsState.loading || unitsState.loading || submitting || !selectedUnit}>
@@ -1728,7 +1795,7 @@ export default function BookingPage() {
         ) : (
           <div className="btn-group booking-nav-group">
             {currentStep > 1 ? (
-              <button type="button" className="btn btn-secondary" onClick={() => setCurrentStep((s) => s - 1)}>
+              <button type="button" className="btn btn-secondary" onClick={handleBack}>
                 {c({ ua: 'Назад', ru: 'Назад', en: 'Back' })}
               </button>
             ) : null}
@@ -1817,7 +1884,7 @@ export default function BookingPage() {
         </div>
       ) : null}
 
-{showStickyBar ? (
+{showStickyBar && currentStep === 4 ? (
   <div className="booking-sticky-bar">
     <div className="booking-sticky-body">
       <div className="booking-sticky-info">
