@@ -293,18 +293,40 @@ function VisualSchedule({ bookingKind, locale }) {
       </div>
       
       {/* Time marks & legends */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500', marginTop: '6px' }}>
-        <span>08:00</span>
-        <span style={{ color: isBeach ? 'var(--brand)' : 'inherit', fontWeight: isBeach ? '700' : '500' }}>09:00</span>
-        {isBeach ? (
-          <>
-            <span style={{ color: 'var(--brand)', fontWeight: '700' }}>13:00</span>
-            <span style={{ color: 'var(--brand)', opacity: 0.8 }}>20:00</span>
-          </>
-        ) : (
-          <span style={{ color: 'var(--success)', fontWeight: '700' }}>20:00</span>
+      <div style={{ position: 'relative', height: '18px', marginTop: '6px', width: '100%' }}>
+        <span style={{ position: 'absolute', left: '0', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>08:00</span>
+        
+        <span style={{ 
+          position: 'absolute', 
+          left: `${((9 - startHour) / totalHours) * 100}%`, 
+          transform: 'translateX(-50%)', 
+          fontSize: '0.65rem', 
+          color: isBeach ? 'var(--brand)' : 'var(--text)', 
+          fontWeight: isBeach ? '700' : '500' 
+        }}>09:00</span>
+        
+        {isBeach && (
+          <span style={{ 
+            position: 'absolute', 
+            left: `${((13 - startHour) / totalHours) * 100}%`, 
+            transform: 'translateX(-50%)', 
+            fontSize: '0.65rem', 
+            color: 'var(--brand)', 
+            fontWeight: '700' 
+          }}>13:00</span>
         )}
-        <span>22:00</span>
+        
+        <span style={{ 
+          position: 'absolute', 
+          left: `${((20 - startHour) / totalHours) * 100}%`, 
+          transform: 'translateX(-50%)', 
+          fontSize: '0.65rem', 
+          color: isBeach ? 'var(--brand)' : 'var(--success)', 
+          fontWeight: '700',
+          opacity: isBeach ? 0.8 : 1
+        }}>20:00</span>
+        
+        <span style={{ position: 'absolute', right: '0', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>22:00</span>
       </div>
 
       {/* Mini legend showing what the colors mean for Beach */}
@@ -1239,74 +1261,29 @@ export default function BookingPage() {
                       padding: '8px 0 0'
                     }}>
                       {option.value === 'TABLE' ? (
-                        <svg viewBox="0 0 100 60" width="72" height="44" style={{ display: 'block', overflow: 'visible' }}>
-                          <defs>
-                            <linearGradient id="tableTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="currentColor" stopOpacity="0.15" />
-                              <stop offset="100%" stopColor="currentColor" stopOpacity="0.03" />
-                            </linearGradient>
-                          </defs>
-                          {/* Left Chair */}
-                          <path d="M 22 26 L 22 14 A 6 6 0 0 1 32 14 L 32 26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-                          <path d="M 18 26 L 36 26 C 36 34 18 34 18 26 Z" fill="currentColor" opacity="0.15" />
-                          <line x1="22" y1="30" x2="22" y2="44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-                          <line x1="32" y1="30" x2="32" y2="44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-                          
-                          {/* Right Chair */}
-                          <path d="M 68 26 L 68 14 A 6 6 0 0 1 78 14 L 78 26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-                          <path d="M 64 26 L 82 26 C 82 34 64 34 64 26 Z" fill="currentColor" opacity="0.15" />
-                          <line x1="68" y1="30" x2="68" y2="44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-                          <line x1="78" y1="30" x2="78" y2="44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-
-                          {/* Table legs */}
-                          <path d="M 38 32 L 34 52" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                          <path d="M 62 32 L 66 52" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                          <path d="M 46 32 L 44 50" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.7" />
-                          <path d="M 54 32 L 56 50" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.7" />
-
-                          {/* Table top */}
-                          <ellipse cx="50" cy="30" rx="26" ry="8" fill="url(#tableTopGrad)" stroke="currentColor" strokeWidth="2.5" />
-                          
-                          {/* Table vase/candle */}
-                          <path d="M 49 22 L 51 22 L 50.5 16 Z" fill="currentColor" opacity="0.8" />
-                          <circle cx="50.5" cy="14" r="1.5" fill="var(--brand)" />
-                        </svg>
+                        <img 
+                          src="/icons/booking-table.png" 
+                          alt="Table" 
+                          style={{ 
+                            width: 84, 
+                            height: 52, 
+                            objectFit: 'contain', 
+                            display: 'block',
+                            borderRadius: '6px'
+                          }} 
+                        />
                       ) : (
-                        <svg viewBox="0 0 100 60" width="72" height="44" style={{ display: 'block', overflow: 'visible' }}>
-                          <defs>
-                            <linearGradient id="umbrellaGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.8" />
-                              <stop offset="30%" stopColor="currentColor" stopOpacity="0.2" />
-                              <stop offset="60%" stopColor="var(--brand)" stopOpacity="0.8" />
-                              <stop offset="100%" stopColor="currentColor" stopOpacity="0.2" />
-                            </linearGradient>
-                          </defs>
-                          {/* Sandy ground line */}
-                          <path d="M 10 50 Q 50 46 90 50" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.3" fill="none" />
-
-                          {/* Beach Umbrella */}
-                          <line x1="32" y1="50" x2="32" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                          {/* Umbrella canopy */}
-                          <path d="M 12 26 C 12 10 52 10 52 26 Q 32 23 12 26" fill="url(#umbrellaGrad)" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                          {/* Umbrella lines/folds */}
-                          <path d="M 32 12 Q 22 24.5 12 26" stroke="currentColor" strokeWidth="1" fill="none" opacity="0.4" />
-                          <path d="M 32 12 Q 32 24 32 25" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4" />
-                          <path d="M 32 12 Q 42 24.5 52 26" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4" />
-                          {/* Small tip on top */}
-                          <line x1="32" y1="12" x2="32" y2="8" stroke="currentColor" strokeWidth="1.5" />
-
-                          {/* Sunbed / Lounge Chair */}
-                          <path d="M 48 46 L 68 36 L 86 36 L 94 22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                          <line x1="56" y1="42" x2="56" y2="49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                          <line x1="80" y1="36" x2="80" y2="49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                          {/* Soft cushion layer */}
-                          <path d="M 50 44 L 68 34.5 L 85.5 34.5 L 93 21" fill="none" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
-                          
-                          {/* Cocktail on a stand */}
-                          <path d="M 60 48 L 64 48" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-                          <line x1="62" y1="48" x2="62" y2="44" stroke="currentColor" strokeWidth="1.5" opacity="0.6" />
-                          <circle cx="62" cy="42" r="2" fill="var(--brand)" opacity="0.8" />
-                        </svg>
+                        <img 
+                          src="/icons/booking-beach.png" 
+                          alt="Beach" 
+                          style={{ 
+                            width: 84, 
+                            height: 52, 
+                            objectFit: 'contain', 
+                            display: 'block',
+                            borderRadius: '6px'
+                          }} 
+                        />
                       )}
                     </div>
                     <strong>{localized.title}</strong>
