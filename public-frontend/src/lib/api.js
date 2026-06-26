@@ -25,7 +25,8 @@ async function request(path, init) {
 
 export const contentApi = {
   news: () => request('/news'),
-  menu: () => request('/menu')
+  menu: () => request('/menu'),
+  weather: () => request('/weather')
 };
 
 export const eventsApi = {

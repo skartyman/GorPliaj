@@ -20,6 +20,7 @@ router.get('/ticket-orders/:orderNumber/pdf', publicTicketSalesController.downlo
 router.get('/news', publicController.getNews);
 router.get('/position-types', publicController.listPositionTypes);
 router.get('/settings', publicController.getSettings);
+router.get('/weather', publicController.getWeather);
 router.get('/maps', mapController.listPublicMaps);
 router.get('/maps/default', mapController.getDefaultMap);
 router.get('/maps/:mapId', mapController.getMapById);

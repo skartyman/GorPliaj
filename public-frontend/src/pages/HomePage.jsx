@@ -7,6 +7,7 @@ import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import GalleryCarousel from '../components/GalleryCarousel';
+import WeatherBlock from '../components/WeatherBlock';
 
 const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
 
@@ -186,6 +187,7 @@ export default function HomePage() {
         </section>
       )}
 
+      <WeatherBlock />
 
       {/* About / Info */}
       <section className="content-section">
