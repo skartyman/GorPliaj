@@ -671,6 +671,34 @@ export default function MapPage() {
   const loadMapDataRef = useRef();
   const { t, language } = useAdminI18n();
 
+  const dateOptions = useMemo(() => {
+    const list = [];
+    const baseDate = new Date();
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      let label = '';
+      if (i === 0) {
+        label = language === 'ua' ? 'Сьогодні' : language === 'ru' ? 'Сегодня' : 'Today';
+      } else if (i === 1) {
+        label = language === 'ua' ? 'Завтра' : language === 'ru' ? 'Завтра' : 'Tomorrow';
+      } else {
+        const weekday = d.toLocaleDateString(language === 'ua' ? 'uk-UA' : language === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'short' });
+        const dayMonth = d.toLocaleDateString(language === 'ua' ? 'uk-UA' : language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' });
+        const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        label = `${formattedWeekday}, ${dayMonth}`;
+      }
+      
+      list.push({ date: dateStr, label });
+    }
+    return list;
+  }, [language]);
+
   useEffect(() => {
     async function loadAvailableMaps() {
       setState((prev) => ({
@@ -1382,37 +1410,34 @@ export default function MapPage() {
 
         {!state.error && state.mapData?.map ? (
           <>
-            <div className="map-header-controls">
-              <input
-                type="date"
-                className="map-date-picker"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
-              <button type="button" className="btn" onClick={() => loadMapDataRef.current()}>
-                Оновити
-              </button>
-              <div className="qr-search">
+            <div className="map-header-controls" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}>
+              <div className="quick-date-switcher">
+                {dateOptions.map((opt) => {
+                  const isActive = selectedDate === opt.date;
+                  return (
+                    <button
+                      key={opt.date}
+                      type="button"
+                      className={`quick-date-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => setSelectedDate(opt.date)}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
-                  type="text"
-                  placeholder="Код квитка"
-                  value={qrTicketCode}
-                  onChange={(e) => setQrTicketCode(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleQRArrive(); }}
+                  type="date"
+                  className="map-date-picker"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
                 />
-                <button type="button" className="btn" onClick={handleQRArrive}>Scan QR</button>
+                <button type="button" className="btn" onClick={() => loadMapDataRef.current()}>
+                  Оновити
+                </button>
               </div>
             </div>
-
-            {qrResult ? (
-              <div className={`qr-result ${qrResult.type}`}>
-                {qrResult.type === 'loading' ? '⏳' : null}
-                {qrResult.type === 'success' ? '✅' : null}
-                {qrResult.type === 'error' ? '❌' : null}
-                {' '}{qrResult.message}
-                <button type="button" className="btn btn-small" onClick={() => setQrResult(null)} style={{ marginLeft: 8 }}>✕</button>
-              </div>
-            ) : null}
 
             <div className="map-stats">
               <span className="stat free">Вільно: {state.availability.freeTableIds?.length ?? 0}</span>

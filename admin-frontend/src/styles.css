@@ -2659,3 +2659,50 @@ textarea { resize: vertical; min-height: 96px; }
   background: var(--bg-card, #ffffff);
 }
 
+
+/* Quick Date Switcher */
+.quick-date-switcher {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 4px 10px 4px;
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+
+.quick-date-switcher::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.quick-date-btn {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  background: var(--bg-secondary, #1a1b1e);
+  border: 1px solid var(--line, #2c2d30);
+  border-radius: var(--radius, 8px);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quick-date-btn:hover {
+  border-color: var(--brand, #c9a86c);
+  background: rgba(201, 168, 108, 0.08);
+  transform: translateY(-1px);
+}
+
+.quick-date-btn.active {
+  background: var(--brand, #c9a86c);
+  border-color: var(--brand, #c9a86c);
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(201, 168, 108, 0.25);
+  transform: translateY(-1px);
+}
+
+.quick-date-btn:active {
+  transform: translateY(1px);
+}
