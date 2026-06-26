@@ -63,7 +63,20 @@ export default function EventCard({ event, featured = false }) {
         ) : null}
         {featured ? (
           <p className="event-featured-summary">{featuredSummary}</p>
-        ) : null}
+        ) : (
+          <p className="event-card-summary" style={{
+            fontSize: '0.88rem',
+            lineHeight: '1.6',
+            color: 'var(--muted)',
+            margin: '4px 0 12px 0',
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
+            {featuredSummary}
+          </p>
+        )}
         <div className="event-actions">
           {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') ? (
             event.ticketUrl ? (
