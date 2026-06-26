@@ -76,6 +76,10 @@ model VenueTable {
   seatsMax     Int
   deposit      Decimal       @db.Decimal(10, 2)
   price        Decimal?      @db.Decimal(10, 2)
+  priceWeekday  Decimal?      @db.Decimal(10, 2)
+  priceWeekend  Decimal?      @db.Decimal(10, 2)
+  depositWeekday Decimal?      @db.Decimal(10, 2)
+  depositWeekend Decimal?      @db.Decimal(10, 2)
   isActive     Boolean       @default(true)
   isBookable   Boolean       @default(true)
   sortOrder    Int           @default(0)

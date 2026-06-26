@@ -230,6 +230,54 @@ async function updateTableBaseSettings({ tableId, patch }) {
     }
   }
 
+  if (Object.prototype.hasOwnProperty.call(patch, 'priceWeekday')) {
+    if (patch.priceWeekday === '' || patch.priceWeekday === null || patch.priceWeekday === undefined) {
+      data.priceWeekday = null;
+    } else {
+      const priceWeekday = Number(patch.priceWeekday);
+      if (!Number.isFinite(priceWeekday) || priceWeekday < 0) {
+        return { type: 'INVALID', message: 'Weekday Price must be a non-negative number.' };
+      }
+      data.priceWeekday = priceWeekday;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'priceWeekend')) {
+    if (patch.priceWeekend === '' || patch.priceWeekend === null || patch.priceWeekend === undefined) {
+      data.priceWeekend = null;
+    } else {
+      const priceWeekend = Number(patch.priceWeekend);
+      if (!Number.isFinite(priceWeekend) || priceWeekend < 0) {
+        return { type: 'INVALID', message: 'Weekend Price must be a non-negative number.' };
+      }
+      data.priceWeekend = priceWeekend;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'depositWeekday')) {
+    if (patch.depositWeekday === '' || patch.depositWeekday === null || patch.depositWeekday === undefined) {
+      data.depositWeekday = null;
+    } else {
+      const depositWeekday = Number(patch.depositWeekday);
+      if (!Number.isFinite(depositWeekday) || depositWeekday < 0) {
+        return { type: 'INVALID', message: 'Weekday Deposit must be a non-negative number.' };
+      }
+      data.depositWeekday = depositWeekday;
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'depositWeekend')) {
+    if (patch.depositWeekend === '' || patch.depositWeekend === null || patch.depositWeekend === undefined) {
+      data.depositWeekend = null;
+    } else {
+      const depositWeekend = Number(patch.depositWeekend);
+      if (!Number.isFinite(depositWeekend) || depositWeekend < 0) {
+        return { type: 'INVALID', message: 'Weekend Deposit must be a non-negative number.' };
+      }
+      data.depositWeekend = depositWeekend;
+    }
+  }
+
   if (Object.prototype.hasOwnProperty.call(patch, 'isActive')) {
     data.isActive = Boolean(patch.isActive);
   }
@@ -552,6 +600,10 @@ async function listReservationPositionsManagement({
           positionSide: table.positionSide || null,
           deposit: Number(table.deposit || 0),
           price: table.price === null || table.price === undefined ? null : Number(table.price),
+          priceWeekday: table.priceWeekday === null || table.priceWeekday === undefined ? null : Number(table.priceWeekday),
+          priceWeekend: table.priceWeekend === null || table.priceWeekend === undefined ? null : Number(table.priceWeekend),
+          depositWeekday: table.depositWeekday === null || table.depositWeekday === undefined ? null : Number(table.depositWeekday),
+          depositWeekend: table.depositWeekend === null || table.depositWeekend === undefined ? null : Number(table.depositWeekend),
           seatsMin: table.seatsMin,
           seatsMax: table.seatsMax,
           map: {
@@ -572,6 +624,10 @@ async function listReservationPositionsManagement({
           base: {
             deposit: Number(table.deposit || 0),
             price: table.price === null || table.price === undefined ? null : Number(table.price),
+            priceWeekday: table.priceWeekday === null || table.priceWeekday === undefined ? null : Number(table.priceWeekday),
+            priceWeekend: table.priceWeekend === null || table.priceWeekend === undefined ? null : Number(table.priceWeekend),
+            depositWeekday: table.depositWeekday === null || table.depositWeekday === undefined ? null : Number(table.depositWeekday),
+            depositWeekend: table.depositWeekend === null || table.depositWeekend === undefined ? null : Number(table.depositWeekend),
             isActive: Boolean(table.isActive),
             isBookable: Boolean(table.isBookable),
             photoUrl: table.photoUrl || null
@@ -673,6 +729,10 @@ async function createTable({ mapId, data }) {
     seatsMax: Math.max(0, Number(data.seatsMax) || 0),
     deposit: Number(data.deposit) || 0,
     price: data.price ?? null,
+    priceWeekday: data.priceWeekday !== undefined && data.priceWeekday !== '' && data.priceWeekday !== null ? Number(data.priceWeekday) : null,
+    priceWeekend: data.priceWeekend !== undefined && data.priceWeekend !== '' && data.priceWeekend !== null ? Number(data.priceWeekend) : null,
+    depositWeekday: data.depositWeekday !== undefined && data.depositWeekday !== '' && data.depositWeekday !== null ? Number(data.depositWeekday) : null,
+    depositWeekend: data.depositWeekend !== undefined && data.depositWeekend !== '' && data.depositWeekend !== null ? Number(data.depositWeekend) : null,
     isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
     isBookable: data.isBookable !== undefined ? Boolean(data.isBookable) : true,
     sortOrder: Number(data.sortOrder) || 0,

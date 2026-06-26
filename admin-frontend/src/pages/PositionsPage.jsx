@@ -17,6 +17,10 @@ function buildEmptyForm() {
     seatsMax: 0,
     deposit: 0,
     price: '',
+    priceWeekday: '',
+    priceWeekend: '',
+    depositWeekday: '',
+    depositWeekend: '',
     isActive: true,
     isBookable: true,
     photoUrl: '',
@@ -133,6 +137,10 @@ export default function PositionsPage() {
       seatsMax: row.seatsMax || 0,
       deposit: Number(row.deposit) || 0,
       price: row.price != null ? String(row.price) : '',
+      priceWeekday: row.priceWeekday != null ? String(row.priceWeekday) : '',
+      priceWeekend: row.priceWeekend != null ? String(row.priceWeekend) : '',
+      depositWeekday: row.depositWeekday != null ? String(row.depositWeekday) : '',
+      depositWeekend: row.depositWeekend != null ? String(row.depositWeekend) : '',
       isActive: row.isActive !== false,
       isBookable: row.isBookable !== false,
       photoUrl: row.photoUrl || '',
@@ -174,6 +182,10 @@ export default function PositionsPage() {
       seatsMax: Number(form.seatsMax),
       deposit: Number(form.deposit),
       price: form.price !== '' ? Number(form.price) : null,
+      priceWeekday: form.priceWeekday !== '' ? Number(form.priceWeekday) : null,
+      priceWeekend: form.priceWeekend !== '' ? Number(form.priceWeekend) : null,
+      depositWeekday: form.depositWeekday !== '' ? Number(form.depositWeekday) : null,
+      depositWeekend: form.depositWeekend !== '' ? Number(form.depositWeekend) : null,
       isActive: form.isActive,
       isBookable: form.isBookable,
       photoUrl: form.photoUrl,
@@ -332,6 +344,11 @@ export default function PositionsPage() {
       key: 'price',
       label: t('positions.columns.price'),
       render: (row) => {
+        if (row.priceWeekday != null || row.priceWeekend != null) {
+          const wkday = row.priceWeekday != null ? `${Number(row.priceWeekday)}` : '—';
+          const wkend = row.priceWeekend != null ? `${Number(row.priceWeekend)}` : '—';
+          return `${wkday} / ${wkend} UAH`;
+        }
         if (row.price != null && Number(row.price) > 0) {
           return `${Number(row.price).toFixed(2)} UAH`;
         }
@@ -353,6 +370,11 @@ export default function PositionsPage() {
       key: 'deposit',
       label: t('positions.columns.deposit'),
       render: (row) => {
+        if (row.depositWeekday != null || row.depositWeekend != null) {
+          const wkday = row.depositWeekday != null ? `${Number(row.depositWeekday)}` : '—';
+          const wkend = row.depositWeekend != null ? `${Number(row.depositWeekend)}` : '—';
+          return `${wkday} / ${wkend} UAH`;
+        }
         if (row.deposit != null && Number(row.deposit) > 0) {
           return `${Number(row.deposit).toFixed(2)} UAH`;
         }
@@ -442,8 +464,24 @@ export default function PositionsPage() {
             <input style={inputS} type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
+            {t('positions.fields.priceWeekday')}
+            <input style={inputS} type="number" min="0" step="0.01" value={form.priceWeekday} onChange={(e) => setForm({ ...form, priceWeekday: e.target.value })} placeholder="—" />
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.priceWeekend')}
+            <input style={inputS} type="number" min="0" step="0.01" value={form.priceWeekend} onChange={(e) => setForm({ ...form, priceWeekend: e.target.value })} placeholder="—" />
+          </label>
+          <label style={{ fontSize: 11 }}>
             {t('positions.fields.deposit')}
             <input style={inputS} type="number" min="0" step="0.01" value={form.deposit} onChange={(e) => setForm({ ...form, deposit: e.target.value })} />
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.depositWeekday')}
+            <input style={inputS} type="number" min="0" step="0.01" value={form.depositWeekday} onChange={(e) => setForm({ ...form, depositWeekday: e.target.value })} placeholder="—" />
+          </label>
+          <label style={{ fontSize: 11 }}>
+            {t('positions.fields.depositWeekend')}
+            <input style={inputS} type="number" min="0" step="0.01" value={form.depositWeekend} onChange={(e) => setForm({ ...form, depositWeekend: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.seatsMin')}

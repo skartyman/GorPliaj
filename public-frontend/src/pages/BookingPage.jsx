@@ -1601,8 +1601,8 @@ export default function BookingPage() {
                 <span>{Number(selectedUnit.seatsMin)}-{Number(selectedUnit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
                 <span>
                   {selectedUnit.depositAmount > 0
-                    ? `${c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}`
-                    : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' })}
+                    ? `${resolvedBookingKind === 'BEACH' ? c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' }) : c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}`
+                    : (resolvedBookingKind === 'BEACH' ? c({ ua: 'Безкоштовно', ru: 'Бесплатно', en: 'Free' }) : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' }))}
                 </span>
               </div>
               {selectedUnit.tableId ? (
@@ -1629,7 +1629,7 @@ export default function BookingPage() {
               <strong>{c({ ua: 'До оплати зараз', ru: 'К оплате сейчас', en: 'Due now' })}: {money(paymentPreview.totalAmount, paymentPreview.currency)}</strong>
             </p>
             <p className="muted" style={{ margin: 0 }}>
-              {c({ ua: 'Депозит позиції', ru: 'Депозит позиции', en: 'Position deposit' })}: {paymentPreview.depositAmount > 0 ? money(paymentPreview.depositAmount, paymentPreview.currency) : c({ ua: 'не задано', ru: 'не задан', en: 'not configured' })}
+              {resolvedBookingKind === 'BEACH' ? c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' }) : c({ ua: 'Депозит позиції', ru: 'Депозит позиции', en: 'Position deposit' })}: {paymentPreview.depositAmount > 0 ? money(paymentPreview.depositAmount, paymentPreview.currency) : c({ ua: 'не задано', ru: 'не задан', en: 'not configured' })}
             </p>
             <p className="muted" style={{ margin: 0 }}>
               {c({ ua: 'Тип бронювання', ru: 'Тип бронирования', en: 'Booking type' })}: {bookingKindTitle(resolvedBookingKind)}
