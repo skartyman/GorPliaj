@@ -256,23 +256,15 @@ export default function Layout() {
               <NavLink to="/payment-returns">{paymentReturnsLinkText}</NavLink>
               <span className="footer-legal-note">{menuServiceNotice}</span>
             </div>
-            <span>
+            <span className="footer-credit">
               {rightsText} · {localizedCopy({ ua: 'Розроблено ', ru: 'Разработано ', en: 'Developed by ' }, locale)}
               <a
                 href="https://velych.pp.ua"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontWeight: '800',
-                  letterSpacing: '0.03em',
-                  marginLeft: '4px',
-                  display: 'inline-flex',
-                  alignItems: 'center'
-                }}
+                className="footer-credit-link"
               >
-                <span style={{ color: '#a3e635', marginRight: '2px', fontWeight: '800' }}>//</span>VELYCH.CO
+                <span className="footer-credit-mark">//</span>VELYCH.CO
               </a>
             </span>
           </div>
