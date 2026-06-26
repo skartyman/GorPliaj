@@ -133,24 +133,24 @@ function buildBookableUnit(table, linkedObject, positionTypeMap = {}, reservatio
 
   // Resolve price
   let resolvedPrice = 0;
-  if (isWk && ptConfig.priceWeekend && Number(ptConfig.priceWeekend) > 0) {
+  if (table.price && Number(table.price) > 0) {
+    resolvedPrice = Number(table.price);
+  } else if (isWk && ptConfig.priceWeekend && Number(ptConfig.priceWeekend) > 0) {
     resolvedPrice = Number(ptConfig.priceWeekend);
   } else if (!isWk && ptConfig.priceWeekday && Number(ptConfig.priceWeekday) > 0) {
     resolvedPrice = Number(ptConfig.priceWeekday);
-  } else if (table.price && Number(table.price) > 0) {
-    resolvedPrice = Number(table.price);
   } else if (ptConfig.defaultPrice && Number(ptConfig.defaultPrice) > 0) {
     resolvedPrice = Number(ptConfig.defaultPrice);
   }
 
   // Resolve deposit
   let resolvedDeposit = 0;
-  if (isWk && ptConfig.depositWeekend && Number(ptConfig.depositWeekend) > 0) {
+  if (table.deposit && Number(table.deposit) > 0) {
+    resolvedDeposit = Number(table.deposit);
+  } else if (isWk && ptConfig.depositWeekend && Number(ptConfig.depositWeekend) > 0) {
     resolvedDeposit = Number(ptConfig.depositWeekend);
   } else if (!isWk && ptConfig.depositWeekday && Number(ptConfig.depositWeekday) > 0) {
     resolvedDeposit = Number(ptConfig.depositWeekday);
-  } else if (table.deposit && Number(table.deposit) > 0) {
-    resolvedDeposit = Number(table.deposit);
   } else if (ptConfig.defaultDeposit && Number(ptConfig.defaultDeposit) > 0) {
     resolvedDeposit = Number(ptConfig.defaultDeposit);
   } else if (meta.depositAmount && Number(meta.depositAmount) > 0) {

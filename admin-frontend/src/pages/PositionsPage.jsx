@@ -331,12 +331,44 @@ export default function PositionsPage() {
     {
       key: 'price',
       label: t('positions.columns.price'),
-      render: (row) => (row.price != null && Number(row.price) > 0 ? `${Number(row.price).toFixed(2)} UAH` : '—')
+      render: (row) => {
+        if (row.price != null && Number(row.price) > 0) {
+          return `${Number(row.price).toFixed(2)} UAH`;
+        }
+        const pt = allPositionTypes.find((t) => t.value === row.positionType);
+        if (pt) {
+          if (pt.priceWeekday != null || pt.priceWeekend != null) {
+            const wkday = pt.priceWeekday != null ? `${Number(pt.priceWeekday)}` : '—';
+            const wkend = pt.priceWeekend != null ? `${Number(pt.priceWeekend)}` : '—';
+            return <span className="muted" style={{ fontSize: 11 }}>{wkday} / {wkend} UAH (тип)</span>;
+          }
+          if (pt.defaultPrice != null) {
+            return <span className="muted" style={{ fontSize: 11 }}>{Number(pt.defaultPrice)} UAH (тип)</span>;
+          }
+        }
+        return '—';
+      }
     },
     {
       key: 'deposit',
       label: t('positions.columns.deposit'),
-      render: (row) => (Number(row.deposit) > 0 ? `${Number(row.deposit).toFixed(2)} UAH` : '—')
+      render: (row) => {
+        if (row.deposit != null && Number(row.deposit) > 0) {
+          return `${Number(row.deposit).toFixed(2)} UAH`;
+        }
+        const pt = allPositionTypes.find((t) => t.value === row.positionType);
+        if (pt) {
+          if (pt.depositWeekday != null || pt.depositWeekend != null) {
+            const wkday = pt.depositWeekday != null ? `${Number(pt.depositWeekday)}` : '—';
+            const wkend = pt.depositWeekend != null ? `${Number(pt.depositWeekend)}` : '—';
+            return <span className="muted" style={{ fontSize: 11 }}>{wkday} / {wkend} UAH (тип)</span>;
+          }
+          if (pt.defaultDeposit != null) {
+            return <span className="muted" style={{ fontSize: 11 }}>{Number(pt.defaultDeposit)} UAH (тип)</span>;
+          }
+        }
+        return '—';
+      }
     },
     {
       key: 'active',
