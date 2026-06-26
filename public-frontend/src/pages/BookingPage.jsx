@@ -222,7 +222,7 @@ function VisualSchedule({ bookingKind, locale }) {
   const activeStart = 9;
   const tableWidthPercent = ((20 - 9) / totalHours) * 100;
   const beachArrivalWidthPercent = ((13 - 9) / totalHours) * 100;
-  const beachLeisureWidthPercent = ((20 - 13) / totalHours) * 100;
+  const beachLeisureWidthPercent = ((20 - 9) / totalHours) * 100;
 
   const leftPercent = ((activeStart - startHour) / totalHours) * 100;
 
@@ -241,107 +241,84 @@ function VisualSchedule({ bookingKind, locale }) {
   const getCopy = (dict) => dict[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || dict['en'];
 
   return (
-    <div className="visual-schedule" style={{
-      marginTop: '10px',
-      padding: '10px 12px',
-      borderRadius: '10px',
-      background: 'var(--bg)',
-      border: '1px solid var(--line)',
-      width: '100%',
-      boxSizing: 'border-box'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text)' }}>
-        <span>{getCopy(label)}</span>
-      </div>
-      
-      {/* The timeline bar */}
-      <div style={{ position: 'relative', height: '8px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 4px' }}>
-        {isBeach ? (
-          <>
-            {/* Beach Arrival Window: 09:00 - 13:00 (Solid Gold/Brand) */}
-            <div style={{
-              position: 'absolute',
-              left: `${leftPercent}%`,
-              width: `${beachArrivalWidthPercent}%`,
-              height: '100%',
-              backgroundColor: 'var(--brand)',
-              borderRadius: '4px 0 0 4px'
-            }} title={getCopy({ ua: 'Обовʼязкова явка', ru: 'Обязательная явка', en: 'Mandatory arrival' })} />
-            
-            {/* Beach Rest Window: 13:00 - 20:00 (Semi-transparent Brand) */}
-            <div style={{
-              position: 'absolute',
-              left: `${((13 - startHour) / totalHours) * 100}%`,
-              width: `${beachLeisureWidthPercent}%`,
-              height: '100%',
-              backgroundColor: 'var(--brand)',
-              opacity: 0.35,
-              borderRadius: '0 4px 4px 0'
-            }} title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })} />
-          </>
-        ) : (
-          /* Table Booking Window: 09:00 - 20:00 (Solid Green) */
-          <div style={{
-            position: 'absolute',
-            left: `${leftPercent}%`,
-            width: `${tableWidthPercent}%`,
-            height: '100%',
-            backgroundColor: 'var(--success)',
-            borderRadius: '4px'
-          }} />
-        )}
-      </div>
-      
-      {/* Time marks & legends */}
-      <div style={{ position: 'relative', height: '18px', marginTop: '6px', width: '100%' }}>
-        <span style={{ position: 'absolute', left: '0', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>08:00</span>
-        
-        <span style={{ 
-          position: 'absolute', 
-          left: `${((9 - startHour) / totalHours) * 100}%`, 
-          transform: 'translateX(-50%)', 
-          fontSize: '0.65rem', 
-          color: isBeach ? 'var(--brand)' : 'var(--text)', 
-          fontWeight: isBeach ? '700' : '500' 
-        }}>09:00</span>
-        
-        {isBeach && (
-          <span style={{ 
-            position: 'absolute', 
-            left: `${((13 - startHour) / totalHours) * 100}%`, 
-            transform: 'translateX(-50%)', 
-            fontSize: '0.65rem', 
-            color: 'var(--brand)', 
-            fontWeight: '700' 
-          }}>13:00</span>
-        )}
-        
-        <span style={{ 
-          position: 'absolute', 
-          left: `${((20 - startHour) / totalHours) * 100}%`, 
-          transform: 'translateX(-50%)', 
-          fontSize: '0.65rem', 
-          color: isBeach ? 'var(--brand)' : 'var(--success)', 
-          fontWeight: '700',
-          opacity: isBeach ? 0.8 : 1
-        }}>20:00</span>
-        
-        <span style={{ position: 'absolute', right: '0', fontSize: '0.65rem', color: 'var(--muted)', fontWeight: '500' }}>22:00</span>
+    <div className={`visual-schedule${isBeach ? ' is-beach' : ' is-table'}`}>
+      <div className="visual-schedule-title">
+        {getCopy(label)}
       </div>
 
-      {/* Mini legend showing what the colors mean for Beach */}
-      {isBeach && (
-        <div style={{ display: 'flex', gap: 10, marginTop: '6px', fontSize: '0.62rem', color: 'var(--muted)', flexWrap: 'wrap', borderTop: '1px solid var(--line)', paddingTop: '6px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ display: 'inline-block', width: 8, height: 8, backgroundColor: 'var(--brand)', borderRadius: '2px' }} />
-            {getCopy({ ua: 'Реєстрація (явка)', ru: 'Регистрация (явка)', en: 'Mandatory Check-in' })}
+      <div className="visual-schedule-track" aria-hidden="true">
+        {isBeach ? (
+          <>
+            <div
+              className="visual-schedule-segment visual-schedule-segment-rest"
+              style={{
+              left: `${leftPercent}%`,
+              width: `${beachLeisureWidthPercent}%`
+            }}
+              title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })}
+            />
+            <div
+              className="visual-schedule-segment visual-schedule-segment-arrival"
+              style={{
+              left: `${leftPercent}%`,
+              width: `${beachArrivalWidthPercent}%`
+            }}
+              title={getCopy({ ua: 'Обовʼязкова явка', ru: 'Обязательная явка', en: 'Mandatory arrival' })}
+            />
+          </>
+        ) : (
+          <div
+            className="visual-schedule-segment visual-schedule-segment-table"
+            style={{
+            left: `${leftPercent}%`,
+            width: `${tableWidthPercent}%`
+          }}
+          />
+        )}
+      </div>
+
+      <div className="visual-schedule-marks">
+        <span
+          className={`visual-schedule-mark is-active-start${isBeach ? ' is-strong' : ''}`}
+          style={{ left: `${((9 - startHour) / totalHours) * 100}%` }}
+        >
+          09:00
+        </span>
+        {isBeach && (
+          <span
+            className="visual-schedule-mark is-strong"
+            style={{ left: `${((13 - startHour) / totalHours) * 100}%` }}
+          >
+            13:00
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ display: 'inline-block', width: 8, height: 8, backgroundColor: 'var(--brand)', opacity: 0.35, borderRadius: '2px' }} />
-            {getCopy({ ua: 'Час відпочинку (бронь діє)', ru: 'Время отдыха (бронь действует)', en: 'Rest Time (booking active)' })}
+        )}
+        <span
+          className="visual-schedule-mark is-end"
+          style={{ left: `${((20 - startHour) / totalHours) * 100}%` }}
+        >
+          20:00
+        </span>
+      </div>
+
+      <div className="visual-schedule-legend">
+        {isBeach ? (
+          <>
+            <span>
+              <i className="visual-schedule-dot" aria-hidden="true" />
+              {getCopy({ ua: 'Реєстрація (явка)', ru: 'Регистрация (явка)', en: 'Mandatory Check-in' })}
+            </span>
+            <span>
+              <i className="visual-schedule-dot is-muted" aria-hidden="true" />
+              {getCopy({ ua: 'Час відпочинку (бронь діє)', ru: 'Время отдыха (бронь действует)', en: 'Rest Time (booking active)' })}
+            </span>
+          </>
+        ) : (
+          <span>
+            <i className="visual-schedule-dot is-table" aria-hidden="true" />
+            {getCopy({ ua: 'Час бронювання', ru: 'Время бронирования', en: 'Booking time' })}
           </span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -1245,44 +1222,23 @@ export default function BookingPage() {
                   <button
                     key={option.value}
                     type="button"
-                    className={`booking-kind-card${bookingKind === option.value ? ' active' : ''}`}
+                    className={`booking-kind-card booking-kind-card-${option.value.toLowerCase()}${bookingKind === option.value ? ' active' : ''}`}
                     onClick={() => {
                       setBookingKind(option.value);
                       setSelected({ mapId: 0, zoneId: 0, bookableUnitId: '' });
                       setCurrentStep(2);
                     }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px' }}
                   >
-                    <div style={{
-                      color: bookingKind === option.value ? 'var(--brand)' : 'var(--muted)',
-                      transition: 'color var(--transition)',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      padding: '8px 0 0'
-                    }}>
+                    <div className="booking-kind-icon">
                       {option.value === 'TABLE' ? (
                         <img 
                           src="/icons/booking-table.png" 
                           alt="Table" 
-                          style={{ 
-                            width: 84, 
-                            height: 52, 
-                            objectFit: 'contain', 
-                            display: 'block',
-                            borderRadius: '6px'
-                          }} 
                         />
                       ) : (
                         <img 
                           src="/icons/booking-beach.png" 
                           alt="Beach" 
-                          style={{ 
-                            width: 84, 
-                            height: 52, 
-                            objectFit: 'contain', 
-                            display: 'block',
-                            borderRadius: '6px'
-                          }} 
                         />
                       )}
                     </div>

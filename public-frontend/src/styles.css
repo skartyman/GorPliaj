@@ -2343,6 +2343,10 @@ h3 {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.booking-kind-grid {
+  align-items: stretch;
+}
+
 .booking-kind-card,
 .booking-map-card {
   display: grid;
@@ -2354,6 +2358,47 @@ h3 {
   background: var(--bg-secondary);
   color: var(--text);
   transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+
+.booking-kind-card {
+  position: relative;
+  grid-template-rows: auto auto auto 1fr;
+  align-items: stretch;
+  gap: 10px;
+  min-height: 292px;
+  padding: 28px 18px 18px;
+}
+
+.booking-kind-icon {
+  position: absolute;
+  top: 28px;
+  right: 28px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: min(36%, 210px);
+  height: 132px;
+  pointer-events: none;
+}
+
+.booking-kind-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.34));
+}
+
+.booking-kind-card strong {
+  max-width: calc(100% - min(36%, 210px) - 28px);
+  margin-top: 64px;
+  font-size: 1.03rem;
+  line-height: 1.25;
+}
+
+.booking-kind-card > span {
+  max-width: calc(100% - min(36%, 210px) - 28px);
 }
 
 .booking-kind-card span,
@@ -2368,6 +2413,182 @@ h3 {
   border-color: rgba(201, 168, 108, 0.48);
   box-shadow: 0 0 0 1px rgba(201, 168, 108, 0.22);
   transform: translateY(-1px);
+}
+
+.visual-schedule {
+  align-self: end;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.booking-kind-card-beach .visual-schedule {
+  margin-top: 32px;
+}
+
+.visual-schedule-title {
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.visual-schedule-track {
+  position: relative;
+  height: 8px;
+  margin: 10px 0 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line-light, rgba(255, 255, 255, 0.12));
+}
+
+.visual-schedule-segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.visual-schedule-segment-arrival {
+  z-index: 2;
+  border-radius: 999px;
+  background: var(--brand);
+}
+
+.visual-schedule-segment-rest {
+  z-index: 1;
+  border-radius: 999px;
+  background: rgba(201, 168, 108, 0.34);
+}
+
+.visual-schedule-segment-table {
+  border-radius: 999px;
+  background: var(--success);
+}
+
+.visual-schedule-marks {
+  position: relative;
+  height: 18px;
+  margin-top: 7px;
+}
+
+.visual-schedule-mark {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.visual-schedule-mark:first-child {
+  transform: translateX(0);
+}
+
+.visual-schedule-mark.is-last {
+  transform: translateX(-100%);
+}
+
+.visual-schedule.is-beach .visual-schedule-mark.is-strong,
+.visual-schedule.is-beach .visual-schedule-mark.is-end {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.visual-schedule.is-beach .visual-schedule-mark.is-end {
+  opacity: 0.82;
+}
+
+.visual-schedule.is-table .visual-schedule-mark.is-end {
+  color: var(--success);
+  font-weight: 800;
+}
+
+.visual-schedule-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.visual-schedule-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.visual-schedule-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--brand);
+}
+
+.visual-schedule-dot.is-muted {
+  background: rgba(201, 168, 108, 0.34);
+}
+
+.visual-schedule-dot.is-table {
+  background: var(--success);
+}
+
+@media (max-width: 520px) {
+  .booking-kind-card {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .booking-kind-icon {
+    position: static;
+    justify-content: flex-end;
+    width: 150px;
+    height: 96px;
+    margin-left: auto;
+  }
+
+  .booking-kind-card strong,
+  .booking-kind-card > span {
+    max-width: none;
+  }
+
+  .booking-kind-card strong {
+    margin-top: 0;
+  }
+
+  .visual-schedule {
+    padding: 11px;
+  }
+
+  .visual-schedule-marks {
+    display: flex;
+    justify-content: space-between;
+    gap: 7px;
+    height: auto;
+  }
+
+  .visual-schedule-mark,
+  .visual-schedule-mark:first-child,
+  .visual-schedule-mark.is-last {
+    position: static;
+    transform: none;
+    font-size: 0.62rem;
+  }
+
+  .visual-schedule-legend {
+    gap: 7px 10px;
+    font-size: 0.68rem;
+  }
 }
 
 .booking-event-shell {

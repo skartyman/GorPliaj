@@ -238,7 +238,7 @@ function VisualSchedule({ bookingKind, locale }) {
   const activeStart = 9;
   const tableWidthPercent = ((20 - 9) / totalHours) * 100;
   const beachArrivalWidthPercent = ((13 - 9) / totalHours) * 100;
-  const beachLeisureWidthPercent = ((20 - 13) / totalHours) * 100;
+  const beachLeisureWidthPercent = ((20 - 9) / totalHours) * 100;
 
   const leftPercent = ((activeStart - startHour) / totalHours) * 100;
 
@@ -274,26 +274,26 @@ function VisualSchedule({ bookingKind, locale }) {
       <div style={{ position: 'relative', height: '8px', backgroundColor: 'var(--line-light, rgba(255,255,255,0.12))', borderRadius: '4px', overflow: 'hidden', margin: '8px 0 4px' }}>
         {isBeach ? (
           <>
-            {/* Beach Arrival Window: 09:00 - 13:00 (Solid Gold/Brand) */}
+            {/* Beach rest window: 09:00 - 20:00 (booking active) */}
+            <div style={{
+              position: 'absolute',
+              left: `${leftPercent}%`,
+              width: `${beachLeisureWidthPercent}%`,
+              height: '100%',
+              backgroundColor: 'var(--brand)',
+              opacity: 0.35,
+              borderRadius: '4px'
+            }} title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })} />
+
+            {/* Beach arrival window: 09:00 - 13:00 (mandatory check-in) */}
             <div style={{
               position: 'absolute',
               left: `${leftPercent}%`,
               width: `${beachArrivalWidthPercent}%`,
               height: '100%',
               backgroundColor: 'var(--brand)',
-              borderRadius: '4px 0 0 4px'
+              borderRadius: '4px'
             }} title={getCopy({ ua: 'Обовʼязкова явка', ru: 'Обязательная явка', en: 'Mandatory arrival' })} />
-            
-            {/* Beach Rest Window: 13:00 - 20:00 (Semi-transparent Brand) */}
-            <div style={{
-              position: 'absolute',
-              left: `${((13 - startHour) / totalHours) * 100}%`,
-              width: `${beachLeisureWidthPercent}%`,
-              height: '100%',
-              backgroundColor: 'var(--brand)',
-              opacity: 0.35,
-              borderRadius: '0 4px 4px 0'
-            }} title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })} />
           </>
         ) : (
           /* Table Booking Window: 09:00 - 20:00 (Solid Green) */
