@@ -650,18 +650,7 @@ const translations = {
       total: 'Всього подій',
       published: 'Опубліковано',
       featured: 'Вибрані',
-      errors: {
-        load: 'Не вдалося завантажити події.',
-        save: 'Не вдалося зберегти подію.',
-        delete: 'Не вдалося видалити подію.',
-        upload: 'Не вдалося завантажити постер.'
-      },
-      columns: {
-        title: 'Подія',
-        start: 'Початок',
-        status: 'Статус',
-        actions: 'Дії'
-      },
+
       form: {
         edit: 'Редагувати подію',
         create: 'Створити подію',
@@ -678,19 +667,7 @@ const translations = {
         preview: 'Попередній перегляд',
         openPublic: 'Відкрити публічну сторінку',
         posterUpload: 'Завантажити постер',
-        fields: {
-          title: 'Назва',
-          slug: 'Посилання (slug)',
-          start: 'Початок',
-          end: 'Кінець',
-          status: 'Статус',
-          cta: 'Кнопка (CTA)',
-          shortDescription: 'Короткий опис',
-          fullDescription: 'Повний опис',
-          posterUrl: 'URL постера',
-          ticketUrl: 'URL квитків',
-          featured: 'Вибранa подія'
-        },
+
         placeholders: {
           autoTranslated: 'Автоматичний переклад',
           fullDescriptionUa: 'Повний опис українською...',
