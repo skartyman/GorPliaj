@@ -1988,22 +1988,52 @@ h3 {
 .public-map-object:not(.selectable) { pointer-events: none; }
 .public-map-object .status-dot {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 10px;
-  height: 10px;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 2px solid #fff;
   z-index: 5;
   pointer-events: none;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  box-shadow: 0 1.5px 4px rgba(0,0,0,0.3);
 }
-.public-map-object.free .status-dot { background: #22c55e; }
+@keyframes status-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7), 0 1.5px 4px rgba(0,0,0,0.3);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0), 0 1.5px 4px rgba(0,0,0,0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0), 0 1.5px 4px rgba(0,0,0,0.3);
+  }
+}
+.public-map-object.free .status-dot {
+  background: #22c55e;
+  animation: status-pulse 2s infinite;
+}
 .public-map-object.held .status-dot { background: #f59e0b; }
 .public-map-object.busy .status-dot { background: #ef4444; }
 .public-map-object.unavailable .status-dot { background: #9ca3af; }
 .public-map-object.no-fit { outline: 2px dashed #ff5722; outline-offset: -3px; }
 .public-map-object.no-fit .status-dot { background: #9ca3af; }
+
+/* Status highlight for custom assets */
+.public-map-object.free .public-map-object-asset {
+  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.5));
+}
+.public-map-object.held .public-map-object-asset {
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5));
+}
+.public-map-object.busy .public-map-object-asset {
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.4));
+  opacity: 0.8;
+}
+.public-map-object.unavailable .public-map-object-asset {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
 .public-map-object.free.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #4caf50, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.held.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #ff9800, 0 0 20px rgba(0,0,0,0.4); }
 .public-map-object.busy.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #f44336, 0 0 20px rgba(0,0,0,0.4); }
@@ -2069,6 +2099,7 @@ h3 {
 .legend-dot.free { background: #5cb88a; }
 .legend-dot.held { background: #d9aa54; }
 .legend-dot.busy { background: #df705d; }
+.legend-dot.no-fit { background: #9ca3af; }
 
 /* ===== Booking / Forms ===== */
 .form-group {
