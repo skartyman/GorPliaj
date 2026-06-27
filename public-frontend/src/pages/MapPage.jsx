@@ -1046,6 +1046,19 @@ export default function MapPage() {
     setHoldError('');
     try {
       const hold = await holdsApi.create({ tableId, date, timeFrom, locale });
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({
+          type: 'SELECT_UNIT_FROM_MAP',
+          tableId,
+          bookingKind,
+          date,
+          timeFrom,
+          guests,
+          hold
+        }, window.location.origin);
+        window.close();
+        return;
+      }
       const kindParam = bookingKind === 'BEACH' ? '&kind=BEACH' : '';
       navigate(`/booking?date=${date}&timeFrom=${timeFrom}&guests=${guests}&bookableUnitId=table:${tableId}&mapId=${state.result.map.id}&zoneId=${selectedTable?.zoneId || selectedObjectTable?.zoneId || ''}&flow=STANDARD${kindParam}&holdToken=${hold.holdToken}&holdExpiresAt=${encodeURIComponent(hold.expiresAt)}`);
     } catch (error) {

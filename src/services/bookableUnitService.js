@@ -199,7 +199,7 @@ function buildBookableUnit(table, linkedObject, positionTypeMap = {}, reservatio
     code: table.code || null,
     name: pickLocalizedValue(table.serviceName, table.name),
     label: pickLocalizedValue(linkedObject?.label, table.name),
-    photoUrl: getUnitPhotoUrl(table, meta),
+    photoUrl: table.photoUrl || ptConfig.photoUrl || getUnitPhotoUrl(table, meta),
     seatsMin,
     seatsMax,
     capacityLabel: meta.capacityLabel || null,

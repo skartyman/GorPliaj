@@ -355,7 +355,43 @@ const BOOKING_KIND_OPTIONS = [
 
 export default function BookingPage() {
   const { locale } = useLocale();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    function handleMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'SELECT_UNIT_FROM_MAP') {
+        const { tableId, bookingKind, date, timeFrom, guests, hold } = event.data;
+        
+        setForm((current) => ({
+          ...current,
+          date,
+          timeFrom,
+          guests
+        }));
+        
+        if (bookingKind) {
+          setBookingKind(bookingKind);
+        }
+        
+        setSelected((current) => ({
+          ...current,
+          bookableUnitId: `table:${tableId}`
+        }));
+        
+        const next = new URLSearchParams(window.location.search);
+        next.set('holdToken', hold.holdToken);
+        next.set('holdExpiresAt', hold.expiresAt);
+        next.set('bookableUnitId', `table:${tableId}`);
+        setSearchParams(next, { replace: true });
+        
+        setCurrentStep(4);
+      }
+    }
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [setSearchParams]);
   const c = (values) => localizedCopy(values, locale);
   const today = (() => {
     const d = new Date();
@@ -417,7 +453,13 @@ export default function BookingPage() {
   const [selectedEventDateKey, setSelectedEventDateKey] = useState('');
   const [eventDateAvailability, setEventDateAvailability] = useState({});
   const [eventBookingPrompt, setEventBookingPrompt] = useState(null);
-  const [currentStep, setCurrentStep] = useState(searchParams.get('kind') ? 2 : 1);
+  const [currentStep, setCurrentStep] = useState(
+    searchParams.get('bookableUnitId')
+      ? 4
+      : searchParams.get('kind')
+        ? 2
+        : 1
+  );
   const totalSteps = 4;
   const initialBookableUnitId = useRef(searchParams.get('bookableUnitId') || '');
   const hasAutoAdvanced = useRef(false);
