@@ -1262,7 +1262,14 @@ export default function MapPage() {
             <span className="map-zoom-pill">{Math.round(transform.scale * 100)}%</span>
           </div>
 
-          <div className={`public-map-shell ${isDragging ? 'is-dragging' : ''}`}>
+          <div
+            className={`public-map-shell ${isDragging ? 'is-dragging' : ''}`}
+            style={{
+              backgroundColor: state.result?.map?.backgroundColor || '#d8e7f8',
+              borderRadius: '12px',
+              border: '1px solid var(--line)'
+            }}
+          >
             {zoneFocusItems.length ? (
               <div className="public-map-zone-tabs" aria-label="Map zones">
                 <button

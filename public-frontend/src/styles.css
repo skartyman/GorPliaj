@@ -1879,9 +1879,10 @@ h3 {
 
 .public-map-shell {
   position: relative;
-  border-radius: 0;
+  border-radius: 12px;
   overflow: hidden;
-  background: #1a1a1e;
+  background: #d8e7f8;
+  border: 1px solid var(--line);
 }
 
 .public-map-zone-tabs {
@@ -1932,15 +1933,15 @@ h3 {
 
 .public-map-viewport {
   position: relative;
-  height: 60vh;
-  min-height: 420px;
+  height: 50vh;
+  min-height: 380px;
   overflow: hidden;
   touch-action: none;
 }
 
 .map-preview-container .public-map-viewport {
-  height: min(78vh, 860px);
-  min-height: 620px;
+  height: 520px;
+  min-height: 380px;
 }
 
 .public-map-world { position: absolute; top: 0; left: 0; transform-origin: top left; }
@@ -3380,8 +3381,8 @@ h3 {
   }
 
   .map-preview-container .public-map-viewport {
-    height: 64vh;
-    min-height: 420px;
+    height: 50vh;
+    min-height: 320px;
   }
 
   .footer-top {
