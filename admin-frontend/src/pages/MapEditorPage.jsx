@@ -325,8 +325,9 @@ function calculateFitScale(container, map) {
     return 1;
   }
 
-  const availableWidth = Math.max(container.clientWidth - MAP_VIEWPORT_PADDING * 2, 320);
-  const availableHeight = Math.max(container.clientHeight - MAP_VIEWPORT_PADDING * 2, 240);
+  // Subtract a safety margin (20px) to prevent scrollbar appearance feedback loop (flicker)
+  const availableWidth = Math.max(container.clientWidth - MAP_VIEWPORT_PADDING * 2 - 20, 320);
+  const availableHeight = Math.max(container.clientHeight - MAP_VIEWPORT_PADDING * 2 - 20, 240);
   return clampScale(Math.min(availableWidth / map.width, availableHeight / map.height, 1));
 }
 
