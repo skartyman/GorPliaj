@@ -417,7 +417,7 @@ export default function BookingPage() {
   const [selectedEventDateKey, setSelectedEventDateKey] = useState('');
   const [eventDateAvailability, setEventDateAvailability] = useState({});
   const [eventBookingPrompt, setEventBookingPrompt] = useState(null);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(searchParams.get('kind') ? 2 : 1);
   const totalSteps = 4;
   const initialBookableUnitId = useRef(searchParams.get('bookableUnitId') || '');
   const hasAutoAdvanced = useRef(false);

@@ -116,10 +116,49 @@ export default function HomePage() {
 
       {/* Booking CTA */}
       <section className="content-section">
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: 32 }}>
-          <h2 style={{ marginBottom: 8 }}>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Book a table' })}</h2>
-          <p className="muted" style={{ marginBottom: 20 }}>{c({ ua: 'Оберіть дату, кількість гостей та доступний стіл.', ru: 'Выберите дату, количество гостей и доступный стол.', en: 'Choose a date, guest count and an available table.' })}</p>
-          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: '32px 24px' }}>
+          <h2 style={{ marginBottom: 16, textAlign: 'center' }}>
+            {c({ ua: 'Що бажаєте забронювати?', ru: 'Что хотите забронировать?', en: 'What would you like to book?' })}
+          </h2>
+          <div className="booking-kind-grid" style={{ marginTop: 24 }}>
+            {[
+              {
+                value: 'TABLE',
+                icon: '/icons/booking-table.png',
+                copy: {
+                  ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірні посадки.' },
+                  ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерние посадки.' },
+                  en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening seating.' }
+                }
+              },
+              {
+                value: 'BEACH',
+                icon: '/icons/booking-beach.png',
+                copy: {
+                  ua: { title: 'Пляж', body: 'Бунгало, ліжка та інші пляжні послуги.' },
+                  ru: { title: 'Пляж', body: 'Бунгало, кровати и другие пляжные услуги.' },
+                  en: { title: 'Beach', body: 'Bungalows, daybeds, and other beach services.' }
+                }
+              }
+            ].map((option) => {
+              const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || option.copy['en'];
+              return (
+                <Link
+                  key={option.value}
+                  to={`/booking?kind=${option.value}`}
+                  className={`booking-kind-card booking-kind-card-${option.value.toLowerCase()}`}
+                  style={{ textDecoration: 'none', color: 'inherit', textAlign: 'left' }}
+                >
+                  <div className="booking-kind-icon">
+                    <img src={option.icon} alt={option.value} />
+                  </div>
+                  <strong style={{ display: 'block', fontSize: '1.2rem', marginBottom: 6 }}>{localized.title}</strong>
+                  <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: 12 }}>{localized.body}</span>
+                  <VisualSchedule bookingKind={option.value} locale={locale} />
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -170,5 +209,115 @@ export default function HomePage() {
         </div>
       </section>
     </>
+  );
+}
+
+function VisualSchedule({ bookingKind, locale }) {
+  const isBeach = bookingKind === 'BEACH';
+  const startHour = 8;
+  const endHour = 22;
+  const totalHours = endHour - startHour; // 14
+
+  const activeStart = 9;
+  const tableWidthPercent = ((20 - 9) / totalHours) * 100;
+  const beachArrivalWidthPercent = ((13 - 9) / totalHours) * 100;
+  const beachLeisureWidthPercent = ((20 - 9) / totalHours) * 100;
+
+  const leftPercent = ((activeStart - startHour) / totalHours) * 100;
+
+  const label = isBeach
+    ? {
+        ua: 'Пляж: бронь на весь день (обовʼязкова явка 09:00 - 13:00)',
+        ru: 'Пляж: бронь на весь день (обязательная явка 09:00 - 13:00)',
+        en: 'Beach: full day booking (mandatory arrival 09:00 - 13:00)'
+      }
+    : {
+        ua: 'Столи: час бронювання 09:00 - 20:00',
+        ru: 'Столы: время бронирования 09:00 - 20:00',
+        en: 'Tables: booking hours 09:00 - 20:00'
+      };
+
+  const getCopy = (dict) => dict[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || dict['en'];
+
+  return (
+    <div className={`visual-schedule${isBeach ? ' is-beach' : ' is-table'}`}>
+      <div className="visual-schedule-title">
+        {getCopy(label)}
+      </div>
+
+      <div className="visual-schedule-track" aria-hidden="true">
+        {isBeach ? (
+          <>
+            <div
+              className="visual-schedule-segment visual-schedule-segment-rest"
+              style={{
+              left: `${leftPercent}%`,
+              width: `${beachLeisureWidthPercent}%`
+            }}
+              title={getCopy({ ua: 'Час відпочинку', ru: 'Время отдыха', en: 'Leisure time' })}
+            />
+            <div
+              className="visual-schedule-segment visual-schedule-segment-arrival"
+              style={{
+              left: `${leftPercent}%`,
+              width: `${beachArrivalWidthPercent}%`
+            }}
+              title={getCopy({ ua: 'Обовʼязкова явка', ru: 'Обязательная явка', en: 'Mandatory arrival' })}
+            />
+          </>
+        ) : (
+          <div
+            className="visual-schedule-segment visual-schedule-segment-table"
+            style={{
+            left: `${leftPercent}%`,
+            width: `${tableWidthPercent}%`
+          }}
+          />
+        )}
+      </div>
+
+      <div className="visual-schedule-marks">
+        <span
+          className={`visual-schedule-mark is-active-start${isBeach ? ' is-strong' : ''}`}
+          style={{ left: `${((9 - startHour) / totalHours) * 100}%` }}
+        >
+          09:00
+        </span>
+        {isBeach && (
+          <span
+            className="visual-schedule-mark is-strong"
+            style={{ left: `${((13 - startHour) / totalHours) * 100}%` }}
+          >
+            13:00
+          </span>
+        )}
+        <span
+          className="visual-schedule-mark is-end"
+          style={{ left: `${((20 - startHour) / totalHours) * 100}%` }}
+        >
+          20:00
+        </span>
+      </div>
+
+      <div className="visual-schedule-legend">
+        {isBeach ? (
+          <>
+            <span>
+              <i className="visual-schedule-dot" aria-hidden="true" />
+              {getCopy({ ua: 'Реєстрація (явка)', ru: 'Регистрация (явка)', en: 'Mandatory Check-in' })}
+            </span>
+            <span>
+              <i className="visual-schedule-dot is-muted" aria-hidden="true" />
+              {getCopy({ ua: 'Час відпочинку (бронь діє)', ru: 'Время отдыха (бронь действует)', en: 'Rest Time (booking active)' })}
+            </span>
+          </>
+        ) : (
+          <span>
+            <i className="visual-schedule-dot is-table" aria-hidden="true" />
+            {getCopy({ ua: 'Час бронювання', ru: 'Время бронирования', en: 'Booking time' })}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
