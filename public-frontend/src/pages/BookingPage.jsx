@@ -622,27 +622,24 @@ export default function BookingPage() {
       
       if (bookingFlow === 'EVENT') {
         const dates = buildEventDateOptions(event);
+        let resolvedDateOption = null;
         if (dates.length === 1) {
-          const onlyDate = dates[0];
-          setSelectedEventDateKey(onlyDate.key);
-          setForm((current) => ({
-            ...current,
-            date: onlyDate.date,
-            timeFrom: current.timeFrom === '12:00' ? onlyDate.timeFrom || current.timeFrom : current.timeFrom
-          }));
+          resolvedDateOption = dates[0];
         } else {
           const queryDate = searchParams.get('date') || '';
-          const matchedDate = queryDate && dates.find((item) => item.date === queryDate);
-          setSelectedEventDateKey(matchedDate?.key || '');
-          if (matchedDate) {
-            setForm((current) => ({
-              ...current,
-              date: matchedDate.date,
-              timeFrom: current.timeFrom === '12:00' ? matchedDate.timeFrom || current.timeFrom : current.timeFrom
-            }));
-          } else {
-            setSelectedEventDateKey('');
-          }
+          resolvedDateOption = queryDate && dates.find((item) => item.date === queryDate);
+        }
+
+        if (resolvedDateOption) {
+          setSelectedEventDateKey(resolvedDateOption.key);
+          setForm((current) => ({
+            ...current,
+            date: resolvedDateOption.date,
+            timeFrom: current.timeFrom === '12:00' ? resolvedDateOption.timeFrom || current.timeFrom : current.timeFrom
+          }));
+          setCurrentStep(3);
+        } else {
+          setSelectedEventDateKey('');
         }
       }
     });
@@ -1008,6 +1005,7 @@ export default function BookingPage() {
     const params = new URLSearchParams();
     params.set('event', event.slug);
     if (targetDate) params.set('date', targetDate);
+    if (form.guests) params.set('guests', String(form.guests));
     window.location.assign(`/booking?${params.toString()}`);
   }
 
