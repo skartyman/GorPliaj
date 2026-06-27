@@ -7,7 +7,7 @@ import { useLocale } from '../state/locale';
 import { useMeta } from '../hooks/useMeta';
 
 const MAP_PADDING = 24;
-const MAP_PREVIEW_GUTTER = 240;
+const MAP_PREVIEW_GUTTER = 20;
 const PINCH_SENSITIVITY = 0.006;
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
 const STATIC_TYPE_ACCENTS = {
@@ -675,6 +675,7 @@ export default function MapPage() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null });
   const viewportRef = useRef(null);
+  const sidePanelRef = useRef(null);
   const focusedFromQueryRef = useRef('');
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
@@ -708,7 +709,7 @@ export default function MapPage() {
 
   const navigate = useNavigate();
 
-  const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'BEACH' ? 'BEACH' : 'TABLE');
+  const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'TABLE' ? 'TABLE' : 'BEACH');
   const [usageMode, setUsageMode] = useState(
     searchParams.get('usageMode') === 'EVENING'
       || (searchParams.get('timeFrom') && searchParams.get('timeFrom') > '16:00')
@@ -846,6 +847,14 @@ export default function MapPage() {
     setSelectedTable(selectedTableId ? tables.find((item) => item.id === selectedTableId) || null : null);
   }, [selectedTableId, state.result]);
 
+  useEffect(() => {
+    if ((selectedTableId || selectedObjectId) && sidePanelRef.current) {
+      setTimeout(() => {
+        sidePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+  }, [selectedTableId, selectedObjectId]);
+
   const tableById = useMemo(() => {
     if (!state.result) return new Map();
     return new Map(state.result.map.zones.flatMap((zone) => zone.tables).map((table) => [table.id, table]));
@@ -920,20 +929,7 @@ export default function MapPage() {
     transformRef.current = transform;
   }, [transform]);
 
-  useEffect(() => {
-    const node = viewportRef.current;
-    if (!node || !canInteractWithMap) return undefined;
-
-    const handleWheel = (event) => {
-      event.preventDefault();
-      const current = transformRef.current;
-      const rect = node.getBoundingClientRect();
-      zoomTo(current.scale * (event.deltaY > 0 ? 0.92 : 1.08), event.clientX - rect.left, event.clientY - rect.top);
-    };
-
-    node.addEventListener('wheel', handleWheel, { passive: false });
-    return () => node.removeEventListener('wheel', handleWheel);
-  }, [canInteractWithMap, transform.maxScale, transform.minScale]);
+  // Mouse wheel zoom removed so mouse wheel scrolls the page normally.
 
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
@@ -1340,8 +1336,6 @@ export default function MapPage() {
                     const isTable = object.type === 'TABLE';
                     const table = isTable && object.tableId ? tableById.get(object.tableId) : null;
                     const linkedTable = !isTable && object.tableId ? tableById.get(object.tableId) : null;
-                    if (table && table.bookingKind !== resolvedBookingKind) return null;
-                    if (linkedTable && linkedTable.bookingKind !== resolvedBookingKind) return null;
                     const objectLabel = localizeField(object.label, locale) || object.type;
                     const meta = parseMetaJson(object.metaJson);
                     if (table) {
@@ -1429,6 +1423,34 @@ export default function MapPage() {
                 </div>
               </div>
             </div>
+            {(selectedTable || selectedObject) && (
+              <button
+                type="button"
+                className="btn btn-primary floating-booking-hint"
+                onClick={() => sidePanelRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                style={{
+                  position: 'absolute',
+                  bottom: '16px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 200,
+                  boxShadow: '0 4px 15px rgba(201, 168, 108, 0.4)',
+                  borderRadius: '999px',
+                  padding: '10px 20px',
+                  fontSize: '0.9rem',
+                  fontWeight: '700',
+                  color: '#000000',
+                  backgroundColor: 'var(--brand, #c9a86c)',
+                  border: '1px solid var(--brand, #c9a86c)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {locale === 'ua' ? '👉 Перейти до бронювання' : locale === 'ru' ? '👉 Перейти к бронированию' : '👉 Proceed to booking'}
+              </button>
+            )}
           </div>
 
           {!canInteractWithMap ? <p className="muted">Preparing map...</p> : null}
@@ -1454,7 +1476,7 @@ export default function MapPage() {
           </div>
         </article>
 
-        <aside className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable || selectedObject ? 'is-open' : ''}`}>
+        <aside ref={sidePanelRef} className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable || selectedObject ? 'is-open' : ''}`}>
           {(selectedTable || selectedObject) ? (
             <button
               type="button"
