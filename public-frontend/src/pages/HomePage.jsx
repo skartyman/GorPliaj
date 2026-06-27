@@ -116,10 +116,13 @@ export default function HomePage() {
 
       {/* Booking CTA */}
       <section className="content-section">
+        <div className="section-header">
+          <h2>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Booking' })}</h2>
+        </div>
         <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: '32px 24px' }}>
-          <h2 style={{ marginBottom: 16, textAlign: 'center' }}>
+          <h3 style={{ marginBottom: 16, textAlign: 'center', fontSize: '1.25rem', fontWeight: 600 }}>
             {c({ ua: 'Що бажаєте забронювати?', ru: 'Что хотите забронировать?', en: 'What would you like to book?' })}
-          </h2>
+          </h3>
           <div className="booking-kind-grid" style={{ marginTop: 24 }}>
             {[
               {
