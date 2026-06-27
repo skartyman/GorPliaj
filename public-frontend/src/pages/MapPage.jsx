@@ -871,13 +871,6 @@ export default function MapPage() {
     return pt?.photoUrl || null;
   }, [selectedTable, positionTypes]);
 
-  const selectedObjectTablePhoto = useMemo(() => {
-    if (!selectedObjectTable) return null;
-    if (selectedObjectTable.photoUrl) return selectedObjectTable.photoUrl;
-    const pt = positionTypes.find((t) => t.value === selectedObjectTable.positionType);
-    return pt?.photoUrl || null;
-  }, [selectedObjectTable, positionTypes]);
-
   useEffect(() => {
     if ((selectedTableId || selectedObjectId) && sidePanelRef.current) {
       setTimeout(() => {
@@ -906,6 +899,13 @@ export default function MapPage() {
     selectedObjectTable.status === 'free' &&
     tableFitsGuests(selectedObjectTable)
   );
+
+  const selectedObjectTablePhoto = useMemo(() => {
+    if (!selectedObjectTable) return null;
+    if (selectedObjectTable.photoUrl) return selectedObjectTable.photoUrl;
+    const pt = positionTypes.find((t) => t.value === selectedObjectTable.positionType);
+    return pt?.photoUrl || null;
+  }, [selectedObjectTable, positionTypes]);
 
   const zoneFocusItems = useMemo(() => {
     const zones = state.result?.map?.zones || [];
