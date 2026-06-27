@@ -466,6 +466,11 @@ export default function BookingPage() {
     return () => clearTimeout(timer);
   }, [currentStep]);
 
+  const matchedEventForStandardDate = useMemo(
+    () => findEventForDate(eventOptionsState.events, form.date),
+    [eventOptionsState.events, form.date]
+  );
+
   const isStandardEventTime = bookingFlow === 'STANDARD' && bookingKind === 'TABLE' && matchedEventForStandardDate && form.timeFrom >= '17:00';
   const activeEventSlug = (bookingFlow === 'EVENT' || isStandardEventTime)
     ? (lockedEventSlug || selectedEventSlug || (matchedEventForStandardDate ? matchedEventForStandardDate.slug : ''))
@@ -528,10 +533,7 @@ export default function BookingPage() {
     () => eventOptionsState.events.slice(0, 3),
     [eventOptionsState.events]
   );
-  const matchedEventForStandardDate = useMemo(
-    () => findEventForDate(eventOptionsState.events, form.date),
-    [eventOptionsState.events, form.date]
-  );
+
   const standardBeachAlertEvent = useMemo(() => {
     if (bookingFlow === 'EVENT' || bookingKind !== 'BEACH') {
       return null;
