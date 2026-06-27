@@ -2411,7 +2411,8 @@ h3 {
 
 .booking-selected-panel {
   display: grid;
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 16px;
   margin-bottom: 14px;
   padding: 18px 20px;
   border: 1px solid rgba(201, 168, 108, 0.28);
@@ -2419,6 +2420,47 @@ h3 {
   background:
     radial-gradient(circle at top left, rgba(201, 168, 108, 0.12), transparent 38%),
     var(--bg-secondary);
+}
+
+@media (min-width: 768px) {
+  .booking-selected-panel {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+.booking-selected-photo-card {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+@media (min-width: 768px) {
+  .booking-selected-photo-card {
+    width: 240px;
+    height: 140px;
+  }
+}
+
+.booking-selected-photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.booking-selected-photo-card:hover img {
+  transform: scale(1.05);
+}
+
+.booking-selected-photo-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.65) 100%);
+  pointer-events: none;
 }
 
 .booking-selected-copy {

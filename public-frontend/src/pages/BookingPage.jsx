@@ -810,6 +810,13 @@ export default function BookingPage() {
     [filteredUnits, selected.bookableUnitId]
   );
 
+  const selectedUnitPhoto = useMemo(() => {
+    if (!selectedUnit) return null;
+    if (selectedUnit.photoUrl) return selectedUnit.photoUrl;
+    const pt = positionTypes.find((t) => t.value === selectedUnit.positionType);
+    return pt?.photoUrl || null;
+  }, [selectedUnit, positionTypes]);
+
   useEffect(() => {
     if (!hasAutoAdvanced.current && initialBookableUnitId.current && selectedUnit) {
       if (resolvedBookingKind === 'BEACH' && form.timeFrom > '13:00') return;
@@ -1601,8 +1608,10 @@ export default function BookingPage() {
             {photo || typePrice || ptDesc ? (
               <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
                 {photo ? (
-                  <img src={photo} alt=""
-                    style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                  <div style={{ position: 'relative', width: 80, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)', flexShrink: 0 }}>
+                    <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.15)', pointerEvents: 'none' }} />
+                  </div>
                 ) : null}
                 <div style={{ minWidth: 0 }}>
                   <strong style={{ fontSize: '0.95rem' }}>{selectedType.label}</strong>
@@ -1697,31 +1706,39 @@ export default function BookingPage() {
         <div className="form-group" style={{ gridColumn: '1 / -1' }}>
           {selectedUnit ? (
             <div className="booking-selected-panel">
-              <div className="booking-selected-copy">
-                <span className="eyebrow">{c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })}</span>
-                <strong>{getUnitDisplayName(selectedUnit, locale)}</strong>
-                <span>{selectedMetaLine}</span>
-                {selectedUnit.rowSortOrder != null ? <span className="muted small">{c({ ua: 'Ряд', ru: 'Ряд', en: 'Row' })} {selectedUnit.rowSortOrder}</span> : null}
-                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                    📅 {formatUkrainianDate(form.date, { weekday: true })}
-                  </span>
-                  {form.timeFrom ? (
-                    <span className="muted">
-                      🕒 {c({ ua: 'Час', ru: 'Время', en: 'Time' })}: {form.timeFrom}
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div className="booking-selected-copy">
+                  <span className="eyebrow">{c({ ua: 'Обрано', ru: 'Выбрано', en: 'Selected' })}</span>
+                  <strong>{getUnitDisplayName(selectedUnit, locale)}</strong>
+                  <span>{selectedMetaLine}</span>
+                  {selectedUnit.rowSortOrder != null ? <span className="muted small">{c({ ua: 'Ряд', ru: 'Ряд', en: 'Row' })} {selectedUnit.rowSortOrder}</span> : null}
+                  <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
+                      📅 {formatUkrainianDate(form.date, { weekday: true })}
                     </span>
-                  ) : null}
+                    {form.timeFrom ? (
+                      <span className="muted">
+                        🕒 {c({ ua: 'Час', ru: 'Время', en: 'Time' })}: {form.timeFrom}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="booking-selected-meta">
+                  <span>{positionTypeLabel(selectedUnit.positionType)}</span>
+                  <span>{Number(selectedUnit.seatsMin)}-{Number(selectedUnit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
+                  <span>
+                    {selectedUnit.depositAmount > 0
+                      ? `${resolvedBookingKind === 'BEACH' ? c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' }) : c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}`
+                      : (resolvedBookingKind === 'BEACH' ? c({ ua: 'Безкоштовно', ru: 'Бесплатно', en: 'Free' }) : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' }))}
+                  </span>
                 </div>
               </div>
-              <div className="booking-selected-meta">
-                <span>{positionTypeLabel(selectedUnit.positionType)}</span>
-                <span>{Number(selectedUnit.seatsMin)}-{Number(selectedUnit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
-                <span>
-                  {selectedUnit.depositAmount > 0
-                    ? `${resolvedBookingKind === 'BEACH' ? c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' }) : c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}`
-                    : (resolvedBookingKind === 'BEACH' ? c({ ua: 'Безкоштовно', ru: 'Бесплатно', en: 'Free' }) : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' }))}
-                </span>
-              </div>
+              {selectedUnitPhoto ? (
+                <div className="booking-selected-photo-card">
+                  <img src={selectedUnitPhoto} alt={getUnitDisplayName(selectedUnit, locale)} />
+                  <div className="booking-selected-photo-overlay" />
+                </div>
+              ) : null}
               {selectedUnit.tableId ? (
                 <div className="booking-selected-actions" style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 4 }}>
                   <button

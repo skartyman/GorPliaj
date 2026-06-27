@@ -856,6 +856,28 @@ export default function MapPage() {
     setSelectedTable(selectedTableId ? tables.find((item) => item.id === selectedTableId) || null : null);
   }, [selectedTableId, state.result]);
 
+  const [positionTypes, setPositionTypes] = useState([]);
+  useEffect(() => {
+    fetch('/api/position-types')
+      .then((r) => r.json())
+      .then((body) => { if (Array.isArray(body)) setPositionTypes(body); })
+      .catch(() => {});
+  }, []);
+
+  const selectedTablePhoto = useMemo(() => {
+    if (!selectedTable) return null;
+    if (selectedTable.photoUrl) return selectedTable.photoUrl;
+    const pt = positionTypes.find((t) => t.value === selectedTable.positionType);
+    return pt?.photoUrl || null;
+  }, [selectedTable, positionTypes]);
+
+  const selectedObjectTablePhoto = useMemo(() => {
+    if (!selectedObjectTable) return null;
+    if (selectedObjectTable.photoUrl) return selectedObjectTable.photoUrl;
+    const pt = positionTypes.find((t) => t.value === selectedObjectTable.positionType);
+    return pt?.photoUrl || null;
+  }, [selectedObjectTable, positionTypes]);
+
   useEffect(() => {
     if ((selectedTableId || selectedObjectId) && sidePanelRef.current) {
       setTimeout(() => {
@@ -1524,6 +1546,12 @@ export default function MapPage() {
           <h3>{t('mapSelectedTitle')}</h3>
           {selectedTable ? (
             <>
+              {selectedTablePhoto ? (
+                <div className="booking-selected-photo-card" style={{ marginBottom: 14 }}>
+                  <img src={selectedTablePhoto} alt={localizeField(selectedTable.name, locale) || selectedTable.code} />
+                  <div className="booking-selected-photo-overlay" />
+                </div>
+              ) : null}
               <p>
                 <strong>{localizeField(selectedTable.name, locale) || selectedTable.code}</strong>
               </p>
@@ -1564,6 +1592,12 @@ export default function MapPage() {
             </>
           ) : selectedObject ? (
             <>
+              {selectedObjectMeta.photoUrl || selectedObjectTablePhoto ? (
+                <div className="booking-selected-photo-card" style={{ marginBottom: 14 }}>
+                  <img src={selectedObjectMeta.photoUrl || selectedObjectTablePhoto} alt={selectedObjectLabel} />
+                  <div className="booking-selected-photo-overlay" />
+                </div>
+              ) : null}
               <p>
                 <strong>{selectedObjectLabel}</strong>
                 {selectedObjectTable ? <span className="muted"> ({selectedObjectTable.code})</span> : null}
@@ -1573,11 +1607,6 @@ export default function MapPage() {
               ) : null}
               {selectedObjectTable?.rowSortOrder != null ? (
                 <p className="muted">{localizeField({ ua: 'Ряд', ru: 'Ряд', en: 'Row' }, locale)} {selectedObjectTable.rowSortOrder}</p>
-              ) : null}
-              {selectedObjectMeta.photoUrl ? (
-                <div className="map-object-photo">
-                  <img src={selectedObjectMeta.photoUrl} alt={selectedObjectLabel} />
-                </div>
               ) : null}
               {selectedObjectMeta.price !== '' && selectedObjectMeta.price !== null && selectedObjectMeta.price !== undefined ? (
                 <p className="muted">

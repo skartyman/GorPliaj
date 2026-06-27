@@ -96,7 +96,8 @@ export default function PositionsPage() {
       priceWeekday: pt.priceWeekday !== '' && pt.priceWeekday != null ? Number(pt.priceWeekday) : null,
       priceWeekend: pt.priceWeekend !== '' && pt.priceWeekend != null ? Number(pt.priceWeekend) : null,
       depositWeekday: pt.depositWeekday !== '' && pt.depositWeekday != null ? Number(pt.depositWeekday) : null,
-      depositWeekend: pt.depositWeekend !== '' && pt.depositWeekend != null ? Number(pt.depositWeekend) : null
+      depositWeekend: pt.depositWeekend !== '' && pt.depositWeekend != null ? Number(pt.depositWeekend) : null,
+      photoUrl: pt.photoUrl !== undefined ? pt.photoUrl : undefined
     };
 
     const { response, body } = await apiRequest(`/api/admin/position-types/${pt.id}`, {
@@ -491,6 +492,44 @@ export default function PositionsPage() {
             {t('positions.fields.seatsMax')}
             <input style={inputS} type="number" min="0" value={form.seatsMax} onChange={(e) => setForm({ ...form, seatsMax: e.target.value })} />
           </label>
+          <label style={{ fontSize: 11, gridColumn: 'span 2' }}>
+            Фото (URL або завантаження)
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input style={{ ...inputS, flex: 1 }} value={form.photoUrl} onChange={(e) => setForm({ ...form, photoUrl: e.target.value })} placeholder="URL фото" />
+              <label className="btn btn-small" style={{ fontSize: 11, padding: '4px 8px', cursor: 'pointer', margin: 0 }}>
+                Завантажити
+                <input
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.webp"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('folder', 'map-objects');
+                    formData.append('image', file);
+                    const result = await apiRequest('/api/admin/uploads/image', {
+                      method: 'POST',
+                      body: formData
+                    });
+                    if (result.response.ok && result.body?.url) {
+                      setForm((current) => ({ ...current, photoUrl: result.body.url }));
+                    } else {
+                      alert(result.body?.message || 'Error uploading photo');
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              {form.photoUrl && (
+                <img
+                  src={form.photoUrl}
+                  alt=""
+                  style={{ height: 28, borderRadius: 4, border: '1px solid var(--border-light)' }}
+                />
+              )}
+            </div>
+          </label>
           <div style={{ fontSize: 11, display: 'flex', gap: 8, alignItems: 'center', height: 28, alignSelf: 'end' }}>
             <label className="menu-admin-checkbox" style={{ gap: 2 }}>
               <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
@@ -562,6 +601,7 @@ export default function PositionsPage() {
                       <th>{t('positionTypes.form.fields.defaultDeposit') || 'Базовий депозит'}</th>
                       <th>{t('positionTypes.form.fields.depositWeekday') || 'Деп. (будні)'}</th>
                       <th>{t('positionTypes.form.fields.depositWeekend') || 'Деп. (вихідні)'}</th>
+                      <th>Фото</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -642,6 +682,51 @@ export default function PositionsPage() {
                               placeholder="—"
                               style={{ width: '100%', maxWidth: 80, fontSize: 12, padding: '2px 6px', height: 26 }}
                             />
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              {pt.photoUrl ? (
+                                <img
+                                  src={pt.photoUrl}
+                                  alt=""
+                                  style={{ width: 40, height: 26, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-light)' }}
+                                />
+                              ) : (
+                                <div style={{ width: 40, height: 26, borderRadius: 4, background: '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#666' }}>—</div>
+                              )}
+                              <input
+                                type="text"
+                                value={pt.photoUrl || ''}
+                                onChange={(e) => handleTypePriceChange(pt.id, 'photoUrl', e.target.value)}
+                                placeholder="URL"
+                                style={{ width: 70, fontSize: 10, padding: '2px 4px', height: 20 }}
+                              />
+                              <label className="btn btn-small" style={{ fontSize: 9, padding: '2px 4px', cursor: 'pointer', margin: 0 }}>
+                                Завантажити
+                                <input
+                                  type="file"
+                                  accept=".png,.jpg,.jpeg,.webp"
+                                  style={{ display: 'none' }}
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const formData = new FormData();
+                                    formData.append('folder', 'map-objects');
+                                    formData.append('image', file);
+                                    const result = await apiRequest('/api/admin/uploads/image', {
+                                      method: 'POST',
+                                      body: formData
+                                    });
+                                    if (result.response.ok && result.body?.url) {
+                                      handleTypePriceChange(pt.id, 'photoUrl', result.body.url);
+                                    } else {
+                                      alert(result.body?.message || 'Error uploading photo');
+                                    }
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                            </div>
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <button
