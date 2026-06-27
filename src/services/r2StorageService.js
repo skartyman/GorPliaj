@@ -211,7 +211,7 @@ async function saveMapAsset(asset) {
     updatedAt: new Date().toISOString(),
     assets: [
       normalized,
-      ...library.assets.filter((item) => item.id !== normalized.id && item.url !== normalized.url)
+      ...library.assets.filter((item) => item.id !== normalized.id)
     ].slice(0, 300)
   };
 

@@ -218,6 +218,30 @@ function getTemplateKey(item) {
   ].join(':');
 }
 
+function inferObjectAssetCategory(template) {
+  const subType = String(template?.subType || '').trim().toUpperCase();
+  const texture = String(template?.texture || '').trim().toLowerCase();
+  const label = String(template?.label || template?.objectLabel || '').trim().toLowerCase();
+
+  if (['sand', 'sea', 'water', 'wood', 'dark_wood', 'grass'].includes(texture) || subType === 'POLYGON') {
+    return 'SURFACES';
+  }
+
+  if (['TREE', 'BUSH', 'FLOWER'].includes(subType) || /(tree|bush|flower|green)/i.test(label)) {
+    return 'NATURE';
+  }
+
+  if (['KITCHEN', 'CASHIER', 'ENTRANCE', 'WC', 'STAIRS'].includes(subType) || /(entrance|kitchen|cashier|stairs|wc)/i.test(label)) {
+    return 'INFRASTRUCTURE';
+  }
+
+  if (['BED', 'SUNBED', 'UMBRELLA', 'TABLE', 'STAGE'].includes(subType) || /(bed|sunbed|umbrella|table|stage|bar|chair|sofa)/i.test(label)) {
+    return 'FURNITURE';
+  }
+
+  return 'OTHER';
+}
+
 function normalizeObjectTemplate(template) {
   if (!template) return null;
 
@@ -225,6 +249,7 @@ function normalizeObjectTemplate(template) {
   const svgUrl = String(template.svgUrl || '').trim();
   const svgCode = String(template.svgCode || '').trim();
   const subType = String(template.subType || '').trim();
+  const texture = String(template.texture || '').trim();
 
   if (!label && !svgUrl && !svgCode) {
     return null;
@@ -246,7 +271,8 @@ function normalizeObjectTemplate(template) {
     strokeWidth: template.strokeWidth || '',
     svgUrl,
     svgCode,
-    isLocked: Boolean(template.isLocked)
+    isLocked: Boolean(template.isLocked),
+    category: template.category || inferObjectAssetCategory({ ...template, label, subType, texture })
   };
 }
 
@@ -271,7 +297,8 @@ function buildTemplateFromObject(object, tableMap = null) {
     strokeWidth: meta.strokeWidth,
     svgUrl: meta.svgUrl,
     svgCode: meta.svgCode,
-    isLocked: meta.isLocked
+    isLocked: meta.isLocked,
+    category: meta.category || inferObjectAssetCategory({ label, subType: meta.subType, texture: meta.texture })
   });
 
   if (!template || (!template.svgUrl && !template.svgCode && !template.textureUrl && !template.subType && object.type !== 'CUSTOM')) {
@@ -1240,7 +1267,7 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, onDrawZoneP
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, mapId, onAppendRow, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, onSaveObject, mapId, onAppendRow, t, language }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -1313,6 +1340,16 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, t
       <div className="actions compact editor-actions-grid">
         <button type="button" className="icon-action-btn primary" onClick={() => onSave()} title={t('mapEditor.save')} aria-label={t('mapEditor.save')}>
           <ActionIcon name="save" />
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-small editor-save-object-btn"
+          onClick={() => onSaveObject()}
+          title="Сохранить объект"
+          aria-label="Сохранить объект"
+        >
+          <ActionIcon name="save" />
+          <span>Сохранить объект</span>
         </button>
         <button
           type="button"
@@ -2419,6 +2456,7 @@ export default function MapEditorPage() {
   const pendingSaveRef = useRef(null);
   const rotationStateRef = useRef(null);
   const resizeEdgeStateRef = useRef(null);
+  const [objectAssetSavePrompt, setObjectAssetSavePrompt] = useState(null);
   const [mapScale, setMapScale] = useState(1);
   const [mapAutoFit, setMapAutoFit] = useState(true);
   const [textureAssets, setTextureAssets] = useState([]);
@@ -2640,6 +2678,83 @@ export default function MapEditorPage() {
     setCustomObjectAssets(normalizedAssets.map(normalizeStoredObjectAsset).filter(Boolean));
   }
 
+  function getStoredObjectAssetForObject(object) {
+    if (!object) {
+      return null;
+    }
+
+    const template = buildTemplateFromObject(object);
+    if (!template) {
+      return null;
+    }
+
+    const normalizedKey = getTemplateKey(template);
+    return customObjectAssets.find((asset) => getTemplateKey(asset) === normalizedKey) || null;
+  }
+
+  function hasObjectAssetChanges(currentObject, originalObject) {
+    if (!currentObject || !originalObject) {
+      return false;
+    }
+
+    const currentTemplate = buildTemplateFromObject(currentObject);
+    const originalTemplate = buildTemplateFromObject(originalObject);
+    if (!currentTemplate || !originalTemplate) {
+      return false;
+    }
+
+    return JSON.stringify({
+      label: currentTemplate.label,
+      width: currentTemplate.width,
+      height: currentTemplate.height,
+      type: currentTemplate.type,
+      subType: currentTemplate.subType,
+      interactionMode: currentTemplate.interactionMode,
+      texture: currentTemplate.texture,
+      textureUrl: currentTemplate.textureUrl,
+      opacity: currentTemplate.opacity,
+      strokeColor: currentTemplate.strokeColor,
+      strokeWidth: currentTemplate.strokeWidth,
+      svgUrl: currentTemplate.svgUrl,
+      svgCode: currentTemplate.svgCode,
+      category: currentTemplate.category,
+      isLocked: currentTemplate.isLocked
+    }) !== JSON.stringify({
+      label: originalTemplate.label,
+      width: originalTemplate.width,
+      height: originalTemplate.height,
+      type: originalTemplate.type,
+      subType: originalTemplate.subType,
+      interactionMode: originalTemplate.interactionMode,
+      texture: originalTemplate.texture,
+      textureUrl: originalTemplate.textureUrl,
+      opacity: originalTemplate.opacity,
+      strokeColor: originalTemplate.strokeColor,
+      strokeWidth: originalTemplate.strokeWidth,
+      svgUrl: originalTemplate.svgUrl,
+      svgCode: originalTemplate.svgCode,
+      category: originalTemplate.category,
+      isLocked: originalTemplate.isLocked
+    });
+  }
+
+  function buildObjectAssetPayload(object, mode = 'current') {
+    const template = buildTemplateFromObject(object);
+    if (!template) {
+      return null;
+    }
+
+    const originalAsset = mode === 'current' ? getStoredObjectAssetForObject(editorState.original?.objects?.find((item) => item.id === object.id) || object) : null;
+    const nextId = mode === 'current'
+      ? (originalAsset?.id || `asset-object-${object.id}`)
+      : `asset-object-${object.id}-${Date.now()}`;
+
+    return {
+      ...template,
+      id: nextId
+    };
+  }
+
   async function loadMapAssetLibrary() {
     const result = await apiRequest(MAP_ASSET_LIBRARY_ENDPOINT);
     if (result.response.ok) {
@@ -2729,18 +2844,30 @@ export default function MapEditorPage() {
     }
   }
 
-  function registerSelectedObjectTemplate(metaOverrides = {}) {
+  function registerSelectedObjectTemplate(metaOverrides = {}, options = {}) {
     if (!selectedObject) return;
 
-    const template = buildTemplateFromObject({
+    const payload = buildObjectAssetPayload({
       ...selectedObject,
       metaJson: {
         ...selectedObject.metaJson,
         ...metaOverrides
       }
-    });
+    }, options.mode === 'new' ? 'new' : 'current');
 
-    upsertCustomObjectAsset(template);
+    if (!payload) {
+      return;
+    }
+
+    upsertCustomObjectAsset(payload);
+  }
+
+  function saveSelectedObjectAsset(mode = 'current') {
+    if (!selectedObject) {
+      return;
+    }
+
+    registerSelectedObjectTemplate({}, { mode });
   }
 
   useEffect(() => {
@@ -4161,6 +4288,33 @@ export default function MapEditorPage() {
     }));
   }
 
+  function promptSelectedObjectSave() {
+    if (!selectedObject) {
+      return;
+    }
+
+    const originalSelectedObject = editorState.original?.objects?.find((item) => item.id === selectedObject.id) || null;
+    if (hasObjectAssetChanges(selectedObject, originalSelectedObject)) {
+      setObjectAssetSavePrompt({
+        objectId: selectedObject.id,
+        objectLabel: getObjectDisplayName(selectedObject, tableMap, t, language)
+      });
+      return;
+    }
+
+    saveSelectedObjectAsset('current');
+  }
+
+  function confirmSelectedObjectSave(mode) {
+    if (!selectedObject) {
+      setObjectAssetSavePrompt(null);
+      return;
+    }
+
+    saveSelectedObjectAsset(mode);
+    setObjectAssetSavePrompt(null);
+  }
+
   function openDraftPreview() {
     const mapId = editorState.selectedMapId || editorState.current?.map?.id;
     const payload = buildPreviewDraftPayload(editorState.current);
@@ -5026,6 +5180,7 @@ export default function MapEditorPage() {
                       onDelete={handleDeleteSelected}
                       onLayerAction={moveSelectedLayer}
                       onSave={saveChanges}
+                      onSaveObject={promptSelectedObjectSave}
                       mapId={map?.id}
                       onAppendRow={appendRow}
                       t={t}
@@ -5143,6 +5298,47 @@ export default function MapEditorPage() {
           </div>
         ) : null}
       </PageContainer>
+
+      {objectAssetSavePrompt ? (
+        <div
+          className="admin-modal-overlay"
+          role="presentation"
+          onMouseDown={() => setObjectAssetSavePrompt(null)}
+        >
+          <div
+            className="admin-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="object-asset-save-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="admin-modal-head">
+              <div>
+                <h2 id="object-asset-save-title">Сохранить объект</h2>
+                <p className="muted small" style={{ marginTop: '6px' }}>
+                  {objectAssetSavePrompt.objectLabel ? `«${objectAssetSavePrompt.objectLabel}»` : 'Выбранный объект'}
+                </p>
+              </div>
+              <button type="button" className="icon-btn" onClick={() => setObjectAssetSavePrompt(null)} aria-label="Закрыть">
+                ×
+              </button>
+            </div>
+
+            <p className="muted" style={{ lineHeight: 1.5 }}>
+              В объекте есть изменения. Сохранить текущий объект в библиотеке или создать новый вариант?
+            </p>
+
+            <div className="admin-modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => confirmSelectedObjectSave('new')}>
+                Создать новый
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => confirmSelectedObjectSave('current')}>
+                Сохранить текущий
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AdminLayout>
   );
 }
