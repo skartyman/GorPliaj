@@ -1855,6 +1855,15 @@ h3 {
   grid-template-columns: 1fr;
 }
 
+@media (min-width: 901px) {
+  .map-preview-container {
+    grid-template-columns: 1fr 350px;
+  }
+  .map-preview-container .map-zone-board {
+    max-width: none;
+  }
+}
+
 .map-viewport-wrapper {
   border-radius: var(--radius);
   overflow: hidden;
