@@ -1620,8 +1620,11 @@ h3 {
 /* ===== Map Page ===== */
 .map-container {
   display: grid;
-  grid-template-columns: 1fr 350px;
+  grid-template-columns: minmax(600px, 800px) 350px;
+  justify-content: center;
   gap: 24px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .event-back-link {
@@ -3375,7 +3378,7 @@ h3 {
 }
 
 /* ===== Responsive ===== */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .events-hero {
     grid-template-columns: 1fr;
     padding: 24px;
