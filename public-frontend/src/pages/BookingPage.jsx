@@ -80,6 +80,14 @@ function formatEventButtonLabel(value) {
 }
 
 function buildEventDateOptions(event) {
+  const todayStr = (() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
+
   const sessions = Array.isArray(event?.sessions)
     ? event.sessions.filter((session) => session?.isActive !== false && session?.startsAt)
     : [];
@@ -89,7 +97,7 @@ function buildEventDateOptions(event) {
     sessions.forEach((session) => {
       const sessionDate = new Date(session.startsAt);
       const dateKey = toDateKeyFromLocalDate(sessionDate);
-      if (!dateKey) return;
+      if (!dateKey || dateKey < todayStr) return;
       const current = grouped.get(dateKey);
       if (!current) {
         grouped.set(dateKey, {
@@ -126,14 +134,16 @@ function buildEventDateOptions(event) {
 
   while (cursor <= last) {
     const cursorKey = toDateKeyFromLocalDate(cursor);
-    options.push({
-      key: cursorKey,
-      date: cursorKey,
-      startsAt: event.startAt,
-      timeFrom: toTimeOnly(event.startAt) || '12:00',
-      label: formatEventButtonLabel(cursor),
-      fullLabel: formatUkrainianDate(cursor)
-    });
+    if (cursorKey >= todayStr) {
+      options.push({
+        key: cursorKey,
+        date: cursorKey,
+        startsAt: event.startAt,
+        timeFrom: toTimeOnly(event.startAt) || '12:00',
+        label: formatEventButtonLabel(cursor),
+        fullLabel: formatUkrainianDate(cursor)
+      });
+    }
     cursor.setDate(cursor.getDate() + 1);
   }
 
@@ -456,8 +466,11 @@ export default function BookingPage() {
     return () => clearTimeout(timer);
   }, [currentStep]);
 
-  const activeEventSlug = bookingFlow === 'EVENT' ? (lockedEventSlug || selectedEventSlug) : '';
-  const resolvedBookingKind = bookingFlow === 'EVENT' ? 'TABLE' : bookingKind;
+  const isStandardEventTime = bookingFlow === 'STANDARD' && bookingKind === 'TABLE' && matchedEventForStandardDate && form.timeFrom >= '17:00';
+  const activeEventSlug = (bookingFlow === 'EVENT' || isStandardEventTime)
+    ? (lockedEventSlug || selectedEventSlug || (matchedEventForStandardDate ? matchedEventForStandardDate.slug : ''))
+    : '';
+  const resolvedBookingKind = (bookingFlow === 'EVENT' || isStandardEventTime) ? 'TABLE' : bookingKind;
 
   const dateOptions = useMemo(() => {
     const list = [];
@@ -604,27 +617,30 @@ export default function BookingPage() {
       if (ignore) return;
       setEventInfo(event);
       setTicketTypes(Array.isArray(tickets?.ticketTypes) ? tickets.ticketTypes : []);
-      const dates = buildEventDateOptions(event);
-      if (dates.length === 1) {
-        const onlyDate = dates[0];
-        setSelectedEventDateKey(onlyDate.key);
-        setForm((current) => ({
-          ...current,
-          date: onlyDate.date,
-          timeFrom: current.timeFrom === '12:00' ? onlyDate.timeFrom || current.timeFrom : current.timeFrom
-        }));
-      } else {
-        const queryDate = searchParams.get('date') || '';
-        const matchedDate = queryDate && dates.find((item) => item.date === queryDate);
-        setSelectedEventDateKey(matchedDate?.key || '');
-        if (matchedDate) {
+      
+      if (bookingFlow === 'EVENT') {
+        const dates = buildEventDateOptions(event);
+        if (dates.length === 1) {
+          const onlyDate = dates[0];
+          setSelectedEventDateKey(onlyDate.key);
           setForm((current) => ({
             ...current,
-            date: matchedDate.date,
-            timeFrom: current.timeFrom === '12:00' ? matchedDate.timeFrom || current.timeFrom : current.timeFrom
+            date: onlyDate.date,
+            timeFrom: current.timeFrom === '12:00' ? onlyDate.timeFrom || current.timeFrom : current.timeFrom
           }));
         } else {
-          setSelectedEventDateKey('');
+          const queryDate = searchParams.get('date') || '';
+          const matchedDate = queryDate && dates.find((item) => item.date === queryDate);
+          setSelectedEventDateKey(matchedDate?.key || '');
+          if (matchedDate) {
+            setForm((current) => ({
+              ...current,
+              date: matchedDate.date,
+              timeFrom: current.timeFrom === '12:00' ? matchedDate.timeFrom || current.timeFrom : current.timeFrom
+            }));
+          } else {
+            setSelectedEventDateKey('');
+          }
         }
       }
     });
@@ -632,7 +648,7 @@ export default function BookingPage() {
     return () => {
       ignore = true;
     };
-  }, [activeEventSlug, searchParams]);
+  }, [activeEventSlug, searchParams, bookingFlow]);
 
   useEffect(() => {
     if (!canLoadMaps) {
@@ -836,7 +852,9 @@ export default function BookingPage() {
     : selectedUnit ? c({ ua: 'Час вийшов', ru: 'Время вышло', en: 'Time expired' }) : '';
 
   const entryTicketType = useMemo(() => {
-    if (!eventInfo?.startAt || toLocalDateKey(eventInfo.startAt) !== form.date) return null;
+    if (!eventInfo) return null;
+    const range = getEventDateRange(eventInfo);
+    if (!range.includes(form.date)) return null;
     return ticketTypes[0] || null;
   }, [eventInfo, form.date, ticketTypes]);
 
@@ -1447,6 +1465,17 @@ export default function BookingPage() {
                 </div>
               )}
             </div>
+            {bookingFlow === 'STANDARD' && bookingKind === 'TABLE' && matchedEventForStandardDate && form.timeFrom >= '17:00' ? (
+              <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+                <p className="menu-cart-note menu-cart-note-alert" style={{ margin: 0 }}>
+                  {c({
+                    ua: `О 19:00 розпочнеться захід "${localizeField(matchedEventForStandardDate.title, locale) || ''}", вхід на який потребує вхідний квиток. Бронювання столу на цей час здійснюється одразу з придбанням квитків для всіх гостей.`,
+                    ru: `В 19:00 начнется мероприятие "${localizeField(matchedEventForStandardDate.title, locale) || ''}", вход на которое требует билет. Бронирование стола на это время осуществляется сразу с приобретением входных билетов для всех гостей.`,
+                    en: `At 19:00 the event "${localizeField(matchedEventForStandardDate.title, locale) || ''}" starts, entry to which requires a ticket. Table booking for this time is performed immediately with the purchase of entry tickets for all guests.`
+                  })}
+                </p>
+              </div>
+            ) : null}
             <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
               <VisualSchedule bookingKind={resolvedBookingKind} locale={locale} />
             </div>
