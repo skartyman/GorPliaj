@@ -1150,7 +1150,7 @@ export default function MapPage() {
   }
 
   return (
-    <>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       <div className="section-header">
         <div>
           <h1>{t('mapTitle')}</h1>
@@ -1430,32 +1430,33 @@ export default function MapPage() {
                 </div>
               </div>
             </div>
-            {(selectedTable || selectedObject) && (
+            {isMobileViewport && (selectedTable || selectedObject) && (
               <button
                 type="button"
-                className="btn btn-primary floating-booking-hint"
+                className="floating-booking-hint"
                 onClick={() => sidePanelRef.current?.scrollIntoView({ behavior: 'smooth' })}
                 style={{
                   position: 'absolute',
-                  bottom: '16px',
+                  bottom: '12px',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   zIndex: 200,
-                  boxShadow: '0 4px 15px rgba(201, 168, 108, 0.4)',
-                  borderRadius: '999px',
-                  padding: '10px 20px',
-                  fontSize: '0.9rem',
-                  fontWeight: '700',
-                  color: '#000000',
-                  backgroundColor: 'var(--brand, #c9a86c)',
-                  border: '1px solid var(--brand, #c9a86c)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '30px',
+                  padding: '6px 14px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(27, 27, 30, 0.88)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '4px',
+                  backdropFilter: 'blur(4px)'
                 }}
               >
-                {locale === 'ua' ? '👉 Перейти до бронювання' : locale === 'ru' ? '👉 Перейти к бронированию' : '👉 Proceed to booking'}
+                <span>👇 {locale === 'ua' ? 'Перейти до бронювання' : locale === 'ru' ? 'Перейти к бронированию' : 'Proceed to booking'}</span>
               </button>
             )}
           </div>
@@ -1483,7 +1484,7 @@ export default function MapPage() {
           </div>
         </article>
 
-        <aside ref={sidePanelRef} className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${selectedTable || selectedObject ? 'is-open' : ''}`}>
+        <aside ref={sidePanelRef} className={`map-side-panel ${isMobileViewport ? 'mobile-sheet' : ''} ${(!isMobileViewport || selectedTable || selectedObject) ? 'is-open' : ''}`}>
           {(selectedTable || selectedObject) ? (
             <button
               type="button"
@@ -1618,11 +1619,19 @@ export default function MapPage() {
               )}
             </>
           ) : (
-            <p className="muted">{t('mapSelectHint')}</p>
+            <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted, #64748b)' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📍</div>
+              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', margin: '0 0 8px' }}>
+                {locale === 'ua' ? 'Оберіть обʼєкт на мапі' : locale === 'ru' ? 'Выберите объект на карте' : 'Select an object on map'}
+              </p>
+              <p style={{ fontSize: '0.82rem', lineHeight: 1.4, margin: 0 }}>
+                {locale === 'ua' ? 'Клацніть на стіл, шезлонг або ліжко, щоб розпочати бронювання.' : locale === 'ru' ? 'Кликните на стол, шезлонг или кровать, чтобы начать бронирование.' : 'Click on a table, sunbed, or daybed to start booking.'}
+              </p>
+            </div>
           )}
           {holdError ? <p className="muted" style={{ color: 'var(--danger)', marginTop: 8 }}>{holdError}</p> : null}
         </aside>
       </div>
-    </>
+    </div>
   );
 }

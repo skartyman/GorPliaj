@@ -1620,7 +1620,7 @@ h3 {
 /* ===== Map Page ===== */
 .map-container {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 350px;
   gap: 24px;
 }
 
@@ -2003,6 +2003,7 @@ h3 {
 .public-map-object.no-fit.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9ca3af, 0 0 20px rgba(0,0,0,0.4); }
 
 .map-side-panel {
+  display: none;
   background: var(--bg-secondary);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -2010,6 +2011,10 @@ h3 {
   align-self: start;
   position: sticky;
   top: 80px;
+}
+
+.map-side-panel.is-open {
+  display: block;
 }
 
 .map-object-photo,
