@@ -2432,7 +2432,7 @@ h3 {
 .booking-selected-photo-card {
   position: relative;
   width: 100%;
-  height: 140px;
+  height: 180px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--line);
@@ -2440,8 +2440,8 @@ h3 {
 
 @media (min-width: 768px) {
   .booking-selected-photo-card {
-    width: 240px;
-    height: 140px;
+    width: 350px;
+    height: 200px;
   }
 }
 
