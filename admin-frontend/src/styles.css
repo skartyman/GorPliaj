@@ -734,8 +734,24 @@ textarea { resize: vertical; min-height: 96px; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .actions.compact { gap: 6px; }
 
-.editor-actions-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 6px; }
-.editor-actions-grid .btn { width: 100%; white-space: nowrap; }
+.editor-actions-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.editor-actions-grid .icon-action-btn,
+.editor-actions-grid .icon-btn {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
 .prominent-actions .btn { min-width: 150px; min-height: 42px; font-weight: 600; }
 
 .reservation-detail-summary {
@@ -1398,7 +1414,13 @@ textarea { resize: vertical; min-height: 96px; }
 .field-opacity { align-self: start; }
 .field-with-suffix { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .field-suffix { min-width: 32px; text-align: center; color: var(--text-secondary); font-size: 12px; font-weight: 700; }
-.field-color input[type='color'] { width: 100%; max-width: 56px; min-height: 40px; padding: 4px; }
+.field-color input[type='color'] {
+  width: 100%;
+  height: 38px;
+  padding: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
 .field-texture { align-self: start; }
 .texture-choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; }
 .texture-choice { border: 1px solid var(--border-light); background: var(--bg-card); border-radius: var(--radius-btn); padding: 8px; display: grid; gap: 6px; justify-items: center; color: var(--text-primary); cursor: pointer; font: inherit; font-size: 11px; line-height: 1.1; }
@@ -2718,4 +2740,20 @@ textarea { resize: vertical; min-height: 96px; }
 
 .quick-date-btn:active {
   transform: translateY(1px);
+}
+
+/* Uniform alignments for properties editor */
+.editor-form-grid input:not([type='checkbox']),
+.editor-form-grid select {
+  height: 38px !important;
+  padding: 6px 10px !important;
+  box-sizing: border-box !important;
+  margin-top: 4px !important;
+}
+.editor-form-grid textarea {
+  box-sizing: border-box !important;
+  margin-top: 4px !important;
+}
+.editor-form-grid label {
+  margin-bottom: 0px !important;
 }

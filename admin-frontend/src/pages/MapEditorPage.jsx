@@ -1267,7 +1267,7 @@ function ZoneViewportSettings({ zones, map, onZoneChange, onAddZone, onDrawZoneP
   );
 }
 
-function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, onSaveObject, mapId, onAppendRow, t, language }) {
+function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, tables, onFieldChange, onCreatePosition, onRegisterTemplate, onDuplicate, onDelete, onLayerAction, onSave, onSaveObject, mapId, onAppendRow, t, language, savedTemplateId, onDeleteTemplate }) {
   if (!selectedObject) {
     return <p className="muted">{t('mapEditor.noSelection')}</p>;
   }
@@ -1337,20 +1337,7 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, t
         </span>
       </div>
 
-      <div className="actions compact editor-actions-grid">
-        <button type="button" className="icon-action-btn primary" onClick={() => onSave()} title={t('mapEditor.save')} aria-label={t('mapEditor.save')}>
-          <ActionIcon name="save" />
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary btn-small editor-save-object-btn"
-          onClick={() => onSaveObject()}
-          title="Сохранить объект"
-          aria-label="Сохранить объект"
-        >
-          <ActionIcon name="save" />
-          <span>Сохранить объект</span>
-        </button>
+      <div className="actions compact editor-actions-grid" style={{ marginBottom: '8px' }}>
         <button
           type="button"
           className="icon-action-btn"
@@ -1378,6 +1365,45 @@ function MapObjectProperties({ selectedObject, tableMap, zoneMap, rows, zones, t
         <button type="button" className="icon-action-btn danger" onClick={onDelete} title={t('mapEditor.deleteSelected')} aria-label={t('mapEditor.deleteSelected')}>
           <ActionIcon name="delete" />
         </button>
+      </div>
+
+      {/* Блок управління шаблоном */}
+      <div className="editor-template-actions-section" style={{
+        padding: '10px 12px',
+        background: 'var(--bg-page, #f8fafc)',
+        border: '1px solid var(--border-light, #cbd5e1)',
+        borderRadius: '8px',
+        marginTop: '2px',
+        marginBottom: '10px'
+      }}>
+        <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+          {language === 'ua' ? "Шаблон об'єкта" : "Шаблон объекта"}
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-small"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center', fontSize: '11px', padding: '6px 8px', height: '32px', borderRadius: '6px' }}
+            onClick={() => onSaveObject()}
+            title={language === 'ua' ? "Зберегти об'єкт як шаблон" : "Сохранить объект как шаблон"}
+          >
+            <ActionIcon name="save" />
+            <span>{language === 'ua' ? 'Зберегти' : 'Сохранить'}</span>
+          </button>
+          
+          {savedTemplateId ? (
+            <button
+              type="button"
+              className="btn btn-danger btn-small"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center', backgroundColor: '#ef4444', color: '#fff', border: 'none', fontSize: '11px', padding: '6px 8px', height: '32px', cursor: 'pointer', borderRadius: '6px' }}
+              onClick={() => onDeleteTemplate(savedTemplateId)}
+              title={language === 'ua' ? 'Видалити цей шаблон із бібліотеки' : 'Удалить этот шаблон из библиотеки'}
+            >
+              <ActionIcon name="delete" />
+              <span>{language === 'ua' ? 'Видалити' : 'Удалить'}</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="editor-inspector-sections">
@@ -2812,6 +2838,23 @@ export default function MapEditorPage() {
     }
 
     setTextureAssets((prev) => prev.filter((asset) => asset.id !== assetId));
+  }
+
+  async function deleteObjectTemplate(assetId) {
+    if (!window.confirm(language === 'ua' ? 'Ви дійсно хочете видалити цей шаблон?' : 'Вы действительно хотите удалить этот шаблон?')) {
+      return;
+    }
+
+    const result = await apiRequest(`${MAP_ASSET_LIBRARY_ENDPOINT}/${encodeURIComponent(assetId)}`, {
+      method: 'DELETE'
+    });
+
+    if (result.response.ok && Array.isArray(result.body?.assets)) {
+      syncMapAssetsFromLibrary(result.body.assets);
+      return;
+    }
+
+    setCustomObjectAssets((prev) => prev.filter((asset) => asset.id !== assetId));
   }
 
   async function upsertCustomObjectAsset(template) {
@@ -5185,6 +5228,8 @@ export default function MapEditorPage() {
                       onAppendRow={appendRow}
                       t={t}
                       language={language}
+                      savedTemplateId={getStoredObjectAssetForObject(selectedObject)?.id}
+                      onDeleteTemplate={deleteObjectTemplate}
                     />
                     <details className="map-settings-accordion">
                       <summary>
@@ -5250,22 +5295,59 @@ export default function MapEditorPage() {
                     </div>
                     
                     <div className="asset-library">
-                      {(assetCategories[editorState.activeCategory] || assetCategories.SURFACES).items.map((item) => (
-                        <button key={getTemplateKey(item)} type="button" className="asset-item" onClick={() => createObject(item.type, item)}>
-                          <div className="asset-preview">
-                            {item.svgUrl || item.textureUrl || item.url ? (
-                              <img src={item.svgUrl || item.textureUrl || item.url} alt="" />
-                            ) : item.subType && SVG_TEMPLATES[item.subType] ? (
-                              <svg viewBox="0 0 100 100">
-                                {SVG_TEMPLATES[item.subType]}
-                              </svg>
-                            ) : (
-                              <div className={`editor-object-badge ${item.type.toLowerCase()}`} />
+                      {(assetCategories[editorState.activeCategory] || assetCategories.SURFACES).items.map((item) => {
+                        const itemKey = getTemplateKey(item);
+                        return (
+                          <div key={itemKey} className="asset-item-wrapper" style={{ position: 'relative', width: '100%' }}>
+                            <button type="button" className="asset-item" style={{ width: '100%' }} onClick={() => createObject(item.type, item)}>
+                              <div className="asset-preview">
+                                {item.svgUrl || item.textureUrl || item.url ? (
+                                  <img src={item.svgUrl || item.textureUrl || item.url} alt="" />
+                                ) : item.subType && SVG_TEMPLATES[item.subType] ? (
+                                  <svg viewBox="0 0 100 100">
+                                    {SVG_TEMPLATES[item.subType]}
+                                  </svg>
+                                ) : (
+                                  <div className={`editor-object-badge ${item.type.toLowerCase()}`} />
+                                )}
+                              </div>
+                              <span className="asset-label">{item.label}</span>
+                            </button>
+                            {item.id && (
+                              <button
+                                type="button"
+                                className="asset-delete-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteObjectTemplate(item.id);
+                                }}
+                                title={language === 'ua' ? 'Видалити шаблон' : 'Удалить шаблон'}
+                                style={{
+                                  position: 'absolute',
+                                  top: '-4px',
+                                  right: '-4px',
+                                  background: '#ef4444',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '18px',
+                                  height: '18px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                  zIndex: 10
+                                }}
+                              >
+                                &times;
+                              </button>
                             )}
                           </div>
-                          <span className="asset-label">{item.label}</span>
-                        </button>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <CustomObjectCreator

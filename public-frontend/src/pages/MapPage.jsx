@@ -787,7 +787,7 @@ export default function MapPage() {
   }), [mapDimensions.height, mapDimensions.width]);
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 1024px)');
+    const media = window.matchMedia('(max-width: 768px)');
     const sync = () => setIsMobileViewport(media.matches);
     sync();
     media.addEventListener('change', sync);
