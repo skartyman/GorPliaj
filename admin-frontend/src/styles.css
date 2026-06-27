@@ -2757,3 +2757,13 @@ textarea { resize: vertical; min-height: 96px; }
 .editor-form-grid label {
   margin-bottom: 0px !important;
 }
+
+/* Clamp SVG sizes inside standard buttons to prevent overflow */
+.btn svg,
+.editor-template-actions-section svg {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
