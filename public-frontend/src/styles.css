@@ -1980,33 +1980,38 @@ h3 {
 .public-map-table.busy { background: #f44336; color: #fff; font-weight: 700; border: 2px solid #c62828; }
 .public-map-table.unavailable { background: #9e9e9e; color: #fff; font-weight: 700; border: 2px solid #757575; opacity: 0.4; }
 .public-map-table.no-fit { outline: 2px dashed #ff5722; outline-offset: -3px; }
-.public-map-table.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--brand), 0 0 20px rgba(0,0,0,0.5); z-index: 10; }
-.public-map-table.free.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #2e7d32, 0 0 20px rgba(0,0,0,0.5); }
-.public-map-table.held.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #e65100, 0 0 20px rgba(0,0,0,0.5); }
-.public-map-table.busy.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #b71c1c, 0 0 20px rgba(0,0,0,0.5); }
-.public-map-table.unavailable.selected { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #616161, 0 0 20px rgba(0,0,0,0.5); }
 .public-map-object:not(.selectable) { pointer-events: none; }
 .public-map-object .status-dot {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 999px;
   border: 2px solid #fff;
   z-index: 5;
   pointer-events: none;
-  box-shadow: 0 1.5px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  font-size: 8px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
 }
 @keyframes status-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7), 0 1.5px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7), 0 2px 6px rgba(0,0,0,0.35);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0), 0 1.5px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0), 0 2px 6px rgba(0,0,0,0.35);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0), 0 1.5px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0), 0 2px 6px rgba(0,0,0,0.35);
   }
 }
 .public-map-object.free .status-dot {
@@ -2034,11 +2039,23 @@ h3 {
   opacity: 0.55;
   filter: grayscale(1);
 }
-.public-map-object.free.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #4caf50, 0 0 20px rgba(0,0,0,0.4); }
-.public-map-object.held.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #ff9800, 0 0 20px rgba(0,0,0,0.4); }
-.public-map-object.busy.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #f44336, 0 0 20px rgba(0,0,0,0.4); }
-.public-map-object.unavailable.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9ca3af, 0 0 20px rgba(0,0,0,0.4); }
-.public-map-object.no-fit.selected { outline: 3px solid #fff; box-shadow: 0 0 0 4px #9ca3af, 0 0 20px rgba(0,0,0,0.4); }
+/* Unified premium selected style (Gold pulsing highlight like hostess panel) */
+.public-map-table.selected, .public-map-object.selected {
+  outline: 4px solid #FFFFFF !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 6px #C89241, 0 0 25px 10px rgba(200, 146, 65, 0.9) !important;
+  z-index: 9999 !important;
+  animation: public-pulse-selected 2s infinite !important;
+}
+
+@keyframes public-pulse-selected {
+  0%, 100% {
+    box-shadow: 0 0 0 5px #C89241, 0 0 20px 6px rgba(200, 146, 65, 0.8) !important;
+  }
+  50% {
+    box-shadow: 0 0 0 8px #C89241, 0 0 35px 14px rgba(200, 146, 65, 1) !important;
+  }
+}
 
 .map-side-panel {
   display: none;

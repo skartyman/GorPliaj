@@ -1432,7 +1432,11 @@ export default function MapPage() {
                         onClick={isSelectableObject ? () => selectObject(object) : undefined}
                       >
                         <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
-                        {activeTable ? <span className="status-dot" /> : null}
+                        {activeTable ? (
+                          <span className="status-dot">
+                            {activeTable.code}
+                          </span>
+                        ) : null}
                       </Component>
                     );
                   })}
