@@ -413,7 +413,7 @@ function hasRenderableObjectGraphic(object, meta, label) {
 }
 
 function isSelectableMapObject(object, meta) {
-  return object?.isActive !== false && (meta.interactionMode === 'SELECTABLE' || meta.isSelectable);
+  return object?.isActive !== false && (object.tableId || meta.interactionMode === 'SELECTABLE' || meta.isSelectable);
 }
 
 function resolveAccentTexture(accent) {
@@ -1340,18 +1340,18 @@ export default function MapPage() {
                   />
 
                   {renderObjects.map((object) => {
-                    const isTable = object.type === 'TABLE';
-                    const table = isTable && object.tableId ? tableById.get(object.tableId) : null;
-                    const linkedTable = !isTable && object.tableId ? tableById.get(object.tableId) : null;
+                    const activeTable = object.tableId ? tableById.get(object.tableId) : null;
                     const objectLabel = localizeField(object.label, locale) || object.type;
                     const meta = parseMetaJson(object.metaJson);
-                    if (table) {
-                      const disabled = table.status !== 'free' || !tableFitsGuests(table);
+                    const isTableDefault = object.type === 'TABLE' && !hasRenderableObjectGraphic(object, meta, objectLabel);
+
+                    if (isTableDefault && activeTable) {
+                      const disabled = activeTable.status !== 'free' || !tableFitsGuests(activeTable);
                       return (
                         <button
                           key={object.id}
                           type="button"
-                          className={`public-map-table ${table.status} ${!tableFitsGuests(table) ? 'no-fit' : ''} ${selectedTableId === table.id ? 'selected' : ''}`}
+                          className={`public-map-table ${activeTable.status} ${!tableFitsGuests(activeTable) ? 'no-fit' : ''} ${selectedTableId === activeTable.id ? 'selected' : ''}`}
                           style={{
                             left: object.x,
                             top: object.y,
@@ -1361,11 +1361,11 @@ export default function MapPage() {
                             zIndex: getObjectZIndex(object),
                             borderRadius: object.width === object.height ? 999 : 8
                           }}
-                          onClick={() => selectTable(table.id)}
+                          onClick={() => selectTable(activeTable.id)}
                           onPointerDown={(event) => event.stopPropagation()}
                           disabled={disabled}
                         >
-                          {table.code}
+                          {activeTable.code}
                         </button>
                       );
                     }
@@ -1407,7 +1407,7 @@ export default function MapPage() {
                       <Component
                         key={object.id}
                         type={isSelectableObject ? 'button' : undefined}
-                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${(selectedObjectId === object.id || (selectedTableId && object.tableId === selectedTableId)) ? 'selected' : ''} ${linkedTable ? linkedTable.status : ''} ${linkedTable && !tableFitsGuests(linkedTable) ? 'no-fit' : ''}`}
+                        className={`public-map-object object-${String(object.type).toLowerCase()} ${hasAsset ? 'has-asset' : ''} ${isSelectableObject ? 'selectable' : ''} ${(selectedObjectId === object.id || (selectedTableId && object.tableId === selectedTableId)) ? 'selected' : ''} ${activeTable ? activeTable.status : ''} ${activeTable && !tableFitsGuests(activeTable) ? 'no-fit' : ''}`}
                         style={{
                           left: object.x,
                           top: object.y,
@@ -1423,7 +1423,7 @@ export default function MapPage() {
                         onClick={isSelectableObject ? () => selectObject(object) : undefined}
                       >
                         <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
-                        {linkedTable ? <span className="status-dot" /> : null}
+                        {activeTable ? <span className="status-dot" /> : null}
                       </Component>
                     );
                   })}

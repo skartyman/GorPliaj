@@ -277,7 +277,7 @@ function normalizeObjectTemplate(template) {
 }
 
 function buildTemplateFromObject(object, tableMap = null) {
-  if (!object || object.type === 'TABLE') return null;
+  if (!object) return null;
 
   const meta = object.metaJson || {};
   const label = localizeField(object.label, 'ua') || meta.label || object.type;
@@ -301,7 +301,7 @@ function buildTemplateFromObject(object, tableMap = null) {
     category: meta.category || inferObjectAssetCategory({ label, subType: meta.subType, texture: meta.texture })
   });
 
-  if (!template || (!template.svgUrl && !template.svgCode && !template.textureUrl && !template.subType && object.type !== 'CUSTOM')) {
+  if (!template || (!template.svgUrl && !template.svgCode && !template.textureUrl && !template.subType && object.type !== 'CUSTOM' && object.type !== 'TABLE')) {
     return null;
   }
 
