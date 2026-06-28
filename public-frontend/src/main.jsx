@@ -40,7 +40,9 @@ async function cleanupLegacyServiceWorkers() {
           return;
         }
 
-        await registration.unregister();
+        if (!activeScriptUrl.includes('/sw.js')) {
+          await registration.unregister();
+        }
       })
     );
 
@@ -62,7 +64,7 @@ cleanupLegacyServiceWorkers();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/sw.js?v=7')
       .then(reg => console.log('SW registered'))
       .catch(err => console.log('SW error', err));
   });
@@ -71,7 +73,7 @@ if ('serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+              <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : undefined}>
         <SettingsProvider>
           <LocaleProvider>
             <CartProvider>

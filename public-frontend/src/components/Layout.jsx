@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
 import { localizedCopy, localizeField } from '../lib/i18n';
+import ClientInstallPrompt from './ClientInstallPrompt';
 
 const navItems = [
   { to: '/', labelKey: 'navHome', icon: (
@@ -116,6 +117,8 @@ export default function Layout() {
 
   return (
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
+      <ClientInstallPrompt />
+
       <aside className="sidebar">
         <NavLink to="/" className="sidebar-logo">
           <img src={logoUrl} alt={brandName} />

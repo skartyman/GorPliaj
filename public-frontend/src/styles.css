@@ -2075,6 +2075,8 @@ h3 {
   align-self: start;
   position: sticky;
   top: 80px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .map-side-panel.is-open {
@@ -2454,10 +2456,19 @@ h3 {
   }
 }
 
+.map-side-panel .booking-selected-photo-card {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  box-sizing: border-box;
+}
+
 .booking-selected-photo-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
   transition: transform 0.3s ease;
 }
 
@@ -4368,4 +4379,86 @@ h3 {
 
 .custom-date-input:focus {
   border-color: var(--brand, #c9a86c);
+}
+
+.client-install-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  z-index: 1200;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: min(92vw, 520px);
+  padding: 12px;
+  border: 1px solid rgba(201, 168, 108, 0.34);
+  border-radius: 8px;
+  background: rgba(10, 19, 28, 0.96);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.34);
+  color: #fff;
+  transform: translateX(-50%);
+  backdrop-filter: blur(16px);
+}
+
+.client-install-prompt__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #10344d;
+  flex: 0 0 auto;
+}
+
+.client-install-prompt__icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.client-install-prompt__text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.client-install-prompt__text strong {
+  font-size: 0.94rem;
+  line-height: 1.2;
+}
+
+.client-install-prompt__text span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.client-install-prompt__button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #101820;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.client-install-prompt__button:disabled {
+  opacity: 0.68;
+  cursor: wait;
+}
+
+@media (max-width: 560px) {
+  .client-install-prompt {
+    grid-template-columns: 38px minmax(0, 1fr);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+  }
+
+  .client-install-prompt__button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }

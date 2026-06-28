@@ -683,13 +683,14 @@ export default function MapPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null });
+  const safeTransform = transform || { scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null };
   const viewportRef = useRef(null);
   const sidePanelRef = useRef(null);
   const focusedFromQueryRef = useRef('');
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
-  const transformRef = useRef(transform);
+  const transformRef = useRef(safeTransform);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const today = useMemo(() => {
     const d = new Date();
@@ -949,16 +950,16 @@ export default function MapPage() {
       .filter(Boolean);
   }, [mapDimensions, mapRenderFrame.offsetX, mapRenderFrame.offsetY, renderObjects, state.result?.map?.zones, tableById]);
 
-  const canInteractWithMap = Boolean(state.result && transform.initial);
-  const resetTransform = transform.initial || {
+  const canInteractWithMap = Boolean(state.result && safeTransform.initial);
+  const resetTransform = safeTransform.initial || {
     scale: 1,
     translateX: 0,
     translateY: 0
   };
 
   useEffect(() => {
-    transformRef.current = transform;
-  }, [transform]);
+    transformRef.current = safeTransform;
+  }, [safeTransform]);
 
   // Mouse wheel zoom removed so mouse wheel scrolls the page normally.
 
@@ -966,17 +967,17 @@ export default function MapPage() {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
     const constrained = clampTranslate(mapRenderFrame.width, mapRenderFrame.height, rect.width, rect.height, nextScale, nextX, nextY);
-    setTransform((current) => ({ ...current, scale: nextScale, translateX: constrained.translateX, translateY: constrained.translateY }));
+    setTransform((current) => ({ ...(current || safeTransform), scale: nextScale, translateX: constrained.translateX, translateY: constrained.translateY }));
   }
 
   function zoomTo(nextScale, pivotX, pivotY) {
     if (!viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
-    const boundedScale = clamp(nextScale, transform.minScale || 0.45, transform.maxScale || 3.5);
+    const boundedScale = clamp(nextScale, safeTransform.minScale || 0.45, safeTransform.maxScale || 3.5);
     if (!Number.isFinite(boundedScale)) return;
     const localX = Number.isFinite(pivotX) ? pivotX : rect.width / 2;
     const localY = Number.isFinite(pivotY) ? pivotY : rect.height / 2;
-    const anchored = zoomAroundViewportPoint(localX, localY, boundedScale, transform.scale || 1, transform.translateX || 0, transform.translateY || 0);
+    const anchored = zoomAroundViewportPoint(localX, localY, boundedScale, safeTransform.scale || 1, safeTransform.translateX || 0, safeTransform.translateY || 0);
     if (Number.isFinite(anchored.translateX) && Number.isFinite(anchored.translateY)) {
       applyTransform(boundedScale, anchored.translateX, anchored.translateY);
     }
@@ -998,7 +999,7 @@ export default function MapPage() {
     const padding = isMobileViewport ? 28 : 54;
     const availableWidth = Math.max(rect.width - padding * 2, 1);
     const availableHeight = Math.max(rect.height - padding * 2, 1);
-    const nextScale = clamp(Math.min(availableWidth / width, availableHeight / height), transform.minScale, transform.maxScale);
+    const nextScale = clamp(Math.min(availableWidth / width, availableHeight / height), safeTransform.minScale, safeTransform.maxScale);
     const centerX = (Number(bounds.x) || 0) + width / 2;
     const centerY = (Number(bounds.y) || 0) + height / 2;
     const nextX = rect.width / 2 - centerX * nextScale;
@@ -1012,9 +1013,9 @@ export default function MapPage() {
     if (!viewportRef.current || !object) return;
     const center = getObjectCenter(object);
     const rect = viewportRef.current.getBoundingClientRect();
-    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * transform.scale;
-    const targetY = rect.height * 0.5 - (center.y + mapRenderFrame.offsetY) * transform.scale;
-    applyTransform(transform.scale, targetX, targetY);
+    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * safeTransform.scale;
+    const targetY = rect.height * 0.5 - (center.y + mapRenderFrame.offsetY) * safeTransform.scale;
+    applyTransform(safeTransform.scale, targetX, targetY);
   }
 
   function selectTable(tableId) {
@@ -1069,7 +1070,7 @@ export default function MapPage() {
   }
 
   useEffect(() => {
-    if (!state.result || !transform.initial) return;
+    if (!state.result || !safeTransform.initial) return;
 
     const focusKey = `${state.result.map.id}:${focusTableId || 0}:${focusObjectId || 0}`;
     if (focusedFromQueryRef.current === focusKey) {
@@ -1102,18 +1103,36 @@ export default function MapPage() {
         focusZoneBounds(leftBeachFocus.zone.id, leftBeachFocus.bounds);
       }
     }
-  }, [focusObjectId, focusTableId, renderObjects, state.result, tableById, transform.initial, bookingKind, zoneFocusItems]);
+  }, [focusObjectId, focusTableId, renderObjects, state.result, tableById, safeTransform.initial, bookingKind, zoneFocusItems]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    function handleTouchMove(event) {
+      if (event.touches.length > 0) {
+        event.preventDefault();
+      }
+    }
+
+    viewport.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => {
+      viewport.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [state.loading, state.result]);
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
-    try {
-      viewportRef.current?.setPointerCapture(event.pointerId);
-    } catch (err) {
-      console.warn('Pointer capture failed:', err);
+    if (event.pointerType !== 'touch') {
+      try {
+        viewportRef.current?.setPointerCapture(event.pointerId);
+      } catch (err) {
+        console.warn('Pointer capture failed:', err);
+      }
     }
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 1) {
-      dragStartRef.current = { x: event.clientX, y: event.clientY, translateX: transform.translateX, translateY: transform.translateY };
+      dragStartRef.current = { x: event.clientX, y: event.clientY, translateX: safeTransform.translateX, translateY: safeTransform.translateY };
       setIsDragging(true);
     }
     if (pointersRef.current.size === 2) {
@@ -1121,9 +1140,9 @@ export default function MapPage() {
       if (a && b && Number.isFinite(a.x) && Number.isFinite(b.x)) {
         pinchStartRef.current = {
           distance: Math.hypot(a.x - b.x, a.y - b.y),
-          scale: transform.scale || 1,
-          translateX: transform.translateX || 0,
-          translateY: transform.translateY || 0
+          scale: safeTransform.scale || 1,
+          translateX: safeTransform.translateX || 0,
+          translateY: safeTransform.translateY || 0
         };
       }
     }
@@ -1136,7 +1155,7 @@ export default function MapPage() {
     if (pointersRef.current.size === 1 && isDragging) {
       const dx = event.clientX - dragStartRef.current.x;
       const dy = event.clientY - dragStartRef.current.y;
-      applyTransform(transform.scale, dragStartRef.current.translateX + dx, dragStartRef.current.translateY + dy);
+      applyTransform(safeTransform.scale, dragStartRef.current.translateX + dx, dragStartRef.current.translateY + dy);
       return;
     }
 
@@ -1152,8 +1171,8 @@ export default function MapPage() {
 
       const nextScale = clamp(
         (pinchStartRef.current.scale || 1) * (1 + (currentDistance - (pinchStartRef.current.distance || 0)) * PINCH_SENSITIVITY),
-        transform.minScale || 0.45,
-        transform.maxScale || 3.5
+        safeTransform.minScale || 0.45,
+        safeTransform.maxScale || 3.5
       );
       if (!Number.isFinite(nextScale)) return;
 
@@ -1172,16 +1191,23 @@ export default function MapPage() {
   }
 
   function handlePointerEnd(event) {
-    try {
-      if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
-        viewportRef.current.releasePointerCapture(event.pointerId);
+    if (event.pointerType !== 'touch') {
+      try {
+        if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
+          viewportRef.current.releasePointerCapture(event.pointerId);
+        }
+      } catch (err) {
+        console.warn('Pointer release failed:', err);
       }
-    } catch (err) {
-      console.warn('Pointer release failed:', err);
     }
     pointersRef.current.delete(event.pointerId);
     if (!pointersRef.current.size) {
       setIsDragging(false);
+    } else if (pointersRef.current.size === 1) {
+      const [remaining] = Array.from(pointersRef.current.values());
+      if (remaining) {
+        dragStartRef.current = { x: remaining.x, y: remaining.y, translateX: safeTransform.translateX, translateY: safeTransform.translateY };
+      }
     }
   }
 
@@ -1289,10 +1315,10 @@ export default function MapPage() {
       <div className="map-container map-preview-container">
         <article className="map-zone-board">
           <div className="map-controls">
-            <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale * 1.15)}>
+            <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(safeTransform.scale * 1.15)}>
               {t('mapZoomIn')}
             </button>
-            <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(transform.scale / 1.15)}>
+            <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(safeTransform.scale / 1.15)}>
               {t('mapZoomOut')}
             </button>
             <button
@@ -1303,7 +1329,7 @@ export default function MapPage() {
             >
               {t('mapFit')}
             </button>
-            <span className="map-zoom-pill">{Math.round(transform.scale * 100)}%</span>
+            <span className="map-zoom-pill">{Math.round(safeTransform.scale * 100)}%</span>
           </div>
 
           <div
@@ -1349,7 +1375,7 @@ export default function MapPage() {
               onDoubleClick={(event) => {
                 if (!canInteractWithMap) return;
                 const rect = viewportRef.current.getBoundingClientRect();
-                zoomTo(transform.scale * 1.25, event.clientX - rect.left, event.clientY - rect.top);
+                zoomTo(safeTransform.scale * 1.25, event.clientX - rect.left, event.clientY - rect.top);
               }}
             >
               <div
@@ -1358,7 +1384,7 @@ export default function MapPage() {
                   width: mapRenderFrame.width,
                   height: mapRenderFrame.height,
                   backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
-                  transform: `translate3d(${transform.translateX}px, ${transform.translateY}px, 0) scale(${transform.scale})`
+                  transform: `translate3d(${safeTransform.translateX}px, ${safeTransform.translateY}px, 0) scale(${safeTransform.scale})`
                 }}
               >
                 <div
