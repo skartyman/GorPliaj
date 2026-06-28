@@ -57,6 +57,31 @@ function formatSessionLabel(session) {
   return `${start} - ${end}`;
 }
 
+function createEmptyTypeForm(sessions = []) {
+  return {
+    ...EMPTY_TYPE,
+    name: { ...EMPTY_TYPE.name },
+    eventSessionId: sessions.length ? String(sessions[0].id) : ''
+  };
+}
+
+function buildTicketTypeForm(type) {
+  return {
+    name: {
+      ua: type.name?.ua || '',
+      ru: type.name?.ru || '',
+      en: type.name?.en || ''
+    },
+    price: String(Number(type.price ?? 0)),
+    currency: type.currency || 'UAH',
+    capacity: String(type.capacity ?? ''),
+    salesStart: toDateTimeLocal(type.salesStart),
+    salesEnd: toDateTimeLocal(type.salesEnd),
+    isActive: Boolean(type.isActive),
+    eventSessionId: type.eventSessionId ? String(type.eventSessionId) : ''
+  };
+}
+
 export default function TicketSalesPage() {
   const { language } = useAdminI18n();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -68,7 +93,7 @@ export default function TicketSalesPage() {
   const [tickets, setTickets] = useState([]);
   const [sessionForm, setSessionForm] = useState(EMPTY_SESSION);
   const [editingSessionId, setEditingSessionId] = useState(null);
-  const [typeForm, setTypeForm] = useState(EMPTY_TYPE);
+  const [typeForm, setTypeForm] = useState(() => createEmptyTypeForm());
   const [editingTypeId, setEditingTypeId] = useState(null);
   const [orderForm, setOrderForm] = useState(EMPTY_ORDER);
   const [state, setState] = useState({ loading: true, saving: false, error: '', message: '' });
@@ -102,10 +127,16 @@ export default function TicketSalesPage() {
 
     const loadedSessions = Array.isArray(results[0].body) ? results[0].body : [];
     const loadedTypes = Array.isArray(results[1].body) ? results[1].body : [];
+    const sessionIds = new Set(loadedSessions.map((session) => String(session.id)));
     setSessions(loadedSessions);
     setTicketTypes(loadedTypes);
     setOrders(Array.isArray(results[2].body) ? results[2].body : []);
     setTickets(Array.isArray(results[3].body) ? results[3].body : []);
+    setTypeForm((current) => {
+      if (!loadedSessions.length) return { ...current, eventSessionId: '' };
+      if (current.eventSessionId && sessionIds.has(String(current.eventSessionId))) return current;
+      return { ...current, eventSessionId: String(loadedSessions[0].id) };
+    });
     setOrderForm((current) => ({
       ...current,
       ticketTypeId: loadedTypes.some((type) => String(type.id) === current.ticketTypeId)
@@ -134,7 +165,7 @@ export default function TicketSalesPage() {
   }
 
   function resetTypeForm() {
-    setTypeForm((current) => ({ ...EMPTY_TYPE, eventSessionId: sessions.length ? '' : (current.eventSessionId || '') }));
+    setTypeForm(createEmptyTypeForm(sessions));
     setEditingTypeId(null);
   }
 
@@ -275,6 +306,54 @@ export default function TicketSalesPage() {
     [ticketTypes]
   );
 
+  const sessionIds = useMemo(
+    () => new Set(sessions.map((session) => String(session.id))),
+    [sessions]
+  );
+
+  const ticketTypesBySessionId = useMemo(() => {
+    const grouped = new Map();
+    ticketTypes.forEach((type) => {
+      const key = type.eventSessionId ? String(type.eventSessionId) : '';
+      const rows = grouped.get(key) || [];
+      rows.push(type);
+      grouped.set(key, rows);
+    });
+    return grouped;
+  }, [ticketTypes]);
+
+  const unassignedTicketTypes = useMemo(
+    () => ticketTypes.filter((type) => !type.eventSessionId || !sessionIds.has(String(type.eventSessionId))),
+    [sessionIds, ticketTypes]
+  );
+
+  function scrollToTicketTypeForm() {
+    window.requestAnimationFrame(() => {
+      document.getElementById('ticket-type-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function beginTicketTypeForSession(sessionId = '') {
+    setEditingTypeId(null);
+    setTypeForm({
+      ...createEmptyTypeForm(sessions),
+      eventSessionId: sessionId ? String(sessionId) : ''
+    });
+    scrollToTicketTypeForm();
+  }
+
+  function editTicketType(type) {
+    setTypeForm(buildTicketTypeForm(type));
+    setEditingTypeId(type.id);
+    scrollToTicketTypeForm();
+  }
+
+  function duplicateTicketType(type) {
+    setTypeForm(buildTicketTypeForm(type));
+    setEditingTypeId(null);
+    scrollToTicketTypeForm();
+  }
+
   const orderColumns = [
     { key: 'number', label: 'Заказ', render: (row) => <strong>{row.orderNumber}</strong> },
     { key: 'session', label: 'Дата', render: (row) => row.eventSession ? formatSessionLabel(row.eventSession) : 'Общая дата события' },
@@ -307,9 +386,62 @@ export default function TicketSalesPage() {
     { key: 'created', label: 'Создан', render: (row) => formatDateTime(row.createdAt) }
   ];
 
+  function renderTicketTypeCard(type) {
+    return (
+      <div className="ticket-rate-card" key={type.id}>
+        <div className="ticket-rate-card__main">
+          <strong>{localizeField(type.name, language)}</strong>
+          <div className="muted">
+            {Number(type.price).toFixed(2)} {type.currency} · продано {type.soldCount}/{type.capacity}
+            {type.isActive ? ' · на сайте' : ' · скрыт'}
+          </div>
+          {(type.salesStart || type.salesEnd) ? (
+            <div className="muted small">
+              Продажи: {type.salesStart ? formatDateTime(type.salesStart) : 'сейчас'} - {type.salesEnd ? formatDateTime(type.salesEnd) : 'без окончания'}
+            </div>
+          ) : null}
+        </div>
+        <div className="actions compact">
+          <button
+            type="button"
+            className="btn btn-small btn-secondary"
+            disabled={state.saving}
+            onClick={() => updateTicketType(type.id, { isActive: !type.isActive })}
+          >
+            {type.isActive ? 'Скрыть' : 'Показать'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-small btn-secondary"
+            disabled={state.saving}
+            onClick={() => editTicketType(type)}
+          >
+            Редактировать
+          </button>
+          <button
+            type="button"
+            className="btn btn-small btn-secondary"
+            disabled={state.saving}
+            onClick={() => duplicateTicketType(type)}
+          >
+            Копировать
+          </button>
+          <button
+            type="button"
+            className="btn btn-small btn-danger"
+            disabled={state.saving || type.soldCount > 0}
+            onClick={() => deleteTicketType(type.id)}
+          >
+            Удалить
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AdminLayout>
-      <PageContainer title="Продажа билетов" description="Управление датами события, тарифами, заказами и выпущенными билетами. Сначала создайте даты вечера, затем привяжите к ним тарифы билетов.">
+      <PageContainer title="Продажа билетов" description="Создайте дни события и сразу добавляйте тарифы внутри нужного дня. Так видно, какой билет к какой дате относится.">
         <label style={{ maxWidth: 520 }}>
           Мероприятие
           <select value={eventId} onChange={(event) => setEventId(event.target.value)}>
@@ -323,7 +455,7 @@ export default function TicketSalesPage() {
       </PageContainer>
 
       <div className="grid-two-col" style={{ alignItems: 'start' }}>
-        <PanelCard title={editingSessionId ? 'Редактирование даты события' : 'Даты события'} subtitle="Если событие проходит несколько вечеров подряд, создайте по одной записи на каждый день и время.">
+        <PanelCard title={editingSessionId ? 'Редактирование даты события' : 'Даты и тарифы'} subtitle="Каждая дата показывает свои тарифы. Кнопка «Тариф на эту дату» сразу подставляет нужный день в форму справа.">
           <form className="event-admin-form" onSubmit={saveSession}>
             <label>Название (UA)<input value={sessionForm.name.ua} onChange={(event) => setSessionForm({ ...sessionForm, name: { ...sessionForm.name, ua: event.target.value } })} placeholder="Например: Первый вечер" /></label>
             <div className="grid-two-col">
@@ -346,63 +478,114 @@ export default function TicketSalesPage() {
             </div>
           </form>
 
-          <div className="rich-list" style={{ marginTop: 16 }}>
+          <div className="ticket-session-list">
             {sessions.map((session) => (
-              <div className="compact-row" key={session.id}>
-                <div style={{ display: 'grid', gap: 4 }}>
-                  <strong>{localizeField(session.name, language) || formatSessionLabel(session)}</strong>
-                  <div className="muted">{formatSessionLabel(session)}</div>
-                  <div className="muted small">{session.isActive ? 'Активна' : 'Скрыта с сайта'}</div>
+              <section className="ticket-session-card" key={session.id}>
+                <div className="ticket-session-card__head">
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <strong>{localizeField(session.name, language) || formatSessionLabel(session)}</strong>
+                    <div className="muted">{formatSessionLabel(session)}</div>
+                    <div className="muted small">{session.isActive ? 'Активна для продажи' : 'Скрыта с сайта'}</div>
+                  </div>
+                  <div className="actions compact">
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      disabled={state.saving}
+                      onClick={() => beginTicketTypeForSession(session.id)}
+                    >
+                      Тариф на эту дату
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-secondary"
+                      disabled={state.saving}
+                      onClick={() => {
+                        setSessionForm({
+                          name: {
+                            ua: session.name?.ua || '',
+                            ru: session.name?.ru || '',
+                            en: session.name?.en || ''
+                          },
+                          startsAt: toDateTimeLocal(session.startsAt),
+                          endsAt: toDateTimeLocal(session.endsAt),
+                          isActive: Boolean(session.isActive),
+                          sortOrder: session.sortOrder || 0
+                        });
+                        setEditingSessionId(session.id);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      Редактировать дату
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-small btn-danger"
+                      disabled={state.saving}
+                      onClick={() => deleteSession(session.id)}
+                    >
+                      Удалить дату
+                    </button>
+                  </div>
                 </div>
-                <div className="actions compact">
-                  <button
-                    type="button"
-                    className="btn btn-small btn-secondary"
-                    disabled={state.saving}
-                    onClick={() => {
-                      setSessionForm({
-                        name: {
-                          ua: session.name?.ua || '',
-                          ru: session.name?.ru || '',
-                          en: session.name?.en || ''
-                        },
-                        startsAt: toDateTimeLocal(session.startsAt),
-                        endsAt: toDateTimeLocal(session.endsAt),
-                        isActive: Boolean(session.isActive),
-                        sortOrder: session.sortOrder || 0
-                      });
-                      setEditingSessionId(session.id);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-small btn-danger"
-                    disabled={state.saving}
-                    onClick={() => deleteSession(session.id)}
-                  >
-                    Удалить
-                  </button>
+                <div className="ticket-rate-list">
+                  {(ticketTypesBySessionId.get(String(session.id)) || []).map(renderTicketTypeCard)}
+                  {!(ticketTypesBySessionId.get(String(session.id)) || []).length ? (
+                    <p className="muted small">На эту дату ещё нет тарифа. Нажмите «Тариф на эту дату».</p>
+                  ) : null}
                 </div>
-              </div>
+              </section>
             ))}
-            {!sessions.length ? <p className="muted">Для этого события пока не создано отдельных дат. Если событие идёт в два вечера, добавьте здесь оба дня.</p> : null}
+            {!sessions.length ? (
+              <section className="ticket-session-card">
+                <div className="ticket-session-card__head">
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <strong>Общая продажа события</strong>
+                    <div className="muted">Для события без отдельных дней тариф создаётся как общий.</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-small"
+                    disabled={state.saving}
+                    onClick={() => beginTicketTypeForSession('')}
+                  >
+                    Создать тариф
+                  </button>
+                </div>
+                <div className="ticket-rate-list">
+                  {(ticketTypesBySessionId.get('') || []).map(renderTicketTypeCard)}
+                  {!ticketTypes.length ? <p className="muted small">Тарифов пока нет.</p> : null}
+                </div>
+              </section>
+            ) : null}
+            {sessions.length && unassignedTicketTypes.length ? (
+              <section className="ticket-session-card warning">
+                <div className="ticket-session-card__head">
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <strong>Тарифы без привязки к дате</strong>
+                    <div className="muted">Откройте тариф и выберите день, чтобы он появился в продаже корректно.</div>
+                  </div>
+                </div>
+                <div className="ticket-rate-list">
+                  {unassignedTicketTypes.map(renderTicketTypeCard)}
+                </div>
+              </section>
+            ) : null}
           </div>
         </PanelCard>
 
-        <PanelCard title={editingTypeId ? 'Редактирование типа билета' : 'Новый тип билета'} subtitle="Тариф билета теперь можно привязать к конкретной дате события.">
-          <form className="event-admin-form" onSubmit={saveTicketType}>
-            <label>Название (UA)<input required value={typeForm.name.ua} onChange={(event) => setTypeForm({ ...typeForm, name: { ...typeForm.name, ua: event.target.value } })} /></label>
-            <label>Дата события
+        <PanelCard title={editingTypeId ? 'Редактирование тарифа' : 'Новый тариф'} subtitle="Главное поле — дата. Если тариф создаётся кнопкой из нужного дня, дата уже выбрана.">
+          <form id="ticket-type-form" className="event-admin-form" onSubmit={saveTicketType}>
+            <label className="ticket-session-field">Для какой даты продаём билет
               <select required={sessions.length > 0} value={typeForm.eventSessionId} onChange={(event) => setTypeForm({ ...typeForm, eventSessionId: event.target.value })}>
-                <option value="">Без отдельной даты</option>
+                {sessions.length ? <option value="" disabled>Выберите дату</option> : <option value="">Общая продажа события</option>}
                 {sessions.map((session) => (
                   <option key={session.id} value={session.id}>{localizeField(session.name, language) || formatSessionLabel(session)}</option>
                 ))}
               </select>
+              <span className="field-hint">Покупатель увидит этот тариф именно для выбранного дня.</span>
             </label>
+            <label>Название (UA)<input required value={typeForm.name.ua} onChange={(event) => setTypeForm({ ...typeForm, name: { ...typeForm.name, ua: event.target.value } })} /></label>
             <div className="grid-two-col">
               <label>Цена<input type="number" min="0" step="0.01" required value={typeForm.price} onChange={(event) => setTypeForm({ ...typeForm, price: event.target.value })} /></label>
               <label>Количество билетов<input type="number" min="1" required value={typeForm.capacity} onChange={(event) => setTypeForm({ ...typeForm, capacity: event.target.value })} /></label>
@@ -415,7 +598,7 @@ export default function TicketSalesPage() {
             </label>
             <div className="actions compact">
               <button className="btn" type="submit" disabled={state.saving || !eventId}>
-                {editingTypeId ? 'Сохранить изменения' : 'Создать тип билета'}
+                {editingTypeId ? 'Сохранить тариф' : 'Создать тариф'}
               </button>
               {editingTypeId ? (
                 <button className="btn btn-secondary" type="button" disabled={state.saving} onClick={resetTypeForm}>
@@ -424,71 +607,6 @@ export default function TicketSalesPage() {
               ) : null}
             </div>
           </form>
-          <div className="rich-list" style={{ marginTop: 16 }}>
-            {ticketTypes.map((type) => (
-              <div className="compact-row" key={type.id}>
-                <div style={{ display: 'grid', gap: 4 }}>
-                  <strong>{localizeField(type.name, language)}</strong>
-                  <div className="muted">
-                    {Number(type.price).toFixed(2)} {type.currency} · продано {type.soldCount}/{type.capacity}
-                    {type.isActive ? ' · на сайте' : ' · скрыт'}
-                  </div>
-                  <div className="muted small">
-                    {type.eventSession ? `Дата: ${localizeField(type.eventSession.name, language) || formatSessionLabel(type.eventSession)}` : 'Дата: общая для события'}
-                  </div>
-                  {(type.salesStart || type.salesEnd) ? (
-                    <div className="muted small">
-                      Продажи: {type.salesStart ? formatDateTime(type.salesStart) : 'сейчас'} - {type.salesEnd ? formatDateTime(type.salesEnd) : 'без окончания'}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="actions compact">
-                  <button
-                    type="button"
-                    className="btn btn-small btn-secondary"
-                    disabled={state.saving}
-                    onClick={() => updateTicketType(type.id, { isActive: !type.isActive })}
-                  >
-                    {type.isActive ? 'Скрыть' : 'Показать'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-small btn-secondary"
-                    disabled={state.saving}
-                    onClick={() => {
-                      setTypeForm({
-                        name: {
-                          ua: type.name?.ua || '',
-                          ru: type.name?.ru || '',
-                          en: type.name?.en || ''
-                        },
-                        price: String(Number(type.price ?? 0)),
-                        currency: type.currency || 'UAH',
-                        capacity: String(type.capacity ?? ''),
-                        salesStart: toDateTimeLocal(type.salesStart),
-                        salesEnd: toDateTimeLocal(type.salesEnd),
-                        isActive: Boolean(type.isActive),
-                        eventSessionId: type.eventSessionId ? String(type.eventSessionId) : ''
-                      });
-                      setEditingTypeId(type.id);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    Редактировать
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-small btn-danger"
-                    disabled={state.saving || type.soldCount > 0}
-                    onClick={() => deleteTicketType(type.id)}
-                  >
-                    Удалить
-                  </button>
-                </div>
-              </div>
-            ))}
-            {!ticketTypes.length ? <p className="muted">Для выбранного события ещё нет типов билетов. После создания дат добавьте хотя бы один тариф.</p> : null}
-          </div>
         </PanelCard>
       </div>
 

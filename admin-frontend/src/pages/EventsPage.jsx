@@ -266,6 +266,10 @@ export default function EventsPage() {
 
   function handleSaveSession(event) {
     event.preventDefault();
+    if (!sessionForm.startsAt || !sessionForm.endsAt) {
+      alert(language === 'ua' ? 'Будь ласка, вкажіть дату початку та закінчення сесії!' : language === 'ru' ? 'Пожалуйста, укажите дату начала и окончания сессии!' : 'Please specify session start and end dates!');
+      return;
+    }
     if (editId) {
       return saveSession(event);
     }
@@ -294,6 +298,118 @@ export default function EventsPage() {
       eventSessionId: String(tt.eventSessionId ?? '')
     });
     setEditingTypeId(id);
+  }
+
+  async function autoGenerateSessions() {
+    if (!form.startAt) {
+      alert(language === 'ua' ? 'Спочатку вкажіть дату початку заходу!' : language === 'ru' ? 'Сначала укажите дату начала мероприятия!' : 'Please specify the event start date first!');
+      return;
+    }
+
+    if (sessions.length > 0) {
+      const confirmMsg = language === 'ua' 
+        ? 'Це замінить усі поточні сесії на нові автозгенеровані. Продовжити?'
+        : language === 'ru'
+        ? 'Это заменит все текущие сессии на новые автосгенерированные. Продолжить?'
+        : 'This will replace all current sessions with newly auto-generated ones. Proceed?';
+      if (!window.confirm(confirmMsg)) return;
+    }
+
+    const startDate = new Date(form.startAt);
+    let endDate = form.endAt ? new Date(form.endAt) : null;
+    if (!endDate) {
+      endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000); // 4 hours duration fallback
+    }
+
+    if (endDate < startDate) {
+      alert(language === 'ua' ? 'Дата закінчення не може бути раніше дати початку!' : language === 'ru' ? 'Дата окончания не может быть раньше даты начала!' : 'End date cannot be earlier than start date!');
+      return;
+    }
+
+    const generated = [];
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // If it's a single day event
+    if (diffDays <= 1 && startDate.toDateString() === endDate.toDateString()) {
+      generated.push({
+        name: {
+          ua: language === 'ua' ? 'Основний сеанс' : language === 'ru' ? 'Основной сеанс' : 'Main Session',
+          ru: 'Основной сеанс',
+          en: 'Main Session'
+        },
+        startsAt: toDateTimeLocal(startDate),
+        endsAt: toDateTimeLocal(endDate),
+        isActive: true
+      });
+    } else {
+      // Multi-day event: generate a daily session for each day in range
+      let current = new Date(startDate);
+      let dayIndex = 1;
+      while (current <= endDate) {
+        const sStart = new Date(current);
+        const sEnd = new Date(current);
+        
+        sStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+        sEnd.setHours(endDate.getHours(), endDate.getMinutes(), 0, 0);
+        
+        generated.push({
+          name: {
+            ua: `День ${dayIndex}`,
+            ru: `День ${dayIndex}`,
+            en: `Day ${dayIndex}`
+          },
+          startsAt: toDateTimeLocal(sStart),
+          endsAt: toDateTimeLocal(sEnd),
+          isActive: true
+        });
+
+        current.setDate(current.getDate() + 1);
+        dayIndex++;
+      }
+    }
+
+    if (editId) {
+      setSessionsSaving(true);
+      setFeedback({ tone: '', message: '' });
+      try {
+        // Delete all existing sessions sequentially
+        for (const s of sessions) {
+          if (s.id) {
+            await apiRequest(`/api/admin/event-sessions/${s.id}`, { method: 'DELETE' });
+          }
+        }
+        
+        // Create the newly generated sessions sequentially
+        for (const s of generated) {
+          const payload = {
+            name: s.name,
+            startsAt: fromDateTimeLocal(s.startsAt),
+            endsAt: fromDateTimeLocal(s.endsAt),
+            isActive: s.isActive
+          };
+          await apiRequest(`/api/admin/events/${editId}/sessions`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+        }
+        await loadEventWithDetails(editId);
+        setFeedback({ tone: 'success', message: language === 'ua' ? 'Сесії успішно автозгенеровані!' : language === 'ru' ? 'Сессии успешно автосгенерированы!' : 'Sessions successfully auto-generated!' });
+      } catch (err) {
+        setFeedback({ tone: 'error', message: language === 'ua' ? 'Помилка при автогенерації сесій.' : language === 'ru' ? 'Ошибка при автогенерации сессий.' : 'Failed to auto-generate sessions.' });
+      } finally {
+        setSessionsSaving(false);
+      }
+    } else {
+      const formatted = generated.map(g => ({
+        name: g.name,
+        startsAt: fromDateTimeLocal(g.startsAt),
+        endsAt: fromDateTimeLocal(g.endsAt),
+        isActive: g.isActive
+      }));
+      setSessions(formatted);
+      markDirty();
+    }
   }
 
   async function submitForm(event) {
@@ -431,6 +547,10 @@ export default function EventsPage() {
 
   async function saveTicketType(event) {
     event.preventDefault();
+    if (!typeForm.name.ua || !typeForm.price) {
+      alert(language === 'ua' ? 'Будь ласка, вкажіть назву та ціну квитка!' : language === 'ru' ? 'Пожалуйста, укажите название и цену билета!' : 'Please specify ticket name and price!');
+      return;
+    }
     if (!editId) return;
     setTypesSaving(true);
     const payload = {
@@ -625,6 +745,26 @@ export default function EventsPage() {
               <hr /><span>{t('eventsAdmin.sectionSessions')}</span>
             </div>
 
+            <div className="info-tip-box" style={{ background: 'rgba(201, 168, 108, 0.08)', border: '1px solid rgba(201, 168, 108, 0.25)', borderRadius: 6, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--text-muted)' }}>
+              <strong>💡 {language === 'ua' ? 'Чому тут два блоки дат?' : language === 'ru' ? 'Почему здесь два блока дат?' : 'Why are there two date blocks?'}</strong>
+              <p style={{ margin: '4px 0 8px 0', lineHeight: 1.4 }}>
+                {language === 'ua' 
+                  ? 'Перший блок — це загальні дати початку та закінчення заходу для афіші. Другий блок (Сесії) — це фактичні дати та сеанси для бронювання столів або купівлі квитків. Кожне бронювання привʼязується до конкретної сесії (дня).'
+                  : language === 'ru'
+                  ? 'Первый блок — это общие даты начала и окончания мероприятия для афиши. Второй блок (Сессии) — это фактические даты и сеансы для бронирования столов или покупки билетов. Каждое бронирование привязывается к конкретной сессии (дню).'
+                  : 'The first block is the general start/end dates of the event for posters. The second block (Sessions) is the actual dates/slots for booking tables or buying tickets. Each booking is linked to a specific session.'}
+              </p>
+              <button
+                type="button"
+                className="btn btn-small btn-secondary"
+                disabled={sessionsSaving}
+                onClick={autoGenerateSessions}
+                style={{ fontSize: 12 }}
+              >
+                ⚡ {language === 'ua' ? 'Автогенерація сесій на основі дат заходу' : language === 'ru' ? 'Автогенерация сессий на основе дат мероприятия' : 'Auto-generate sessions based on event dates'}
+              </button>
+            </div>
+
             {sessions.length === 0 ? (
               <p className="muted" style={{ margin: '8px 0', fontSize: 13 }}>{t('eventsAdmin.noSessions')}</p>
             ) : (
@@ -654,11 +794,11 @@ export default function EventsPage() {
               </label>
               <label style={{ flex: '1 0 160px' }}>
                 {t('eventsAdmin.form.fields.start')} <span className="required">*</span>
-                <input type="datetime-local" value={sessionForm.startsAt} onChange={(e) => setSessionForm({ ...sessionForm, startsAt: e.target.value })} required style={{ fontSize: 12 }} />
+                <input type="datetime-local" value={sessionForm.startsAt} onChange={(e) => setSessionForm({ ...sessionForm, startsAt: e.target.value })} style={{ fontSize: 12 }} />
               </label>
               <label style={{ flex: '1 0 160px' }}>
                 {t('eventsAdmin.form.fields.end')} <span className="required">*</span>
-                <input type="datetime-local" value={sessionForm.endsAt} onChange={(e) => setSessionForm({ ...sessionForm, endsAt: e.target.value })} required style={{ fontSize: 12 }} />
+                <input type="datetime-local" value={sessionForm.endsAt} onChange={(e) => setSessionForm({ ...sessionForm, endsAt: e.target.value })} style={{ fontSize: 12 }} />
               </label>
               <label className="menu-admin-checkbox" style={{ marginBottom: 2 }}>
                 <input type="checkbox" checked={sessionForm.isActive} onChange={(e) => setSessionForm({ ...sessionForm, isActive: e.target.checked })} />
@@ -780,11 +920,11 @@ export default function EventsPage() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end', marginTop: 8 }}>
                   <label style={{ flex: '1 0 140px' }}>
                     {t('eventsAdmin.form.fields.name')} (UA) <span className="required">*</span>
-                    <input value={typeForm.name.ua} onChange={(e) => setTypeForm({ ...typeForm, name: { ...typeForm.name, ua: e.target.value } })} required style={{ fontSize: 12 }} />
+                    <input value={typeForm.name.ua} onChange={(e) => setTypeForm({ ...typeForm, name: { ...typeForm.name, ua: e.target.value } })} style={{ fontSize: 12 }} />
                   </label>
                   <label style={{ flex: '1 0 140px' }}>
                     {t('eventsAdmin.form.fields.price')} <span className="required">*</span>
-                    <input type="number" step="0.01" min="0" value={typeForm.price} onChange={(e) => setTypeForm({ ...typeForm, price: e.target.value })} required style={{ fontSize: 12 }} />
+                    <input type="number" step="0.01" min="0" value={typeForm.price} onChange={(e) => setTypeForm({ ...typeForm, price: e.target.value })} style={{ fontSize: 12 }} />
                   </label>
                   <label style={{ flex: '0 0 100px' }}>
                     {t('eventsAdmin.form.fields.capacity')}

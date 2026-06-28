@@ -82,8 +82,6 @@ export default function AdminLayout({ children }) {
     }
   }, [isMapFullscreen, location.pathname]);
 
-  console.log('[MAP] AdminLayout rendered', window.location.pathname, performance.now().toFixed(0));
-
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
     setUser(null);
@@ -159,7 +157,7 @@ export default function AdminLayout({ children }) {
                 to={item.to}
                 end
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                onClick={() => { console.log('[MAP] sidebar nav click', item.to); onNavSelect(); }}
+                onClick={onNavSelect}
               >
                 <Icon />
                 <span>{t(item.labelKey)}</span>

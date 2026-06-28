@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AdminI18nProvider } from './lib/i18n';
 import './styles.css';
-import { registerAdminServiceWorker } from './lib/pwa';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -15,5 +14,3 @@ createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>
 );
-
-registerAdminServiceWorker();

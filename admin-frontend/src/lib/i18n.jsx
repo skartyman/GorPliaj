@@ -74,53 +74,80 @@ const translations = {
       loading: 'Перевіряємо доступ...'
     },
     dashboard: {
-      eyebrow: 'Головне робоче місце',
-      title: 'Операційне зведення з пріоритетом на щоденну роботу',
-      description: 'Дашборд показує поточне навантаження, швидкі переходи та найближчі бронювання на одному екрані.',
-      openReservations: 'Відкрити бронювання',
-      viewMap: 'Відкрити карту',
-      openMenu: 'Відкрити меню',
-      summary: {
-        today: 'Бронювань сьогодні',
-        pending: 'Очікують підтвердження',
+      eyebrow: 'Робочий пульт',
+      title: 'Що потрібно зробити зараз',
+      description: 'Швидкі дії для зміни та зрозумілі показники для контролю дня.',
+      heroKpi: {
+        reservationsToday: 'Бронювання сьогодні',
+        activeGuests: 'Гостей активно',
+        awaitingConfirmation: 'Чекають підтвердження'
+      },
+      quickActions: {
+        createBooking: {
+          title: 'Створити бронювання вручну',
+          description: 'Для гостя від хостес: вибрати місце, дату, час і одразу створити бронювання.',
+          meta: 'Хостес'
+        },
+        openMap: {
+          title: 'Відкрити карту посадки',
+          description: 'Швидко вибрати вільне місце, посадити гостя або перевірити поточні бронювання.',
+          meta: 'Карта'
+        },
+        stopList: {
+          title: 'Скласти стоп-лист',
+          description: 'Відкрити меню та швидко вимкнути позиції, яких сьогодні немає в наявності.',
+          meta: '{count} вже в стопі'
+        },
+        scanTickets: {
+          title: 'Скан квитків',
+          description: 'Перевірити QR, квиток на афішу або код бронювання біля входу.',
+          meta: 'Вхід'
+        }
+      },
+      metrics: {
+        revenue: 'Виручка оплат',
+        paidPayments: 'Оплачено платежів',
+        paidTickets: 'Оплачено квитків',
+        menuItems: 'Позиції меню'
+      },
+      charts: {
+        reservations7days: 'Бронювання за 7 днів',
+        reservations7daysDesc: 'За датами відвідування, не за датою створення.',
+        revenue7days: 'Виручка за 7 днів',
+        revenue7daysDesc: 'Тільки платежі зі статусом PAID.',
+        statusShare: 'Статуси бронювань',
+        statusShareDesc: 'Швидко видно, де зависли заявки.',
+        menuDemand: 'Меню та попит',
+        menuDemandDesc: 'Лайки гостей та доступність позицій.',
+        totalLikes: 'лайків всього',
+        inStopList: 'у стоп-листі'
+      },
+      statusShare: {
+        pending: 'Очікують',
         confirmed: 'Підтверджено',
         completed: 'Завершено',
-        busyTables: 'Зайнятих столів',
-        totalLikes: 'Всього лайків',
-        likedItems: 'Популярних страв',
-        menuItems: 'Активних страв'
+        cancelled: 'Скасовано'
       },
-      quickActionsTitle: 'Швидкі дії',
-      quickActionsDescription: 'Короткі сценарії для адміністратора на телефоні та на десктопі.',
-      likesTitle: 'Лідери за лайками',
-      likesDescription: 'Топ страв, які користувачі найчастіше відмічають у публічному меню.',
-      upcomingTitle: 'Найближчі бронювання',
-      upcomingDescription: 'Актуальні броні з live API.',
-      latestTitle: 'Останні створені',
-      latestDescription: 'Свіжі записи для швидкого контролю.',
-      quick: {
-        reservationsTitle: 'Бронювання',
-        reservationsDescription: 'Шукати, фільтрувати та швидко змінювати статуси.',
-        mapTitle: 'Карта залу',
-        mapDescription: 'Дивитися завантаження столів та поточну посадку.',
-        menuTitle: 'Меню та лайки',
-        menuDescription: 'Редагувати страви та відстежувати інтерес гостей до позицій.',
-        newsTitle: 'Новини на головній',
-        newsDescription: 'Готувати анонси та важливі повідомлення.',
-        eventsTitle: 'Події',
-        eventsDescription: 'Планувати афіші, дати та промо.'
+      attention: {
+        title: 'Бронювання, які потребують уваги',
+        description: 'Тільки найближчі активні заявки, без довгої таблиці.',
+        empty: 'Зараз немає термінових бронювань.',
+        guest: 'Гість'
       },
+      quickLinks: {
+        title: 'Швидкі переходи',
+        description: 'Другий рядок посилань для адміна, коли потрібно не шукати в меню.',
+        payments: 'Платежі',
+        ticketSales: 'Продаж квитків',
+        menuEditor: 'Редактор меню',
+        events: 'Афіша',
+        allReservations: 'Всі бронювання'
+      },
+      emptyLikes: 'Поки немає статистики лайков.',
       errors: {
-        load: 'Не вдалося завантажити дашборд.',
-        loadInsights: 'Не вдалося завантажити статистику меню.'
-      },
-      empty: {
-        upcoming: 'Найближчих бронювань поки немає.',
-        latest: 'Нещодавніх бронювань поки немає.',
-        likes: 'Поки немає страв з лайками.'
-      },
-      createdFromFeed: 'Створено з поточного адміністративного потоку.',
-      noCategory: 'Без категорії'
+        loadReservations: 'Не вдалося завантажити броні.',
+        loadDashboard: 'Не вдалося завантажити дашборд.'
+      }
     },
     reservations: {
       title: 'Бронювання',
@@ -1152,6 +1179,82 @@ const translations = {
       delete: 'Удалить',
       create: 'Создать',
       confirmDelete: 'Удалить этого пользователя?'
+    },
+    dashboard: {
+      eyebrow: 'Рабочий пульт',
+      title: 'Что нужно сделать сейчас',
+      description: 'Быстрые действия для смены и понятные показатели для контроля дня.',
+      heroKpi: {
+        reservationsToday: 'Брони сегодня',
+        activeGuests: 'Гостей активно',
+        awaitingConfirmation: 'Ждут подтверждения'
+      },
+      quickActions: {
+        createBooking: {
+          title: 'Создать бронь вручную',
+          description: 'Для гостя от хостесс: выбрать место, дату, время и сразу завести бронь.',
+          meta: 'Хостесс'
+        },
+        openMap: {
+          title: 'Открыть карту посадки',
+          description: 'Быстро выбрать свободное место, посадить гостя или проверить текущие брони.',
+          meta: 'Карта'
+        },
+        stopList: {
+          title: 'Составить стоп-лист',
+          description: 'Открыть меню и быстро выключить позиции, которых сегодня нет в наличии.',
+          meta: '{count} уже в стопе'
+        },
+        scanTickets: {
+          title: 'Скан билетов',
+          description: 'Проверить QR, билет на афишу или код бронирования у входа.',
+          meta: 'Вход'
+        }
+      },
+      metrics: {
+        revenue: 'Выручка оплат',
+        paidPayments: 'Оплачено платежей',
+        paidTickets: 'Оплачено билетов',
+        menuItems: 'Позиции меню'
+      },
+      charts: {
+        reservations7days: 'Брони за 7 дней',
+        reservations7daysDesc: 'По датам посещения, не по дате создания.',
+        revenue7days: 'Выручка за 7 дней',
+        revenue7daysDesc: 'Только платежи со статусом PAID.',
+        statusShare: 'Статусы броней',
+        statusShareDesc: 'Быстро видно, где зависли заявки.',
+        menuDemand: 'Меню и спрос',
+        menuDemandDesc: 'Лайки гостей и доступность позиций.',
+        totalLikes: 'лайков всего',
+        inStopList: 'в стоп-листе'
+      },
+      statusShare: {
+        pending: 'Ожидают',
+        confirmed: 'Подтверждены',
+        completed: 'Завершены',
+        cancelled: 'Отменены'
+      },
+      attention: {
+        title: 'Брони, которые требуют внимания',
+        description: 'Только ближайшие активные заявки, без длинной таблицы.',
+        empty: 'Сейчас нет срочных броней.',
+        guest: 'Гость'
+      },
+      quickLinks: {
+        title: 'Быстрые переходы',
+        description: 'Второй ряд ссылок для админа, когда нужно не искать в меню.',
+        payments: 'Платежи',
+        ticketSales: 'Продажа билетов',
+        menuEditor: 'Редактор меню',
+        events: 'Афиша',
+        allReservations: 'Все брони'
+      },
+      emptyLikes: 'Пока нет статистики лайков.',
+      errors: {
+        loadReservations: 'Не удалось загрузить брони.',
+        loadDashboard: 'Не удалось загрузить дашборд.'
+      }
     }
     // ... остальное RU остается без изменений
   },
@@ -1242,6 +1345,82 @@ const translations = {
       delete: 'Delete',
       create: 'Create',
       confirmDelete: 'Delete this user?'
+    },
+    dashboard: {
+      eyebrow: 'Control Panel',
+      title: 'What needs to be done now',
+      description: 'Quick actions for the shift and clear metrics for daily control.',
+      heroKpi: {
+        reservationsToday: 'Reservations today',
+        activeGuests: 'Active guests',
+        awaitingConfirmation: 'Awaiting confirmation'
+      },
+      quickActions: {
+        createBooking: {
+          title: 'Create manual booking',
+          description: 'For a guest from hostess: pick a table, date, time and create the booking right away.',
+          meta: 'Hostess'
+        },
+        openMap: {
+          title: 'Open seating map',
+          description: 'Quickly pick a free table, seat a guest or check current reservations.',
+          meta: 'Map'
+        },
+        stopList: {
+          title: 'Build stop list',
+          description: 'Open menu and quickly disable items that are not available today.',
+          meta: '{count} already stopped'
+        },
+        scanTickets: {
+          title: 'Scan tickets',
+          description: 'Check QR, event ticket or booking code at the entrance.',
+          meta: 'Entry'
+        }
+      },
+      metrics: {
+        revenue: 'Payment revenue',
+        paidPayments: 'Paid payments',
+        paidTickets: 'Paid tickets',
+        menuItems: 'Menu items'
+      },
+      charts: {
+        reservations7days: 'Reservations for 7 days',
+        reservations7daysDesc: 'By visit dates, not creation dates.',
+        revenue7days: 'Revenue for 7 days',
+        revenue7daysDesc: 'Only payments with PAID status.',
+        statusShare: 'Reservation statuses',
+        statusShareDesc: 'Quickly see where requests are stuck.',
+        menuDemand: 'Menu & demand',
+        menuDemandDesc: 'Guest likes and item availability.',
+        totalLikes: 'total likes',
+        inStopList: 'in stop list'
+      },
+      statusShare: {
+        pending: 'Pending',
+        confirmed: 'Confirmed',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
+      },
+      attention: {
+        title: 'Reservations that need attention',
+        description: 'Only the nearest active requests, without a long table.',
+        empty: 'No urgent reservations right now.',
+        guest: 'Guest'
+      },
+      quickLinks: {
+        title: 'Quick links',
+        description: 'Second row of links for admin when you don\'t want to search through the menu.',
+        payments: 'Payments',
+        ticketSales: 'Ticket sales',
+        menuEditor: 'Menu editor',
+        events: 'Events',
+        allReservations: 'All reservations'
+      },
+      emptyLikes: 'No like statistics yet.',
+      errors: {
+        loadReservations: 'Failed to load reservations.',
+        loadDashboard: 'Failed to load dashboard.'
+      }
     }
     // ... остальное EN остается без изменений
   }

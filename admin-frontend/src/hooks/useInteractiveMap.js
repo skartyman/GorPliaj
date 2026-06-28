@@ -1,9 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const ZOOM_STEP = 1.2;
+const DEFAULT_TRANSFORM = { scale: 1, translateX: 0, translateY: 0 };
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function finiteNumber(value, fallback) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function normalizeTransform(value) {
+  if (!value || typeof value !== 'object') {
+    return DEFAULT_TRANSFORM;
+  }
+
+  return {
+    scale: Math.max(finiteNumber(value.scale, DEFAULT_TRANSFORM.scale), 0.01),
+    translateX: finiteNumber(value.translateX, DEFAULT_TRANSFORM.translateX),
+    translateY: finiteNumber(value.translateY, DEFAULT_TRANSFORM.translateY)
+  };
 }
 
 function getFitWidthScale(viewportWidth, worldWidth) {
@@ -60,10 +78,14 @@ export function useInteractiveMap({
   const pinchStartRef = useRef(null);
 
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0 });
+  const viewportRef = useRef(viewport);
+  viewportRef.current = viewport;
 
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
+  const [transform, setTransform] = useState(DEFAULT_TRANSFORM);
+
+  const transformRef = useRef(DEFAULT_TRANSFORM);
+  const safeTransform = normalizeTransform(transform);
+  transformRef.current = safeTransform;
 
   const fitViewScale = useMemo(
     () => getFitViewScale(viewport, fitWorldWidth, fitWorldHeight),
@@ -76,33 +98,36 @@ export function useInteractiveMap({
   );
 
   const clampTranslate = useCallback(
-    (translateX, translateY, scale, nextViewport = viewport) => {
-      const viewportMinScale = getMinScale(nextViewport, fitWorldWidth, fitWorldHeight, minScaleProp);
-      const boundedScale = clamp(scale, viewportMinScale, maxScale);
+    (translateX, translateY, scale, nextViewport = viewportRef.current) => {
+      const safeViewport = nextViewport || { width: 0, height: 0 };
+      const viewportMinScale = getMinScale(safeViewport, fitWorldWidth, fitWorldHeight, minScaleProp);
+      const boundedScale = clamp(finiteNumber(scale, DEFAULT_TRANSFORM.scale), viewportMinScale, maxScale);
       const scaledWidth = worldWidth * boundedScale;
       const scaledHeight = worldHeight * boundedScale;
       const edgeLimit = 64;
 
-      const rawXMin = nextViewport.width - scaledWidth - edgeLimit;
+      const rawTranslateX = finiteNumber(translateX, DEFAULT_TRANSFORM.translateX);
+      const rawTranslateY = finiteNumber(translateY, DEFAULT_TRANSFORM.translateY);
+
+      const rawXMin = finiteNumber(safeViewport.width, 0) - scaledWidth - edgeLimit;
       const rawXMax = edgeLimit;
       const xBounds = { min: Math.min(rawXMin, rawXMax), max: Math.max(rawXMin, rawXMax) };
 
-      const rawYMin = nextViewport.height - scaledHeight - edgeLimit;
+      const rawYMin = finiteNumber(safeViewport.height, 0) - scaledHeight - edgeLimit;
       const rawYMax = edgeLimit;
       const yBounds = { min: Math.min(rawYMin, rawYMax), max: Math.max(rawYMin, rawYMax) };
 
       return {
         scale: boundedScale,
-        translateX: clamp(translateX, xBounds.min, xBounds.max),
-        translateY: clamp(translateY, yBounds.min, yBounds.max)
+        translateX: clamp(rawTranslateX, xBounds.min, xBounds.max),
+        translateY: clamp(rawTranslateY, yBounds.min, yBounds.max)
       };
     },
-    [fitWorldHeight, fitWorldWidth, maxScale, minScaleProp, viewport, worldHeight, worldWidth]
+    [fitWorldHeight, fitWorldWidth, maxScale, minScaleProp, worldHeight, worldWidth]
   );
 
   useEffect(() => {
     if (!containerNode) return;
-    console.log('[MAP] listeners attach', performance.now().toFixed(0));
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
@@ -111,14 +136,15 @@ export function useInteractiveMap({
         current.width === nextViewport.width && current.height === nextViewport.height ? current : nextViewport
       );
       setTransform((current) => {
-        const isPristine = current.scale === 1 && current.translateX === 0 && current.translateY === 0;
-        const seedScale = isPristine ? getFitViewScale(nextViewport, fitWorldWidth, fitWorldHeight) : current.scale;
+        const safeCurrent = normalizeTransform(current);
+        const isPristine = safeCurrent.scale === 1 && safeCurrent.translateX === 0 && safeCurrent.translateY === 0;
+        const seedScale = isPristine ? getFitViewScale(nextViewport, fitWorldWidth, fitWorldHeight) : safeCurrent.scale;
         const centered = getCenteredTranslate(nextViewport, worldWidth, worldHeight, seedScale);
-        const nextTx = isPristine ? centered.translateX : current.translateX;
-        const nextTy = isPristine ? centered.translateY : current.translateY;
+        const nextTx = isPristine ? centered.translateX : safeCurrent.translateX;
+        const nextTy = isPristine ? centered.translateY : safeCurrent.translateY;
         const result = clampTranslate(nextTx, nextTy, seedScale, nextViewport);
-        return result.scale === current.scale && result.translateX === current.translateX && result.translateY === current.translateY
-          ? current
+        return result.scale === safeCurrent.scale && result.translateX === safeCurrent.translateX && result.translateY === safeCurrent.translateY
+          ? safeCurrent
           : result;
       });
     });
@@ -128,9 +154,10 @@ export function useInteractiveMap({
 
   useEffect(() => {
     setTransform((current) => {
-      const result = clampTranslate(current.translateX, current.translateY, current.scale);
-      return result.scale === current.scale && result.translateX === current.translateX && result.translateY === current.translateY
-        ? current
+      const safeCurrent = normalizeTransform(current);
+      const result = clampTranslate(safeCurrent.translateX, safeCurrent.translateY, safeCurrent.scale);
+      return result.scale === safeCurrent.scale && result.translateX === safeCurrent.translateX && result.translateY === safeCurrent.translateY
+        ? safeCurrent
         : result;
     });
   }, [clampTranslate]);
@@ -144,9 +171,10 @@ export function useInteractiveMap({
       const focalY = clientY - rect.top;
 
       setTransform((current) => {
+        const safeCurrent = normalizeTransform(current);
         const boundedScale = clamp(nextScale, minScale, maxScale);
-        const worldX = (focalX - current.translateX) / current.scale;
-        const worldY = (focalY - current.translateY) / current.scale;
+        const worldX = (focalX - safeCurrent.translateX) / safeCurrent.scale;
+        const worldY = (focalY - safeCurrent.translateY) / safeCurrent.scale;
         const nextTranslateX = focalX - worldX * boundedScale;
         const nextTranslateY = focalY - worldY * boundedScale;
         return clampTranslate(nextTranslateX, nextTranslateY, boundedScale);
@@ -165,11 +193,13 @@ export function useInteractiveMap({
     function onPointerDown(event) {
       if (isInteractiveTarget(event.target)) return;
       event.preventDefault();
-      node.setPointerCapture(event.pointerId);
+      try {
+        node.setPointerCapture(event.pointerId);
+      } catch {}
       pointersRef.current.set(event.pointerId, event);
 
       if (pointersRef.current.size === 1) {
-        const t = transformRef.current;
+        const t = normalizeTransform(transformRef.current);
         panStartRef.current = { x: event.clientX, y: event.clientY, translateX: t.translateX, translateY: t.translateY };
         pinchStartRef.current = null;
         return;
@@ -177,7 +207,7 @@ export function useInteractiveMap({
 
       if (pointersRef.current.size === 2) {
         const [first, second] = [...pointersRef.current.values()];
-        pinchStartRef.current = { distance: Math.max(getDistance(first, second), 1), scale: transformRef.current.scale };
+        pinchStartRef.current = { distance: Math.max(getDistance(first, second), 1), scale: normalizeTransform(transformRef.current).scale };
         panStartRef.current = null;
       }
     }
@@ -188,20 +218,25 @@ export function useInteractiveMap({
       event.preventDefault();
       pointersRef.current.set(event.pointerId, event);
 
-      if (pointersRef.current.size === 1 && panStartRef.current) {
-        const deltaX = event.clientX - panStartRef.current.x;
-        const deltaY = event.clientY - panStartRef.current.y;
-        setTransform((current) =>
-          clampTranslate(panStartRef.current.translateX + deltaX, panStartRef.current.translateY + deltaY, current.scale)
-        );
+      const panStart = panStartRef.current;
+      if (pointersRef.current.size === 1 && panStart) {
+        const deltaX = event.clientX - panStart.x;
+        const deltaY = event.clientY - panStart.y;
+        const nextTranslateX = finiteNumber(panStart.translateX, DEFAULT_TRANSFORM.translateX) + deltaX;
+        const nextTranslateY = finiteNumber(panStart.translateY, DEFAULT_TRANSFORM.translateY) + deltaY;
+        setTransform((current) => {
+          const safeCurrent = normalizeTransform(current);
+          return clampTranslate(nextTranslateX, nextTranslateY, safeCurrent.scale);
+        });
         return;
       }
 
-      if (pointersRef.current.size === 2 && pinchStartRef.current) {
+      const pinchStart = pinchStartRef.current;
+      if (pointersRef.current.size === 2 && pinchStart) {
         const [first, second] = [...pointersRef.current.values()];
         const nextDistance = Math.max(getDistance(first, second), 1);
-        const ratio = nextDistance / pinchStartRef.current.distance;
-        const nextScale = pinchStartRef.current.scale * ratio;
+        const ratio = nextDistance / Math.max(finiteNumber(pinchStart.distance, 1), 1);
+        const nextScale = finiteNumber(pinchStart.scale, DEFAULT_TRANSFORM.scale) * ratio;
         const center = getCenter(first, second);
         zoomAtPointRef.current(nextScale, center.x, center.y);
       }
@@ -213,7 +248,7 @@ export function useInteractiveMap({
 
       if (pointersRef.current.size === 1) {
         const [remaining] = [...pointersRef.current.values()];
-        const t = transformRef.current;
+        const t = normalizeTransform(transformRef.current);
         panStartRef.current = { x: remaining.clientX, y: remaining.clientY, translateX: t.translateX, translateY: t.translateY };
         pinchStartRef.current = null;
         return;
@@ -228,7 +263,7 @@ export function useInteractiveMap({
     function onWheel(event) {
       event.preventDefault();
       const zoomFactor = event.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP;
-      zoomAtPointRef.current(transformRef.current.scale * zoomFactor, event.clientX, event.clientY);
+      zoomAtPointRef.current(normalizeTransform(transformRef.current).scale * zoomFactor, event.clientX, event.clientY);
     }
 
     node.addEventListener('pointerdown', onPointerDown);
@@ -249,14 +284,14 @@ export function useInteractiveMap({
   const zoomIn = useCallback(() => {
     const rect = containerNode?.getBoundingClientRect();
     if (!rect) return;
-    zoomAtPoint(transform.scale * ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  }, [containerNode, transform.scale, zoomAtPoint]);
+    zoomAtPoint(safeTransform.scale * ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }, [containerNode, safeTransform.scale, zoomAtPoint]);
 
   const zoomOut = useCallback(() => {
     const rect = containerNode?.getBoundingClientRect();
     if (!rect) return;
-    zoomAtPoint(transform.scale / ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  }, [containerNode, transform.scale, zoomAtPoint]);
+    zoomAtPoint(safeTransform.scale / ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }, [containerNode, safeTransform.scale, zoomAtPoint]);
 
   const fitToView = useCallback(() => {
     const centered = getCenteredTranslate(viewport, worldWidth, worldHeight, fitViewScale);
@@ -280,7 +315,7 @@ export function useInteractiveMap({
   return {
     containerRef,
     containerNode,
-    transform,
+    transform: safeTransform,
     minScale,
     maxScale,
     handlers: {},

@@ -526,7 +526,7 @@ export default function MenuEditorPage() {
             <p className="muted">{t('menuAdmin.emptyCategories')}</p>
           ) : null}
 
-          <div className="menu-admin-tree">
+          <div id="stop-list" className="menu-admin-tree">
             {categoriesWithItems.map((category) => {
               const isExpanded = expandedCategories[String(category.id)] !== false;
               return (

@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { NavLink } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
@@ -52,6 +52,251 @@ export default function PositionsPage() {
 
   const [allPositionTypes, setAllPositionTypes] = useState([]);
   const [savingTypeIds, setSavingTypeIds] = useState([]);
+  const editIdRef = useRef(editId);
+  const positionAutosaveTimerRef = useRef(null);
+  const positionAutosaveInFlightRef = useRef(false);
+  const pendingPositionAutosaveRef = useRef(null);
+  const positionTypeTimersRef = useRef(new Map());
+  const positionTypesRef = useRef(allPositionTypes);
+
+  useEffect(() => {
+    editIdRef.current = editId;
+  }, [editId]);
+
+  useEffect(() => {
+    positionTypesRef.current = allPositionTypes;
+  }, [allPositionTypes]);
+
+  useEffect(() => () => {
+    if (positionAutosaveTimerRef.current) {
+      clearTimeout(positionAutosaveTimerRef.current);
+    }
+    for (const timerId of positionTypeTimersRef.current.values()) {
+      clearTimeout(timerId);
+    }
+    positionTypeTimersRef.current.clear();
+  }, []);
+
+  function normalizeNumber(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    const next = Number(value);
+    return Number.isFinite(next) ? next : null;
+  }
+
+  function buildPositionPayload(sourceForm) {
+    return {
+      code: sourceForm.code,
+      name: sourceForm.name,
+      positionType: sourceForm.positionType,
+      bookingKind: sourceForm.bookingKind,
+      seatsMin: Number(sourceForm.seatsMin),
+      seatsMax: Number(sourceForm.seatsMax),
+      deposit: Number(sourceForm.deposit),
+      price: normalizeNumber(sourceForm.price),
+      priceWeekday: normalizeNumber(sourceForm.priceWeekday),
+      priceWeekend: normalizeNumber(sourceForm.priceWeekend),
+      depositWeekday: normalizeNumber(sourceForm.depositWeekday),
+      depositWeekend: normalizeNumber(sourceForm.depositWeekend),
+      isActive: sourceForm.isActive,
+      isBookable: sourceForm.isBookable,
+      photoUrl: sourceForm.photoUrl,
+      sortOrder: Number(sourceForm.sortOrder)
+    };
+  }
+
+  function upsertPositionInState(updatedTable) {
+    if (!updatedTable) return;
+    setState((current) => {
+      if (!current.data?.positions) return current;
+      const exists = current.data.positions.some((row) => row.id === updatedTable.id);
+      const positions = exists
+        ? current.data.positions.map((row) => (row.id === updatedTable.id ? updatedTable : row))
+        : [updatedTable, ...current.data.positions];
+      return {
+        ...current,
+        data: {
+          ...current.data,
+          positions
+        }
+      };
+    });
+  }
+
+  function upsertPositionTypeInState(updatedType) {
+    if (!updatedType) return;
+    setAllPositionTypes((current) => {
+      const exists = current.some((row) => row.id === updatedType.id);
+      const next = exists
+        ? current.map((row) => (row.id === updatedType.id ? updatedType : row))
+        : [...current, updatedType];
+      return next.sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+    });
+  }
+
+  function queuePositionAutosave(nextForm) {
+    if (!editIdRef.current) return;
+    if (positionAutosaveTimerRef.current) {
+      clearTimeout(positionAutosaveTimerRef.current);
+    }
+    positionAutosaveTimerRef.current = setTimeout(() => {
+      positionAutosaveTimerRef.current = null;
+      void persistPosition(nextForm, { auto: true });
+    }, 500);
+  }
+
+  function updateForm(patch) {
+    setForm((current) => {
+      const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
+      if (editIdRef.current) {
+        queuePositionAutosave(next);
+      }
+      return next;
+    });
+  }
+
+  function buildPositionTypePatch(pt) {
+    return {
+      defaultPrice: normalizeNumber(pt.defaultPrice),
+      defaultDeposit: normalizeNumber(pt.defaultDeposit),
+      priceWeekday: normalizeNumber(pt.priceWeekday),
+      priceWeekend: normalizeNumber(pt.priceWeekend),
+      depositWeekday: normalizeNumber(pt.depositWeekday),
+      depositWeekend: normalizeNumber(pt.depositWeekend),
+      photoUrl: pt.photoUrl !== undefined ? pt.photoUrl : undefined
+    };
+  }
+
+  function queuePositionTypeAutosave(id) {
+    const current = positionTypesRef.current.find((pt) => pt.id === id);
+    if (!current) return;
+    const existingTimer = positionTypeTimersRef.current.get(id);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    const timerId = setTimeout(() => {
+      positionTypeTimersRef.current.delete(id);
+      const latest = positionTypesRef.current.find((pt) => pt.id === id);
+      if (latest) {
+        void persistPositionType(latest, { auto: true });
+      }
+    }, 500);
+    positionTypeTimersRef.current.set(id, timerId);
+  }
+
+  async function persistPosition(sourceForm, { auto = false } = {}) {
+    const currentEditId = editIdRef.current;
+    if (auto && !currentEditId) {
+      return;
+    }
+
+    if (positionAutosaveInFlightRef.current) {
+      if (auto) {
+        pendingPositionAutosaveRef.current = sourceForm;
+      }
+      return;
+    }
+
+    positionAutosaveInFlightRef.current = true;
+    if (!auto) {
+      setSaving(true);
+      setFeedback('');
+      setFeedbackType('');
+    }
+
+    try {
+      const payload = buildPositionPayload(sourceForm);
+      let url;
+      let method;
+
+      if (currentEditId) {
+        url = `/api/admin/reservation-positions/${currentEditId}`;
+        method = 'PATCH';
+      } else {
+        if (!sourceForm.mapId) {
+          if (!auto) {
+            setFeedback(t('positions.errors.save'));
+            setFeedbackType('error');
+          }
+          return;
+        }
+        url = '/api/admin/tables';
+        method = 'POST';
+        payload.mapId = Number(sourceForm.mapId) || null;
+      }
+
+      payload.zoneId = Number(sourceForm.zoneId) || null;
+
+      const { response, body } = await apiRequest(url, {
+        method,
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        if (!auto) {
+          setFeedback(body.message || t('positions.errors.save'));
+          setFeedbackType('error');
+        }
+        return;
+      }
+
+      if (body?.table) {
+        upsertPositionInState(body.table);
+      }
+
+      if (!auto) {
+        setFeedback(currentEditId ? t('positions.feedback.updated') : t('positions.feedback.created'));
+        setFeedbackType('success');
+        if (!currentEditId) {
+          resetForm();
+        }
+      }
+    } finally {
+      positionAutosaveInFlightRef.current = false;
+      if (!auto) {
+        setSaving(false);
+      }
+      if (auto && pendingPositionAutosaveRef.current) {
+        const pending = pendingPositionAutosaveRef.current;
+        pendingPositionAutosaveRef.current = null;
+        void persistPosition(pending, { auto: true });
+      }
+    }
+  }
+
+  async function persistPositionType(pt, { auto = false } = {}) {
+    const timerId = positionTypeTimersRef.current.get(pt.id);
+    if (timerId) {
+      clearTimeout(timerId);
+      positionTypeTimersRef.current.delete(pt.id);
+    }
+
+    setSavingTypeIds((prev) => (prev.includes(pt.id) ? prev : [...prev, pt.id]));
+    if (!auto) {
+      setFeedback('');
+      setFeedbackType('');
+    }
+
+    const { response, body } = await apiRequest(`/api/admin/position-types/${pt.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(buildPositionTypePatch(pt))
+    });
+
+    setSavingTypeIds((prev) => prev.filter((id) => id !== pt.id));
+
+    if (response.ok && body?.positionType) {
+      upsertPositionTypeInState(body.positionType);
+      if (!auto) {
+        setFeedback(t('positionTypes.feedback.saved') || 'Ціни успішно збережено');
+        setFeedbackType('success');
+      }
+      return;
+    }
+
+    if (!auto) {
+      setFeedback(body.message || t('positionTypes.errors.save') || 'Помилка збереження цін');
+      setFeedbackType('error');
+    }
+  }
 
   async function loadPositions() {
     const params = new URLSearchParams();
@@ -83,37 +328,11 @@ export default function PositionsPage() {
     setAllPositionTypes((prev) =>
       prev.map((pt) => (pt.id === id ? { ...pt, [field]: value } : pt))
     );
+    queuePositionTypeAutosave(id);
   }
 
   async function savePositionTypePrices(pt) {
-    setSavingTypeIds((prev) => [...prev, pt.id]);
-    setFeedback('');
-    setFeedbackType('');
-
-    const payload = {
-      defaultPrice: pt.defaultPrice !== '' && pt.defaultPrice != null ? Number(pt.defaultPrice) : null,
-      defaultDeposit: pt.defaultDeposit !== '' && pt.defaultDeposit != null ? Number(pt.defaultDeposit) : null,
-      priceWeekday: pt.priceWeekday !== '' && pt.priceWeekday != null ? Number(pt.priceWeekday) : null,
-      priceWeekend: pt.priceWeekend !== '' && pt.priceWeekend != null ? Number(pt.priceWeekend) : null,
-      depositWeekday: pt.depositWeekday !== '' && pt.depositWeekday != null ? Number(pt.depositWeekday) : null,
-      depositWeekend: pt.depositWeekend !== '' && pt.depositWeekend != null ? Number(pt.depositWeekend) : null,
-      photoUrl: pt.photoUrl !== undefined ? pt.photoUrl : undefined
-    };
-
-    const { response, body } = await apiRequest(`/api/admin/position-types/${pt.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload)
-    });
-
-    setSavingTypeIds((prev) => prev.filter((id) => id !== pt.id));
-    if (response.ok) {
-      setFeedback(t('positionTypes.feedback.saved') || 'Ціни успішно збережено');
-      setFeedbackType('success');
-      await loadPositionTypes();
-    } else {
-      setFeedback(body.message || t('positionTypes.errors.save') || 'Помилка збереження цін');
-      setFeedbackType('error');
-    }
+    await persistPositionType(pt, { auto: false });
   }
 
   useEffect(() => {
@@ -156,65 +375,7 @@ export default function PositionsPage() {
 
   async function submitForm(event) {
     event.preventDefault();
-    setSaving(true);
-    setFeedback('');
-    setFeedbackType('');
-
-    let url, method;
-    if (editId) {
-      url = `/api/admin/reservation-positions/${editId}`;
-      method = 'PATCH';
-    } else {
-      if (!form.mapId) {
-        setFeedback(t('positions.errors.save'));
-        setSaving(false);
-        return;
-      }
-      url = '/api/admin/tables';
-      method = 'POST';
-    }
-
-    const payload = {
-      code: form.code,
-      name: form.name,
-      positionType: form.positionType,
-      bookingKind: form.bookingKind,
-      seatsMin: Number(form.seatsMin),
-      seatsMax: Number(form.seatsMax),
-      deposit: Number(form.deposit),
-      price: form.price !== '' ? Number(form.price) : null,
-      priceWeekday: form.priceWeekday !== '' ? Number(form.priceWeekday) : null,
-      priceWeekend: form.priceWeekend !== '' ? Number(form.priceWeekend) : null,
-      depositWeekday: form.depositWeekday !== '' ? Number(form.depositWeekday) : null,
-      depositWeekend: form.depositWeekend !== '' ? Number(form.depositWeekend) : null,
-      isActive: form.isActive,
-      isBookable: form.isBookable,
-      photoUrl: form.photoUrl,
-      sortOrder: Number(form.sortOrder)
-    };
-
-    if (method === 'POST') {
-      payload.mapId = Number(form.mapId) || null;
-    }
-    payload.zoneId = Number(form.zoneId) || null;
-
-    const { response, body } = await apiRequest(url, {
-      method,
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      setFeedback(body.message || t('positions.errors.save'));
-      setFeedbackType('error');
-      setSaving(false);
-      return;
-    }
-
-    setFeedback(editId ? t('positions.feedback.updated') : t('positions.feedback.created'));
-    setFeedbackType('success');
-    resetForm();
-    setSaving(false);
-    await loadPositions();
+    await persistPosition(form, { auto: false });
   }
 
   async function removePosition(id) {
@@ -422,22 +583,22 @@ export default function PositionsPage() {
         <div style={{ display: 'contents' }}>
           <label style={{ fontSize: 11, gridColumn: 'span 1' }}>
             {t('positions.fields.code')}
-            <input style={inputS} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="A1" />
+            <input style={inputS} value={form.code} onChange={(e) => updateForm({ code: e.target.value })} placeholder="A1" />
           </label>
           <label style={{ fontSize: 11, gridColumn: 'span 2' }}>
             {t('positions.fields.name')}
             <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               <span style={{ fontSize: 10, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>UA</span>
-              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.ua} onChange={(e) => setForm({ ...form, name: { ...form.name, ua: e.target.value } })} placeholder="Назва UA" />
+              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.ua} onChange={(e) => updateForm({ name: { ...form.name, ua: e.target.value } })} placeholder="Назва UA" />
               <span style={{ fontSize: 10, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>RU</span>
-              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.ru} onChange={(e) => setForm({ ...form, name: { ...form.name, ru: e.target.value } })} placeholder="Назва RU" />
+              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.ru} onChange={(e) => updateForm({ name: { ...form.name, ru: e.target.value } })} placeholder="Назва RU" />
               <span style={{ fontSize: 10, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>EN</span>
-              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.en} onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })} placeholder="Назва EN" />
+              <input style={{ ...inputS, flex: 1, minWidth: 0 }} value={form.name.en} onChange={(e) => updateForm({ name: { ...form.name, en: e.target.value } })} placeholder="Назва EN" />
             </div>
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.positionType')}
-            <select style={selectS} value={form.positionType} onChange={(e) => setForm({ ...form, positionType: e.target.value })}>
+            <select style={selectS} value={form.positionType} onChange={(e) => updateForm({ positionType: e.target.value })}>
               <option value="">—</option>
               {positionTypes.map((pt) => (
                 <option key={pt} value={pt}>{pt}</option>
@@ -446,7 +607,7 @@ export default function PositionsPage() {
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.zone')}
-            <select style={selectS} value={form.zoneId} onChange={(e) => setForm({ ...form, zoneId: e.target.value })}>
+            <select style={selectS} value={form.zoneId} onChange={(e) => updateForm({ zoneId: e.target.value })}>
               <option value="">—</option>
               {allZonesForFilter.map((z) => (
                 <option key={z.id} value={z.id}>{localizeField(z.name, language)}</option>
@@ -455,47 +616,47 @@ export default function PositionsPage() {
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.bookingKind')}
-            <select style={selectS} value={form.bookingKind} onChange={(e) => setForm({ ...form, bookingKind: e.target.value })}>
+            <select style={selectS} value={form.bookingKind} onChange={(e) => updateForm({ bookingKind: e.target.value })}>
               <option value="TABLE">{t('reservationMeta.bookingKind.TABLE')}</option>
               <option value="BEACH">{t('reservationMeta.bookingKind.BEACH')}</option>
             </select>
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.price')}
-            <input style={inputS} type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="—" />
+            <input style={inputS} type="number" min="0" step="0.01" value={form.price} onChange={(e) => updateForm({ price: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.priceWeekday')}
-            <input style={inputS} type="number" min="0" step="0.01" value={form.priceWeekday} onChange={(e) => setForm({ ...form, priceWeekday: e.target.value })} placeholder="—" />
+            <input style={inputS} type="number" min="0" step="0.01" value={form.priceWeekday} onChange={(e) => updateForm({ priceWeekday: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.priceWeekend')}
-            <input style={inputS} type="number" min="0" step="0.01" value={form.priceWeekend} onChange={(e) => setForm({ ...form, priceWeekend: e.target.value })} placeholder="—" />
+            <input style={inputS} type="number" min="0" step="0.01" value={form.priceWeekend} onChange={(e) => updateForm({ priceWeekend: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.deposit')}
-            <input style={inputS} type="number" min="0" step="0.01" value={form.deposit} onChange={(e) => setForm({ ...form, deposit: e.target.value })} />
+            <input style={inputS} type="number" min="0" step="0.01" value={form.deposit} onChange={(e) => updateForm({ deposit: e.target.value })} />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.depositWeekday')}
-            <input style={inputS} type="number" min="0" step="0.01" value={form.depositWeekday} onChange={(e) => setForm({ ...form, depositWeekday: e.target.value })} placeholder="—" />
+            <input style={inputS} type="number" min="0" step="0.01" value={form.depositWeekday} onChange={(e) => updateForm({ depositWeekday: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.depositWeekend')}
-            <input style={inputS} type="number" min="0" step="0.01" value={form.depositWeekend} onChange={(e) => setForm({ ...form, depositWeekend: e.target.value })} placeholder="—" />
+            <input style={inputS} type="number" min="0" step="0.01" value={form.depositWeekend} onChange={(e) => updateForm({ depositWeekend: e.target.value })} placeholder="—" />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.seatsMin')}
-            <input style={inputS} type="number" min="0" value={form.seatsMin} onChange={(e) => setForm({ ...form, seatsMin: e.target.value })} />
+            <input style={inputS} type="number" min="0" value={form.seatsMin} onChange={(e) => updateForm({ seatsMin: e.target.value })} />
           </label>
           <label style={{ fontSize: 11 }}>
             {t('positions.fields.seatsMax')}
-            <input style={inputS} type="number" min="0" value={form.seatsMax} onChange={(e) => setForm({ ...form, seatsMax: e.target.value })} />
+            <input style={inputS} type="number" min="0" value={form.seatsMax} onChange={(e) => updateForm({ seatsMax: e.target.value })} />
           </label>
           <label style={{ fontSize: 11, gridColumn: 'span 2' }}>
             Фото (URL або завантаження)
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input style={{ ...inputS, flex: 1 }} value={form.photoUrl} onChange={(e) => setForm({ ...form, photoUrl: e.target.value })} placeholder="URL фото" />
+              <input style={{ ...inputS, flex: 1 }} value={form.photoUrl} onChange={(e) => updateForm({ photoUrl: e.target.value })} placeholder="URL фото" />
               <label className="btn btn-small" style={{ fontSize: 11, padding: '4px 8px', cursor: 'pointer', margin: 0 }}>
                 Завантажити
                 <input
@@ -513,7 +674,7 @@ export default function PositionsPage() {
                       body: formData
                     });
                     if (result.response.ok && result.body?.url) {
-                      setForm((current) => ({ ...current, photoUrl: result.body.url }));
+                      updateForm((current) => ({ ...current, photoUrl: result.body.url }));
                     } else {
                       alert(result.body?.message || 'Error uploading photo');
                     }
@@ -532,11 +693,11 @@ export default function PositionsPage() {
           </label>
           <div style={{ fontSize: 11, display: 'flex', gap: 8, alignItems: 'center', height: 28, alignSelf: 'end' }}>
             <label className="menu-admin-checkbox" style={{ gap: 2 }}>
-              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+              <input type="checkbox" checked={form.isActive} onChange={(e) => updateForm({ isActive: e.target.checked })} />
               <span style={{ fontSize: 11 }}>{t('positions.fields.isActive')}</span>
             </label>
             <label className="menu-admin-checkbox" style={{ gap: 2 }}>
-              <input type="checkbox" checked={form.isBookable} onChange={(e) => setForm({ ...form, isBookable: e.target.checked })} />
+              <input type="checkbox" checked={form.isBookable} onChange={(e) => updateForm({ isBookable: e.target.checked })} />
               <span style={{ fontSize: 11 }}>{t('positions.fields.isBookable')}</span>
             </label>
           </div>
@@ -560,7 +721,7 @@ export default function PositionsPage() {
             <form onSubmit={submitForm} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <label style={{ fontSize: 11, maxWidth: 320 }}>
                 {t('positions.fields.map')} <span className="required">*</span>
-                <select style={{ fontSize: 12, padding: '2px 6px', height: 28 }} value={form.mapId} onChange={(e) => setForm({ ...form, mapId: e.target.value })} required>
+                <select style={{ fontSize: 12, padding: '2px 6px', height: 28 }} value={form.mapId} onChange={(e) => updateForm({ mapId: e.target.value })} required>
                   <option value="">—</option>
                   {maps.map((m) => (
                     <option key={m.id} value={m.id}>{localizeField(m.name, language)} ({m.usageMode})</option>

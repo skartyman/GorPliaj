@@ -629,7 +629,6 @@ function ReservationCountdown({ reservation, className = 'table-countdown', styl
 
 
 export default function MapPage() {
-  console.log('[MAP] MapPage rendered', performance.now().toFixed(0));
   const [state, setState] = useState({
     loading: true,
     error: '',
@@ -780,15 +779,6 @@ export default function MapPage() {
       setState((prev) => ({ ...prev, loading: false, error: t('map.errors.load'), mapData: null, reservations: [], availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] } }));
     });
   }, [selectedMapId, selectedDate]);
-
-
-
-  useEffect(() => {
-    function globalClick(e) { console.log('[MAP] GLOBAL CLICK', e.target.tagName, e.target.className); }
-    document.addEventListener('click', globalClick, true);
-    return () => document.removeEventListener('click', globalClick, true);
-  }, []);
-
   async function handleFreeTableArrive(table) {
     if (!table) return;
     const result = await apiRequest(`/api/admin/tables/${table.id}/arrive`, { method: 'POST' });
@@ -825,6 +815,7 @@ export default function MapPage() {
   }), [mapDimensions.height, mapDimensions.width]);
 
   const [computedViewportHeight, setComputedViewportHeight] = useState('auto');
+  const lastHeightRef = useRef(0);
 
   const { containerRef, containerNode, transform, minScale, maxScale, handlers, actions } = useInteractiveMap({
     worldWidth: mapRenderFrame.width,
@@ -834,6 +825,7 @@ export default function MapPage() {
     minScale: 0.22,
     maxScale: 3
   });
+  const safeTransform = transform || { scale: 1, translateX: 0, translateY: 0 };
 
   useEffect(() => {
     const node = containerNode;
@@ -843,7 +835,11 @@ export default function MapPage() {
       if (!w) return;
       const h = w * mapDimensions.height / mapDimensions.width;
       const maxH = Math.min(window.innerHeight * 0.78, 860);
-      setComputedViewportHeight(Math.max(360, Math.min(h, maxH)));
+      const nextH = Math.max(360, Math.min(h, maxH));
+      if (Math.abs(lastHeightRef.current - nextH) > 4) {
+        lastHeightRef.current = nextH;
+        setComputedViewportHeight(nextH);
+      }
     };
     update();
     const ro = new ResizeObserver(update);
@@ -1101,7 +1097,6 @@ export default function MapPage() {
   }
 
   function focusWholeMap() {
-    console.log('[MAP] focusWholeMap clicked');
     setActiveZoneFocusId('all');
     actions.fitToView();
   }
@@ -1489,11 +1484,11 @@ export default function MapPage() {
                     </div>
                   ) : null}
                   <div className="interactive-map-controls">
-                    <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom+'); actions.zoomIn(); }} aria-label="Zoom in">+</button>
-                    <button type="button" className="map-control" onClick={() => { console.log('[MAP] zoom-'); actions.zoomOut(); }} aria-label="Zoom out">−</button>
-                    <button type="button" className="map-control fit" onClick={() => { console.log('[MAP] fit'); focusWholeMap(); }} aria-label="Fit map">⤢</button>
+                    <button type="button" className="map-control" onClick={actions.zoomIn} aria-label="Zoom in">+</button>
+                    <button type="button" className="map-control" onClick={actions.zoomOut} aria-label="Zoom out">−</button>
+                    <button type="button" className="map-control fit" onClick={focusWholeMap} aria-label="Fit map">⤢</button>
                     <span className="map-zoom-indicator">
-                      {Math.round(transform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
+                      {Math.round(safeTransform.scale * 100)}% · min {Math.round(minScale * 100)}% / max {Math.round(maxScale * 100)}%
                     </span>
                   </div>
 
@@ -1511,7 +1506,7 @@ export default function MapPage() {
                         width: mapRenderFrame.width,
                         height: mapRenderFrame.height,
                         backgroundColor: state.mapData.map.backgroundColor || '#eef2ff',
-                        transform: `translate(${transform.translateX}px, ${transform.translateY}px) scale(${transform.scale})`
+                        transform: `translate(${safeTransform.translateX}px, ${safeTransform.translateY}px) scale(${safeTransform.scale})`
                       }}
                     >
                       <div
@@ -1587,11 +1582,9 @@ export default function MapPage() {
                                 }}
                                 title={objectLabel}
                                 onPointerDown={isBookable ? (event) => {
-                                  console.log('[MAP] object pdown', object.tableId);
                                   event.stopPropagation();
                                 } : undefined}
                                 onClick={isBookable ? () => {
-                                  console.log('[MAP] object click', object.tableId);
                                   setSelectedTableId(object.tableId);
                                   setSelectedObjectId(null);
                                 } : undefined}
@@ -1623,8 +1616,8 @@ export default function MapPage() {
                                 borderRadius: tableShape === 'ROUND' ? 999 : 12
                               }}
                               title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
-                              onPointerDown={(event) => { console.log('[MAP] table pdown', object.tableId); event.stopPropagation(); }}
-                              onClick={() => { console.log('[MAP] table click', object.tableId); setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
+                              onPointerDown={(event) => { event.stopPropagation(); }}
+                              onClick={() => { setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
                             >
                               <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
                               {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
