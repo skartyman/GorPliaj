@@ -63,6 +63,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/paygate/hutko', hutkoRoutes);
 
+app.get(['/app', '/app/*'], (req, res) => {
+  return sendPublicIndex(res);
+});
+
 app.get(['/booking', '/booking/*'], (req, res) => {
   return sendPublicIndex(res);
 });
