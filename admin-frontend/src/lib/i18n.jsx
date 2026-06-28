@@ -1074,6 +1074,141 @@ const translations = {
       delete: 'Видалити',
       create: 'Створити',
       confirmDelete: 'Видалити цього користувача?'
+    },
+    ticketSales: {
+      page: {
+        title: 'Продаж квитків',
+        description: 'Створіть дні події та одразу додавайте тарифи всередині потрібного дня. Так видно, який квиток до якої дати відноситься.',
+        event: 'Подія',
+        noEvents: 'Немає подій',
+        selectEvent: 'Оберіть подію вище, або створіть дати та тарифи на сторінці «Події».'
+      },
+      errors: {
+        loadEvents: 'Не вдалося завантажити події.',
+        loadSales: 'Не вдалося завантажити продажі.',
+        saveSession: 'Не вдалося зберегти дату події.',
+        deleteSession: 'Не вдалося видалити дату події.',
+        saveType: 'Не вдалося зберегти тип квитка.',
+        updateType: 'Не вдалося оновити тип квитка.',
+        deleteType: 'Не вдалося видалити тип квитка.',
+        createOrder: 'Не вдалося створити замовлення.',
+        updateOrder: 'Не вдалося оновити замовлення.'
+      },
+      feedback: {
+        sessionSaved: 'Дату події оновлено.',
+        sessionCreated: 'Дату події додано.',
+        sessionDeleted: 'Дату події видалено.',
+        typeSaved: 'Тип квитка оновлено.',
+        typeCreated: 'Тип квитка створено та доступний для продажі.',
+        typeUpdated: 'Тип квитка оновлено.',
+        typeDeleted: 'Тип квитка видалено.',
+        orderCreated: 'Замовлення {number} створено.',
+        orderStatusUpdated: 'Статус замовлення оновлено.'
+      },
+      confirm: {
+        deleteSession: 'Видалити цю дату події? Якщо по ній вже є замовлення або квитки, видалення буде заборонено.',
+        deleteType: 'Видалити цей тип квитка? Якщо по ньому вже були продажі, видалення буде заборонено.'
+      },
+      noSession: 'Без окремої дати',
+      sessionForm: {
+        editTitle: 'Редагування дати події',
+        listTitle: 'Дати та тарифи',
+        listSubtitle: 'Кожна дата показує свої тарифи. Кнопка «Тариф на цю дату» одразу підставляє потрібний день у форму справа.',
+        name: 'Назва (UA)',
+        namePlaceholder: 'Наприклад: Перший вечір',
+        start: 'Початок',
+        end: 'Кінець',
+        active: 'Активна для продажі',
+        save: 'Зберегти дату',
+        add: 'Додати дату',
+        cancel: 'Скасувати'
+      },
+      typeForm: {
+        editTitle: 'Редагування тарифу',
+        newTitle: 'Новий тариф',
+        subtitle: 'Головне поле — дата. Якщо тариф створюється кнопкою з потрібного дня, дата вже обрана.',
+        session: 'Для якої дати продаємо квиток',
+        selectSession: 'Оберіть дату',
+        generalSession: 'Загальний продаж події',
+        sessionHint: 'Покупач побачить цей тариф саме для обраної дати.',
+        name: 'Назва (UA)',
+        price: 'Ціна',
+        capacity: 'Кількість квитків',
+        salesStart: 'Початок продаж',
+        salesEnd: 'Кінець продаж',
+        visible: 'Показувати на сайті',
+        save: 'Зберегти тариф',
+        add: 'Створити тариф',
+        cancel: 'Скасувати'
+      },
+      orderForm: {
+        title: 'Ручне замовлення',
+        subtitle: 'Створення замовлення менеджером або касиром. Дата події визначається обраним типом квитка.',
+        customer: 'Покупець',
+        email: 'Email',
+        phone: 'Телефон',
+        type: 'Тип квитка',
+        selectType: 'Оберіть тип квитка',
+        generalDate: 'загальна дата',
+        quantity: 'Кількість',
+        paid: 'Оплата вже отримана',
+        create: 'Створити замовлення'
+      },
+      sessions: {
+        active: 'Активна для продажі',
+        hidden: 'Прихована з сайту',
+        tariffForDate: 'Тариф на цю дату',
+        editDate: 'Редагувати дату',
+        deleteDate: 'Видалити дату',
+        noTariff: 'На цю дату ще немає тарифу. Натисніть «Тариф на цю дату».',
+        generalTitle: 'Загальний продаж події',
+        generalDesc: 'Для події без окремих днів тариф створюється як загальний.',
+        createTariff: 'Створити тариф',
+        noTariffs: 'Тарифів поки немає.',
+        unassignedTitle: 'Тарифи без прив\'язки до дати',
+        unassignedDesc: 'Відкрийте тариф та оберіть день, щоб він з\'явився в продажі коректно.'
+      },
+      columns: {
+        order: 'Замовлення',
+        date: 'Дата',
+        generalDate: 'Загальна дата події',
+        customer: 'Покупець',
+        tickets: 'Квитки',
+        amount: 'Сума',
+        status: 'Статус',
+        actions: 'Дії',
+        code: 'Код',
+        type: 'Тип квитка',
+        holder: 'Власник',
+        created: 'Створено'
+      },
+      card: {
+        sold: 'продано',
+        onSite: 'на сайті',
+        hidden: 'скритий',
+        sales: 'Продажі:',
+        now: 'зараз',
+        noEnd: 'без закінчення',
+        hide: 'Приховати',
+        show: 'Показати',
+        edit: 'Редагувати',
+        duplicate: 'Копіювати',
+        delete: 'Видалити'
+      },
+      orderActions: {
+        paid: 'Оплачено',
+        cancel: 'Скасувати'
+      },
+      orders: {
+        title: 'Замовлення',
+        loading: 'Завантаження...',
+        empty: 'Замовлень поки немає.'
+      },
+      tickets: {
+        title: 'Випущені квитки',
+        loading: 'Завантаження...',
+        empty: 'Квитків поки немає.'
+      }
     }
   },
   ru: {
@@ -1319,6 +1454,141 @@ const translations = {
           baseSaved: 'Сохранено.',
           reservationCreated: 'Бронирование создано.'
         }
+      }
+    },
+    ticketSales: {
+      page: {
+        title: 'Продажа билетов',
+        description: 'Создайте дни события и сразу добавляйте тарифы внутри нужного дня. Так видно, какой билет к какой дате относится.',
+        event: 'Мероприятие',
+        noEvents: 'Нет мероприятий',
+        selectEvent: 'Выберите мероприятие выше, или создайте даты и тарифы на странице «События».'
+      },
+      errors: {
+        loadEvents: 'Не удалось загрузить события.',
+        loadSales: 'Не удалось загрузить продажи.',
+        saveSession: 'Не удалось сохранить дату события.',
+        deleteSession: 'Не удалось удалить дату события.',
+        saveType: 'Не удалось сохранить тип билета.',
+        updateType: 'Не удалось обновить тип билета.',
+        deleteType: 'Не удалось удалить тип билета.',
+        createOrder: 'Не удалось создать заказ.',
+        updateOrder: 'Не удалось обновить заказ.'
+      },
+      feedback: {
+        sessionSaved: 'Дата события обновлена.',
+        sessionCreated: 'Дата события добавлена.',
+        sessionDeleted: 'Дата события удалена.',
+        typeSaved: 'Тип билета обновлён.',
+        typeCreated: 'Тип билета создан и доступен для продажи.',
+        typeUpdated: 'Тип билета обновлён.',
+        typeDeleted: 'Тип билета удалён.',
+        orderCreated: 'Заказ {number} создан.',
+        orderStatusUpdated: 'Статус заказа обновлён.'
+      },
+      confirm: {
+        deleteSession: 'Удалить эту дату события? Если по ней уже есть заказы или билеты, удаление будет запрещено.',
+        deleteType: 'Удалить этот тип билета? Если по нему уже были продажи, удаление будет запрещено.'
+      },
+      noSession: 'Без отдельной даты',
+      sessionForm: {
+        editTitle: 'Редактирование даты события',
+        listTitle: 'Даты и тарифы',
+        listSubtitle: 'Каждая дата показывает свои тарифы. Кнопка «Тариф на эту дату» сразу подставляет нужный день в форму справа.',
+        name: 'Название (UA)',
+        namePlaceholder: 'Например: Первый вечер',
+        start: 'Начало',
+        end: 'Конец',
+        active: 'Активна для продажи',
+        save: 'Сохранить дату',
+        add: 'Добавить дату',
+        cancel: 'Отмена'
+      },
+      typeForm: {
+        editTitle: 'Редактирование тарифа',
+        newTitle: 'Новый тариф',
+        subtitle: 'Главное поле — дата. Если тариф создаётся кнопкой из нужного дня, дата уже выбрана.',
+        session: 'Для какой даты продаём билет',
+        selectSession: 'Выберите дату',
+        generalSession: 'Общая продажа события',
+        sessionHint: 'Покупатель увидит этот тариф именно для выбранного дня.',
+        name: 'Название (UA)',
+        price: 'Цена',
+        capacity: 'Количество билетов',
+        salesStart: 'Начало продаж',
+        salesEnd: 'Конец продаж',
+        visible: 'Показывать на сайте',
+        save: 'Сохранить тариф',
+        add: 'Создать тариф',
+        cancel: 'Отмена'
+      },
+      orderForm: {
+        title: 'Ручной заказ',
+        subtitle: 'Создание заказа менеджером или кассиром. Дата события определяется выбранным типом билета.',
+        customer: 'Покупатель',
+        email: 'Email',
+        phone: 'Телефон',
+        type: 'Тип билета',
+        selectType: 'Выберите тип билета',
+        generalDate: 'общая дата',
+        quantity: 'Количество',
+        paid: 'Оплата уже получена',
+        create: 'Создать заказ'
+      },
+      sessions: {
+        active: 'Активна для продажи',
+        hidden: 'Скрыта с сайта',
+        tariffForDate: 'Тариф на эту дату',
+        editDate: 'Редактировать дату',
+        deleteDate: 'Удалить дату',
+        noTariff: 'На эту дату ещё нет тарифа. Нажмите «Тариф на эту дату».',
+        generalTitle: 'Общая продажа события',
+        generalDesc: 'Для события без отдельных дней тариф создаётся как общий.',
+        createTariff: 'Создать тариф',
+        noTariffs: 'Тарифов пока нет.',
+        unassignedTitle: 'Тарифы без привязки к дате',
+        unassignedDesc: 'Откройте тариф и выберите день, чтобы он появился в продаже корректно.'
+      },
+      columns: {
+        order: 'Заказ',
+        date: 'Дата',
+        generalDate: 'Общая дата события',
+        customer: 'Покупатель',
+        tickets: 'Билеты',
+        amount: 'Сумма',
+        status: 'Статус',
+        actions: 'Действия',
+        code: 'Код',
+        type: 'Тип билета',
+        holder: 'Владелец',
+        created: 'Создан'
+      },
+      card: {
+        sold: 'продано',
+        onSite: 'на сайте',
+        hidden: 'скрыт',
+        sales: 'Продажи:',
+        now: 'сейчас',
+        noEnd: 'без окончания',
+        hide: 'Скрыть',
+        show: 'Показать',
+        edit: 'Редактировать',
+        duplicate: 'Копировать',
+        delete: 'Удалить'
+      },
+      orderActions: {
+        paid: 'Оплачен',
+        cancel: 'Отменить'
+      },
+      orders: {
+        title: 'Заказы',
+        loading: 'Загрузка...',
+        empty: 'Заказов пока нет.'
+      },
+      tickets: {
+        title: 'Выпущенные билеты',
+        loading: 'Загрузка...',
+        empty: 'Билетов пока нет.'
       }
     }
     // ... остальное RU остается без изменений
@@ -1566,6 +1836,141 @@ const translations = {
       errors: {
         loadReservations: 'Failed to load reservations.',
         loadDashboard: 'Failed to load dashboard.'
+      }
+    },
+    ticketSales: {
+      page: {
+        title: 'Ticket Sales',
+        description: 'Create event dates and add tariffs inside each day. This way you can see which ticket belongs to which date.',
+        event: 'Event',
+        noEvents: 'No events',
+        selectEvent: 'Select an event above, or create dates and tariffs on the Events page.'
+      },
+      errors: {
+        loadEvents: 'Failed to load events.',
+        loadSales: 'Failed to load ticket sales.',
+        saveSession: 'Failed to save event date.',
+        deleteSession: 'Failed to delete event date.',
+        saveType: 'Failed to save ticket type.',
+        updateType: 'Failed to update ticket type.',
+        deleteType: 'Failed to delete ticket type.',
+        createOrder: 'Failed to create order.',
+        updateOrder: 'Failed to update order.'
+      },
+      feedback: {
+        sessionSaved: 'Event date updated.',
+        sessionCreated: 'Event date added.',
+        sessionDeleted: 'Event date deleted.',
+        typeSaved: 'Ticket type updated.',
+        typeCreated: 'Ticket type created and available for sale.',
+        typeUpdated: 'Ticket type updated.',
+        typeDeleted: 'Ticket type deleted.',
+        orderCreated: 'Order {number} created.',
+        orderStatusUpdated: 'Order status updated.'
+      },
+      confirm: {
+        deleteSession: 'Delete this event date? If there are already orders or tickets for it, deletion will be blocked.',
+        deleteType: 'Delete this ticket type? If there are already sales for it, deletion will be blocked.'
+      },
+      noSession: 'No separate date',
+      sessionForm: {
+        editTitle: 'Edit event date',
+        listTitle: 'Dates & tariffs',
+        listSubtitle: 'Each date shows its own tariffs. The "Tariff for this date" button sets the correct day in the form on the right.',
+        name: 'Name (UA)',
+        namePlaceholder: 'e.g. First evening',
+        start: 'Start',
+        end: 'End',
+        active: 'Active for sale',
+        save: 'Save date',
+        add: 'Add date',
+        cancel: 'Cancel'
+      },
+      typeForm: {
+        editTitle: 'Edit tariff',
+        newTitle: 'New tariff',
+        subtitle: 'The key field is the date. If the tariff is created via the button from a specific day, the date is already set.',
+        session: 'For which date are we selling tickets',
+        selectSession: 'Select a date',
+        generalSession: 'General event sale',
+        sessionHint: 'Customers will see this tariff for the selected date.',
+        name: 'Name (UA)',
+        price: 'Price',
+        capacity: 'Number of tickets',
+        salesStart: 'Sales start',
+        salesEnd: 'Sales end',
+        visible: 'Show on site',
+        save: 'Save tariff',
+        add: 'Create tariff',
+        cancel: 'Cancel'
+      },
+      orderForm: {
+        title: 'Manual order',
+        subtitle: 'Creating an order by manager or cashier. The event date is determined by the selected ticket type.',
+        customer: 'Customer',
+        email: 'Email',
+        phone: 'Phone',
+        type: 'Ticket type',
+        selectType: 'Select ticket type',
+        generalDate: 'general date',
+        quantity: 'Quantity',
+        paid: 'Payment already received',
+        create: 'Create order'
+      },
+      sessions: {
+        active: 'Active for sale',
+        hidden: 'Hidden from site',
+        tariffForDate: 'Tariff for this date',
+        editDate: 'Edit date',
+        deleteDate: 'Delete date',
+        noTariff: 'No tariff for this date yet. Click "Tariff for this date".',
+        generalTitle: 'General event sale',
+        generalDesc: 'For events without separate dates, the tariff is created as general.',
+        createTariff: 'Create tariff',
+        noTariffs: 'No tariffs yet.',
+        unassignedTitle: 'Tariffs without a date',
+        unassignedDesc: 'Open a tariff and select a day so it appears in the sale correctly.'
+      },
+      columns: {
+        order: 'Order',
+        date: 'Date',
+        generalDate: 'General event date',
+        customer: 'Customer',
+        tickets: 'Tickets',
+        amount: 'Amount',
+        status: 'Status',
+        actions: 'Actions',
+        code: 'Code',
+        type: 'Ticket type',
+        holder: 'Holder',
+        created: 'Created'
+      },
+      card: {
+        sold: 'sold',
+        onSite: 'on site',
+        hidden: 'hidden',
+        sales: 'Sales:',
+        now: 'now',
+        noEnd: 'no end',
+        hide: 'Hide',
+        show: 'Show',
+        edit: 'Edit',
+        duplicate: 'Duplicate',
+        delete: 'Delete'
+      },
+      orderActions: {
+        paid: 'Paid',
+        cancel: 'Cancel'
+      },
+      orders: {
+        title: 'Orders',
+        loading: 'Loading...',
+        empty: 'No orders yet.'
+      },
+      tickets: {
+        title: 'Issued tickets',
+        loading: 'Loading...',
+        empty: 'No tickets yet.'
       }
     }
     // ... остальное EN остается без изменений
