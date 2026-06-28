@@ -1758,6 +1758,24 @@ textarea { resize: vertical; min-height: 96px; }
 .reservation-management-forms textarea { resize: vertical; }
 .reservation-management-panel .field-span-2 { grid-column: 1 / -1; }
 .reservation-management-panel input[type="file"] { display: none; }
+
+.position-flat-table-wrap { overflow-x: auto; margin-top: 12px; }
+.position-flat-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.position-flat-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border-warm); font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
+.position-flat-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+.position-flat-table tbody tr:hover { background: var(--bg-hover, rgba(0,0,0,0.03)); }
+.position-flat-table .position-row-inactive { opacity: 0.55; }
+.position-flat-actions { display: flex; gap: 6px; white-space: nowrap; }
+.btn-link { border: 0; background: none; color: var(--text); font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; font-family: var(--font-sans); }
+.btn-link:hover { color: var(--accent); }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+.modal-card { background: var(--bg-card); border-radius: 16px; padding: 24px; min-width: 320px; max-width: 420px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.18); display: flex; flex-direction: column; gap: 14px; }
+.modal-card h4 { margin: 0; font-size: 1rem; }
+.modal-card-wide { max-width: 560px; }
+.modal-card input, .modal-card select, .modal-card textarea { width: 100%; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.modal-photo-preview { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; }
 .admin-form-span-2 { grid-column: 1 / -1; }
 .checkbox-row { display: flex; gap: 10px; align-items: center; margin-bottom: 0; font-size: 14px; }
 .checkbox-row input { width: 18px; height: 18px; margin: 0; }

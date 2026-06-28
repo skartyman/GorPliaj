@@ -46,88 +46,6 @@ function getPositionDisplayName(position, language) {
   return localizeField(position?.serviceName, language) || position?.code || localizeField(position?.name, language) || '—';
 }
 
-function getAvailabilityLabel(position, t) {
-  if (!position?.effective?.isActive) {
-    return t('reservationMeta.availability.hidden');
-  }
-
-  if (!position?.effective?.isBookable) {
-    return t('reservationMeta.availability.closed');
-  }
-
-  return t('reservationMeta.availability.available');
-}
-
-function getPositionTypeGroupLabel(position, t) {
-  const bookingKindLabel = getBookingKindLabel(position?.bookingKind, t);
-  const positionTypeLabel = getPositionTypeLabel(position?.positionType, t);
-  const seatsMin = Number(position?.seatsMin || 0);
-  const seatsMax = Number(position?.seatsMax || 0);
-
-  if (seatsMin > 0 && seatsMax > 0) {
-    if (seatsMin === seatsMax) {
-      return `${bookingKindLabel} · ${positionTypeLabel} · ${seatsMax}`;
-    }
-
-    return `${bookingKindLabel} · ${positionTypeLabel} · ${seatsMin}-${seatsMax}`;
-  }
-
-  return `${bookingKindLabel} · ${positionTypeLabel}`;
-}
-
-function buildPositionTypeKey(position) {
-  return [
-    position?.map?.id || '',
-    position?.zone?.id || '',
-    position?.bookingKind || '',
-    position?.positionType || '',
-    position?.seatsMin || '',
-    position?.seatsMax || ''
-  ].join('::');
-}
-
-function buildPositionTypeGroups(positions, t) {
-  const groups = new Map();
-
-  for (const position of positions || []) {
-    const key = buildPositionTypeKey(position);
-    const name = getPositionTypeGroupLabel(position, t);
-    const existing = groups.get(key);
-
-    if (existing) {
-      existing.positions.push(position);
-      existing.codes.push(position.code || `#${position.id}`);
-      existing.positionIds.push(position.id);
-      existing.reservationStats.activeCount += Number(position.reservationStats?.activeCount || 0);
-      existing.reservationStats.confirmedCount += Number(position.reservationStats?.confirmedCount || 0);
-      existing.reservationStats.pendingCount += Number(position.reservationStats?.pendingCount || 0);
-      continue;
-    }
-
-    groups.set(key, {
-      key,
-      label: name,
-      bookingKind: position.bookingKind,
-      positionType: position.positionType,
-      seatsMin: position.seatsMin,
-      seatsMax: position.seatsMax,
-      map: position.map,
-      zone: position.zone,
-      representative: position,
-      positions: [position],
-      positionIds: [position.id],
-      codes: [position.code || `#${position.id}`],
-      reservationStats: {
-        activeCount: Number(position.reservationStats?.activeCount || 0),
-        confirmedCount: Number(position.reservationStats?.confirmedCount || 0),
-        pendingCount: Number(position.reservationStats?.pendingCount || 0)
-      }
-    });
-  }
-
-  return Array.from(groups.values()).sort((left, right) => left.label.localeCompare(right.label, 'uk'));
-}
-
 function getDateLocale(language) {
   return language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
 }
@@ -289,12 +207,11 @@ export default function ReservationsPage() {
   const [managementMapId, setManagementMapId] = useState('');
   const [managementZoneId, setManagementZoneId] = useState('');
   const [managementEventId, setManagementEventId] = useState('');
-  const [selectedTypeKey, setSelectedTypeKey] = useState('');
-  const [selectedPositionId, setSelectedPositionId] = useState(null);
-  const [baseForm, setBaseForm] = useState({ deposit: 0, isActive: true, isBookable: true, photoUrl: '' });
-  const [overrideForm, setOverrideForm] = useState({ enabled: false, deposit: 0, isActive: true, isBookable: true, photoUrl: '', note: '' });
-  const [positionActionState, setPositionActionState] = useState({ savingBase: false, savingOverride: false, deletingOverride: false, uploading: false, error: '', success: '' });
+  const [positionActionState, setPositionActionState] = useState({ savingBase: false, error: '', success: '' });
   const [bookingFormState, setBookingFormState] = useState({ open: false, saving: false, error: '', success: '', form: null });
+  const [positionModal, setPositionModal] = useState({ type: null, position: null });
+  const [depositEdit, setDepositEdit] = useState({ saving: false, value: 0 });
+  const [photoEdit, setPhotoEdit] = useState({ saving: false, url: '' });
 
   const quickActions = useMemo(
     () => ({
@@ -372,90 +289,6 @@ export default function ReservationsPage() {
       cancelled = true;
     };
   }, [dateFilter, managementEventId, managementMapId, managementZoneId, managementSearch, today]);
-
-  const positionTypeGroups = useMemo(
-    () => buildPositionTypeGroups(managementState.positions, t),
-    [managementState.positions, t]
-  );
-
-  const selectedType = useMemo(
-    () => positionTypeGroups.find((group) => group.key === selectedTypeKey) || null,
-    [positionTypeGroups, selectedTypeKey]
-  );
-
-  const selectedPosition = useMemo(
-    () => {
-      if (!selectedType) {
-        return managementState.positions.find((position) => position.id === selectedPositionId) || null;
-      }
-
-      return selectedType.positions.find((position) => position.id === selectedPositionId)
-        || selectedType.positions[0]
-        || null;
-    },
-    [managementState.positions, selectedPositionId, selectedType]
-  );
-
-  useEffect(() => {
-    if (!positionTypeGroups.length) {
-      setSelectedTypeKey('');
-      setSelectedPositionId(null);
-      return;
-    }
-
-    setSelectedTypeKey((current) => {
-      if (current && positionTypeGroups.some((group) => group.key === current)) {
-        return current;
-      }
-
-      return positionTypeGroups[0].key;
-    });
-  }, [positionTypeGroups]);
-
-  useEffect(() => {
-    if (!selectedType) {
-      return;
-    }
-
-    setSelectedPositionId((current) => {
-      if (current && selectedType.positions.some((position) => position.id === current)) {
-        return current;
-      }
-
-      return selectedType.positions[0]?.id || null;
-    });
-  }, [selectedType]);
-
-  useEffect(() => {
-    if (!selectedPosition) {
-      return;
-    }
-
-    setBaseForm({
-      deposit: Number(selectedPosition.base?.deposit || 0),
-      isActive: Boolean(selectedPosition.base?.isActive),
-      isBookable: Boolean(selectedPosition.base?.isBookable),
-      photoUrl: selectedPosition.base?.photoUrl || ''
-    });
-
-    setOverrideForm({
-      enabled: Boolean(selectedPosition.override),
-      deposit: Number(selectedPosition.override?.deposit ?? selectedPosition.effective?.deposit ?? 0),
-      isActive: selectedPosition.override?.isActive ?? Boolean(selectedPosition.effective?.isActive),
-      isBookable: selectedPosition.override?.isBookable ?? Boolean(selectedPosition.effective?.isBookable),
-      photoUrl: selectedPosition.override?.photoUrl ?? selectedPosition.effective?.photoUrl ?? '',
-      note: selectedPosition.override?.note || ''
-    });
-
-    setPositionActionState({ savingBase: false, savingOverride: false, deletingOverride: false, uploading: false, error: '', success: '' });
-    setBookingFormState((current) => ({
-      ...current,
-      open: false,
-      error: '',
-      success: '',
-      form: buildBookingForm(selectedPosition, managementState.scope.reservationDate || today, managementState.scope.eventId || managementEventId)
-    }));
-  }, [selectedPosition, managementState.scope.reservationDate, managementState.scope.eventId, managementEventId, today]);
 
   const statuses = useMemo(
     () => ['ALL', ...new Set(state.rows.map((row) => row.status).filter(Boolean))],
@@ -589,134 +422,6 @@ export default function ReservationsPage() {
     }
   }
 
-  async function saveBaseSettings() {
-    if (!selectedPosition) return;
-
-    setPositionActionState((current) => ({ ...current, savingBase: true, error: '', success: '' }));
-    const { response, body } = await apiRequest(`/api/admin/reservation-positions/${selectedPosition.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        deposit: Number(baseForm.deposit || 0),
-        isActive: Boolean(baseForm.isActive),
-        isBookable: Boolean(baseForm.isBookable),
-        photoUrl: baseForm.photoUrl
-      })
-    });
-
-    if (!response.ok) {
-      setPositionActionState((current) => ({ ...current, savingBase: false, error: body.message || t('reservations.management.errors.saveBase') }));
-      return;
-    }
-
-    await reloadManagement();
-    setPositionActionState((current) => ({ ...current, savingBase: false, success: t('reservations.management.feedback.baseSaved') }));
-  }
-
-  async function saveOverrideSettings() {
-    if (!selectedPosition) return;
-
-    setPositionActionState((current) => ({ ...current, savingOverride: true, error: '', success: '' }));
-
-    if (!overrideForm.enabled) {
-      if (!selectedPosition.override) {
-        setPositionActionState((current) => ({ ...current, savingOverride: false, success: t('reservations.management.feedback.overrideDisabled') }));
-        return;
-      }
-
-      const query = new URLSearchParams();
-      if (managementState.scope.eventId) {
-        query.set('eventId', String(managementState.scope.eventId));
-      } else {
-        query.set('ruleDate', managementState.scope.reservationDate);
-      }
-
-      const { response, body } = await apiRequest(`/api/admin/reservation-positions/${selectedPosition.id}/override?${query.toString()}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        setPositionActionState((current) => ({ ...current, savingOverride: false, error: body.message || t('reservations.management.errors.deleteOverride') }));
-        return;
-      }
-
-      await reloadManagement();
-      setPositionActionState((current) => ({ ...current, savingOverride: false, success: t('reservations.management.feedback.overrideRemoved') }));
-      return;
-    }
-
-    const payload = {
-      eventId: managementState.scope.eventId || null,
-      ruleDate: managementState.scope.eventId ? null : managementState.scope.reservationDate,
-      deposit: Number(overrideForm.deposit || 0),
-      isActive: Boolean(overrideForm.isActive),
-      isBookable: Boolean(overrideForm.isBookable),
-      photoUrl: overrideForm.photoUrl,
-      note: overrideForm.note
-    };
-
-    const { response, body } = await apiRequest(`/api/admin/reservation-positions/${selectedPosition.id}/override`, {
-      method: 'PUT',
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      setPositionActionState((current) => ({ ...current, savingOverride: false, error: body.message || t('reservations.management.errors.saveOverride') }));
-      return;
-    }
-
-    await reloadManagement();
-    setPositionActionState((current) => ({ ...current, savingOverride: false, success: t('reservations.management.feedback.overrideSaved') }));
-  }
-
-  async function deleteOverrideSettings() {
-    if (!selectedPosition?.override) return;
-
-    setPositionActionState((current) => ({ ...current, deletingOverride: true, error: '', success: '' }));
-    const query = new URLSearchParams();
-    if (managementState.scope.eventId) {
-      query.set('eventId', String(managementState.scope.eventId));
-    } else {
-      query.set('ruleDate', managementState.scope.reservationDate);
-    }
-
-    const { response, body } = await apiRequest(`/api/admin/reservation-positions/${selectedPosition.id}/override?${query.toString()}`, {
-      method: 'DELETE'
-    });
-
-    if (!response.ok) {
-      setPositionActionState((current) => ({ ...current, deletingOverride: false, error: body.message || t('reservations.management.errors.deleteOverride') }));
-      return;
-    }
-
-    await reloadManagement();
-    setPositionActionState((current) => ({ ...current, deletingOverride: false, success: 'Override removed.' }));
-  }
-
-  async function uploadBasePhoto(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setPositionActionState((current) => ({ ...current, uploading: true, error: '', success: '' }));
-    const formData = new FormData();
-    formData.append('folder', 'map-objects');
-    formData.append('image', file);
-
-    const result = await apiRequest('/api/admin/uploads/image', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!result.response.ok || !result.body?.url) {
-      setPositionActionState((current) => ({ ...current, uploading: false, error: result.body?.message || t('reservations.management.errors.uploadPhoto') }));
-      event.target.value = '';
-      return;
-    }
-
-    setBaseForm((current) => ({ ...current, photoUrl: result.body.url }));
-    setPositionActionState((current) => ({ ...current, uploading: false, success: t('reservations.management.feedback.photoUploaded') }));
-    event.target.value = '';
-  }
-
   function updateBookingForm(field, value) {
     setBookingFormState((current) => ({
       ...current,
@@ -726,7 +431,7 @@ export default function ReservationsPage() {
 
   async function submitBookingForm(event) {
     event.preventDefault();
-    if (!selectedPosition || !bookingFormState.form) return;
+    if (!bookingFormState.form) return;
 
     setBookingFormState((current) => ({ ...current, saving: true, error: '', success: '' }));
     const payload = {
@@ -763,54 +468,75 @@ export default function ReservationsPage() {
     }));
   }
 
-  const managementColumns = [
-    {
-      key: 'positionType',
-      label: t('reservations.management.columns.type'),
-      render: (group) => (
-        <div>
-          <button
-            type="button"
-            className={`btn btn-small ${selectedTypeKey === group.key ? '' : 'btn-secondary'}`}
-            onClick={() => setSelectedTypeKey(group.key)}
-          >
-            {group.label}
-          </button>
-          <div className="muted small">{getBookingKindLabel(group.bookingKind, t)} · {group.positions.length} {t('reservations.management.columns.pcs')}</div>
-        </div>
-      )
-    },
-    {
-      key: 'mapZone',
-      label: t('reservations.management.columns.mapZone'),
-      render: (group) => `${localizeField(group.map?.name, language) || '—'} / ${localizeField(group.zone?.name, language) || '—'}`
-    },
-    {
-      key: 'capacity',
-      label: t('reservations.management.columns.capacity'),
-      render: (group) => `${group.seatsMin || '—'}-${group.seatsMax || '—'}`
-    },
-    {
-      key: 'effective',
-      label: t('reservations.management.columns.effective'),
-      render: (group) => (
-        <div>
-          <div>{getAvailabilityLabel(group.representative, t)}</div>
-          <div className="muted small">{t('reservations.management.columns.deposit', { amount: Number(group.representative.effective?.deposit || 0) })}</div>
-        </div>
-      )
-    },
-    {
-      key: 'reservations',
-      label: t('reservations.management.columns.bookings'),
-      render: (group) => (
-        <div>
-          <div>{group.reservationStats?.activeCount || 0}</div>
-           <div className="muted small">{t('reservations.management.columns.confirmed', { count: group.reservationStats?.confirmedCount || 0 })}</div>
-        </div>
-      )
+  async function togglePositionAvailability(position) {
+    const nextActive = !position.effective?.isActive;
+    const nextBookable = nextActive ? true : false;
+    setPositionActionState((current) => ({ ...current, savingBase: true, error: '', success: '' }));
+    const { response, body } = await apiRequest(`/api/admin/reservation-positions/${position.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive: nextActive, isBookable: nextBookable, deposit: Number(position.effective?.deposit || 0) })
+    });
+    if (!response.ok) {
+      setPositionActionState((current) => ({ ...current, savingBase: false, error: body.message || t('reservations.management.errors.saveBase') }));
+      return;
     }
-  ];
+    await reloadManagement();
+    setPositionActionState((current) => ({ ...current, savingBase: false, success: '' }));
+  }
+
+  async function saveDepositFromModal() {
+    const pos = positionModal.position;
+    if (!pos) return;
+    setDepositEdit((c) => ({ ...c, saving: true }));
+    const { response, body } = await apiRequest(`/api/admin/reservation-positions/${pos.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ deposit: Number(depositEdit.value || 0), isActive: Boolean(pos.effective?.isActive), isBookable: Boolean(pos.effective?.isBookable) })
+    });
+    if (!response.ok) {
+      setPositionActionState((current) => ({ ...current, error: body.message || t('reservations.management.errors.saveBase') }));
+      setDepositEdit((c) => ({ ...c, saving: false }));
+      return;
+    }
+    await reloadManagement();
+    setPositionModal({ type: null, position: null });
+    setDepositEdit({ saving: false, value: 0 });
+  }
+
+  async function savePhotoFromModal() {
+    const pos = positionModal.position;
+    if (!pos) return;
+    setPhotoEdit((c) => ({ ...c, saving: true }));
+    const { response, body } = await apiRequest(`/api/admin/reservation-positions/${pos.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ photoUrl: photoEdit.url, isActive: Boolean(pos.effective?.isActive), isBookable: Boolean(pos.effective?.isBookable), deposit: Number(pos.effective?.deposit || 0) })
+    });
+    if (!response.ok) {
+      setPositionActionState((current) => ({ ...current, error: body.message || t('reservations.management.errors.saveBase') }));
+      setPhotoEdit((c) => ({ ...c, saving: false }));
+      return;
+    }
+    await reloadManagement();
+    setPositionModal({ type: null, position: null });
+    setPhotoEdit({ saving: false, url: '' });
+  }
+
+  async function uploadPhotoFromModal(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setPhotoEdit((c) => ({ ...c, saving: true }));
+    const formData = new FormData();
+    formData.append('folder', 'map-objects');
+    formData.append('image', file);
+    const result = await apiRequest('/api/admin/uploads/image', { method: 'POST', body: formData });
+    if (!result.response.ok || !result.body?.url) {
+      setPositionActionState((current) => ({ ...current, error: result.body?.message || t('reservations.management.errors.uploadPhoto') }));
+      setPhotoEdit((c) => ({ ...c, saving: false }));
+      event.target.value = '';
+      return;
+    }
+    setPhotoEdit({ saving: false, url: result.body.url });
+    event.target.value = '';
+  }
 
   const reservationColumns = [
     {
@@ -1097,7 +823,6 @@ export default function ReservationsPage() {
               <div>
                 <span className="eyebrow">{t('reservations.management.title')}</span>
                 <h3 className="panel-section-title">{t('reservations.management.description')}</h3>
-                <p className="muted">{t('reservations.management.helpText')}</p>
               </div>
               <Link className="btn btn-secondary btn-small" to="/admin/map">{t('reservations.management.openMap')}</Link>
             </div>
@@ -1115,16 +840,12 @@ export default function ReservationsPage() {
                     const nextValue = event.target.value;
                     setManagementEventId(nextValue);
                     const selectedEvent = managementState.events.find((item) => String(item.id) === nextValue);
-                    if (selectedEvent?.startAt) {
-                      setDateFilter(toDateInput(selectedEvent.startAt));
-                    }
+                    if (selectedEvent?.startAt) setDateFilter(toDateInput(selectedEvent.startAt));
                   }}
                 >
                   <option value="">{t('reservations.management.noEvent')}</option>
-                  {managementState.events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {localizeField(event.title, language) || `#${event.id}`} · {formatDate(event.startAt, dateLocale)}
-                    </option>
+                  {managementState.events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>{localizeField(ev.title, language) || `#${ev.id}`} · {formatDate(ev.startAt, dateLocale)}</option>
                   ))}
                 </select>
               </label>
@@ -1132,10 +853,8 @@ export default function ReservationsPage() {
                 {t('reservations.management.map')}
                 <select value={managementMapId} onChange={(event) => { setManagementMapId(event.target.value); setManagementZoneId(''); }}>
                   <option value="">{t('reservations.management.allMaps')}</option>
-                  {managementState.maps.map((map) => (
-                    <option key={map.id} value={map.id}>
-                      {localizeField(map.name, language) || `#${map.id}`}
-                    </option>
+                  {managementState.maps.map((m) => (
+                    <option key={m.id} value={m.id}>{localizeField(m.name, language) || `#${m.id}`}</option>
                   ))}
                 </select>
               </label>
@@ -1144,263 +863,193 @@ export default function ReservationsPage() {
                 <select value={managementZoneId} onChange={(event) => setManagementZoneId(event.target.value)}>
                   <option value="">{t('reservations.management.allZones')}</option>
                   {managementState.maps
-                    .filter((map) => !managementMapId || String(map.id) === managementMapId)
-                    .flatMap((map) => map.zones || [])
-                    .map((zone) => (
-                      <option key={zone.id} value={zone.id}>
-                        {localizeField(zone.name, language) || `#${zone.id}`}
-                      </option>
+                    .filter((m) => !managementMapId || String(m.id) === managementMapId)
+                    .flatMap((m) => m.zones || [])
+                    .map((z) => (
+                      <option key={z.id} value={z.id}>{localizeField(z.name, language) || `#${z.id}`}</option>
                     ))}
                 </select>
               </label>
               <label>
                 {t('reservations.management.search')}
-                <input
-                  value={managementSearch}
-                  onChange={(event) => setManagementSearch(event.target.value)}
-                  placeholder={t('reservations.management.searchPlaceholder')}
-                />
+                <input value={managementSearch} onChange={(event) => setManagementSearch(event.target.value)} placeholder={t('reservations.management.searchPlaceholder')} />
               </label>
             </FilterBar>
 
-            <p className="muted table-meta">
-              {t('reservations.management.scopeLabel', {
-                scopeInfo: managementState.scope.eventId
-                  ? t('reservations.management.scopeEvent', { id: managementState.scope.eventId })
-                  : t('reservations.management.scopeDateLabel'),
-                scopeDate: managementState.scope.reservationDate || dateFilter
-              })}
-            </p>
-
             {managementState.loading ? <p>{t('reservations.management.loading')}</p> : null}
             {managementState.error ? <p className="error">{managementState.error}</p> : null}
-            {!managementState.loading && !managementState.error ? (
-              <>
-                <DataTable columns={managementColumns} rows={positionTypeGroups} emptyText={t('reservations.management.empty')} />
+            {positionActionState.error ? <p className="error">{positionActionState.error}</p> : null}
+            {positionActionState.success ? <p className="success-message">{positionActionState.success}</p> : null}
+            {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
 
-                {selectedPosition ? (
-                  <div className="reservation-management-grid">
-                    <article className="panel-card reservation-management-panel">
-                      <div className="panel-card-head">
-                        <div>
-                          <span className="eyebrow">{t('reservations.management.selectedType')}</span>
-                          <h3 className="panel-section-title">{selectedType?.label || getPositionDisplayName(selectedPosition, language)}</h3>
-                          <p className="muted">{localizeField(selectedPosition.map?.name, language) || '—'} / {localizeField(selectedPosition.zone?.name, language) || '—'}</p>
-                        </div>
-                        <StatusPill status={selectedPosition.effective?.isBookable && selectedPosition.effective?.isActive ? 'CONFIRMED' : 'CANCELLED'} />
-                      </div>
-
-                      {selectedType && selectedType.positions.length > 1 ? (
-                        <div className="admin-form-grid">
-                          <label className="field-span-2">
-                            {t('reservations.management.specificPosition')}
-                            <select value={selectedPositionId || ''} onChange={(event) => setSelectedPositionId(Number(event.target.value))}>
-                              {selectedType.positions.map((position) => (
-                                <option key={position.id} value={position.id}>
-                                  {position.code || `#${position.id}`} · {getAvailabilityLabel(position, t)}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="muted">{t('reservations.management.codesInType', { codes: selectedType.codes.join(', ') })}</span>
-                          </label>
-                        </div>
-                      ) : null}
-
-                      <div className="details-grid compact table-sheet-grid">
-                        <div className="detail-row"><span className="muted">{t('reservations.management.details.kind')}</span><strong>{getBookingKindLabel(selectedPosition.bookingKind, t)}</strong></div>
-                        <div className="detail-row"><span className="muted">{t('reservations.management.details.type')}</span><strong>{getPositionTypeLabel(selectedPosition.positionType, t) || '—'}</strong></div>
-                        <div className="detail-row"><span className="muted">{t('reservations.management.details.capacity')}</span><strong>{selectedPosition.seatsMin}-{selectedPosition.seatsMax}</strong></div>
-                        <div className="detail-row"><span className="muted">{t('reservations.management.details.effectiveDeposit')}</span><strong>{Number(selectedPosition.effective?.deposit || 0)}</strong></div>
-                        <div className="detail-row"><span className="muted">{t('reservations.management.details.bookingsInScope')}</span><strong>{selectedPosition.reservationStats?.activeCount || 0}</strong></div>
-                        <div className="detail-row"><span className="muted">{t('reservations.management.details.availability')}</span><strong>{getAvailabilityLabel(selectedPosition, t)}</strong></div>
-                      </div>
-
-                      {positionActionState.error ? <p className="error">{positionActionState.error}</p> : null}
-                      {positionActionState.success ? <p className="success-message">{positionActionState.success}</p> : null}
-
-                      <div className="reservation-management-forms">
-                        <form className="admin-form-grid" onSubmit={(event) => { event.preventDefault(); saveBaseSettings(); }}>
-                          <div className="field-span-2">
-                            <h4 className="panel-section-title">{t('reservations.management.baseSettings.title')}</h4>
-                            <p className="muted">{t('reservations.management.baseSettings.description')}</p>
-                          </div>
-                          <label>
-                            {t('reservations.management.baseSettings.deposit')}
-                            <input type="number" min="0" step="1" value={baseForm.deposit} onChange={(event) => setBaseForm((current) => ({ ...current, deposit: event.target.value }))} />
-                          </label>
-                          <label>
-                            {t('reservations.management.baseSettings.photoUrl')}
-                            <input type="url" value={baseForm.photoUrl} onChange={(event) => setBaseForm((current) => ({ ...current, photoUrl: event.target.value }))} />
-                          </label>
-                          <label className="checkbox-label inline">
-                            <input type="checkbox" checked={baseForm.isActive} onChange={(event) => setBaseForm((current) => ({ ...current, isActive: event.target.checked }))} />
-                            {t('reservations.management.baseSettings.activeOnMap')}
-                          </label>
-                          <label className="checkbox-label inline">
-                            <input type="checkbox" checked={baseForm.isBookable} onChange={(event) => setBaseForm((current) => ({ ...current, isBookable: event.target.checked }))} />
-                            {t('reservations.management.baseSettings.bookableByDefault')}
-                          </label>
-                          <label className="btn btn-secondary btn-small">
-                            {positionActionState.uploading ? t('reservations.management.baseSettings.uploading') : t('reservations.management.baseSettings.uploadPhoto')}
-                            <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadBasePhoto} disabled={positionActionState.uploading} />
-                          </label>
-                          <div className="actions field-span-2">
-                            <button type="submit" className="btn" disabled={positionActionState.savingBase}>
-                              {positionActionState.savingBase ? t('reservations.management.baseSettings.saving') : t('reservations.management.baseSettings.save')}
+            {!managementState.loading && !managementState.error && (
+              <div className="position-flat-table-wrap">
+                <table className="position-flat-table">
+                  <thead>
+                    <tr>
+                      <th>{t('reservations.management.flat.code')}</th>
+                      <th>{t('reservations.management.flat.type')}</th>
+                      <th>{t('reservations.management.flat.zone')}</th>
+                      <th>{t('reservations.management.flat.capacity')}</th>
+                      <th>{t('reservations.management.flat.deposit')}</th>
+                      <th>{t('reservations.management.flat.status')}</th>
+                      <th>{t('reservations.management.flat.bookings')}</th>
+                      <th>{t('reservations.management.flat.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {managementState.positions.length === 0 ? (
+                      <tr><td colSpan="8" className="muted" style={{ textAlign: 'center', padding: '24px' }}>{t('reservations.management.empty')}</td></tr>
+                    ) : managementState.positions.map((pos) => {
+                      const isActive = Boolean(pos.effective?.isActive);
+                      const isBookable = Boolean(pos.effective?.isBookable);
+                      return (
+                        <tr key={pos.id} className={!isActive ? 'position-row-inactive' : ''}>
+                          <td><strong>{pos.code || `#${pos.id}`}</strong></td>
+                          <td>{getBookingKindLabel(pos.bookingKind, t)} · {getPositionTypeLabel(pos.positionType, t)}</td>
+                          <td>{localizeField(pos.map?.name, language) || '—'} / {localizeField(pos.zone?.name, language) || '—'}</td>
+                          <td>{pos.seatsMin}-{pos.seatsMax}</td>
+                          <td>
+                            <button type="button" className="btn-link" onClick={() => { setPositionModal({ type: 'deposit', position: pos }); setDepositEdit({ saving: false, value: Number(pos.effective?.deposit || 0) }); }}>
+                              {Number(pos.effective?.deposit || 0)}
                             </button>
-                          </div>
-                        </form>
-
-                        <form className="admin-form-grid" onSubmit={(event) => { event.preventDefault(); saveOverrideSettings(); }}>
-                          <div className="field-span-2">
-                            <h4 className="panel-section-title">{t('reservations.management.overrideSettings.title')}</h4>
-                            <p className="muted">{t('reservations.management.overrideSettings.description', {
-                              scope: managementState.scope.eventId
-                                ? t('reservations.management.scopeEvent', { id: managementState.scope.eventId })
-                                : managementState.scope.reservationDate
-                            })}</p>
-                          </div>
-                          <label className="checkbox-label inline field-span-2">
-                            <input type="checkbox" checked={overrideForm.enabled} onChange={(event) => setOverrideForm((current) => ({ ...current, enabled: event.target.checked }))} />
-                            {t('reservations.management.overrideSettings.enableOverride')}
-                          </label>
-                          <label>
-                            {t('reservations.management.overrideSettings.deposit')}
-                            <input type="number" min="0" step="1" value={overrideForm.deposit} disabled={!overrideForm.enabled} onChange={(event) => setOverrideForm((current) => ({ ...current, deposit: event.target.value }))} />
-                          </label>
-                          <label>
-                            {t('reservations.management.overrideSettings.photoUrl')}
-                            <input type="url" value={overrideForm.photoUrl} disabled={!overrideForm.enabled} onChange={(event) => setOverrideForm((current) => ({ ...current, photoUrl: event.target.value }))} />
-                          </label>
-                          <label className="checkbox-label inline">
-                            <input type="checkbox" checked={overrideForm.isActive} disabled={!overrideForm.enabled} onChange={(event) => setOverrideForm((current) => ({ ...current, isActive: event.target.checked }))} />
-                            {t('reservations.management.overrideSettings.activeInScope')}
-                          </label>
-                          <label className="checkbox-label inline">
-                            <input type="checkbox" checked={overrideForm.isBookable} disabled={!overrideForm.enabled} onChange={(event) => setOverrideForm((current) => ({ ...current, isBookable: event.target.checked }))} />
-                            {t('reservations.management.overrideSettings.bookableInScope')}
-                          </label>
-                          <label className="field-span-2">
-                            {t('reservations.management.overrideSettings.note')}
-                            <textarea rows="3" value={overrideForm.note} disabled={!overrideForm.enabled} onChange={(event) => setOverrideForm((current) => ({ ...current, note: event.target.value }))}></textarea>
-                          </label>
-                          <div className="actions field-span-2">
-                            <button type="submit" className="btn" disabled={positionActionState.savingOverride}>
-                              {positionActionState.savingOverride ? t('reservations.management.overrideSettings.saving') : t('reservations.management.overrideSettings.save')}
+                          </td>
+                          <td>
+                            <StatusPill status={isActive && isBookable ? 'CONFIRMED' : isActive ? 'HELD' : 'CANCELLED'} />
+                          </td>
+                          <td>{pos.reservationStats?.activeCount || 0}</td>
+                          <td className="position-flat-actions">
+                            <button type="button" className="btn btn-small btn-secondary" title={t('reservations.management.flat.toggleAvailability')} onClick={() => togglePositionAvailability(pos)} disabled={positionActionState.savingBase}>
+                              {isActive ? '⏸' : '▶️'}
                             </button>
-                            {selectedPosition.override ? (
-                              <button
-                                type="button"
-                                className="btn btn-secondary"
-                                disabled={positionActionState.deletingOverride}
-                                onClick={deleteOverrideSettings}
-                              >
-                                {positionActionState.deletingOverride ? t('reservations.management.overrideSettings.removing') : t('reservations.management.overrideSettings.remove')}
-                              </button>
-                            ) : null}
-                          </div>
-                        </form>
-                      </div>
+                            <button type="button" className="btn btn-small btn-secondary" title={t('reservations.management.flat.photo')} onClick={() => { setPositionModal({ type: 'photo', position: pos }); setPhotoEdit({ saving: false, url: pos.effective?.photoUrl || pos.base?.photoUrl || '' }); }}>
+                              📷
+                            </button>
+                            <button type="button" className="btn btn-small" title={t('reservations.management.flat.createBooking')} onClick={() => { setPositionModal({ type: 'booking', position: pos }); setBookingFormState((c) => ({ ...c, open: true, error: '', success: '', form: buildBookingForm(pos, managementState.scope.reservationDate || today, managementState.scope.eventId || managementEventId) })) }}>
+                              📅
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                      <div className="booking-admin-panel">
-                        <div className="table-sheet-head">
-                          <div>
-                            <span className="eyebrow">{t('reservations.management.manualBooking.title')}</span>
-                            <h4>{getPositionDisplayName(selectedPosition, language)}</h4>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn"
-                            onClick={() => setBookingFormState((current) => ({
-                              ...current,
-                              open: !current.open,
-                              error: '',
-                              success: '',
-                              form: buildBookingForm(selectedPosition, managementState.scope.reservationDate || today, managementState.scope.eventId || managementEventId)
-                            }))}
-                          >
-                            {bookingFormState.open ? t('reservations.management.manualBooking.closeForm') : t('reservations.management.manualBooking.createBooking')}
-                          </button>
-                        </div>
-
-                        {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
-                        {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
-
-                        {bookingFormState.open && bookingFormState.form ? (
-                          <form className="admin-form-grid" onSubmit={submitBookingForm}>
-                            <label>
-                              {t('reservations.management.manualBooking.guestName')}
-                              <input type="text" required value={bookingFormState.form.customerName} onChange={(event) => updateBookingForm('customerName', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.phone')}
-                              <input type="text" required value={bookingFormState.form.customerPhone} onChange={(event) => updateBookingForm('customerPhone', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.email')}
-                              <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.guests')}
-                              <input type="number" min={selectedPosition.seatsMin || 1} max={selectedPosition.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.date')}
-                              <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.start')}
-                              <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.end')}
-                              <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} />
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.source')}
-                              <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)}>
-                                <option value="WALK_IN">Walk-in</option>
-                                <option value="PHONE">Phone</option>
-                                <option value="INSTAGRAM">Instagram</option>
-                                <option value="FACEBOOK">Facebook</option>
-                                <option value="WEB">Web</option>
-                              </select>
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.status')}
-                              <select value={bookingFormState.form.status} onChange={(event) => updateBookingForm('status', event.target.value)}>
-                                <option value="PENDING">Pending</option>
-                                <option value="CONFIRMED">Confirmed</option>
-                              </select>
-                            </label>
-                            <label className="checkbox-label inline">
-                              <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(event) => updateBookingForm('depositRequired', event.target.checked)} />
-                              {t('reservations.management.manualBooking.depositRequired')}
-                            </label>
-                            <label>
-                              {t('reservations.management.manualBooking.depositAmount')}
-                              <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(event) => updateBookingForm('depositAmount', event.target.value)} />
-                            </label>
-                            <label className="field-span-2">
-                              {t('reservations.management.manualBooking.guestComment')}
-                              <textarea rows="3" value={bookingFormState.form.commentCustomer} onChange={(event) => updateBookingForm('commentCustomer', event.target.value)}></textarea>
-                            </label>
-                            <label className="field-span-2">
-                              {t('reservations.management.manualBooking.adminComment')}
-                              <textarea rows="3" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)}></textarea>
-                            </label>
-                            <div className="actions field-span-2">
-                              <button type="submit" className="btn" disabled={bookingFormState.saving}>
-                                {bookingFormState.saving ? t('reservations.management.manualBooking.saving') : t('reservations.management.manualBooking.create')}
-                              </button>
-                            </div>
-                          </form>
-                        ) : null}
-                      </div>
-                    </article>
+            {positionModal.type === 'deposit' && positionModal.position && (
+              <div className="modal-overlay" onClick={() => setPositionModal({ type: null, position: null })}>
+                <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                  <h4>{t('reservations.management.flat.deposit')} — {positionModal.position.code || `#${positionModal.position.id}`}</h4>
+                  <label>
+                    {t('reservations.management.flat.deposit')}
+                    <input type="number" min="0" step="1" value={depositEdit.value} onChange={(e) => setDepositEdit((c) => ({ ...c, value: e.target.value }))} />
+                  </label>
+                  <div className="modal-actions">
+                    <button type="button" className="btn btn-secondary" onClick={() => setPositionModal({ type: null, position: null })}>{t('reservations.management.flat.cancel')}</button>
+                    <button type="button" className="btn" disabled={depositEdit.saving} onClick={saveDepositFromModal}>{depositEdit.saving ? t('reservations.management.flat.saving') : t('reservations.management.flat.save')}</button>
                   </div>
-                ) : null}
-              </>
+                </div>
+              </div>
+            )}
+
+            {positionModal.type === 'photo' && positionModal.position && (
+              <div className="modal-overlay" onClick={() => setPositionModal({ type: null, position: null })}>
+                <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                  <h4>{t('reservations.management.flat.photo')} — {positionModal.position.code || `#${positionModal.position.id}`}</h4>
+                  {photoEdit.url ? <img src={photoEdit.url} alt="" className="modal-photo-preview" /> : null}
+                  <label>
+                    {t('reservations.management.flat.photoUrl')}
+                    <input type="url" value={photoEdit.url} onChange={(e) => setPhotoEdit((c) => ({ ...c, url: e.target.value }))} placeholder="https://..." />
+                  </label>
+                  <label className="btn btn-secondary btn-small">
+                    {photoEdit.saving ? t('reservations.management.baseSettings.uploading') : t('reservations.management.baseSettings.uploadPhoto')}
+                    <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={uploadPhotoFromModal} disabled={photoEdit.saving} />
+                  </label>
+                  <div className="modal-actions">
+                    <button type="button" className="btn btn-secondary" onClick={() => setPositionModal({ type: null, position: null })}>{t('reservations.management.flat.cancel')}</button>
+                    <button type="button" className="btn" disabled={photoEdit.saving} onClick={savePhotoFromModal}>{photoEdit.saving ? t('reservations.management.flat.saving') : t('reservations.management.flat.save')}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {positionModal.type === 'booking' && positionModal.position && bookingFormState.form ? (
+              <div className="modal-overlay" onClick={() => setPositionModal({ type: null, position: null })}>
+                <div className="modal-card modal-card-wide" onClick={(e) => e.stopPropagation()}>
+                  <h4>{t('reservations.management.manualBooking.title')} — {getPositionDisplayName(positionModal.position, language)}</h4>
+                  {bookingFormState.error ? <p className="error">{bookingFormState.error}</p> : null}
+                  <form className="admin-form-grid" onSubmit={(e) => { e.preventDefault(); submitBookingForm(e); }}>
+                    <label>
+                      {t('reservations.management.manualBooking.guestName')}
+                      <input type="text" required value={bookingFormState.form.customerName} onChange={(e) => updateBookingForm('customerName', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.phone')}
+                      <input type="text" required value={bookingFormState.form.customerPhone} onChange={(e) => updateBookingForm('customerPhone', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.email')}
+                      <input type="email" value={bookingFormState.form.customerEmail} onChange={(e) => updateBookingForm('customerEmail', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.guests')}
+                      <input type="number" min={positionModal.position.seatsMin || 1} max={positionModal.position.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(e) => updateBookingForm('guests', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.date')}
+                      <input type="date" required value={bookingFormState.form.reservationDate} onChange={(e) => updateBookingForm('reservationDate', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.start')}
+                      <input type="time" required value={bookingFormState.form.timeFrom} onChange={(e) => updateBookingForm('timeFrom', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.end')}
+                      <input type="time" value={bookingFormState.form.timeTo} onChange={(e) => updateBookingForm('timeTo', e.target.value)} />
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.source')}
+                      <select value={bookingFormState.form.source} onChange={(e) => updateBookingForm('source', e.target.value)}>
+                        <option value="WALK_IN">Walk-in</option>
+                        <option value="PHONE">Phone</option>
+                        <option value="INSTAGRAM">Instagram</option>
+                        <option value="FACEBOOK">Facebook</option>
+                        <option value="WEB">Web</option>
+                      </select>
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.status')}
+                      <select value={bookingFormState.form.status} onChange={(e) => updateBookingForm('status', e.target.value)}>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                      </select>
+                    </label>
+                    <label className="checkbox-label inline">
+                      <input type="checkbox" checked={Boolean(bookingFormState.form.depositRequired)} onChange={(e) => updateBookingForm('depositRequired', e.target.checked)} />
+                      {t('reservations.management.manualBooking.depositRequired')}
+                    </label>
+                    <label>
+                      {t('reservations.management.manualBooking.depositAmount')}
+                      <input type="number" min="0" step="1" disabled={!bookingFormState.form.depositRequired} value={bookingFormState.form.depositAmount} onChange={(e) => updateBookingForm('depositAmount', e.target.value)} />
+                    </label>
+                    <label className="field-span-2">
+                      {t('reservations.management.manualBooking.guestComment')}
+                      <textarea rows="2" value={bookingFormState.form.commentCustomer} onChange={(e) => updateBookingForm('commentCustomer', e.target.value)}></textarea>
+                    </label>
+                    <label className="field-span-2">
+                      {t('reservations.management.manualBooking.adminComment')}
+                      <textarea rows="2" value={bookingFormState.form.commentAdmin} onChange={(e) => updateBookingForm('commentAdmin', e.target.value)}></textarea>
+                    </label>
+                    <div className="actions field-span-2">
+                      <button type="button" className="btn btn-secondary" onClick={() => setPositionModal({ type: null, position: null })}>{t('reservations.management.flat.cancel')}</button>
+                      <button type="submit" className="btn" disabled={bookingFormState.saving}>
+                        {bookingFormState.saving ? t('reservations.management.manualBooking.saving') : t('reservations.management.manualBooking.create')}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             ) : null}
           </section>
         )}
