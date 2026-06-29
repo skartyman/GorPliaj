@@ -61,7 +61,7 @@ export default function MenuPage() {
         const itemsList = Array.isArray(category.items) ? category.items : [];
         if (!categoryLabel || !itemsList.length) return acc;
         const section = resolveCategorySection(categoryLabel, category.section);
-        acc[section].push({ categoryKey: categoryLabel, categoryLabel, items: itemsList });
+        acc[section].push({ categoryKey: categoryLabel, categoryLabel, items: itemsList, noPhoto: category.noPhoto });
         return acc;
       },
       { kitchen: [], bar: [] }
@@ -278,14 +278,16 @@ export default function MenuPage() {
                   const showImage = item.imageUrl && !hasImageError(item.id);
 
                   return (
-                    <article key={item.id} className="menu-card" onClick={() => setSelectedItem({ ...item, name, category: localizeField(category.categoryLabel, locale) })}>
-                      <div className="menu-card-image">
-                        {showImage ? (
-                          <img src={item.imageUrl} alt={name} loading="lazy" onError={() => handleImageError(item.id)} />
-                        ) : (
-                          <div className="menu-card-fallback">GP</div>
-                        )}
-                      </div>
+                    <article key={item.id} className={`menu-card${category.noPhoto ? ' no-photo' : ''}`} onClick={() => setSelectedItem({ ...item, name, category: localizeField(category.categoryLabel, locale) })}>
+                      {!category.noPhoto && (
+                        <div className="menu-card-image">
+                          {showImage ? (
+                            <img src={item.imageUrl} alt={name} loading="lazy" onError={() => handleImageError(item.id)} />
+                          ) : (
+                            <div className="menu-card-fallback">GP</div>
+                          )}
+                        </div>
+                      )}
                       <div className="menu-card-body">
                         <h3>{name}</h3>
                         {description ? <p className="muted">{description}</p> : null}

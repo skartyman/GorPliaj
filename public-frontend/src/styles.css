@@ -1311,6 +1311,19 @@ h3 {
   letter-spacing: 0.1em;
 }
 
+.menu-card.no-photo {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.menu-card.no-photo .menu-card-body {
+  padding: 12px 16px;
+}
+
+.menu-card.no-photo .menu-card-bottom {
+  margin-top: auto;
+}
+
 .menu-card-body {
   padding: 14px 16px 16px;
   flex: 1;

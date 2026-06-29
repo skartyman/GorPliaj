@@ -8,6 +8,7 @@ function toPublicCategory(category) {
     slug: category.slug,
     section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
+    noPhoto: category.noPhoto || false,
     items: category.items
       .filter((item) => item.isActive && item.isAvailable)
       .map((item) => ({

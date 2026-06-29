@@ -44,7 +44,8 @@ const CATEGORY_FORM_DEFAULT = {
   slug: '',
   section: 'KITCHEN',
   sortOrder: 0,
-  isActive: true
+  isActive: true,
+  noPhoto: false
 };
 
 const ITEM_FORM_DEFAULT = {
@@ -68,7 +69,8 @@ function buildCategoryForm(category) {
     slug: category?.slug || '',
     section: category?.section || 'KITCHEN',
     sortOrder: Number(category?.sortOrder || 0),
-    isActive: category?.isActive !== false
+    isActive: category?.isActive !== false,
+    noPhoto: category?.noPhoto === true
   };
 }
 
@@ -748,6 +750,15 @@ export default function MenuEditorPage() {
                   onChange={(event) => setCategoryForm((current) => ({ ...current, isActive: event.target.checked }))}
                 />
                 <span>{t('menuAdmin.fields.visibleOnSite')}</span>
+              </label>
+
+              <label className="menu-admin-checkbox">
+                <input
+                  type="checkbox"
+                  checked={categoryForm.noPhoto}
+                  onChange={(event) => setCategoryForm((current) => ({ ...current, noPhoto: event.target.checked }))}
+                />
+                <span>{t('menuAdmin.fields.noPhoto')}</span>
               </label>
 
               <div className="actions">

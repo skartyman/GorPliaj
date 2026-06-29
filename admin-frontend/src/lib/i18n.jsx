@@ -536,6 +536,7 @@ const translations = {
         uploadImage: 'Завантажити фото',
         sortOrder: 'Порядок',
         visibleOnSite: 'Показувати на сайті',
+        noPhoto: 'Без фото',
         availableNow: 'Доступно зараз'
       },
       placeholders: {

@@ -425,6 +425,7 @@ model MenuCategory {
   section   MenuSection @default(KITCHEN)
   sortOrder Int        @default(0)
   isActive  Boolean    @default(true)
+  noPhoto   Boolean    @default(false)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   items     MenuItem[]

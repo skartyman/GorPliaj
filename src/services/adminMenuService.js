@@ -60,6 +60,7 @@ function toAdminCategory(category) {
     section: category.section || 'KITCHEN',
     sortOrder: category.sortOrder,
     isActive: category.isActive,
+    noPhoto: category.noPhoto || false,
     itemsCount: category._count?.items ?? category.items?.length ?? 0,
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
@@ -149,7 +150,8 @@ async function createCategory(input) {
       slug,
       section: normalizeMenuSection(input.section, 'KITCHEN'),
       sortOrder: normalizeInteger(input.sortOrder, 0),
-      isActive: normalizeBoolean(input.isActive, true)
+      isActive: normalizeBoolean(input.isActive, true),
+      noPhoto: normalizeBoolean(input.noPhoto, false)
     }
   });
 
@@ -184,7 +186,10 @@ async function updateCategory(id, input) {
         : existing.sortOrder,
       isActive: Object.prototype.hasOwnProperty.call(input, 'isActive')
         ? normalizeBoolean(input.isActive, existing.isActive)
-        : existing.isActive
+        : existing.isActive,
+      noPhoto: Object.prototype.hasOwnProperty.call(input, 'noPhoto')
+        ? normalizeBoolean(input.noPhoto, existing.noPhoto)
+        : existing.noPhoto
     }
   });
 
