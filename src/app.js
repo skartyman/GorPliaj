@@ -8,8 +8,10 @@ const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const paymentsRoutes = require('./routes/payments');
 const hutkoRoutes = require('./routes/paygate/hutko');
+const waiterRoutes = require('./routes/waiter');
 const { extractInvoiceData } = require('./services/groqVisionService');
 const { setupBotWebhook } = require('./services/botService');
+const { setupWaiterBotWebhook } = require('./services/waiterTelegramService');
 
 const app = express();
 const publicDir = path.join(__dirname, '..', 'public');
@@ -62,6 +64,7 @@ app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/paygate/hutko', hutkoRoutes);
+app.use('/api/waiter', waiterRoutes);
 
 app.get(['/app', '/app/*'], (req, res) => {
   return sendPublicIndex(res);
@@ -88,6 +91,14 @@ app.get('/map-preview', (req, res) => {
 });
 
 app.get('/about', (req, res) => {
+  return sendPublicIndex(res);
+});
+
+app.get('/waiter', (req, res) => {
+  return sendPublicIndex(res);
+});
+
+app.get('/waiter/*', (req, res) => {
   return sendPublicIndex(res);
 });
 
@@ -137,5 +148,6 @@ app.get('*', (req, res) => {
 });
 
 setupBotWebhook(app);
+setupWaiterBotWebhook(app);
 
 module.exports = app;

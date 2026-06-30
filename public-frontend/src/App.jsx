@@ -10,6 +10,7 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import PaymentReturnsPage from './pages/PaymentReturnsPage';
 import RulesPage from './pages/RulesPage';
+import WaiterCabinetPage from './pages/WaiterCabinetPage';
 
 export default function App() {
   return (
@@ -27,6 +28,8 @@ export default function App() {
         <Route path="/payment-returns" element={<PaymentReturnsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
+      <Route path="/waiter" element={<WaiterCabinetPage />} />
+      <Route path="/waiter/*" element={<WaiterCabinetPage />} />
     </Routes>
   );
 }

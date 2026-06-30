@@ -80,6 +80,9 @@ const {
   updatePositionType,
   deletePositionType
 } = require('../../controllers/adminPositionTypeController');
+const waiterService = require('../../services/waiterService');
+const tableOrderService = require('../../services/tableOrderService');
+const { addWaiterConnection } = require('../../services/waiterSseService');
 const {
   listBeachRows,
   createBeachRow,
@@ -238,5 +241,31 @@ router.get('/users', requireAdminAuth, requirePermission('users:view'), listUser
 router.post('/users', requireAdminAuth, requirePermission('users:create'), createUser);
 router.patch('/users/:id', requireAdminAuth, requirePermission('users:update'), updateUser);
 router.delete('/users/:id', requireAdminAuth, requirePermission('users:delete'), deleteUser);
+
+router.get('/waiters', requireAdminAuth, requirePermission('users:view'), async (req, res) => {
+  try { res.json(await waiterService.listWaiters()); }
+  catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
+});
+router.post('/waiters', requireAdminAuth, requirePermission('users:create'), async (req, res) => {
+  try {
+    const { name, pinCode, telegramChatId } = req.body;
+    if (!name || !pinCode) return res.status(400).json({ message: 'name and pinCode are required.' });
+    res.status(201).json(await waiterService.createWaiter({ name, pinCode, telegramChatId }));
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+router.patch('/waiters/:id', requireAdminAuth, requirePermission('users:update'), async (req, res) => {
+  try { res.json(await waiterService.updateWaiter(parseInt(req.params.id, 10), req.body)); }
+  catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
+});
+router.delete('/waiters/:id', requireAdminAuth, requirePermission('users:delete'), async (req, res) => {
+  try { await waiterService.deleteWaiter(parseInt(req.params.id, 10)); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
+});
+router.get('/table-orders', requireAdminAuth, requirePermission('reservations:view'), async (req, res) => {
+  try {
+    const { date, status, waiterId } = req.query;
+    res.json(await tableOrderService.getAllOrders({ date, status, waiterId: waiterId ? parseInt(waiterId, 10) : undefined }));
+  } catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
+});
 
 module.exports = router;

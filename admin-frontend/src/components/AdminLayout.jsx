@@ -32,11 +32,12 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/positions', labelKey: 'nav.positions', icon: IconTable, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/menu', labelKey: 'nav.menu', icon: IconMenu, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/events', labelKey: 'nav.events', icon: IconEvents, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
-  { to: '/admin/ticket-sales', labelKey: 'nav.ticketSales', icon: IconTicket, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/ticket-sales', labelKey: 'nav.ticketSales', icon: IconTicket, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
   { to: '/admin/news', labelKey: 'nav.news', icon: IconNews, roles: ['seo_smm', 'admin', 'manager', 'owner'] },
   { to: '/admin/payments', labelKey: 'nav.payments', icon: IconPayments, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/verify-ticket', labelKey: 'nav.verifyTicket', icon: IconTicket, roles: ['hostess', 'admin', 'manager', 'owner'] },
   { to: '/admin/users', labelKey: 'nav.users', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/waiters', labelKey: 'nav.waiters', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/settings', labelKey: 'nav.settings', icon: IconSettings, roles: ['seo_smm', 'admin', 'manager', 'owner'] }
 ];
 

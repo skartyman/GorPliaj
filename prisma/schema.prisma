@@ -613,3 +613,99 @@ enum MenuSection {
   KITCHEN
   BAR
 }
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  COMPLETED
+  CANCELLED
+}
+
+enum CallStatus {
+  PENDING
+  ACCEPTED
+}
+
+model Waiter {
+  id             Int            @id @default(autoincrement())
+  name           String
+  pinCode        String         @unique
+  telegramChatId String?
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  shifts         WaiterShift[]
+  orders         TableOrder[]
+  calls          WaiterCall[]
+}
+
+model WaiterShift {
+  id        Int                 @id @default(autoincrement())
+  waiterId  Int
+  startedAt DateTime            @default(now())
+  endedAt   DateTime?
+  isActive  Boolean             @default(true)
+  waiter    Waiter              @relation(fields: [waiterId], references: [id])
+  tables    WaiterShiftTable[]
+  orders    TableOrder[]
+
+  @@index([waiterId])
+}
+
+model WaiterShiftTable {
+  id         Int         @id @default(autoincrement())
+  shiftId    Int
+  tableId    Int
+  assignedAt DateTime    @default(now())
+  shift      WaiterShift @relation(fields: [shiftId], references: [id])
+
+  @@unique([shiftId, tableId])
+  @@index([shiftId])
+}
+
+model TableOrder {
+  id             Int              @id @default(autoincrement())
+  tableId        Int
+  shiftId        Int?
+  waiterId       Int?
+  status         OrderStatus      @default(PENDING)
+  customerName   String
+  customerPhone  String
+  notes          String?
+  createdAt      DateTime         @default(now())
+  acceptedAt     DateTime?
+  completedAt    DateTime?
+  shift          WaiterShift?     @relation(fields: [shiftId], references: [id])
+  waiter         Waiter?          @relation(fields: [waiterId], references: [id])
+  items          TableOrderItem[]
+
+  @@index([tableId])
+  @@index([waiterId])
+  @@index([status])
+}
+
+model TableOrderItem {
+  id         Int       @id @default(autoincrement())
+  orderId    Int
+  menuItemId Int
+  quantity   Int       @default(1)
+  price      Decimal   @db.Decimal(10, 2)
+  notes      String?
+  order      TableOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model WaiterCall {
+  id          Int        @id @default(autoincrement())
+  tableId     Int
+  waiterId    Int?
+  status      CallStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  respondedAt DateTime?
+  waiter      Waiter?    @relation(fields: [waiterId], references: [id])
+
+  @@index([tableId])
+  @@index([waiterId])
+  @@index([status])
+}

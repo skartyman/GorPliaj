@@ -106,3 +106,32 @@ export const settingsApi = {
     body: JSON.stringify(data),
   }),
 };
+
+export const tableOrderApi = {
+  create: (payload) => request('/table-orders', { method: 'POST', body: JSON.stringify(payload) }),
+  status: (id) => request(`/table-orders/${id}/status`),
+  sseUrl: (id) => `${API_BASE}/table-orders/${id}/sse`
+};
+
+export const waiterCallApi = {
+  create: (payload) => request('/waiter-calls', { method: 'POST', body: JSON.stringify(payload) })
+};
+
+export const waiterApi = {
+  login: (pinCode) => request('/waiter/auth/login', { method: 'POST', body: JSON.stringify({ pinCode }) }),
+  me: () => request('/waiter/auth/me'),
+  logout: () => request('/waiter/auth/logout', { method: 'POST' }),
+  startShift: () => request('/waiter/shift/start', { method: 'POST' }),
+  endShift: () => request('/waiter/shift/end', { method: 'POST' }),
+  getShift: () => request('/waiter/shift'),
+  scanTable: (tableId) => request('/waiter/tables/scan', { method: 'POST', body: JSON.stringify({ tableId }) }),
+  removeTable: (tableId) => request(`/waiter/tables/${tableId}`, { method: 'DELETE' }),
+  getTables: () => request('/waiter/tables'),
+  getOrders: () => request('/waiter/orders'),
+  acceptOrder: (id) => request(`/waiter/orders/${id}/accept`, { method: 'PATCH' }),
+  completeOrder: (id) => request(`/waiter/orders/${id}/complete`, { method: 'PATCH' }),
+  cancelOrder: (id) => request(`/waiter/orders/${id}/cancel`, { method: 'PATCH' }),
+  getCalls: () => request('/waiter/calls'),
+  respondToCall: (id) => request(`/waiter/calls/${id}/respond`, { method: 'PATCH' }),
+  sseUrl: '/api/waiter/sse'
+};

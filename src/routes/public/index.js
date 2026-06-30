@@ -4,6 +4,7 @@ const reservationController = require('../../controllers/reservationController')
 const mapController = require('../../controllers/mapController');
 const holdController = require('../../controllers/holdController');
 const publicTicketSalesController = require('../../controllers/publicTicketSalesController');
+const tableOrderController = require('../../controllers/tableOrderController');
 
 const router = express.Router();
 
@@ -33,5 +34,10 @@ router.delete('/holds/:holdToken', holdController.releaseHold);
 router.get('/reservations/:ticketCode/status', reservationController.getPublicReservationStatus);
 router.get('/reservations/:ticketCode/pdf', reservationController.downloadPublicReservationPdf);
 router.post('/reservations', reservationController.createReservation);
+
+router.post('/table-orders', tableOrderController.createOrder);
+router.get('/table-orders/:id/status', tableOrderController.getOrderStatus);
+router.get('/table-orders/:id/sse', tableOrderController.orderSse);
+router.post('/waiter-calls', tableOrderController.createCall);
 
 module.exports = router;
