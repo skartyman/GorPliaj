@@ -1707,8 +1707,14 @@ export default function MapPage() {
                                 ) : null}
                                 {reservation.status === 'CONFIRMED' ? (
                                   <>
-                                    <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Прийшли</button>
+                                    <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'SEATED')}>Посадити</button>
                                     <button type="button" className="btn btn-small btn-danger" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
+                                  </>
+                                ) : null}
+                                {reservation.status === 'SEATED' ? (
+                                  <>
+                                    <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'COMPLETED')}>Завершити</button>
+                                    <button type="button" className="btn btn-small btn-danger" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'NO_SHOW')}>Не зʼявився</button>
                                   </>
                                 ) : null}
                               </div>
