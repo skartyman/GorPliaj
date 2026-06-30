@@ -379,6 +379,10 @@ async function processCallback(payload) {
           : null;
         const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
 
+        const rentalAmt = Number(reservation.rentalAmount || 0);
+        const depositAmt = Number(reservation.depositAmount || 0);
+        const payAmt = Number(reservation.payment?.amount || payment.amount || 0);
+
         await sendTicketEmail({
           to: reservation.customerEmail,
           ticketCode: reservation.ticketCode,
@@ -391,9 +395,10 @@ async function processCallback(payload) {
           tableName: reservation.table?.name || '',
           zoneName: reservation.zone?.name || '',
           eventTitle: reservation.event?.title || null,
-          depositAmount: reservation.depositAmount,
-          totalPaid: reservation.payment?.amount || payment.amount,
-          entryTicketsAmount: Math.max(Number((reservation.payment?.amount || payment.amount) || 0) - Number(reservation.depositAmount || 0), 0),
+          depositAmount: depositAmt,
+          rentalAmount: rentalAmt,
+          totalPaid: payAmt,
+          entryTicketsAmount: Math.max(payAmt - rentalAmt - depositAmt, 0),
           qrDataUrl,
           verifyUrl,
           statusUrl,

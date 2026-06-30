@@ -205,6 +205,7 @@ function buildBookableUnit(table, linkedObject, positionTypeMap = {}, reservatio
     capacityLabel: meta.capacityLabel || null,
     depositRequired: resolvedDeposit > 0 || Boolean(meta.depositRequired),
     depositAmount: resolvedDeposit,
+    rentalAmount: resolvedPrice,
     priceLabel,
     features: Array.isArray(meta.features) ? meta.features : [],
     description: localizeField(table.serviceDescription, 'ua') || localizeField(meta.description, 'ua')

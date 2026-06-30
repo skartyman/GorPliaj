@@ -126,14 +126,17 @@ function getEventEntryBreakdown(event, reservationDate, guests) {
   };
 }
 
-function buildPaymentComment({ depositAmount, entryBreakdown, totalAmount }) {
+function buildPaymentComment({ rentalAmount, depositAmount, entryBreakdown, totalAmount }) {
   const lines = [];
 
+  if (rentalAmount > 0) {
+    lines.push(`Position rental paid online: ${rentalAmount} UAH.`);
+  }
   if (depositAmount > 0) {
-    lines.push(`Booking deposit paid online: ${depositAmount} UAH.`);
-    lines.push('Important: this deposit is included in the final bill at the venue.');
-  } else {
-    lines.push('Booking is free: no deposit was configured for this position.');
+    lines.push(`Deposit paid online: ${depositAmount} UAH. Included in the final bill at the venue.`);
+  }
+  if (!rentalAmount && !depositAmount) {
+    lines.push('Booking is free: no rental or deposit was configured for this position.');
   }
 
   lines.push(`Total online payment: ${totalAmount} UAH.`);
@@ -159,7 +162,8 @@ function buildPublicReservationAccess(reservation) {
 function buildReservationPdfPayload(reservation) {
   const totalPaid = Number(reservation.payment?.amount || 0);
   const depositAmount = Number(reservation.depositAmount || 0);
-  const entryTicketsAmount = Math.max(totalPaid - depositAmount, 0);
+  const rentalAmount = Number(reservation.rentalAmount || 0);
+  const entryTicketsAmount = Math.max(totalPaid - depositAmount - rentalAmount, 0);
 
   return {
     ticketCode: reservation.ticketCode,
@@ -173,6 +177,7 @@ function buildReservationPdfPayload(reservation) {
     zoneName: reservation.zone?.name || '',
     eventTitle: localizeJson(reservation.event?.title),
     depositAmount,
+    rentalAmount,
     totalPaid,
     entryTicketsAmount,
     entryTicketCount: entryTicketsAmount > 0 ? reservation.guests : 0,
@@ -267,15 +272,20 @@ async function createReservation(req, res) {
 
     const objectId = Number(req.body.objectId || bookableUnit?.objectId || 0);
     const tableDeposit = Number(table.deposit || 0);
+    const tablePrice = Number(table.price || 0);
     let deposit = {
       depositRequired: tableDeposit > 0,
       depositAmount: tableDeposit > 0 ? tableDeposit : null
     };
+    let rentalAmount = tablePrice > 0 ? tablePrice : null;
     if (bookableUnit?.depositAmount > 0) {
       deposit = {
         depositRequired: true,
         depositAmount: Number(bookableUnit.depositAmount)
       };
+    }
+    if (bookableUnit?.rentalAmount > 0) {
+      rentalAmount = Number(bookableUnit.rentalAmount);
     }
 
     if (objectId) {
@@ -297,12 +307,13 @@ async function createReservation(req, res) {
       return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });
     }
     const depositAmount = Number(deposit.depositAmount);
-    const totalAmount = depositAmount + Number(entryBreakdown?.amount || 0);
+    const rental = rentalAmount ? Number(rentalAmount) : 0;
+    const totalAmount = rental + depositAmount + Number(entryBreakdown?.amount || 0);
     if (totalAmount > 0 && !customerEmail) {
       return res.status(400).json({ message: 'Email is required for paid bookings so we can send the PDF confirmation.' });
     }
 
-    const paymentComment = buildPaymentComment({ depositAmount, entryBreakdown, totalAmount });
+    const paymentComment = buildPaymentComment({ rentalAmount: rental, depositAmount, entryBreakdown, totalAmount });
     const commentCustomer = [normalizeText(req.body.commentCustomer), paymentComment].filter(Boolean).join('\n\n');
     const ticketCode = generateTicketCode();
 
@@ -323,6 +334,7 @@ async function createReservation(req, res) {
       commentAdmin: paymentComment,
       depositRequired: depositAmount > 0,
       depositAmount,
+      rentalAmount: rental > 0 ? rental : null,
       status: totalAmount > 0 ? 'AWAITING_PAYMENT' : 'PENDING',
       source: event ? 'EVENT' : 'WEB',
       ticketCode
@@ -341,7 +353,7 @@ async function createReservation(req, res) {
       checkout = await hutkoService.createCheckoutSession({
         reservationId: reservation.id,
         amount: totalAmount,
-        description: `GorPliaj ${bookingLabel} ${positionName}: deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
+        description: `GorPliaj ${bookingLabel} ${positionName}: rental ${rental} UAH, deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
         currency: entryBreakdown?.currency || 'UAH',
         customerEmail,
         customerPhone: req.body.customerPhone,
@@ -404,8 +416,9 @@ async function getPublicReservationStatus(req, res) {
         status: fresh.status,
         paymentStatus: fresh.payment?.status || null,
         paymentAmount: fresh.payment ? Number(fresh.payment.amount || 0) : null,
+        rentalAmount: Number(fresh.rentalAmount || 0),
         depositAmount: Number(fresh.depositAmount || 0),
-        entryTicketsAmount: Math.max(Number(fresh.payment?.amount || 0) - Number(fresh.depositAmount || 0), 0),
+        entryTicketsAmount: Math.max(Number(fresh.payment?.amount || 0) - Number(fresh.rentalAmount || 0) - Number(fresh.depositAmount || 0), 0),
         customerName: fresh.customerName,
         guests: fresh.guests,
         tableName: getBookingPositionName(fresh.table),

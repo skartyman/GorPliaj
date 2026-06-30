@@ -49,6 +49,7 @@ function buildTicketHtml({
   zoneName,
   eventTitle,
   depositAmount,
+  rentalAmount,
   totalPaid,
   entryTicketsAmount,
   qrDataUrl,
@@ -59,7 +60,10 @@ function buildTicketHtml({
   downloadUrl
 }) {
   const isPaid = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
-  const hasDeposit = Number(depositAmount || 0) > 0;
+  const rental = Number(rentalAmount || 0);
+  const deposit = Number(depositAmount || 0);
+  const hasRental = rental > 0;
+  const hasDeposit = deposit > 0;
   const hasEntry = Number(entryTicketsAmount || 0) > 0;
   const appBaseUrl = getBaseUrl();
 
@@ -83,7 +87,7 @@ function buildTicketHtml({
                     <div style="font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:#f7e8cf;opacity:0.92;">GorPliaj</div>
                     <div style="font-size:32px;line-height:1.15;font-weight:700;color:#ffffff;margin-top:10px;">Ваше бронювання підтверджено</div>
                     <div style="font-size:15px;line-height:1.6;color:#f6e8d8;margin-top:12px;">
-                      Показуйте цей лист або PDF на вході. Депозит вже зафіксований у бронюванні та зараховується у фінальний рахунок закладу.
+                      Показуйте цей лист або PDF на вході. Оплата за користування місцем вже зарахована.
                     </div>
                     <div style="margin-top:22px;display:inline-block;padding:12px 18px;border-radius:16px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.18);color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.12em;">
                       ${escapeHtml(ticketCode)}
@@ -119,9 +123,9 @@ function buildTicketHtml({
                       <tr>
                         <td style="width:50%;padding-right:8px;vertical-align:top;">
                           <div style="background:#3f2416;border-radius:22px;padding:20px 22px;min-height:126px;">
-                            <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#d8bf9e;">Депозит</div>
-                            <div style="font-size:28px;font-weight:700;color:#ffffff;margin-top:10px;">${formatMoney(depositAmount || 0)}</div>
-                            <div style="font-size:13px;line-height:1.6;color:#f0dfcf;margin-top:10px;">${hasDeposit ? 'Зараховується у фінальний рахунок.' : 'Для цієї позиції депозит не встановлено.'}</div>
+                            <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#d8bf9e;">Оренда позиції</div>
+                            <div style="font-size:28px;font-weight:700;color:#ffffff;margin-top:10px;">${formatMoney(rental || deposit || 0)}</div>
+                            <div style="font-size:13px;line-height:1.6;color:#f0dfcf;margin-top:10px;">Оплата за користування місцем.</div>
                           </div>
                         </td>
                         <td style="width:50%;padding-left:8px;vertical-align:top;">
@@ -193,6 +197,7 @@ async function sendTicketEmail({
   zoneName,
   eventTitle,
   depositAmount,
+  rentalAmount,
   totalPaid,
   entryTicketsAmount,
   qrDataUrl,
@@ -232,6 +237,7 @@ async function sendTicketEmail({
     zoneName,
     eventTitle,
     depositAmount,
+    rentalAmount,
     totalPaid,
     entryTicketsAmount,
     qrDataUrl,
@@ -257,6 +263,7 @@ async function sendTicketEmail({
       zoneName,
       eventTitle,
       depositAmount,
+      rentalAmount,
       totalPaid,
       entryTicketsAmount,
       status,

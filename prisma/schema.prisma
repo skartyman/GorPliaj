@@ -200,6 +200,7 @@ model Reservation {
   commentAdmin    String?
   depositRequired Boolean           @default(false)
   depositAmount   Decimal?          @db.Decimal(10, 2)
+  rentalAmount    Decimal?          @db.Decimal(10, 2)
   paidInCash      Boolean           @default(false)
   expiresAt       DateTime?
   createdAt       DateTime          @default(now())

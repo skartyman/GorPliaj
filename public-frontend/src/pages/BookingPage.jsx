@@ -907,14 +907,16 @@ export default function BookingPage() {
   }, [eventInfo, form.date, ticketTypes]);
 
   const paymentPreview = useMemo(() => {
+    const rentalAmount = Number(selectedUnit?.rentalAmount || 0);
     const depositAmount = Number(selectedUnit?.depositAmount || 0);
     const entryTicketPrice = Number(entryTicketType?.price || 0);
     const entryTicketsAmount = entryTicketPrice > 0 ? entryTicketPrice * Number(form.guests || 0) : 0;
     return {
+      rentalAmount,
       depositAmount,
       entryTicketPrice,
       entryTicketsAmount,
-      totalAmount: depositAmount + entryTicketsAmount,
+      totalAmount: rentalAmount + depositAmount + entryTicketsAmount,
       currency: entryTicketType?.currency || 'UAH'
     };
   }, [selectedUnit, entryTicketType, form.guests]);
@@ -1767,9 +1769,9 @@ export default function BookingPage() {
                   <span>{positionTypeLabel(selectedUnit.positionType)}</span>
                   <span>{Number(selectedUnit.seatsMin)}-{Number(selectedUnit.seatsMax)} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
                   <span>
-                    {selectedUnit.depositAmount > 0
-                      ? `${resolvedBookingKind === 'BEACH' ? c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' }) : c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: ${money(selectedUnit.depositAmount, paymentPreview.currency)}`
-                      : (resolvedBookingKind === 'BEACH' ? c({ ua: 'Безкоштовно', ru: 'Бесплатно', en: 'Free' }) : c({ ua: 'Без депозиту', ru: 'Без депозита', en: 'No deposit' }))}
+                    {selectedUnit.rentalAmount > 0
+                      ? `${c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' })}: ${money(selectedUnit.rentalAmount, paymentPreview.currency)}`
+                      : (resolvedBookingKind === 'BEACH' ? c({ ua: 'Безкоштовно', ru: 'Бесплатно', en: 'Free' }) : c({ ua: 'Без оплати', ru: 'Без оплаты', en: 'Free' }))}
                   </span>
                 </div>
               </div>
@@ -1803,7 +1805,7 @@ export default function BookingPage() {
               <strong>{c({ ua: 'До оплати зараз', ru: 'К оплате сейчас', en: 'Due now' })}: {money(paymentPreview.totalAmount, paymentPreview.currency)}</strong>
             </p>
             <p className="muted" style={{ margin: 0 }}>
-              {resolvedBookingKind === 'BEACH' ? c({ ua: 'Вартість оренди', ru: 'Стоимость аренды', en: 'Rental cost' }) : c({ ua: 'Депозит позиції', ru: 'Депозит позиции', en: 'Position deposit' })}: {paymentPreview.depositAmount > 0 ? money(paymentPreview.depositAmount, paymentPreview.currency) : c({ ua: 'не задано', ru: 'не задан', en: 'not configured' })}
+              {c({ ua: 'Оренда позиції', ru: 'Аренда позиции', en: 'Position rental' })}: {paymentPreview.rentalAmount > 0 ? money(paymentPreview.rentalAmount, paymentPreview.currency) : c({ ua: 'не задано', ru: 'не задан', en: 'not configured' })}
             </p>
             <p className="muted" style={{ margin: 0 }}>
               {c({ ua: 'Тип бронювання', ru: 'Тип бронирования', en: 'Booking type' })}: {bookingKindTitle(resolvedBookingKind)}

@@ -32,6 +32,7 @@ async function generateTicketPdf({
   tableName,
   zoneName,
   eventTitle,
+  rentalAmount,
   depositAmount,
   totalPaid,
   entryTicketsAmount,
@@ -44,8 +45,11 @@ async function generateTicketPdf({
   downloadUrl,
   depositVerifyUrl
 }) {
+  const rental = Number(rentalAmount || 0);
   const deposit = Number(depositAmount || 0);
+  const hasRental = rental > 0;
   const hasDeposit = deposit > 0;
+  const hasPayment = hasRental || hasDeposit;
 
   const doc = new PDFDocument({ size: [420, 760], margin: 24, autoFirstPage: false });
   doc.addPage({ size: [420, 760], margin: 24 });
@@ -76,8 +80,7 @@ async function generateTicketPdf({
     const soft = '#fbf6ef';
     const line = '#eadbca';
     const isPaid = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
-    const paidTotal = Number(totalPaid || deposit || 0);
-    const entryAmount = Number(entryTicketsAmount || 0);
+    const paidTotal = Number(totalPaid || 0);
     const reservationPosition = localizedText(tableName) || '-';
     const reservationZone = localizedText(zoneName) || '-';
     const eventName = localizedText(eventTitle);
@@ -102,7 +105,7 @@ async function generateTicketPdf({
       .text('Підтвердження бронювання', margin + 24, y, { width: contentWidth - 48 });
     y += 22;
     doc.fillColor('#f2dfcd').font('Roboto').fontSize(9.5)
-      .text(hasDeposit ? 'Бронювання місця та квитанція про депозит' : 'Бронювання місця', margin + 24, y, { width: contentWidth - 48 });
+      .text(hasPayment ? 'Бронювання місця та квитанція про оплату' : 'Бронювання місця', margin + 24, y, { width: contentWidth - 48 });
     y += 18;
     doc.fillColor('#ffffff').font('Roboto-Bold').fontSize(17)
       .text(ticketCode, margin + 24, y);
@@ -141,45 +144,46 @@ async function generateTicketPdf({
     });
 
     y += 150;
-    if (hasDeposit) {
+
+    if (hasRental && hasDeposit) {
       const cardWidth = (contentWidth - 52) / 2;
 
+      doc.roundedRect(margin + 18, y, cardWidth, 92, 16).fill(deep);
+      doc.fillColor('#d8bf9e').font('Roboto').fontSize(8.5).text('Оренда позиції', margin + 32, y + 14);
+      doc.fillColor('#ffffff').font('Roboto-Bold').fontSize(22).text(formatMoney(rental), margin + 32, y + 30, { width: cardWidth - 28 });
+      doc.fillColor('#f0dfcf').font('Roboto').fontSize(9)
+        .text('Оплата за користування місцем.', margin + 32, y + 60, { width: cardWidth - 28 });
+
+      doc.roundedRect(margin + 34 + cardWidth, y, cardWidth, 92, 16).fill('#f3ede5');
+      doc.fillColor('#8f6a44').font('Roboto').fontSize(8.5).text('Депозит', margin + 48 + cardWidth, y + 14);
+      doc.fillColor(dark).font('Roboto-Bold').fontSize(22).text(formatMoney(deposit), margin + 48 + cardWidth, y + 30, { width: cardWidth - 28 });
+      doc.fillColor('#6d5948').font('Roboto').fontSize(9)
+        .text('Зараховується у рахунок у закладі.', margin + 48 + cardWidth, y + 60, { width: cardWidth - 28 });
+    } else if (hasRental) {
+      const cardWidth = contentWidth - 36;
+      doc.roundedRect(margin + 18, y, cardWidth, 92, 16).fill(deep);
+      doc.fillColor('#d8bf9e').font('Roboto').fontSize(8.5).text('Оренда позиції', margin + 32, y + 14);
+      doc.fillColor('#ffffff').font('Roboto-Bold').fontSize(22).text(formatMoney(rental), margin + 32, y + 30, { width: cardWidth - 28 });
+      doc.fillColor('#f0dfcf').font('Roboto').fontSize(9)
+        .text('Оплата за користування місцем.', margin + 32, y + 60, { width: cardWidth - 28 });
+    } else if (hasDeposit) {
+      const cardWidth = contentWidth - 36;
       doc.roundedRect(margin + 18, y, cardWidth, 92, 16).fill(deep);
       doc.fillColor('#d8bf9e').font('Roboto').fontSize(8.5).text('Депозит', margin + 32, y + 14);
       doc.fillColor('#ffffff').font('Roboto-Bold').fontSize(22).text(formatMoney(deposit), margin + 32, y + 30, { width: cardWidth - 28 });
       doc.fillColor('#f0dfcf').font('Roboto').fontSize(9)
-        .text('Враховується у рахунку в закладі.', margin + 32, y + 60, { width: cardWidth - 28 });
-
-      doc.roundedRect(margin + 34 + cardWidth, y, cardWidth, 92, 16).fill('#f3ede5');
-      doc.fillColor('#8f6a44').font('Roboto').fontSize(8.5).text('Онлайн-оплата', margin + 48 + cardWidth, y + 14);
-      doc.fillColor(dark).font('Roboto-Bold').fontSize(22).text(formatMoney(paidTotal), margin + 48 + cardWidth, y + 30, { width: cardWidth - 28 });
-      doc.fillColor('#6d5948').font('Roboto').fontSize(9)
-        .text(entryAmount > 0 ? `Вхідні квитки: ${formatMoney(entryAmount)}.` : 'Тільки депозит, без вхідних квитків.', margin + 48 + cardWidth, y + 60, { width: cardWidth - 28 });
-    } else {
-      const cardWidth = contentWidth - 36;
-      doc.roundedRect(margin + 18, y, cardWidth, 92, 16).fill('#f3ede5');
-      doc.fillColor('#8f6a44').font('Roboto').fontSize(8.5).text('Онлайн-оплата', margin + 32, y + 14);
-      doc.fillColor(dark).font('Roboto-Bold').fontSize(22).text(formatMoney(paidTotal), margin + 32, y + 30, { width: cardWidth - 28 });
-
-      let paymentDesc = '';
-      if (entryAmount > 0) {
-        paymentDesc = `Вхідні квитки: ${formatMoney(entryAmount)}.`;
-      } else {
-        paymentDesc = 'Оплата за послуги пляжу (без додаткового депозиту).';
-      }
-      doc.fillColor('#6d5948').font('Roboto').fontSize(9)
-        .text(paymentDesc, margin + 32, y + 60, { width: cardWidth - 28 });
+        .text('Зараховується у рахунок у закладі.', margin + 32, y + 60, { width: cardWidth - 28 });
     }
 
     y += 108;
-    if (entryAmount > 0) {
+    if (entryTicketsAmount > 0) {
       doc.roundedRect(margin + 18, y, contentWidth - 36, 42, 14).fill('#faf6f1');
       doc.fillColor(dark).font('Roboto-Bold').fontSize(9)
         .text('Деталі платежу', margin + 32, y + 10);
 
-      const detailsText = hasDeposit
-        ? `Депозит: ${formatMoney(deposit)}   •   Вхідні: ${entryTicketCount || guests} x ${formatMoney(entryTicketPrice)} = ${formatMoney(entryAmount)}`
-        : `Вхідні квитки: ${entryTicketCount || guests} x ${formatMoney(entryTicketPrice)} = ${formatMoney(entryAmount)}`;
+      const detailsText = hasRental
+        ? `Оренда: ${formatMoney(rental)}   •   Вхідні: ${entryTicketCount || guests} x ${formatMoney(entryTicketPrice)} = ${formatMoney(entryTicketsAmount)}`
+        : `Вхідні квитки: ${entryTicketCount || guests} x ${formatMoney(entryTicketPrice)} = ${formatMoney(entryTicketsAmount)}`;
 
       doc.fillColor(muted).font('Roboto').fontSize(8)
         .text(detailsText, margin + 32, y + 24, { width: contentWidth - 64 });
@@ -188,7 +192,7 @@ async function generateTicketPdf({
 
     const hasDepositQr = Boolean(depositQrBuffer && hasDeposit);
     const qrBlockWidth = hasDepositQr ? (contentWidth - 52) / 2 : contentWidth - 36;
-    const qrBlockSize = hasDepositQr ? 130 : 130;
+    const qrBlockSize = 130;
     const qrImageSize = 90;
     const qrTop = y;
 
@@ -208,7 +212,7 @@ async function generateTicketPdf({
       doc.fillColor(dark).font('Roboto-Bold').fontSize(10)
         .text('QR-код депозиту', rightX + 8, qrTop + 110, { width: qrBlockWidth - 16, align: 'center' });
       doc.fillColor(muted).font('Roboto').fontSize(7)
-        .text('Для підтвердження списання депозиту.', rightX + 12, qrTop + 122, { width: qrBlockWidth - 24, align: 'center' });
+        .text('Для підтвердження списання депозиту офіціантом.', rightX + 12, qrTop + 122, { width: qrBlockWidth - 24, align: 'center' });
     }
 
     y = qrTop + qrBlockSize + 12;
@@ -217,7 +221,7 @@ async function generateTicketPdf({
 
     const noticeText = hasDeposit
       ? 'Пред\'явіть цей PDF на вході. Депозит зараховується у рахунок. Збережіть другий QR для підтвердження депозиту офіціантом.'
-      : 'Пред\'явіть цей PDF на вході. Оплата зараховується у ваш фінальний рахунок у закладі.';
+      : 'Пред\'явіть цей PDF на вході. Оплата за користування місцем вже зарахована.';
 
     doc.fillColor('#7f7165').font('Roboto').fontSize(7)
       .text(noticeText, margin + 24, y, { width: contentWidth - 48, align: 'center' });
