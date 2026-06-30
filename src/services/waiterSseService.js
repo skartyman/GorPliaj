@@ -45,9 +45,19 @@ function broadcastToWaiter(waiterId, data) {
   }
 }
 
+function broadcastToAllWaiters(data) {
+  const msg = `data: ${JSON.stringify(data)}\n\n`;
+  for (const [, set] of waiterConnections) {
+    for (const res of set) {
+      try { res.write(msg); } catch {}
+    }
+  }
+}
+
 module.exports = {
   addGuestConnection,
   addWaiterConnection,
   broadcastToGuest,
-  broadcastToWaiter
+  broadcastToWaiter,
+  broadcastToAllWaiters
 };

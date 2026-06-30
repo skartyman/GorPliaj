@@ -391,6 +391,12 @@ export default function MenuPage() {
         </div>
       )}
 
+      {orderSuccessBanner && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 2000, padding: '14px 16px', background: '#16a34a', color: '#fff', fontSize: '0.95rem', fontWeight: 600, textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
+          {orderSuccessBanner}
+        </div>
+      )}
+
       {selectedItem && (
         <div className="modal-overlay modal-item" role="dialog" aria-modal="true">
           <button className="modal-backdrop" onClick={() => setSelectedItem(null)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })} />

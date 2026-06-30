@@ -79,6 +79,19 @@ export default function WaiterCabinetPage() {
   }, [loadInitial]);
 
   useEffect(() => {
+    if (Notification && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [waiter]);
+
+  function showNotification(title, body, tag) {
+    if (!Notification || Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, { body, tag, icon: '/icons/waiter-192.png', badge: '/icons/waiter-192.png', vibrate: [200, 100, 200] });
+    } catch {}
+  }
+
+  useEffect(() => {
     if (!waiter) return;
     const es = new EventSource(waiterApi.sseUrl);
     eventSourceRef.current = es;
@@ -88,10 +101,22 @@ export default function WaiterCabinetPage() {
         if (data.type === 'NEW_ORDER') {
           setOrders((p) => [data.order, ...p]);
           if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          const tableLabel = data.order.tableCode || `#${data.order.tableId}`;
+          showNotification(
+            c({ ua: 'Нове замовлення', ru: 'Новый заказ', en: 'New order' }),
+            `${c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} ${tableLabel} · #${data.order.id}`,
+            `order-${data.order.id}`
+          );
         }
         if (data.type === 'NEW_CALL') {
           setCalls((p) => [data.call, ...p]);
           if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+          const tableLabel = data.call.tableCode || `#${data.call.tableId}`;
+          showNotification(
+            c({ ua: '📞 Виклик', ru: '📞 Вызов', en: '📞 Call' }),
+            `${c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} ${tableLabel}`,
+            `call-${data.call.id}`
+          );
         }
         if (data.type === 'ORDER_STATUS_CHANGED') setOrders((p) => p.map((o) => o.id === data.order.id ? data.order : o));
       } catch {}
@@ -307,7 +332,7 @@ export default function WaiterCabinetPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <strong style={{ color: '#f8fafc', fontSize: '1.05rem' }}>#{order.id}</strong>
-                        <span style={{ color: '#f8fafc', marginLeft: 8 }}>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {order.tableId}</span>
+                        <span style={{ color: '#f8fafc', marginLeft: 8 }}>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {order.table?.code || `#${order.tableId}`}</span>
                         <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#64748b' }}>{timeAgo(order.createdAt, locale)}</span>
                       </div>
                       <span style={{ padding: '3px 10px', borderRadius: 12, background: STATUS_LABELS[order.status]?.color + '22', color: STATUS_LABELS[order.status]?.color, fontSize: '0.8rem', fontWeight: 700 }}>
@@ -341,7 +366,7 @@ export default function WaiterCabinetPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div>
                         <strong style={{ color: '#f8fafc', fontSize: '1.05rem' }}>#{order.id}</strong>
-                        <span style={{ color: '#f8fafc', marginLeft: 8 }}>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {order.tableId}</span>
+                        <span style={{ color: '#f8fafc', marginLeft: 8 }}>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {order.table?.code || `#${order.tableId}`}</span>
                       </div>
                       <span style={{ padding: '3px 10px', borderRadius: 12, background: STATUS_LABELS[order.status]?.color + '22', color: STATUS_LABELS[order.status]?.color, fontSize: '0.8rem', fontWeight: 700 }}>
                         {STATUS_LABELS[order.status]?.[locale] || order.status}
@@ -365,7 +390,7 @@ export default function WaiterCabinetPage() {
                 {doneOrders.slice(0, 10).map((order) => (
                   <div key={order.id} style={{ background: '#1e293b', borderRadius: 14, padding: 14, marginBottom: 8, opacity: 0.5 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#94a3b8' }}><strong>#{order.id}</strong> · {c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {order.tableId}</span>
+                      <span style={{ color: '#94a3b8' }}><strong>#{order.id}</strong> · {c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {order.table?.code || `#${order.tableId}`}</span>
                       <span style={{ color: STATUS_LABELS[order.status]?.color, fontSize: '0.85rem' }}>{STATUS_LABELS[order.status]?.[locale]}</span>
                     </div>
                   </div>
@@ -384,7 +409,7 @@ export default function WaiterCabinetPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div>
                     <strong style={{ color: '#f87171', fontSize: '1.05rem' }}>{c({ ua: '📞 Виклик', ru: '📞 Вызов', en: '📞 Call' })}</strong>
-                    <span style={{ color: '#f8fafc', marginLeft: 8 }}>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {call.tableId}</span>
+                    <span style={{ color: '#f8fafc', marginLeft: 8 }}>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {call.table?.code || `#${call.tableId}`}</span>
                     <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#64748b' }}>{timeAgo(call.createdAt, locale)}</span>
                   </div>
                 </div>

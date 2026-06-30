@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma');
 const { getWaiterForTable } = require('./waiterService');
 const { notifyWaiterNewOrder, notifyWaiterNewCall } = require('./waiterTelegramService');
-const { broadcastToWaiter, broadcastToGuest } = require('./waiterSseService');
+const { broadcastToWaiter, broadcastToGuest, broadcastToAllWaiters } = require('./waiterSseService');
 
 function resolveName(json) {
   if (!json) return null;
@@ -41,13 +41,15 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
     },
     include: {
       items: { include: { menuItem: { select: { name: true } } } },
-      waiter: { select: { id: true, name: true } }
+      waiter: { select: { id: true, name: true } },
+      table: { select: { id: true, code: true } }
     }
   });
 
   const orderData = {
     id: order.id,
     tableId: order.tableId,
+    tableCode: order.table?.code || null,
     status: order.status,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
@@ -60,6 +62,8 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
   if (waiter) {
     broadcastToWaiter(waiter.id, { type: 'NEW_ORDER', order: orderData });
     notifyWaiterNewOrder(waiter, orderData, tableId).catch(() => {});
+  } else {
+    broadcastToAllWaiters({ type: 'NEW_ORDER', order: orderData });
   }
 
   return orderData;
@@ -106,14 +110,14 @@ async function cancelOrder(orderId) {
   return order;
 }
 
-async function listOrdersForWaiter(waiterId, { shiftId } = {}) {
-  const where = { waiterId };
-  if (shiftId) where.shiftId = shiftId;
-
+async function listOrdersForWaiter(waiterId) {
   return prisma.tableOrder.findMany({
-    where,
+    where: { waiterId },
     orderBy: { createdAt: 'desc' },
-    include: { items: true }
+    include: {
+      items: { include: { menuItem: { select: { name: true } } } },
+      table: { select: { id: true, code: true } }
+    }
   });
 }
 
@@ -150,17 +154,20 @@ async function getAllOrders({ date, status, waiterId } = {}) {
 
 async function createWaiterCall({ tableId, customerName }) {
   const waiter = await getWaiterForTable(tableId);
+  const table = await prisma.venueTable.findUnique({ where: { id: tableId }, select: { code: true } });
 
   const call = await prisma.waiterCall.create({
     data: {
       tableId,
       waiterId: waiter?.id || null
-    }
+    },
+    include: { table: { select: { id: true, code: true } } }
   });
 
   const callData = {
     id: call.id,
     tableId: call.tableId,
+    tableCode: call.table?.code || null,
     status: call.status,
     createdAt: call.createdAt.toISOString()
   };
@@ -168,6 +175,8 @@ async function createWaiterCall({ tableId, customerName }) {
   if (waiter) {
     broadcastToWaiter(waiter.id, { type: 'NEW_CALL', call: callData, customerName });
     notifyWaiterNewCall(waiter, tableId, customerName).catch(() => {});
+  } else {
+    broadcastToAllWaiters({ type: 'NEW_CALL', call: callData, customerName });
   }
 
   return callData;
@@ -183,8 +192,9 @@ async function respondToCall(callId, waiterId) {
 
 async function listCallsForWaiter(waiterId) {
   return prisma.waiterCall.findMany({
-    where: { waiterId, status: 'PENDING' },
-    orderBy: { createdAt: 'desc' }
+    where: { status: 'PENDING', OR: [{ waiterId }, { waiterId: null }] },
+    orderBy: { createdAt: 'desc' },
+    include: { table: { select: { id: true, code: true } } }
   });
 }
 

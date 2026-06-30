@@ -33,8 +33,7 @@ router.get('/sse', requireWaiterAuth, (req, res) => {
 
 router.get('/orders', requireWaiterAuth, async (req, res) => {
   try {
-    const shift = await waiterController.getShift ? await require('../../services/waiterService').getActiveShift(req.waiterAuth.sub) : null;
-    const orders = await tableOrderService.listOrdersForWaiter(req.waiterAuth.sub, { shiftId: shift?.id });
+    const orders = await tableOrderService.listOrdersForWaiter(req.waiterAuth.sub);
     res.json(orders);
   } catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
 });

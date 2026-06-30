@@ -19,6 +19,14 @@ const publicAppDir = path.join(publicDir, 'public-app');
 const adminAppDir = path.join(publicDir, 'admin-app');
 const publicIndexPath = path.join(publicAppDir, 'index.html');
 const hasPublicBuild = fs.existsSync(publicIndexPath);
+let waiterIndexHtml = null;
+if (hasPublicBuild) {
+  try {
+    waiterIndexHtml = fs.readFileSync(publicIndexPath, 'utf8')
+      .replace(/<link rel="manifest" href="[^"]*">/, '<link rel="manifest" href="/waiter.webmanifest?v=1" />')
+      .replace(/<meta name="theme-color" content="[^"]*">/, '<meta name="theme-color" content="#1a1a2e" />');
+  } catch {}
+}
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   Pragma: 'no-cache',
@@ -49,6 +57,17 @@ function sendPublicIndex(res) {
 
   setNoCacheHeaders(res);
   return res.sendFile(publicIndexPath);
+}
+
+function sendWaiterIndex(res) {
+  if (!hasPublicBuild || !waiterIndexHtml) {
+    setNoCacheHeaders(res);
+    return res.status(503).send('Public app is not built.');
+  }
+
+  setNoCacheHeaders(res);
+  res.setHeader('Content-Type', 'text/html');
+  return res.send(waiterIndexHtml);
 }
 
 if (hasPublicBuild) {
@@ -95,11 +114,11 @@ app.get('/about', (req, res) => {
 });
 
 app.get('/waiter', (req, res) => {
-  return sendPublicIndex(res);
+  return sendWaiterIndex(res);
 });
 
 app.get('/waiter/*', (req, res) => {
-  return sendPublicIndex(res);
+  return sendWaiterIndex(res);
 });
 
 app.post('/api/invoice/ocr', async (req, res) => {

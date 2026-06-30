@@ -92,6 +92,8 @@ model VenueTable {
   reservations Reservation[]
   tableHolds   TableHold[]
   overrides    VenueTableOverride[]
+  orders       TableOrder[]
+  calls        WaiterCall[]
 
   @@index([mapId])
   @@index([zoneId])
@@ -678,6 +680,7 @@ model TableOrder {
   completedAt    DateTime?
   shift          WaiterShift?     @relation(fields: [shiftId], references: [id])
   waiter         Waiter?          @relation(fields: [waiterId], references: [id])
+  table          VenueTable?      @relation(fields: [tableId], references: [id])
   items          TableOrderItem[]
 
   @@index([tableId])
@@ -706,6 +709,7 @@ model WaiterCall {
   createdAt   DateTime   @default(now())
   respondedAt DateTime?
   waiter      Waiter?    @relation(fields: [waiterId], references: [id])
+  table       VenueTable? @relation(fields: [tableId], references: [id])
 
   @@index([tableId])
   @@index([waiterId])
