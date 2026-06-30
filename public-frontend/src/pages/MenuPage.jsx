@@ -71,7 +71,6 @@ export default function MenuPage() {
   const [manualCode, setManualCode] = useState('');
   const [scanError, setScanError] = useState('');
   const [tableWaiterName, setTableWaiterName] = useState('');
-  const [waiterToolsOpen, setWaiterToolsOpen] = useState(false);
   const [serviceToast, setServiceToast] = useState('');
   const [reviewRating, setReviewRating] = useState(null);
   const html5QrCodeRef = useRef(null);
@@ -249,7 +248,6 @@ export default function MenuPage() {
         ? c({ ua: `✅ Замовлення надіслано — Офіціант: ${name}`, ru: `✅ Заказ отправлен — Официант: ${name}`, en: `✅ Order sent — Waiter: ${name}` })
         : c({ ua: '✅ Замовлення надіслано', ru: '✅ Заказ отправлен', en: '✅ Order sent' });
       setOrderSuccessBanner(msg);
-      setWaiterToolsOpen(true);
       setTimeout(() => { setOrderSuccessBanner(''); }, 5000);
     } catch (err) {
       setOrderError(err.message || 'Error');
@@ -266,7 +264,7 @@ export default function MenuPage() {
     try {
       await waiterCallApi.create({ tableCode });
       setCallSent(true);
-      setWaiterToolsOpen(true);
+      setCallError('');
       setServiceToast(c({
         ua: 'Виклик надіслано вашому офіціанту',
         ru: 'Вызов отправлен вашему официанту',
@@ -330,12 +328,38 @@ export default function MenuPage() {
     <>
       <div className="menu-page-header">
         {isTableView && (
-          <div style={{ padding: '8px 16px', background: '#fff7e6', color: '#2d2118', border: '1px solid rgba(160, 136, 80, 0.28)', borderRadius: 12, fontSize: '0.85rem', fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, boxShadow: '0 4px 14px rgba(60, 45, 25, 0.08)' }}>
-            <span>{c({ ua: `Стіл ${tableCode}`, ru: `Стол ${tableCode}`, en: `Table ${tableCode}` })}</span>
-            {tableWaiterName && (
-              <button type="button" onClick={() => setWaiterToolsOpen((v) => !v)} style={{ opacity: 1, fontSize: '0.8rem', color: '#2d2118', background: '#ffffff', border: '1px solid rgba(160, 136, 80, 0.38)', borderRadius: 999, padding: '5px 10px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(60, 45, 25, 0.08)', whiteSpace: 'nowrap' }}>
-                👤 {tableWaiterName}
-              </button>
+          <div style={{ minHeight: 38, padding: '6px 10px', background: '#fff7e6', color: '#2d2118', borderBottom: '1px solid rgba(160, 136, 80, 0.22)', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: '0 0 auto' }}>{c({ ua: `Стіл ${tableCode}`, ru: `Стол ${tableCode}`, en: `Table ${tableCode}` })}</span>
+            <span style={{ width: 1, height: 18, background: 'rgba(160, 136, 80, 0.28)', flex: '0 0 auto' }} />
+            <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {tableWaiterName || orderWaiterName || c({ ua: 'Офіціант ...', ru: 'Официант ...', en: 'Waiter ...' })}
+            </span>
+            <button type="button" onClick={callWaiter} disabled={callSent} aria-label={c({ ua: 'Викликати офіціанта', ru: 'Позвать официанта', en: 'Call waiter' })}
+              style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(160, 136, 80, 0.34)', background: callSent ? '#dcfce7' : '#fff', color: callSent ? '#166534' : '#2d2118', fontSize: '0.9rem', lineHeight: 1, cursor: callSent ? 'default' : 'pointer', flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              🔔
+            </button>
+            {activeServiceStatus && (
+              <span style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', gap: 5, color: activeServiceStatus.tone }}>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: `${activeServiceStatus.tone}18`, fontSize: '0.68rem', fontWeight: 900 }}>
+                  {activeServiceStatus.icon}
+                </span>
+                <span>{activeServiceStatus.label}</span>
+              </span>
+            )}
+            {(serviceToast || callError) && (
+              <span style={{ flex: '0 0 auto', color: callError ? '#991b1b' : '#166534', fontWeight: 800 }}>
+                {serviceToast || callError}
+              </span>
+            )}
+            {serviceStatus === 'COMPLETED' && (
+              <span style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button key={rating} type="button" onClick={() => leaveReview(rating)} aria-label={`${rating}/5`}
+                    style={{ width: 22, height: 26, border: 'none', background: 'transparent', color: reviewRating && rating <= reviewRating ? '#16a34a' : '#a08850', fontSize: '0.92rem', lineHeight: 1, cursor: 'pointer', padding: 0 }}>
+                    ★
+                  </button>
+                ))}
+              </span>
             )}
           </div>
         )}
@@ -357,53 +381,6 @@ export default function MenuPage() {
           ))}
         </div>
         <div className="menu-legal-note">{menuServiceChargeNote}</div>
-        {isTableView && waiterToolsOpen && (
-          <div style={{ margin: '8px 12px 10px', padding: 12, borderRadius: 12, background: '#fff', border: '1px solid var(--border-warm, #D4C5A9)', boxShadow: '0 8px 22px rgba(60, 45, 25, 0.14)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--muted, #7a6f5a)', fontWeight: 700 }}>
-                  {c({ ua: 'Ваш офіціант', ru: 'Ваш официант', en: 'Your waiter' })}
-                </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text, #2d2118)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {tableWaiterName || orderWaiterName || c({ ua: 'Скоро призначимо', ru: 'Скоро назначим', en: 'Assigning soon' })}
-                </div>
-              </div>
-              <button type="button" onClick={callWaiter} disabled={callSent} aria-label={c({ ua: 'Викликати офіціанта', ru: 'Позвать официанта', en: 'Call waiter' })}
-                style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: callSent ? '#16a34a' : 'var(--primary)', color: '#fff', fontSize: '1.15rem', fontWeight: 800, cursor: callSent ? 'default' : 'pointer', flex: '0 0 auto' }}>
-                🔔
-              </button>
-            </div>
-            {(serviceToast || callError) && (
-              <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: callError ? '#fee2e2' : '#ecfdf5', color: callError ? '#991b1b' : '#166534', fontSize: '0.84rem', fontWeight: 700 }}>
-                {serviceToast || callError}
-              </div>
-            )}
-            {activeServiceStatus && (
-              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: `${activeServiceStatus.tone}22`, color: activeServiceStatus.tone, fontSize: '0.82rem', fontWeight: 900 }}>
-                  {activeServiceStatus.icon}
-                </span>
-                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#2d2118' }}>{activeServiceStatus.label}</span>
-                {orderSent?.id && <span style={{ color: 'var(--muted, #7a6f5a)', fontSize: '0.78rem' }}>#{orderSent.id}</span>}
-              </div>
-            )}
-            {serviceStatus === 'COMPLETED' && (
-              <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-warm, #D4C5A9)' }}>
-                <div style={{ fontSize: '0.84rem', color: '#2d2118', fontWeight: 800, marginBottom: 8 }}>
-                  {c({ ua: 'Як вам обслуговування?', ru: 'Как вам обслуживание?', en: 'How was the service?' })}
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {[1, 2, 3, 4, 5].map((rating) => (
-                    <button key={rating} type="button" onClick={() => leaveReview(rating)} aria-label={`${rating}/5`}
-                      style={{ width: 34, height: 34, borderRadius: 8, border: reviewRating === rating ? '2px solid #16a34a' : '1px solid var(--border-warm, #D4C5A9)', background: reviewRating === rating ? '#dcfce7' : '#fffaf0', color: reviewRating === rating ? '#166534' : '#8a6b2d', fontSize: '1rem', cursor: 'pointer' }}>
-                      ★
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="page-container">
