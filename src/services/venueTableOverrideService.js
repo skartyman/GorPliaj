@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma');
 const { normalizeLocalizedField } = require('../utils/localization');
 
-const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
+const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 
 function getDayRange(value) {
   const start = new Date(value);

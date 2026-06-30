@@ -187,7 +187,9 @@ const translations = {
       actions: {
         confirm: 'Підтвердити',
         cancel: 'Скасувати',
+        seat: 'Посадити',
         complete: 'Завершити',
+        noShow: 'Не зʼявився',
         save: 'Зберігаємо...',
         none: 'Немає дій'
       },

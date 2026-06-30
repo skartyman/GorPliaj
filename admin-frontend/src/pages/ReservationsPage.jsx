@@ -220,8 +220,13 @@ export default function ReservationsPage() {
         { label: t('reservations.actions.cancel'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
       ],
       CONFIRMED: [
+        { label: t('reservations.actions.seat'), status: 'SEATED', className: 'btn btn-small' },
         { label: t('reservations.actions.complete'), status: 'COMPLETED', className: 'btn btn-small btn-success' },
         { label: t('reservations.actions.cancel'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+      ],
+      SEATED: [
+        { label: t('reservations.actions.complete'), status: 'COMPLETED', className: 'btn btn-small btn-success' },
+        { label: t('reservations.actions.noShow'), status: 'NO_SHOW', className: 'btn btn-small btn-danger' }
       ]
     }),
     [t]

@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const venueTableOverrideService = require('./venueTableOverrideService');
 const { localizeMessage } = require('../utils/localization');
-const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
+const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 const HOLD_TTL_MS = 15 * 60 * 1000;
 
 function matchesGuestCapacity(target, guests) {

@@ -2,7 +2,8 @@ const prisma = require('../lib/prisma');
 
 const ALLOWED_TRANSITIONS = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['CANCELLED', 'COMPLETED']
+  CONFIRMED: ['SEATED', 'CANCELLED', 'COMPLETED'],
+  SEATED: ['COMPLETED', 'NO_SHOW']
 };
 
 function getAdminReservations() {

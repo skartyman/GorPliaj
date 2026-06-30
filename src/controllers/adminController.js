@@ -554,7 +554,7 @@ async function createAdminTableArrive(req, res) {
       reservationDate: new Date(todayStr + 'T00:00:00'),
       timeFrom,
       timeTo,
-      status: 'COMPLETED',
+      status: 'SEATED',
       source: 'WALK_IN',
       ticketCode,
       depositRequired: false,
@@ -763,7 +763,7 @@ async function arriveAdminReservation(req, res) {
       data: {
         arrivedAt: new Date(),
         arrivedGuests,
-        status: 'COMPLETED'
+        status: 'SEATED'
       },
       include: {
         table: { select: { id: true, name: true } },
@@ -807,7 +807,7 @@ async function arriveByTicketCodeAdminReservation(req, res) {
       data: {
         arrivedAt: new Date(),
         arrivedGuests: req.body.arrivedGuests ? Number(req.body.arrivedGuests) : undefined,
-        status: 'COMPLETED'
+        status: 'SEATED'
       },
       include: {
         table: { select: { id: true, code: true, name: true } },
