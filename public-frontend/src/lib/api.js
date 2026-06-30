@@ -125,6 +125,7 @@ export const waiterApi = {
   endShift: () => request('/waiter/shift/end', { method: 'POST' }),
   getShift: () => request('/waiter/shift'),
   scanTable: (tableId) => request('/waiter/tables/scan', { method: 'POST', body: JSON.stringify({ tableId }) }),
+  scanTableByCode: (code) => request('/waiter/tables/scan-by-code', { method: 'POST', body: JSON.stringify({ code }) }),
   removeTable: (tableId) => request(`/waiter/tables/${tableId}`, { method: 'DELETE' }),
   getTables: () => request('/waiter/tables'),
   getOrders: () => request('/waiter/orders'),

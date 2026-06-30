@@ -1,0 +1,15 @@
+{
+  "name": "GorPliaj — Кабінет офіціанта",
+  "short_name": "GP Офіціант",
+  "id": "/waiter/?app=gorpliaj-waiter",
+  "start_url": "/waiter/",
+  "scope": "/waiter/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    { "src": "/icons/waiter-192.png?v=1", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "/icons/waiter-512.png?v=1", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}

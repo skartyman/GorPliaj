@@ -15,6 +15,7 @@ router.post('/shift/end', requireWaiterAuth, waiterController.endShift);
 router.get('/shift', requireWaiterAuth, waiterController.getShift);
 
 router.post('/tables/scan', requireWaiterAuth, waiterController.scanTable);
+router.post('/tables/scan-by-code', requireWaiterAuth, waiterController.scanTableByCode);
 router.delete('/tables/:tableId', requireWaiterAuth, waiterController.removeTable);
 router.get('/tables', requireWaiterAuth, waiterController.getTables);
 

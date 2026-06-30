@@ -109,8 +109,27 @@ async function getTables(req, res) {
   }
 }
 
+async function scanTableByCode(req, res) {
+  try {
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') return res.status(400).json({ message: 'code is required.' });
+
+    const shift = await waiterService.getActiveShift(req.waiterAuth.sub);
+    if (!shift) return res.status(400).json({ message: 'Start a shift first.' });
+
+    const result = await waiterService.assignTableByCode(shift.id, code.trim().toUpperCase());
+    if (result.type === 'NOT_FOUND') return res.status(404).json({ message: `Table "${code}" not found.` });
+    if (result.type === 'ALREADY_ASSIGNED') return res.json({ table: result.table, assignment: result.assignment, already: true });
+
+    res.status(201).json({ table: result.table, assignment: result.assignment });
+  } catch (err) {
+    console.error('Scan table by code error:', err);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}
+
 module.exports = {
   login, me, logout,
   startShift, endShift, getShift,
-  scanTable, removeTable, getTables
+  scanTable, scanTableByCode, removeTable, getTables
 };

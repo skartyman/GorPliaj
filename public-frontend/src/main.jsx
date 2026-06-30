@@ -62,10 +62,13 @@ async function cleanupLegacyServiceWorkers() {
 
 cleanupLegacyServiceWorkers();
 
+const isWaiterRoute = window.location.pathname.startsWith('/waiter');
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js?v=7')
-      .then(reg => console.log('SW registered'))
+    const swUrl = isWaiterRoute ? '/waiter/sw.js?v=1' : '/sw.js?v=7';
+    navigator.serviceWorker.register(swUrl)
+      .then(reg => console.log('SW registered:', swUrl))
       .catch(err => console.log('SW error', err));
   });
 }

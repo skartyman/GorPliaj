@@ -159,6 +159,29 @@ async function getWaiterForTable(tableId) {
   return assignment?.shift?.waiter || null;
 }
 
+async function getTableByCode(code) {
+  return prisma.venueTable.findFirst({
+    where: { code, isActive: true },
+    select: { id: true, code: true, name: true, zoneId: true, mapId: true }
+  });
+}
+
+async function assignTableByCode(shiftId, code) {
+  const table = await getTableByCode(code);
+  if (!table) return { type: 'NOT_FOUND' };
+
+  const existing = await prisma.waiterShiftTable.findUnique({
+    where: { shiftId_tableId: { shiftId, tableId: table.id } }
+  });
+  if (existing) return { type: 'ALREADY_ASSIGNED', table, assignment: existing };
+
+  const assignment = await prisma.waiterShiftTable.create({
+    data: { shiftId, tableId: table.id },
+    select: { id: true, tableId: true, assignedAt: true }
+  });
+  return { type: 'SUCCESS', table, assignment };
+}
+
 module.exports = {
   verifyWaiterToken,
   loginByPin,
@@ -171,6 +194,8 @@ module.exports = {
   endShift,
   getActiveShift,
   assignTableToShift,
+  assignTableByCode,
   removeTableFromShift,
-  getWaiterForTable
+  getWaiterForTable,
+  getTableByCode
 };

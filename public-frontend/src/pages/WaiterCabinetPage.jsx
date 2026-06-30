@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { waiterApi } from '../lib/api';
 import { localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
+import WaiterInstallPrompt from '../components/WaiterInstallPrompt';
 
 const STATUS_LABELS = {
   PENDING: { ua: 'Очікує', ru: 'Ожидает', en: 'Pending', color: '#f59e0b' },
@@ -32,7 +34,10 @@ export default function WaiterCabinetPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('orders');
   const [scanInput, setScanInput] = useState('');
+  const [scanMessage, setScanMessage] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
   const eventSourceRef = useRef(null);
+  const html5QrCodeRef = useRef(null);
 
   const loadInitial = useCallback(async () => {
     try {
@@ -50,6 +55,16 @@ export default function WaiterCabinetPage() {
       setWaiter(null);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const existing = document.querySelector('link[rel="manifest"][href*="waiter"]');
+    if (!existing) {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = '/waiter.webmanifest?v=1';
+      document.head.appendChild(link);
     }
   }, []);
 
@@ -73,6 +88,27 @@ export default function WaiterCabinetPage() {
     es.onerror = () => es.close();
     return () => { es.close(); eventSourceRef.current = null; };
   }, [waiter]);
+
+  useEffect(() => {
+    if (!scannerOpen) return;
+    const scanner = new Html5Qrcode('qr-reader');
+    html5QrCodeRef.current = scanner;
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 5, qrbox: { width: 250, height: 250 } },
+      async (decodedText) => {
+        scanner.stop().catch(() => {});
+        setScannerOpen(false);
+        await handleCodeScan(decodedText);
+      },
+      () => {}
+    ).catch(() => {
+      setScannerOpen(false);
+      setScanMessage(c({ ua: 'Не вдалося відкрити камеру', ru: 'Не удалось открыть камеру', en: 'Camera error' }));
+      setTimeout(() => setScanMessage(''), 3000);
+    });
+    return () => { scanner.stop().catch(() => {}); html5QrCodeRef.current = null; };
+  }, [scannerOpen]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -106,7 +142,7 @@ export default function WaiterCabinetPage() {
 
   async function toggleShift() {
     if (shift) {
-      const s = await waiterApi.endShift();
+      await waiterApi.endShift();
       setShift(null);
       setTables([]);
       setOrders([]);
@@ -117,15 +153,28 @@ export default function WaiterCabinetPage() {
     }
   }
 
-  async function handleScanTable() {
-    const id = parseInt(scanInput, 10);
-    if (!id || !shift) return;
+  async function handleCodeScan(code) {
+    if (!shift || !code) return;
+    const cleanCode = code.trim().toUpperCase();
     try {
-      await waiterApi.scanTable(id);
+      const result = await waiterApi.scanTableByCode(cleanCode);
+      if (result.already) {
+        setScanMessage(c({ ua: `Стіл ${cleanCode} вже додано`, ru: `Стол ${cleanCode} уже добавлен`, en: `Table ${cleanCode} already assigned` }));
+      } else {
+        setScanMessage(c({ ua: `Стіл ${cleanCode} додано`, ru: `Стол ${cleanCode} добавлен`, en: `Table ${cleanCode} assigned` }));
+      }
       const t = await waiterApi.getTables();
       setTables(t);
-      setScanInput('');
-    } catch {}
+    } catch (err) {
+      setScanMessage(err.message || c({ ua: 'Стіл не знайдено', ru: 'Стол не найден', en: 'Table not found' }));
+    }
+    setTimeout(() => setScanMessage(''), 4000);
+  }
+
+  async function handleManualScan() {
+    if (!scanInput.trim()) return;
+    await handleCodeScan(scanInput);
+    setScanInput('');
   }
 
   async function removeTable(tableId) {
@@ -303,19 +352,29 @@ export default function WaiterCabinetPage() {
 
         {shift && tab === 'tables' && (
           <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => setScannerOpen(true)}>
+                📷 {c({ ua: 'Сканувати QR', ru: 'Сканировать QR', en: 'Scan QR' })}
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <input type="text" inputMode="numeric" placeholder={c({ ua: 'Номер столу', ru: 'Номер стола', en: 'Table number' })} value={scanInput} onChange={(e) => setScanInput(e.target.value)}
+              <input type="text" placeholder={c({ ua: 'Код столу (напр. R-1)', ru: 'Код стола (напр. R-1)', en: 'Table code (e.g. R-1)' })} value={scanInput} onChange={(e) => setScanInput(e.target.value)}
                 style={{ flex: 1, padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: '1rem' }}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleScanTable(); } }} />
-              <button className="btn btn-primary" onClick={handleScanTable} disabled={!scanInput.trim()}>
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleManualScan(); } }} />
+              <button className="btn btn-secondary" onClick={handleManualScan} disabled={!scanInput.trim()}>
                 {c({ ua: 'Додати', ru: 'Добавить', en: 'Add' })}
               </button>
             </div>
+            {scanMessage && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, background: scanMessage.includes('не знайдено') || scanMessage.includes('не удалось') ? '#fef2f2' : '#f0fdf4', color: scanMessage.includes('не знайдено') || scanMessage.includes('не удалось') ? '#d32f2f' : '#16a34a', fontSize: '0.9rem', fontWeight: 500 }}>
+                {scanMessage}
+              </div>
+            )}
             {tables.length === 0 && <p style={{ textAlign: 'center', color: '#888', padding: 40 }}>{c({ ua: 'Немає закріплених столів', ru: 'Нет закреплённых столов', en: 'No assigned tables' })}</p>}
             {tables.map((t) => (
               <div key={t.id} style={{ background: '#fff', borderRadius: 12, padding: 16, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <strong>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} #{t.tableId}</strong>
+                  <strong>{c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} {t.code || `#${t.tableId}`}</strong>
                   <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#888' }}>{timeAgo(t.assignedAt, locale)}</span>
                 </div>
                 <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem' }} onClick={() => removeTable(t.tableId)}>✕</button>
@@ -324,6 +383,17 @@ export default function WaiterCabinetPage() {
           </div>
         )}
       </div>
+
+      {scannerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1a1a2e', color: '#fff' }}>
+            <span style={{ fontWeight: 600 }}>{c({ ua: 'Скануйте QR-код столу', ru: 'Сканируйте QR-код стола', en: 'Scan table QR code' })}</span>
+            <button onClick={() => { setScannerOpen(false); }} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
+          </div>
+          <div id="qr-reader" style={{ flex: 1 }} />
+        </div>
+      )}
+      <WaiterInstallPrompt />
     </div>
   );
 }
