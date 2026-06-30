@@ -23,8 +23,8 @@ let waiterIndexHtml = null;
 if (hasPublicBuild) {
   try {
     waiterIndexHtml = fs.readFileSync(publicIndexPath, 'utf8')
-      .replace(/<link rel="manifest" href="[^"]*">/, '<link rel="manifest" href="/waiter.webmanifest?v=1" />')
-      .replace(/<meta name="theme-color" content="[^"]*">/, '<meta name="theme-color" content="#1a1a2e" />');
+      .replace(/<link rel="manifest" href="[^"]*"\s*\/?>/, '<link rel="manifest" href="/waiter.webmanifest?v=1" />')
+      .replace(/<meta name="theme-color" content="[^"]*"\s*\/?>/, '<meta name="theme-color" content="#1a1a2e" />');
   } catch {}
 }
 const NO_CACHE_HEADERS = {

@@ -50,6 +50,7 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
     id: order.id,
     tableId: order.tableId,
     tableCode: order.table?.code || null,
+    table: order.table ? { id: order.table.id, code: order.table.code } : null,
     status: order.status,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
@@ -168,15 +169,14 @@ async function createWaiterCall({ tableId, customerName }) {
     id: call.id,
     tableId: call.tableId,
     tableCode: call.table?.code || null,
+    table: call.table ? { id: call.table.id, code: call.table.code } : null,
     status: call.status,
     createdAt: call.createdAt.toISOString()
   };
 
+  broadcastToAllWaiters({ type: 'NEW_CALL', call: callData, customerName });
   if (waiter) {
-    broadcastToWaiter(waiter.id, { type: 'NEW_CALL', call: callData, customerName });
     notifyWaiterNewCall(waiter, tableId, customerName).catch(() => {});
-  } else {
-    broadcastToAllWaiters({ type: 'NEW_CALL', call: callData, customerName });
   }
 
   return callData;

@@ -93,36 +93,46 @@ export default function WaiterCabinetPage() {
 
   useEffect(() => {
     if (!waiter) return;
-    const es = new EventSource(waiterApi.sseUrl);
-    eventSourceRef.current = es;
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'NEW_ORDER') {
-          setOrders((p) => [data.order, ...p]);
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-          const tableLabel = data.order.tableCode || `#${data.order.tableId}`;
-          showNotification(
-            c({ ua: 'Нове замовлення', ru: 'Новый заказ', en: 'New order' }),
-            `${c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} ${tableLabel} · #${data.order.id}`,
-            `order-${data.order.id}`
-          );
-        }
-        if (data.type === 'NEW_CALL') {
-          setCalls((p) => [data.call, ...p]);
-          if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-          const tableLabel = data.call.tableCode || `#${data.call.tableId}`;
-          showNotification(
-            c({ ua: '📞 Виклик', ru: '📞 Вызов', en: '📞 Call' }),
-            `${c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} ${tableLabel}`,
-            `call-${data.call.id}`
-          );
-        }
-        if (data.type === 'ORDER_STATUS_CHANGED') setOrders((p) => p.map((o) => o.id === data.order.id ? data.order : o));
-      } catch {}
-    };
-    es.onerror = () => es.close();
-    return () => { es.close(); eventSourceRef.current = null; };
+    let reconnectTimeout = null;
+
+    function connect() {
+      const es = new EventSource(waiterApi.sseUrl);
+      eventSourceRef.current = es;
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'NEW_ORDER') {
+            setOrders((p) => [data.order, ...p]);
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            const tableLabel = data.order.tableCode || `#${data.order.tableId}`;
+            showNotification(
+              c({ ua: 'Нове замовлення', ru: 'Новый заказ', en: 'New order' }),
+              `${c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} ${tableLabel} · #${data.order.id}`,
+              `order-${data.order.id}`
+            );
+          }
+          if (data.type === 'NEW_CALL') {
+            setCalls((p) => [data.call, ...p]);
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+            const tableLabel = data.call.tableCode || `#${data.call.tableId}`;
+            showNotification(
+              c({ ua: '📞 Виклик', ru: '📞 Вызов', en: '📞 Call' }),
+              `${c({ ua: 'Стіл', ru: 'Стол', en: 'Table' })} ${tableLabel}`,
+              `call-${data.call.id}`
+            );
+          }
+          if (data.type === 'ORDER_STATUS_CHANGED') setOrders((p) => p.map((o) => o.id === data.order.id ? data.order : o));
+        } catch {}
+      };
+      es.onerror = () => {
+        es.close();
+        eventSourceRef.current = null;
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+    }
+
+    connect();
+    return () => { clearTimeout(reconnectTimeout); if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; } };
   }, [waiter]);
 
   useEffect(() => {

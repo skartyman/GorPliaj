@@ -95,7 +95,10 @@ export default function MenuPage() {
         if (consumed) return;
         consumed = true;
         const code = extractTableCode(decodedText);
-        if (code) window.location.href = `/menu?table=${encodeURIComponent(code)}`;
+        if (code) {
+          try { localStorage.setItem('gorpliaj-pending-order', '1'); } catch {}
+          window.location.href = `/menu?table=${encodeURIComponent(code)}`;
+        }
       },
       () => {}
     ).catch(() => {
@@ -255,6 +258,19 @@ export default function MenuPage() {
       setCallError(err.message || 'Error');
     }
   }
+
+  useEffect(() => {
+    if (!isTableView || !tableCode || orderSubmitting || orderSent) return;
+    try {
+      const pending = localStorage.getItem('gorpliaj-pending-order');
+      if (pending) {
+        localStorage.removeItem('gorpliaj-pending-order');
+        if (cartEntries.length > 0) {
+          setTimeout(() => submitOrder(), 500);
+        }
+      }
+    } catch {}
+  }, [isTableView, tableCode]);
 
   const isEn = locale === 'en';
 
@@ -449,7 +465,7 @@ export default function MenuPage() {
             )}
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <input type="text" placeholder={c({ ua: 'Код столу (напр. R-1)', ru: 'Код стола (напр. R-1)', en: 'Table code (e.g. R-1)' })} value={manualCode} onChange={(e) => setManualCode(e.target.value)} style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-warm, #D4C5A9)', borderRadius: 10, fontSize: 14, background: 'var(--bg-input, #FFFEF5)' }} />
-              <button className="btn btn-secondary" type="button" disabled={!manualCode.trim()} onClick={() => { const code = manualCode.trim(); if (code) window.location.href = `/menu?table=${encodeURIComponent(code)}`; }}>
+              <button className="btn btn-secondary" type="button" disabled={!manualCode.trim()} onClick={() => { const code = manualCode.trim(); if (code) { try { localStorage.setItem('gorpliaj-pending-order', '1'); } catch {} window.location.href = `/menu?table=${encodeURIComponent(code)}`; } }}>
                 →
               </button>
             </div>
