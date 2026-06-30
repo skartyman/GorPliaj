@@ -328,14 +328,14 @@ export default function MenuPage() {
     <>
       <div className="menu-page-header">
         {isTableView && (
-          <div style={{ minHeight: 38, padding: '6px 10px', background: '#fff7e6', color: '#2d2118', borderBottom: '1px solid rgba(160, 136, 80, 0.22)', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', whiteSpace: 'nowrap' }}>
+          <div className="menu-service-bar">
             <span style={{ flex: '0 0 auto' }}>{c({ ua: `Стіл ${tableCode}`, ru: `Стол ${tableCode}`, en: `Table ${tableCode}` })}</span>
-            <span style={{ width: 1, height: 18, background: 'rgba(160, 136, 80, 0.28)', flex: '0 0 auto' }} />
+            <span className="menu-service-divider" />
             <span style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {tableWaiterName || orderWaiterName || c({ ua: 'Офіціант ...', ru: 'Официант ...', en: 'Waiter ...' })}
             </span>
             <button type="button" onClick={callWaiter} disabled={callSent} aria-label={c({ ua: 'Викликати офіціанта', ru: 'Позвать официанта', en: 'Call waiter' })}
-              style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(160, 136, 80, 0.34)', background: callSent ? '#dcfce7' : '#fff', color: callSent ? '#166534' : '#2d2118', fontSize: '0.9rem', lineHeight: 1, cursor: callSent ? 'default' : 'pointer', flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              className={`menu-service-bell${callSent ? ' called' : ''}`}>
               🔔
             </button>
             {activeServiceStatus && (

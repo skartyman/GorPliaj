@@ -1197,6 +1197,78 @@ h3 {
   backdrop-filter: blur(20px);
 }
 
+.menu-service-bar {
+  min-height: 38px;
+  padding: 6px 10px;
+  margin: 0 0 6px;
+  background: rgba(244, 239, 229, 0.92);
+  color: #2f2a22;
+  border-bottom: 1px solid rgba(125, 106, 72, 0.18);
+  border-radius: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.menu-service-bar::-webkit-scrollbar {
+  display: none;
+}
+
+[data-theme="dark"] .menu-service-bar {
+  background: rgba(35, 34, 31, 0.92);
+  color: #eee8dc;
+  border-bottom-color: rgba(201, 168, 108, 0.14);
+}
+
+.menu-service-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(125, 106, 72, 0.24);
+  flex: 0 0 auto;
+}
+
+[data-theme="dark"] .menu-service-divider {
+  background: rgba(238, 232, 220, 0.16);
+}
+
+.menu-service-bell {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 106, 72, 0.24);
+  background: rgba(255, 255, 255, 0.68);
+  color: #2f2a22;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.menu-service-bell.called {
+  background: #dcfce7;
+  color: #166534;
+}
+
+[data-theme="dark"] .menu-service-bell {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(238, 232, 220, 0.16);
+  color: #eee8dc;
+}
+
+[data-theme="dark"] .menu-service-bell.called {
+  background: rgba(22, 101, 52, 0.32);
+  color: #bbf7d0;
+}
+
 .menu-section-tabs {
   display: flex;
   gap: 24px;
