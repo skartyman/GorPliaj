@@ -106,6 +106,7 @@ export default function DashboardPage() {
   const canMenu = MANAGEMENT_ROLES.includes(role);
   const canTickets = TICKET_ROLES.includes(role);
   const canAnalytics = MANAGEMENT_ROLES.includes(role);
+  const canManageEventContent = ['seo_smm', ...MANAGEMENT_ROLES].includes(role);
   const [state, setState] = useState({
     loading: true,
     error: '',
@@ -193,7 +194,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [canAnalytics, canMenu, canReservations]);
+  }, [canAnalytics, canMenu, canManageEventContent, canReservations]);
 
   const dateLocale = language === 'ua' ? 'uk-UA' : (language === 'ru' ? 'ru-RU' : 'en-US');
   const todayKey = localDateKey();
@@ -418,9 +419,9 @@ export default function DashboardPage() {
         <PageCard title={t('dashboard.quickLinks.title')} description={t('dashboard.quickLinks.description')}>
           <div className="dashboard-link-list">
             {canAnalytics ? <Link to="/admin/payments">{t('dashboard.quickLinks.payments')}</Link> : null}
-            {canAnalytics ? <Link to="/admin/ticket-sales">{t('dashboard.quickLinks.ticketSales')}</Link> : null}
+            {canManageEventContent ? <Link to="/admin/ticket-sales">{t('dashboard.quickLinks.ticketSales')}</Link> : null}
             {canMenu ? <Link to="/admin/menu">{t('dashboard.quickLinks.menuEditor')}</Link> : null}
-            {canAnalytics ? <Link to="/admin/events">{t('dashboard.quickLinks.events')}</Link> : null}
+            {canManageEventContent ? <Link to="/admin/events">{t('dashboard.quickLinks.events')}</Link> : null}
             {canReservations ? <Link to="/admin/reservations">{t('dashboard.quickLinks.allReservations')}</Link> : null}
           </div>
         </PageCard>

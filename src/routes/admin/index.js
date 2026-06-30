@@ -83,6 +83,8 @@ const {
 const waiterService = require('../../services/waiterService');
 const tableOrderService = require('../../services/tableOrderService');
 const { addWaiterConnection } = require('../../services/waiterSseService');
+const QRCode = require('qrcode');
+const { APP_BASE_URL } = require('../../config/env');
 const {
   listBeachRows,
   createBeachRow,
@@ -265,6 +267,19 @@ router.get('/table-orders', requireAdminAuth, requirePermission('reservations:vi
   try {
     const { date, status, waiterId } = req.query;
     res.json(await tableOrderService.getAllOrders({ date, status, waiterId: waiterId ? parseInt(waiterId, 10) : undefined }));
+  } catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
+});
+
+router.get('/waiters/qr', requireAdminAuth, requirePermission('users:view'), async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ message: 'code is required.' });
+    const baseUrl = APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const url = `${baseUrl}/menu?table=${encodeURIComponent(code)}`;
+    const buffer = await QRCode.toBuffer(url, { width: 300, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(buffer);
   } catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
 });
 

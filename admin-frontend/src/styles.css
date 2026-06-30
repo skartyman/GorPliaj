@@ -3013,6 +3013,32 @@ textarea { resize: vertical; min-height: 96px; }
 }
 
 
+/* Two-column admin grid: stacks on mobile */
+.admin-two-col {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .admin-two-col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Inline 2-col form field grid: stacks on mobile */
+.grid-2 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 720px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Quick Date Switcher */
 .quick-date-switcher {
   display: flex;

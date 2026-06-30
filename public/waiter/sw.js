@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gorpliaj-waiter-v1';
+const CACHE_NAME = 'gorpliaj-waiter-v2';
 const PRECACHE = ['/waiter/', '/waiter.webmanifest'];
 
 self.addEventListener('install', (event) => {

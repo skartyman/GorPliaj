@@ -47,7 +47,7 @@ const PERMISSIONS = {
   'payments:view': ['admin', 'manager', 'owner'],
   'payments:update': ['admin', 'manager', 'owner'],
 
-  'tickets:view': ['admin', 'hostess', 'manager', 'owner'],
+  'tickets:view': ['seo_smm', 'admin', 'hostess', 'manager', 'owner'],
   'tickets:manage': ['seo_smm', 'admin', 'manager', 'owner'],
   'tickets:verify': ['admin', 'hostess', 'manager', 'owner'],
 

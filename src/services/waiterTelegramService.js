@@ -15,7 +15,7 @@ function getBot() {
 async function notifyWaiterNewOrder(waiter, order, tableId) {
   if (!bot || !waiter.telegramChatId) return;
   const itemsText = order.items
-    .map(i => `  ${i.quantity}x menu item #${i.menuItemId}`)
+    .map(i => `  ${i.quantity}x ${i.name || `#${i.menuItemId}`}`)
     .join('\n');
 
   const text = [

@@ -450,6 +450,7 @@ model MenuItem {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems  TableOrderItem[]
 
   @@index([categoryId])
   @@index([sortOrder])
@@ -669,8 +670,8 @@ model TableOrder {
   shiftId        Int?
   waiterId       Int?
   status         OrderStatus      @default(PENDING)
-  customerName   String
-  customerPhone  String
+  customerName   String?
+  customerPhone  String?
   notes          String?
   createdAt      DateTime         @default(now())
   acceptedAt     DateTime?
@@ -692,6 +693,7 @@ model TableOrderItem {
   price      Decimal   @db.Decimal(10, 2)
   notes      String?
   order      TableOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem? @relation(fields: [menuItemId], references: [id])
 
   @@index([orderId])
 }

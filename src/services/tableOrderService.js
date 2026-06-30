@@ -3,6 +3,23 @@ const { getWaiterForTable } = require('./waiterService');
 const { notifyWaiterNewOrder, notifyWaiterNewCall } = require('./waiterTelegramService');
 const { broadcastToWaiter, broadcastToGuest } = require('./waiterSseService');
 
+function resolveName(json) {
+  if (!json) return null;
+  if (typeof json === 'string') return json;
+  return json.ua || json.ru || json.en || null;
+}
+
+function mapItems(items) {
+  return items.map(i => ({
+    id: i.id,
+    menuItemId: i.menuItemId,
+    name: resolveName(i.menuItem?.name),
+    quantity: i.quantity,
+    price: Number(i.price),
+    notes: i.notes
+  }));
+}
+
 async function createTableOrder({ tableId, customerName, customerPhone, notes, items }) {
   const waiter = await getWaiterForTable(tableId);
 
@@ -10,8 +27,8 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
     data: {
       tableId,
       waiterId: waiter?.id || null,
-      customerName,
-      customerPhone,
+      customerName: customerName || '',
+      customerPhone: customerPhone || '',
       notes: notes || null,
       items: {
         create: items.map(item => ({
@@ -22,7 +39,10 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
         }))
       }
     },
-    include: { items: true }
+    include: {
+      items: { include: { menuItem: { select: { name: true } } } },
+      waiter: { select: { id: true, name: true } }
+    }
   });
 
   const orderData = {
@@ -32,14 +52,9 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     notes: order.notes,
+    waiterName: order.waiter?.name || null,
     createdAt: order.createdAt.toISOString(),
-    items: order.items.map(i => ({
-      id: i.id,
-      menuItemId: i.menuItemId,
-      quantity: i.quantity,
-      price: Number(i.price),
-      notes: i.notes
-    }))
+    items: mapItems(order.items)
   };
 
   if (waiter) {
@@ -107,7 +122,7 @@ async function listOrdersForTable(tableId) {
     where: { tableId, status: { notIn: ['CANCELLED'] } },
     orderBy: { createdAt: 'desc' },
     take: 10,
-    include: { items: true }
+    include: { items: { include: { menuItem: { select: { name: true } } } } }
   });
 }
 
@@ -126,7 +141,10 @@ async function getAllOrders({ date, status, waiterId } = {}) {
   return prisma.tableOrder.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    include: { items: true, waiter: { select: { id: true, name: true } } }
+    include: {
+      items: { include: { menuItem: { select: { name: true } } } },
+      waiter: { select: { id: true, name: true } }
+    }
   });
 }
 

@@ -32,7 +32,6 @@ export default class ErrorBoundary extends Component {
           <button
             onClick={() => {
               this.setState({ hasError: false, error: null });
-              window.location.href = '/';
             }}
             style={{
               padding: '0.75rem 2rem',
@@ -41,7 +40,25 @@ export default class ErrorBoundary extends Component {
               borderRadius: '0.5rem',
               cursor: 'pointer',
               background: '#007bff',
-              color: '#fff'
+              color: '#fff',
+              marginBottom: '0.75rem'
+            }}
+          >
+            Спробувати знову
+          </button>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.href = '/';
+            }}
+            style={{
+              padding: '0.75rem 2rem',
+              fontSize: '1rem',
+              border: '1px solid #ccc',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              background: '#fff',
+              color: '#333'
             }}
           >
             На головну

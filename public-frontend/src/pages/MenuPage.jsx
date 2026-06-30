@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { menuApi, tableOrderApi, waiterCallApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
@@ -17,12 +18,24 @@ function resolveCategorySection(categoryName, sectionKey) {
   return barHints.some((hint) => normalized.includes(hint)) ? 'bar' : 'kitchen';
 }
 
-function getTableIdFromSearch(search) {
+function getTableCodeFromSearch(search) {
   const params = new URLSearchParams(search);
   const raw = params.get('table');
   if (!raw) return null;
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const code = raw.trim();
+  return code || null;
+}
+
+function extractTableCode(text) {
+  const trimmed = text.trim();
+  try {
+    if (trimmed.includes('table=')) {
+      const url = new URL(trimmed);
+      const code = url.searchParams.get('table');
+      if (code) return code.trim();
+    }
+  } catch {}
+  return trimmed;
 }
 
 export default function MenuPage() {
@@ -42,19 +55,22 @@ export default function MenuPage() {
   const categoryButtonsRef = useRef(new Map());
   const sectionNodesRef = useRef(new Map());
 
-  const tableId = getTableIdFromSearch(location.search);
-  const isTableView = Boolean(tableId);
+  const tableCode = getTableCodeFromSearch(location.search);
+  const isTableView = Boolean(tableCode);
 
-  const [orderOpen, setOrderOpen] = useState(false);
-  const [orderName, setOrderName] = useState('');
-  const [orderPhone, setOrderPhone] = useState('');
-  const [orderNotes, setOrderNotes] = useState('');
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSent, setOrderSent] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
   const [orderError, setOrderError] = useState('');
+  const [orderWaiterName, setOrderWaiterName] = useState('');
+  const [orderSuccessBanner, setOrderSuccessBanner] = useState('');
   const [callSent, setCallSent] = useState(false);
   const [callError, setCallError] = useState('');
+  const [noTableWarning, setNoTableWarning] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [manualCode, setManualCode] = useState('');
+  const [scanError, setScanError] = useState('');
+  const html5QrCodeRef = useRef(null);
   const eventSourceRef = useRef(null);
 
   useMeta(t('menuMetaTitle'), t('menuMetaDescription'));
@@ -68,13 +84,50 @@ export default function MenuPage() {
   }, [t]);
 
   useEffect(() => {
+    if (!scannerOpen) return;
+    let consumed = false;
+    const scanner = new Html5Qrcode('menu-qr-reader');
+    html5QrCodeRef.current = scanner;
+    scanner.start(
+      { facingMode: 'environment' },
+      { fps: 5, qrbox: { width: 250, height: 250 } },
+      (decodedText) => {
+        if (consumed) return;
+        consumed = true;
+        const code = extractTableCode(decodedText);
+        if (code) window.location.href = `/menu?table=${encodeURIComponent(code)}`;
+      },
+      () => {}
+    ).catch(() => {
+      if (consumed) return;
+      consumed = true;
+      setScannerOpen(false);
+      setScanError(c({ ua: 'Не вдалося відкрити камеру', ru: 'Не удалось открыть камеру', en: 'Camera error' }));
+      setTimeout(() => setScanError(''), 3000);
+    });
+    return () => { consumed = true; scanner.stop().catch(() => {}); html5QrCodeRef.current = null; };
+  }, [scannerOpen]);
+
+  useEffect(() => {
     if (!orderSent?.id) return;
     const es = new EventSource(tableOrderApi.sseUrl(orderSent.id));
     eventSourceRef.current = es;
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        if (data.type === 'STATUS_UPDATE') setOrderStatus(data.status);
+        if (data.type === 'STATUS_UPDATE') {
+          setOrderStatus(data.status);
+          const labels = {
+            ACCEPTED: c({ ua: '👨‍🍳 Прийнято', ru: '👨‍🍳 Принято', en: '👨‍🍳 Accepted' }),
+            PREPARING: c({ ua: '👨‍🍳 Готується', ru: '👨‍🍳 Готовится', en: '👨‍🍳 Preparing' }),
+            COMPLETED: c({ ua: '✅ Готово', ru: '✅ Готово', en: '✅ Ready' }),
+          };
+          const label = labels[data.status];
+          if (label) {
+            const name = orderWaiterName || '';
+            setOrderSuccessBanner(`${label}${name ? ` — ${name}` : ''}`);
+          }
+        }
       } catch {}
     };
     es.onerror = () => es.close();
@@ -164,21 +217,25 @@ export default function MenuPage() {
   }
 
   async function submitOrder() {
-    if (!orderName.trim() || !orderPhone.trim() || !cartEntries.length || !tableId) return;
+    if (!cartEntries.length || !tableCode || orderSubmitting) return;
     setOrderSubmitting(true);
     setOrderError('');
     try {
       const order = await tableOrderApi.create({
-        tableId,
-        customerName: orderName.trim(),
-        customerPhone: orderPhone.trim(),
-        notes: orderNotes.trim() || undefined,
+        tableCode,
         items: cartEntries.map((e) => ({ menuItemId: e.itemId, quantity: e.quantity, price: e.price }))
       });
       setOrderSent(order);
       setOrderStatus(order.status);
+      setOrderWaiterName(order.waiterName || '');
       clear();
       setCartOpen(false);
+      const name = order.waiterName || '';
+      const msg = name
+        ? c({ ua: `✅ Замовлення надіслано — Офіціант: ${name}`, ru: `✅ Заказ отправлен — Официант: ${name}`, en: `✅ Order sent — Waiter: ${name}` })
+        : c({ ua: '✅ Замовлення надіслано', ru: '✅ Заказ отправлен', en: '✅ Order sent' });
+      setOrderSuccessBanner(msg);
+      setTimeout(() => { setOrderSuccessBanner(''); setOrderSent(null); setOrderStatus(null); setOrderWaiterName(''); }, 5000);
     } catch (err) {
       setOrderError(err.message || 'Error');
     } finally {
@@ -187,11 +244,11 @@ export default function MenuPage() {
   }
 
   async function callWaiter() {
-    if (!tableId) return;
+    if (!tableCode) return;
     setCallSent(false);
     setCallError('');
     try {
-      await waiterCallApi.create({ tableId, customerName: orderName || undefined });
+      await waiterCallApi.create({ tableCode, customerName: orderName || undefined });
       setCallSent(true);
       setTimeout(() => setCallSent(false), 10000);
     } catch (err) {
@@ -214,7 +271,7 @@ export default function MenuPage() {
       <div className="menu-page-header">
         {isTableView && (
           <div style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', fontSize: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
-            {c({ ua: `Стіл №${tableId}`, ru: `Стол №${tableId}`, en: `Table #${tableId}` })}
+            {c({ ua: `Стіл ${tableCode}`, ru: `Стол ${tableCode}`, en: `Table ${tableCode}` })}
           </div>
         )}
         <div className="menu-section-tabs">
@@ -283,27 +340,14 @@ export default function MenuPage() {
         ) : null}
       </div>
 
-      {isTableView && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1100, display: 'flex', gap: 8, padding: '10px 16px', background: 'var(--bg)', borderTop: '1px solid var(--line)' }}>
-          <button className="btn btn-secondary" type="button" onClick={callWaiter} style={{ flex: 1 }} disabled={callSent}>
-            {callSent ? c({ ua: 'Очікуйте...', ru: 'Ожидайте...', en: 'Wait...' }) : c({ ua: '📞 Викликати офіціанта', ru: '📞 Вызвать официанта', en: '📞 Call waiter' })}
-          </button>
-          {cartTotalItems > 0 && (
-            <button className="btn btn-primary" type="button" onClick={() => setOrderOpen(true)} style={{ flex: 2 }}>
-              {c({ ua: `Замовити (${cartTotalItems})`, ru: `Заказать (${cartTotalItems})`, en: `Order (${cartTotalItems})` })} · {formatPrice(cartTotalPrice)} грн
-            </button>
-          )}
-        </div>
-      )}
-
-      {!isTableView && cartTotalItems > 0 && (
+      {cartTotalItems > 0 && (
         <button type="button" className="cart-fab" onClick={() => setCartOpen(true)}>
           <span>{t('menuCartTitle')}</span>
           <span>{cartTotalItems} · {formatPrice(cartTotalPrice)} грн</span>
         </button>
       )}
 
-      {cartOpen && !isTableView && (
+      {cartOpen && (
         <div className="cart-overlay" role="dialog" aria-modal="true">
           <button className="cart-backdrop" onClick={() => setCartOpen(false)} aria-label={t('menuOpenCart')} />
           <section className="cart-panel">
@@ -320,52 +364,29 @@ export default function MenuPage() {
             ))}
             <p style={{ marginTop: 20 }}><strong>{t('menuCartTotal')}: {formatPrice(cartTotalPrice)} грн</strong></p>
             <p className="menu-cart-note">{menuServiceChargeNote}</p>
-            <div className="btn-group" style={{ marginTop: 16 }}>
+            {noTableWarning && (
+              <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--warning-bg, #fff3e0)', color: 'var(--warning-text, #e65100)', fontSize: 13, fontWeight: 600, marginTop: 12, textAlign: 'center' }}>
+                {c({ ua: 'Для оформлення замовлення відскануйте QR-код на столі', ru: 'Для оформления заказа отсканируйте QR-код на столе', en: 'Scan the QR code on your table to place an order' })}
+              </div>
+            )}
+            <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {isTableView ? (
+                <>
+                  <button className="btn btn-primary" type="button" style={{ flex: '2 1 140px' }} onClick={() => { setCartOpen(false); submitOrder(); }} disabled={orderSubmitting}>
+                    {orderSubmitting ? '...' : c({ ua: 'Замовити', ru: 'Заказать', en: 'Order' })}
+                  </button>
+                  <button className="btn btn-secondary" type="button" style={{ flex: '1 1 100px' }} onClick={() => { setCartOpen(false); callWaiter(); }} disabled={callSent}>
+                    {callSent ? c({ ua: 'Очікуйте...', ru: 'Ожидайте...', en: 'Wait...' }) : c({ ua: '📞 Офіціант', ru: '📞 Официант', en: '📞 Waiter' })}
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-primary" type="button" style={{ flex: 1 }} onClick={() => setNoTableWarning(true)}>
+                  {c({ ua: 'Замовити', ru: 'Заказать', en: 'Order' })}
+                </button>
+              )}
               <button className="btn btn-secondary" type="button" onClick={() => { const lines = [t('menuCartTitle')]; cartEntries.forEach((e) => lines.push(`${e.name} x ${e.quantity} - ${formatPrice(e.quantity * e.price)} грн`)); lines.push(`${t('menuCartTotal')}: ${formatPrice(cartTotalPrice)} грн`); navigator.clipboard.writeText(lines.join('\n')); }}>{t('menuCartCopy')}</button>
               <button className="btn btn-secondary" type="button" onClick={clear}>{t('menuCartClear')}</button>
             </div>
-          </section>
-        </div>
-      )}
-
-      {orderOpen && (
-        <div className="cart-overlay" role="dialog" aria-modal="true">
-          <button className="cart-backdrop" onClick={() => !orderSubmitting && setOrderOpen(false)} aria-label="Close" />
-          <section className="cart-panel" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            {orderSent ? (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <div style={{ fontSize: '2rem', marginBottom: 12 }}>✅</div>
-                <h3>{c({ ua: 'Замовлення надіслано!', ru: 'Заказ отправлен!', en: 'Order submitted!' })}</h3>
-                <p className="muted" style={{ marginTop: 8 }}>#{orderSent.id}</p>
-                {orderStatus && (
-                  <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 8, background: orderStatus === 'ACCEPTED' || orderStatus === 'COMPLETED' ? 'var(--success-bg, #e8f5e9)' : 'var(--warning-bg, #fff3e0)', fontWeight: 600 }}>
-                    {statusLabels[orderStatus] || orderStatus}
-                  </div>
-                )}
-                <button className="btn btn-secondary" type="button" style={{ marginTop: 20 }} onClick={() => { setOrderOpen(false); setOrderSent(null); setOrderStatus(null); }}>
-                  {c({ ua: 'Повернутися до меню', ru: 'Вернуться к меню', en: 'Back to menu' })}
-                </button>
-              </div>
-            ) : (
-              <>
-                <h2>{c({ ua: 'Оформлення замовлення', ru: 'Оформление заказа', en: 'Place order' })}</h2>
-                <p className="muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>
-                  {c({ ua: `Стіл №${tableId}`, ru: `Стол №${tableId}`, en: `Table #${tableId}` })} · {cartTotalItems} {c({ ua: 'поз.', ru: 'поз.', en: 'items' })} · {formatPrice(cartTotalPrice)} грн
-                </p>
-                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <input type="text" placeholder={c({ ua: "Ім'я", ru: 'Имя', en: 'Name' })} value={orderName} onChange={(e) => setOrderName(e.target.value)} required />
-                  <input type="tel" placeholder={c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })} value={orderPhone} onChange={(e) => setOrderPhone(e.target.value)} required />
-                  <textarea placeholder={c({ ua: 'Коментар (необовʼязково)', ru: 'Комментарий (необязательно)', en: 'Notes (optional)' })} value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} rows={2} />
-                </div>
-                {orderError && <p style={{ color: 'var(--error, #d32f2f)', marginTop: 8, fontSize: '0.85rem' }}>{orderError}</p>}
-                <button className="btn btn-primary" type="button" style={{ marginTop: 16, width: '100%' }} onClick={submitOrder} disabled={orderSubmitting || !orderName.trim() || !orderPhone.trim()}>
-                  {orderSubmitting ? '...' : c({ ua: 'Надіслати замовлення', ru: 'Отправить заказ', en: 'Submit order' })}
-                </button>
-                <button className="btn btn-secondary" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => setOrderOpen(false)} disabled={orderSubmitting}>
-                  {c({ ua: 'Скасувати', ru: 'Отмена', en: 'Cancel' })}
-                </button>
-              </>
-            )}
           </section>
         </div>
       )}
@@ -399,6 +420,37 @@ export default function MenuPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      {noTableWarning && (
+        <div className="cart-overlay" role="dialog" aria-modal="true" style={{ zIndex: 1200 }}>
+          <button className="cart-backdrop" onClick={() => { setNoTableWarning(false); setScannerOpen(false); setManualCode(''); setScanError(''); }} aria-label="Close" />
+          <section className="cart-panel" style={{ maxWidth: 380, textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🍽️</div>
+            <h2 style={{ marginBottom: 8 }}>{c({ ua: 'Скануйте QR-код', ru: 'Сканируйте QR-код', en: 'Scan QR code' })}</h2>
+            <p className="muted" style={{ fontSize: '0.85rem', marginBottom: 16 }}>
+              {c({ ua: 'Для оформлення замовлення відскануйте QR-код на столі або введіть код вручну', ru: 'Для оформления заказа отсканируйте QR-код на столе или введите код вручную', en: 'Scan the QR code on your table or enter the code manually to place an order' })}
+            </p>
+            {scanError && <p style={{ color: 'var(--error, #d32f2f)', fontSize: '0.85rem', marginBottom: 8 }}>{scanError}</p>}
+            {scannerOpen ? (
+              <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+                <div id="menu-qr-reader" style={{ width: '100%' }} />
+              </div>
+            ) : (
+              <button className="btn btn-primary" type="button" style={{ width: '100%', marginBottom: 12 }} onClick={() => { setScanError(''); setScannerOpen(true); }}>
+                {c({ ua: '📷 Увімкнути сканер', ru: '📷 Включить сканер', en: '📷 Open scanner' })}
+              </button>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input type="text" placeholder={c({ ua: 'Код столу (напр. R-1)', ru: 'Код стола (напр. R-1)', en: 'Table code (e.g. R-1)' })} value={manualCode} onChange={(e) => setManualCode(e.target.value)} style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-warm, #D4C5A9)', borderRadius: 10, fontSize: 14, background: 'var(--bg-input, #FFFEF5)' }} />
+              <button className="btn btn-secondary" type="button" disabled={!manualCode.trim()} onClick={() => { const code = manualCode.trim(); if (code) window.location.href = `/menu?table=${encodeURIComponent(code)}`; }}>
+                →
+              </button>
+            </div>
+            <button className="btn btn-secondary" type="button" style={{ width: '100%' }} onClick={() => { setNoTableWarning(false); setScannerOpen(false); setManualCode(''); }}>
+              {c({ ua: 'Назад до меню', ru: 'Назад к меню', en: 'Back to menu' })}
+            </button>
+          </section>
         </div>
       )}
     </>

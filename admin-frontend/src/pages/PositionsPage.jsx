@@ -39,6 +39,7 @@ function normalizeLocalizedFormField(value) {
 
 export default function PositionsPage() {
   const { t, language } = useAdminI18n();
+  const c = (v) => v[language] || v.ua;
   const [state, setState] = useState({ loading: true, error: '', data: null });
   const [form, setForm] = useState(buildEmptyForm());
   const [editId, setEditId] = useState(null);
@@ -49,6 +50,7 @@ export default function PositionsPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkAction, setBulkAction] = useState('');
   const [bulkValue, setBulkValue] = useState('');
+  const [qrCode, setQrCode] = useState(null);
 
   const [allPositionTypes, setAllPositionTypes] = useState([]);
   const [savingTypeIds, setSavingTypeIds] = useState([]);
@@ -569,6 +571,9 @@ export default function PositionsPage() {
           ) : (
             <button type="button" className="btn btn-small btn-secondary" onClick={() => startEdit(row)}>{t('common.edit')}</button>
           )}
+          {row.code ? (
+            <button type="button" className="btn btn-small btn-secondary" onClick={() => setQrCode(qrCode?.id === row.id ? null : { id: row.id, code: row.code })}>QR</button>
+          ) : null}
           <button type="button" className="btn btn-small btn-danger" onClick={() => removePosition(row.id)}>{t('common.delete')}</button>
         </div>
       )
@@ -1033,6 +1038,24 @@ export default function PositionsPage() {
             )}
           </div>
         </details>
+
+        {qrCode && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={() => setQrCode(null)}>
+            <div style={{ background: '#fff', borderRadius: 16, padding: 32, textAlign: 'center', maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ marginBottom: 12 }}>QR: {qrCode.code}</h3>
+              <img src={`/api/admin/waiters/qr?code=${encodeURIComponent(qrCode.code)}`} alt={`QR ${qrCode.code}`} style={{ width: 260, height: 260, border: '1px solid #eee', borderRadius: 12 }} />
+              <p style={{ fontSize: '0.8rem', color: '#888', marginTop: 8 }}>{window.location.origin}/menu?table={qrCode.code}</p>
+              <div className="modal-actions" style={{ marginTop: 16 }}>
+                <a href={`/api/admin/waiters/qr?code=${encodeURIComponent(qrCode.code)}`} download={`qr-${qrCode.code}.png`} className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                  {c({ ua: '⬇ Завантажити', ru: '⬇ Скачать', en: '⬇ Download' })}
+                </a>
+                <button className="btn btn-secondary" onClick={() => setQrCode(null)}>
+                  {c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </PageContainer>
     </AdminLayout>
   );

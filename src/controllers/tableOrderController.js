@@ -1,18 +1,31 @@
+const prisma = require('../lib/prisma');
 const tableOrderService = require('../services/tableOrderService');
 const { addGuestConnection } = require('../services/waiterSseService');
 
+async function resolveTableId(tableCode) {
+  if (!tableCode) return null;
+  const n = parseInt(tableCode, 10);
+  if (Number.isFinite(n) && n > 0) return n;
+  const table = await prisma.venueTable.findFirst({ where: { code: tableCode, isActive: true }, select: { id: true } });
+  return table?.id || null;
+}
+
 async function createOrder(req, res) {
   try {
-    const { tableId, customerName, customerPhone, notes, items } = req.body;
-    if (!tableId || !customerName || !customerPhone || !items?.length) {
-      return res.status(400).json({ message: 'tableId, customerName, customerPhone, and items are required.' });
+    const { tableCode, tableId: legacyTableId, customerName, customerPhone, notes, items } = req.body;
+    const code = tableCode || (legacyTableId ? String(legacyTableId) : null);
+    if (!code || !items?.length) {
+      return res.status(400).json({ message: 'tableCode and items are required.' });
     }
 
+    const resolvedId = await resolveTableId(code);
+    if (!resolvedId) return res.status(400).json({ message: 'Table not found.' });
+
     const order = await tableOrderService.createTableOrder({
-      tableId: parseInt(tableId, 10),
-      customerName,
-      customerPhone,
-      notes,
+      tableId: resolvedId,
+      customerName: customerName || null,
+      customerPhone: customerPhone || null,
+      notes: notes || null,
       items: items.map(i => ({
         menuItemId: i.menuItemId,
         quantity: i.quantity || 1,
@@ -61,11 +74,15 @@ function orderSse(req, res) {
 
 async function createCall(req, res) {
   try {
-    const { tableId, customerName } = req.body;
-    if (!tableId) return res.status(400).json({ message: 'tableId is required.' });
+    const { tableCode, tableId: legacyTableId, customerName } = req.body;
+    const code = tableCode || (legacyTableId ? String(legacyTableId) : null);
+    if (!code) return res.status(400).json({ message: 'tableCode is required.' });
+
+    const resolvedId = await resolveTableId(code);
+    if (!resolvedId) return res.status(400).json({ message: 'Table not found.' });
 
     const call = await tableOrderService.createWaiterCall({
-      tableId: parseInt(tableId, 10),
+      tableId: resolvedId,
       customerName
     });
 

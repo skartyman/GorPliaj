@@ -1670,7 +1670,7 @@ export default function MapPage() {
                     </div>
 
                     {selectedStatus === 'FREE' && !bookingFormState.open ? (
-                      <div className="actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%', marginTop: 8 }}>
+                      <div className="actions grid-2" style={{ width: '100%', marginTop: 8 }}>
                         <button type="button" className="btn btn-success w-full" onClick={() => handleFreeTableArrive(selectedTable)}>Прийшли</button>
                         <button type="button" className="btn w-full" onClick={() => onBookTable(selectedTable)}>Забронювати</button>
                       </div>
@@ -1741,7 +1741,7 @@ export default function MapPage() {
                           Email
                           <input type="email" value={bookingFormState.form.customerEmail} onChange={(event) => updateBookingForm('customerEmail', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
                         </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div className="grid-2">
                           <label style={{ margin: 0, fontSize: '13px' }}>
                             Гостей
                             <input type="number" min={selectedTable.seatsMin || 1} max={selectedTable.seatsMax || 99} required value={bookingFormState.form.guests} onChange={(event) => updateBookingForm('guests', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
@@ -1751,7 +1751,7 @@ export default function MapPage() {
                             <input type="date" required value={bookingFormState.form.reservationDate} onChange={(event) => updateBookingForm('reservationDate', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
                           </label>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div className="grid-2">
                           <label style={{ margin: 0, fontSize: '13px' }}>
                             Початок
                             <input type="time" required value={bookingFormState.form.timeFrom} onChange={(event) => updateBookingForm('timeFrom', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
@@ -1761,7 +1761,7 @@ export default function MapPage() {
                             <input type="time" value={bookingFormState.form.timeTo} onChange={(event) => updateBookingForm('timeTo', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }} />
                           </label>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div className="grid-2">
                           <label style={{ margin: 0, fontSize: '13px' }}>
                             Джерело
                             <select value={bookingFormState.form.source} onChange={(event) => updateBookingForm('source', event.target.value)} style={{ marginTop: 4, padding: '8px 10px' }}>
@@ -1804,7 +1804,7 @@ export default function MapPage() {
                           Коментар адміністратора
                           <textarea rows="2" value={bookingFormState.form.commentAdmin} onChange={(event) => updateBookingForm('commentAdmin', event.target.value)} style={{ marginTop: 4, minHeight: 50, padding: '8px 10px' }} />
                         </label>
-                        <div className="actions booking-admin-actions object-admin-form-wide" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%', marginTop: 8 }}>
+                        <div className="actions booking-admin-actions object-admin-form-wide grid-2" style={{ width: '100%', marginTop: 8 }}>
                           <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={closeBookingForm}>Скасувати</button>
                           <button type="submit" className="btn btn-success" style={{ width: '100%' }} disabled={bookingFormState.saving}>
                             {bookingFormState.saving ? 'Зберігаємо...' : 'Створити бронь'}
