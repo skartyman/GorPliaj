@@ -477,6 +477,13 @@ export default function BookingPage() {
         if (form.date === today && currentTime >= '12:00') return false;
       }
       if (form.date === today && form.timeFrom <= currentTime) return false;
+      if (selected.bookableUnitId && selectedUnit) {
+        const g = Number(form.guests);
+        if (g < Number(selectedUnit.seatsMin) || g > Number(selectedUnit.seatsMax)) {
+          setSelected((c) => ({ ...c, bookableUnitId: '' }));
+          return false;
+        }
+      }
       return true;
     }
     if (currentStep === 3) {
@@ -487,11 +494,14 @@ export default function BookingPage() {
 
   function goToNextStep() {
     if (!canProceedFromStep()) return;
+    if (currentStep === 2 && selected.bookableUnitId && selectedUnit) {
+      setCurrentStep(4);
+      return;
+    }
     setCurrentStep((s) => Math.min(s + 1, totalSteps));
   }
 
   function handleBack() {
-    setSelected((current) => ({ ...current, bookableUnitId: '' }));
     setCurrentStep((s) => s - 1);
   }
 
@@ -1763,6 +1773,9 @@ export default function BookingPage() {
                         🕒 {c({ ua: 'Час', ru: 'Время', en: 'Time' })}: {form.timeFrom}
                       </span>
                     ) : null}
+                    <span className="muted">
+                      👥 {c({ ua: 'Гостей', ru: 'Гостей', en: 'Guests' })}: {form.guests}
+                    </span>
                   </div>
                 </div>
                 <div className="booking-selected-meta">
