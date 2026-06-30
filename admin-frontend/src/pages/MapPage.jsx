@@ -44,10 +44,6 @@ function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTab
 
   const reservations = reservationsByTable[table.id] || [];
   
-  if (reservations.some((reservation) => reservation.status === 'COMPLETED')) {
-    return 'COMPLETED';
-  }
-
   if (reservations.some((reservation) => reservation.status === 'PENDING')) {
     return 'PENDING';
   }
@@ -858,9 +854,14 @@ export default function MapPage() {
 
   const reservationsByTable = useMemo(() => {
     const grouped = {};
+    const FINISHED_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'NO_SHOW']);
 
     state.reservations.forEach((reservation) => {
       if (String(reservation.reservationDate).slice(0, 10) !== selectedDate || !reservation.table?.id) {
+        return;
+      }
+
+      if (FINISHED_STATUSES.has(reservation.status)) {
         return;
       }
 
