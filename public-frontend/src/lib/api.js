@@ -1,9 +1,19 @@
 const API_BASE = '/api';
 
+function getWaiterToken() {
+  try {
+    return localStorage.getItem('waiter_token');
+  } catch {
+    return null;
+  }
+}
+
 async function request(path, init) {
+  const waiterToken = getWaiterToken();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(waiterToken ? { Authorization: `Bearer ${waiterToken}` } : {}),
       ...(init?.headers || {})
     },
     ...init
@@ -110,7 +120,8 @@ export const settingsApi = {
 export const tableOrderApi = {
   create: (payload) => request('/table-orders', { method: 'POST', body: JSON.stringify(payload) }),
   status: (id) => request(`/table-orders/${id}/status`),
-  sseUrl: (id) => `${API_BASE}/table-orders/${id}/sse`
+  sseUrl: (id) => `${API_BASE}/table-orders/${id}/sse`,
+  getTableWaiter: (code) => request(`/table-waiter?code=${encodeURIComponent(code)}`)
 };
 
 export const waiterCallApi = {
@@ -134,5 +145,8 @@ export const waiterApi = {
   cancelOrder: (id) => request(`/waiter/orders/${id}/cancel`, { method: 'PATCH' }),
   getCalls: () => request('/waiter/calls'),
   respondToCall: (id) => request(`/waiter/calls/${id}/respond`, { method: 'PATCH' }),
-  sseUrl: '/api/waiter/sse'
+  sseUrl: () => {
+    const waiterToken = getWaiterToken();
+    return waiterToken ? `/api/waiter/sse?token=${encodeURIComponent(waiterToken)}` : '/api/waiter/sse';
+  }
 };

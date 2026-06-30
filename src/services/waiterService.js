@@ -115,7 +115,7 @@ async function startShift(waiterId) {
 async function endShift(shiftId) {
   return prisma.waiterShift.update({
     where: { id: shiftId },
-    data: { isActive: true, endedAt: new Date() },
+    data: { isActive: false, endedAt: new Date() },
     select: { id: true, waiterId: true, startedAt: true, endedAt: true, isActive: true }
   });
 }

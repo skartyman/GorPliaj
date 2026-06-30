@@ -70,6 +70,10 @@ export default function MenuPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [scanError, setScanError] = useState('');
+  const [tableWaiterName, setTableWaiterName] = useState('');
+  const [waiterToolsOpen, setWaiterToolsOpen] = useState(false);
+  const [serviceToast, setServiceToast] = useState('');
+  const [reviewRating, setReviewRating] = useState(null);
   const html5QrCodeRef = useRef(null);
   const eventSourceRef = useRef(null);
 
@@ -110,6 +114,13 @@ export default function MenuPage() {
     });
     return () => { consumed = true; scanner.stop().catch(() => {}); html5QrCodeRef.current = null; };
   }, [scannerOpen]);
+
+  useEffect(() => {
+    if (!isTableView || !tableCode) return;
+    tableOrderApi.getTableWaiter(tableCode).then((data) => {
+      if (data?.waiterName) setTableWaiterName(data.waiterName);
+    }).catch(() => {});
+  }, [isTableView, tableCode]);
 
   useEffect(() => {
     if (!orderSent?.id) return;
@@ -238,7 +249,8 @@ export default function MenuPage() {
         ? c({ ua: `✅ Замовлення надіслано — Офіціант: ${name}`, ru: `✅ Заказ отправлен — Официант: ${name}`, en: `✅ Order sent — Waiter: ${name}` })
         : c({ ua: '✅ Замовлення надіслано', ru: '✅ Заказ отправлен', en: '✅ Order sent' });
       setOrderSuccessBanner(msg);
-      setTimeout(() => { setOrderSuccessBanner(''); setOrderSent(null); setOrderStatus(null); setOrderWaiterName(''); }, 5000);
+      setWaiterToolsOpen(true);
+      setTimeout(() => { setOrderSuccessBanner(''); }, 5000);
     } catch (err) {
       setOrderError(err.message || 'Error');
     } finally {
@@ -250,27 +262,35 @@ export default function MenuPage() {
     if (!tableCode) return;
     setCallSent(false);
     setCallError('');
+    setServiceToast('');
     try {
-      await waiterCallApi.create({ tableCode, customerName: orderName || undefined });
+      await waiterCallApi.create({ tableCode });
       setCallSent(true);
+      setWaiterToolsOpen(true);
+      setServiceToast(c({
+        ua: 'Виклик надіслано вашому офіціанту',
+        ru: 'Вызов отправлен вашему официанту',
+        en: 'Your waiter has been called'
+      }));
+      setTimeout(() => setServiceToast(''), 5000);
       setTimeout(() => setCallSent(false), 10000);
     } catch (err) {
       setCallError(err.message || 'Error');
+      setServiceToast(err.message || 'Error');
+      setTimeout(() => setServiceToast(''), 5000);
     }
   }
 
   useEffect(() => {
-    if (!isTableView || !tableCode || orderSubmitting || orderSent) return;
+    if (!isTableView || !tableCode || loading || orderSubmitting || orderSent) return;
     try {
       const pending = localStorage.getItem('gorpliaj-pending-order');
-      if (pending) {
+      if (pending && cartEntries.length > 0) {
         localStorage.removeItem('gorpliaj-pending-order');
-        if (cartEntries.length > 0) {
-          setTimeout(() => submitOrder(), 500);
-        }
+        setTimeout(() => submitOrder(), 250);
       }
     } catch {}
-  }, [isTableView, tableCode]);
+  }, [isTableView, tableCode, loading, cartEntries.length, orderSubmitting, orderSent]);
 
   const isEn = locale === 'en';
 
@@ -281,13 +301,42 @@ export default function MenuPage() {
     COMPLETED: c({ ua: 'Виконано', ru: 'Выполнено', en: 'Completed' }),
     CANCELLED: c({ ua: 'Скасовано', ru: 'Отменено', en: 'Cancelled' })
   };
+  const serviceStatus = orderSubmitting ? 'SENDING' : (orderStatus || orderSent?.status || null);
+  const serviceStatusMeta = {
+    SENDING: { icon: '...', tone: '#f59e0b', label: c({ ua: 'Йде відправка', ru: 'Идет отправка', en: 'Sending' }) },
+    PENDING: { icon: '->', tone: '#3b82f6', label: c({ ua: 'Замовлення надіслано', ru: 'Заказ отправлен', en: 'Order sent' }) },
+    ACCEPTED: { icon: '✓', tone: '#16a34a', label: c({ ua: 'Офіціант прийняв', ru: 'Официант принял', en: 'Accepted' }) },
+    PREPARING: { icon: '•', tone: '#8b5cf6', label: c({ ua: 'Готується', ru: 'Готовится', en: 'Preparing' }) },
+    COMPLETED: { icon: '✓✓', tone: '#10b981', label: c({ ua: 'Готово', ru: 'Готово', en: 'Ready' }) },
+    CANCELLED: { icon: 'x', tone: '#64748b', label: c({ ua: 'Скасовано', ru: 'Отменено', en: 'Cancelled' }) }
+  };
+  const activeServiceStatus = serviceStatus ? serviceStatusMeta[serviceStatus] : null;
+
+  function leaveReview(rating) {
+    setReviewRating(rating);
+    try {
+      localStorage.setItem('gorpliaj-last-waiter-review', JSON.stringify({
+        orderId: orderSent?.id || null,
+        waiterName: orderWaiterName || tableWaiterName || null,
+        rating,
+        createdAt: new Date().toISOString()
+      }));
+    } catch {}
+    setServiceToast(c({ ua: 'Дякуємо за відгук', ru: 'Спасибо за отзыв', en: 'Thanks for your feedback' }));
+    setTimeout(() => setServiceToast(''), 4000);
+  }
 
   return (
     <>
       <div className="menu-page-header">
         {isTableView && (
-          <div style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', fontSize: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
-            {c({ ua: `Стіл ${tableCode}`, ru: `Стол ${tableCode}`, en: `Table ${tableCode}` })}
+          <div style={{ padding: '8px 16px', background: '#fff7e6', color: '#2d2118', border: '1px solid rgba(160, 136, 80, 0.28)', borderRadius: 12, fontSize: '0.85rem', fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, boxShadow: '0 4px 14px rgba(60, 45, 25, 0.08)' }}>
+            <span>{c({ ua: `Стіл ${tableCode}`, ru: `Стол ${tableCode}`, en: `Table ${tableCode}` })}</span>
+            {tableWaiterName && (
+              <button type="button" onClick={() => setWaiterToolsOpen((v) => !v)} style={{ opacity: 1, fontSize: '0.8rem', color: '#2d2118', background: '#ffffff', border: '1px solid rgba(160, 136, 80, 0.38)', borderRadius: 999, padding: '5px 10px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(60, 45, 25, 0.08)', whiteSpace: 'nowrap' }}>
+                👤 {tableWaiterName}
+              </button>
+            )}
           </div>
         )}
         <div className="menu-section-tabs">
@@ -308,6 +357,53 @@ export default function MenuPage() {
           ))}
         </div>
         <div className="menu-legal-note">{menuServiceChargeNote}</div>
+        {isTableView && waiterToolsOpen && (
+          <div style={{ margin: '8px 12px 10px', padding: 12, borderRadius: 12, background: '#fff', border: '1px solid var(--border-warm, #D4C5A9)', boxShadow: '0 8px 22px rgba(60, 45, 25, 0.14)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--muted, #7a6f5a)', fontWeight: 700 }}>
+                  {c({ ua: 'Ваш офіціант', ru: 'Ваш официант', en: 'Your waiter' })}
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text, #2d2118)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {tableWaiterName || orderWaiterName || c({ ua: 'Скоро призначимо', ru: 'Скоро назначим', en: 'Assigning soon' })}
+                </div>
+              </div>
+              <button type="button" onClick={callWaiter} disabled={callSent} aria-label={c({ ua: 'Викликати офіціанта', ru: 'Позвать официанта', en: 'Call waiter' })}
+                style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: callSent ? '#16a34a' : 'var(--primary)', color: '#fff', fontSize: '1.15rem', fontWeight: 800, cursor: callSent ? 'default' : 'pointer', flex: '0 0 auto' }}>
+                🔔
+              </button>
+            </div>
+            {(serviceToast || callError) && (
+              <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: callError ? '#fee2e2' : '#ecfdf5', color: callError ? '#991b1b' : '#166534', fontSize: '0.84rem', fontWeight: 700 }}>
+                {serviceToast || callError}
+              </div>
+            )}
+            {activeServiceStatus && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: `${activeServiceStatus.tone}22`, color: activeServiceStatus.tone, fontSize: '0.82rem', fontWeight: 900 }}>
+                  {activeServiceStatus.icon}
+                </span>
+                <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#2d2118' }}>{activeServiceStatus.label}</span>
+                {orderSent?.id && <span style={{ color: 'var(--muted, #7a6f5a)', fontSize: '0.78rem' }}>#{orderSent.id}</span>}
+              </div>
+            )}
+            {serviceStatus === 'COMPLETED' && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-warm, #D4C5A9)' }}>
+                <div style={{ fontSize: '0.84rem', color: '#2d2118', fontWeight: 800, marginBottom: 8 }}>
+                  {c({ ua: 'Як вам обслуговування?', ru: 'Как вам обслуживание?', en: 'How was the service?' })}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button key={rating} type="button" onClick={() => leaveReview(rating)} aria-label={`${rating}/5`}
+                      style={{ width: 34, height: 34, borderRadius: 8, border: reviewRating === rating ? '2px solid #16a34a' : '1px solid var(--border-warm, #D4C5A9)', background: reviewRating === rating ? '#dcfce7' : '#fffaf0', color: reviewRating === rating ? '#166534' : '#8a6b2d', fontSize: '1rem', cursor: 'pointer' }}>
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="page-container">

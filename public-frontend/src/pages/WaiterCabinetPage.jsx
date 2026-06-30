@@ -96,7 +96,7 @@ export default function WaiterCabinetPage() {
     let reconnectTimeout = null;
 
     function connect() {
-      const es = new EventSource(waiterApi.sseUrl);
+      const es = new EventSource(waiterApi.sseUrl());
       eventSourceRef.current = es;
       es.onmessage = (e) => {
         try {

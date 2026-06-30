@@ -93,4 +93,19 @@ async function createCall(req, res) {
   }
 }
 
-module.exports = { createOrder, getOrderStatus, orderSse, createCall };
+async function getTableWaiter(req, res) {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ message: 'code is required.' });
+    const table = await prisma.venueTable.findFirst({ where: { code: code.trim().toUpperCase(), isActive: true }, select: { id: true } });
+    if (!table) return res.json({ waiterName: null });
+    const { getWaiterForTable } = require('../services/waiterService');
+    const waiter = await getWaiterForTable(table.id);
+    res.json({ waiterName: waiter?.name || null });
+  } catch (err) {
+    console.error('Get table waiter error:', err);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}
+
+module.exports = { createOrder, getOrderStatus, orderSse, createCall, getTableWaiter };

@@ -13,6 +13,7 @@ function parseCookieHeader(cookieHeader) {
 }
 
 function extractWaiterToken(req) {
+  if (req.query?.token && typeof req.query.token === 'string') return req.query.token;
   const cookies = parseCookieHeader(req.headers.cookie);
   if (cookies[WAITER_AUTH_COOKIE_NAME]) return cookies[WAITER_AUTH_COOKIE_NAME];
   const auth = req.headers.authorization;

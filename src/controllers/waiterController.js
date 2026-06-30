@@ -1,4 +1,5 @@
 const waiterService = require('../services/waiterService');
+const prisma = require('../lib/prisma');
 
 async function login(req, res) {
   try {
@@ -8,9 +9,10 @@ async function login(req, res) {
     const result = await waiterService.loginByPin(pinCode);
     if (!result) return res.status(401).json({ message: 'Invalid PIN code.' });
 
+    const isSecureRequest = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('waiter_auth_token', result.token, {
       httpOnly: true,
-      secure: true,
+      secure: isSecureRequest,
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 12
     });
@@ -102,7 +104,24 @@ async function removeTable(req, res) {
 async function getTables(req, res) {
   try {
     const shift = await waiterService.getActiveShift(req.waiterAuth.sub);
-    res.json(shift?.tables || []);
+    const assignedTables = shift?.tables || [];
+    if (!assignedTables.length) return res.json([]);
+
+    const tableIds = assignedTables.map((t) => t.tableId);
+    const venueTables = await prisma.venueTable.findMany({
+      where: { id: { in: tableIds } },
+      select: { id: true, code: true, name: true }
+    });
+    const tableById = new Map(venueTables.map((table) => [table.id, table]));
+
+    res.json(assignedTables.map((assigned) => {
+      const table = tableById.get(assigned.tableId);
+      return {
+        ...assigned,
+        code: table?.code || null,
+        table: table ? { id: table.id, code: table.code, name: table.name } : null
+      };
+    }));
   } catch (err) {
     console.error('Get tables error:', err);
     res.status(500).json({ message: 'Internal server error.' });

@@ -112,7 +112,7 @@ async function cancelOrder(orderId) {
 }
 
 async function listOrdersForWaiter(waiterId) {
-  return prisma.tableOrder.findMany({
+  const orders = await prisma.tableOrder.findMany({
     where: { waiterId },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -120,15 +120,21 @@ async function listOrdersForWaiter(waiterId) {
       table: { select: { id: true, code: true } }
     }
   });
+  return orders.map(o => ({
+    ...o,
+    items: mapItems(o.items),
+    table: o.table ? { id: o.table.id, code: o.table.code } : null
+  }));
 }
 
 async function listOrdersForTable(tableId) {
-  return prisma.tableOrder.findMany({
+  const orders = await prisma.tableOrder.findMany({
     where: { tableId, status: { notIn: ['CANCELLED'] } },
     orderBy: { createdAt: 'desc' },
     take: 10,
     include: { items: { include: { menuItem: { select: { name: true } } } } }
   });
+  return orders.map(o => ({ ...o, items: mapItems(o.items) }));
 }
 
 async function getAllOrders({ date, status, waiterId } = {}) {
@@ -174,9 +180,11 @@ async function createWaiterCall({ tableId, customerName }) {
     createdAt: call.createdAt.toISOString()
   };
 
-  broadcastToAllWaiters({ type: 'NEW_CALL', call: callData, customerName });
   if (waiter) {
+    broadcastToWaiter(waiter.id, { type: 'NEW_CALL', call: callData, customerName });
     notifyWaiterNewCall(waiter, tableId, customerName).catch(() => {});
+  } else {
+    broadcastToAllWaiters({ type: 'NEW_CALL', call: callData, customerName });
   }
 
   return callData;

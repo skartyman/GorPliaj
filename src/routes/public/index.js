@@ -36,6 +36,7 @@ router.get('/reservations/:ticketCode/pdf', reservationController.downloadPublic
 router.post('/reservations', reservationController.createReservation);
 
 router.post('/table-orders', tableOrderController.createOrder);
+router.get('/table-waiter', tableOrderController.getTableWaiter);
 router.get('/table-orders/:id/status', tableOrderController.getOrderStatus);
 router.get('/table-orders/:id/sse', tableOrderController.orderSse);
 router.post('/waiter-calls', tableOrderController.createCall);
