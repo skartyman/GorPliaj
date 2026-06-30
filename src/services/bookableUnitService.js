@@ -165,8 +165,6 @@ function buildBookableUnit(table, linkedObject, positionTypeMap = {}, reservatio
     resolvedDeposit = Number(meta.depositAmount);
   } else if (meta.deposit && Number(meta.deposit) > 0) {
     resolvedDeposit = Number(meta.deposit);
-  } else if (bookingKind === 'BEACH' && resolvedPrice > 0) {
-    resolvedDeposit = resolvedPrice;
   }
 
   const priceFromMeta = meta.price ? `${meta.price} ${meta.priceUnit || 'UAH'}` : null;
