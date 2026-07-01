@@ -14,7 +14,7 @@ const CELL_H = (PAGE_H - MARGIN * 2 - 60) / ROWS;
 
 const QR_SOURCE = 500;
 const QR_RENDER = 160;
-const ZONE_SIZE = 175;
+const ZONE_SIZE = 120;
 const LOGO_SIZE = 80;
 
 async function generateTableQrPdf(baseUrl) {
@@ -33,9 +33,18 @@ async function generateTableQrPdf(baseUrl) {
     create: { width: ZONE_SIZE, height: ZONE_SIZE, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 255 } }
   }).png().toBuffer();
 
-  const logoPng = logoBuffer
-    ? await sharp(logoBuffer).resize({ width: LOGO_SIZE, height: LOGO_SIZE, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer()
-    : null;
+  let logoPng = null;
+  if (logoBuffer) {
+    const meta = await sharp(logoBuffer).metadata();
+    const cropSize = Math.min(meta.width, meta.height);
+    const left = Math.floor((meta.width - cropSize) / 2);
+    const top = Math.floor((meta.height - cropSize) / 2);
+    logoPng = await sharp(logoBuffer)
+      .extract({ left, top, width: cropSize, height: cropSize })
+      .resize(LOGO_SIZE, LOGO_SIZE)
+      .png()
+      .toBuffer();
+  }
 
   const qrCenter = Math.floor((QR_SOURCE - ZONE_SIZE) / 2);
   const logoCenter = Math.floor((QR_SOURCE - LOGO_SIZE) / 2);
