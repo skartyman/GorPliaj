@@ -80,8 +80,15 @@ async function scanTable(req, res) {
     const shift = await waiterService.getActiveShift(req.waiterAuth.sub);
     if (!shift) return res.status(400).json({ message: 'Start a shift first.' });
 
-    const assigned = await waiterService.assignTableToShift(shift.id, parseInt(tableId, 10));
-    res.json(assigned);
+    const result = await waiterService.assignTableToShift(shift.id, parseInt(tableId, 10));
+    if (result.type === 'ALREADY_ASSIGNED') return res.json({ assignment: result.assignment, already: true });
+    if (result.type === 'TAKEN') {
+      return res.status(409).json({
+        message: result.waiter?.name ? `Table is already assigned to ${result.waiter.name}.` : 'Table is already assigned to another waiter.',
+        waiter: result.waiter || null
+      });
+    }
+    res.status(201).json(result.assignment);
   } catch (err) {
     console.error('Scan table error:', err);
     res.status(500).json({ message: 'Internal server error.' });
@@ -139,6 +146,13 @@ async function scanTableByCode(req, res) {
     const result = await waiterService.assignTableByCode(shift.id, code.trim().toUpperCase());
     if (result.type === 'NOT_FOUND') return res.status(404).json({ message: `Table "${code}" not found.` });
     if (result.type === 'ALREADY_ASSIGNED') return res.json({ table: result.table, assignment: result.assignment, already: true });
+    if (result.type === 'TAKEN') {
+      return res.status(409).json({
+        message: result.waiter?.name ? `Table "${result.table.code || code}" is already assigned to ${result.waiter.name}.` : `Table "${result.table.code || code}" is already assigned to another waiter.`,
+        table: result.table,
+        waiter: result.waiter || null
+      });
+    }
 
     res.status(201).json({ table: result.table, assignment: result.assignment });
   } catch (err) {

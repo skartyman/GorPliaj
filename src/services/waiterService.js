@@ -135,12 +135,31 @@ async function assignTableToShift(shiftId, tableId) {
   const existing = await prisma.waiterShiftTable.findUnique({
     where: { shiftId_tableId: { shiftId, tableId } }
   });
-  if (existing) return existing;
+  if (existing) return { type: 'ALREADY_ASSIGNED', assignment: existing };
 
-  return prisma.waiterShiftTable.create({
+  const activeAssignment = await prisma.waiterShiftTable.findFirst({
+    where: {
+      tableId,
+      shift: { isActive: true }
+    },
+    include: {
+      shift: {
+        select: {
+          id: true,
+          waiter: { select: { id: true, name: true } }
+        }
+      }
+    }
+  });
+  if (activeAssignment && activeAssignment.shiftId !== shiftId) {
+    return { type: 'TAKEN', assignment: activeAssignment, waiter: activeAssignment.shift?.waiter || null };
+  }
+
+  const assignment = await prisma.waiterShiftTable.create({
     data: { shiftId, tableId },
     select: { id: true, tableId: true, assignedAt: true }
   });
+  return { type: 'SUCCESS', assignment };
 }
 
 async function removeTableFromShift(shiftId, tableId) {
@@ -174,6 +193,24 @@ async function assignTableByCode(shiftId, code) {
     where: { shiftId_tableId: { shiftId, tableId: table.id } }
   });
   if (existing) return { type: 'ALREADY_ASSIGNED', table, assignment: existing };
+
+  const activeAssignment = await prisma.waiterShiftTable.findFirst({
+    where: {
+      tableId: table.id,
+      shift: { isActive: true }
+    },
+    include: {
+      shift: {
+        select: {
+          id: true,
+          waiter: { select: { id: true, name: true } }
+        }
+      }
+    }
+  });
+  if (activeAssignment && activeAssignment.shiftId !== shiftId) {
+    return { type: 'TAKEN', table, assignment: activeAssignment, waiter: activeAssignment.shift?.waiter || null };
+  }
 
   const assignment = await prisma.waiterShiftTable.create({
     data: { shiftId, tableId: table.id },
