@@ -130,7 +130,13 @@ async function updateWaiter(id, data) {
 }
 
 async function deleteWaiter(id) {
-  await prisma.waiter.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.waiterCall.deleteMany({ where: { waiterId: id } }),
+    prisma.tableOrder.updateMany({ where: { waiterId: id }, data: { waiterId: null } }),
+    prisma.waiterShiftTable.deleteMany({ where: { shift: { waiterId: id } } }),
+    prisma.waiterShift.deleteMany({ where: { waiterId: id } }),
+    prisma.waiter.delete({ where: { id } })
+  ]);
 }
 
 async function setWaiterTelegramChatId(waiterId, telegramChatId) {

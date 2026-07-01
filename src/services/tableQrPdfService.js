@@ -11,8 +11,11 @@ const COLS = 3;
 const ROWS = 4;
 const CELL_W = (PAGE_W - MARGIN * 2) / COLS;
 const CELL_H = (PAGE_H - MARGIN * 2 - 60) / ROWS;
-const QR_SIZE = 130;
-const LOGO_SIZE = 36;
+
+const QR_SOURCE = 500;
+const QR_RENDER = 160;
+const ZONE_SIZE = 175;
+const LOGO_SIZE = 80;
 
 async function generateTableQrPdf(baseUrl) {
   const tables = await prisma.venueTable.findMany({
@@ -26,22 +29,40 @@ async function generateTableQrPdf(baseUrl) {
   const logoPath = getLogoPath();
   const logoBuffer = logoPath ? await loadImageBuffer(logoPath) : null;
 
+  const whiteSquare = await sharp({
+    create: { width: ZONE_SIZE, height: ZONE_SIZE, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 255 } }
+  }).png().toBuffer();
+
+  const logoPng = logoBuffer
+    ? await sharp(logoBuffer).resize({ width: LOGO_SIZE, height: LOGO_SIZE, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer()
+    : null;
+
+  const qrCenter = Math.floor((QR_SOURCE - ZONE_SIZE) / 2);
+  const logoCenter = Math.floor((QR_SOURCE - LOGO_SIZE) / 2);
+
   const qrBuffers = await Promise.all(
     tables.map(async (t) => {
       const url = `${baseUrl}/menu?table=${encodeURIComponent(t.code)}`;
-      const raw = await QRCode.toBuffer(url, { width: QR_SIZE + 40, margin: 0, errorCorrectionLevel: 'H', color: { dark: '#1a1a2e', light: '#ffffff' } });
-      if (!logoBuffer) return sharp(raw).resize(QR_SIZE, QR_SIZE).jpeg({ quality: 95 }).toBuffer();
-      const resizedQr = await sharp(raw).resize(QR_SIZE, QR_SIZE).png().toBuffer();
-      const resizedLogo = await sharp(logoBuffer).resize({ width: LOGO_SIZE, height: LOGO_SIZE, fit: 'contain', background: '#ffffff' }).png().toBuffer();
-      return sharp(resizedQr)
-        .composite([{ input: resizedLogo, gravity: 'center' }])
-        .jpeg({ quality: 95 })
-        .toBuffer();
+      const raw = await QRCode.toBuffer(url, {
+        width: QR_SOURCE,
+        margin: 0,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+      const qrPng = await sharp(raw).png().toBuffer();
+
+      const layers = [{ input: whiteSquare, left: qrCenter, top: qrCenter }];
+      if (logoPng) layers.push({ input: logoPng, left: logoCenter, top: logoCenter });
+
+      const composited = await sharp(qrPng).composite(layers).png().toBuffer();
+      return sharp(composited).resize(QR_RENDER, QR_RENDER).jpeg({ quality: 95 }).toBuffer();
     })
   );
 
   const fontPaths = getFontPaths();
-  const headerLogo = logoBuffer ? await sharp(logoBuffer).resize({ width: 48, height: 48, fit: 'contain', background: '#ffffff' }).jpeg().toBuffer() : null;
+  const headerLogo = logoBuffer
+    ? await sharp(logoBuffer).resize({ width: 48, height: 48, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer()
+    : null;
 
   return new Promise((resolve) => {
     const doc = new PDFDocument({ size: 'A4', margin: MARGIN, autoFirstPage: false });
@@ -83,17 +104,17 @@ async function generateTableQrPdf(baseUrl) {
         const y = startY + row * CELL_H;
         const cx = x + CELL_W / 2;
 
-        doc.image(qrBuffers[idx], cx - QR_SIZE / 2, y, { width: QR_SIZE, height: QR_SIZE });
+        doc.image(qrBuffers[idx], cx - QR_RENDER / 2, y, { width: QR_RENDER, height: QR_RENDER });
 
         const t = tables[idx];
         const name = typeof t.name === 'object' ? (t.name.ua || t.name.ru || t.name.en || '') : (t.name || '');
         const zoneName = typeof t.zone?.name === 'object' ? (t.zone.name.ua || t.zone.name.ru || t.zone.name.en || '') : (t.zone?.name || '');
 
         doc.font(fb).fontSize(13).fillColor('#1a1a2e')
-          .text(t.code, x, y + QR_SIZE + 6, { width: CELL_W, align: 'center' });
+          .text(t.code, x, y + QR_RENDER + 6, { width: CELL_W, align: 'center' });
 
         doc.font(fn).fontSize(10).fillColor('#888888')
-          .text(name || zoneName || '', x, y + QR_SIZE + 22, { width: CELL_W, align: 'center' });
+          .text(name || zoneName || '', x, y + QR_RENDER + 22, { width: CELL_W, align: 'center' });
       }
     }
 
