@@ -139,6 +139,17 @@ export default function WaitersPage() {
                   </a>
                 </div>
               )}
+              <div style={{ marginTop: 16, borderTop: '1px solid #eee', paddingTop: 16 }}>
+                <a
+                  href="/api/admin/waiters/qr-pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-small btn-primary"
+                  style={{ textDecoration: 'none' }}
+                >
+                  {c({ ua: '⬇ Завантажити PDF з QR (всі столи)', ru: '⬇ Скачать PDF с QR (все столы)', en: '⬇ Download PDF with QR (all tables)' })}
+                </a>
+              </div>
             </div>
           </div>
 

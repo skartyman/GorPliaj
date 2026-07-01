@@ -283,4 +283,16 @@ router.get('/waiters/qr', requireAdminAuth, requirePermission('users:view'), asy
   } catch (err) { res.status(500).json({ message: 'Internal server error.' }); }
 });
 
+router.get('/waiters/qr-pdf', requireAdminAuth, requirePermission('users:view'), async (req, res) => {
+  try {
+    const { generateTableQrPdf } = require('../../services/tableQrPdfService');
+    const baseUrl = APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const pdf = await generateTableQrPdf(baseUrl);
+    if (!pdf) return res.status(404).json({ message: 'No tables with codes found.' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="qr-tables.pdf"');
+    res.send(pdf);
+  } catch (err) { console.error('QR PDF error:', err); res.status(500).json({ message: 'Internal server error.' }); }
+});
+
 module.exports = router;
