@@ -146,6 +146,12 @@ export default function WaiterCabinetPage() {
             );
           }
           if (data.type === 'ORDER_STATUS_CHANGED') setOrders((p) => p.map((o) => o.id === data.order.id ? data.order : o));
+          if (data.type === 'SHIFT_ENDED') {
+            setShift(null);
+            setTables([]);
+            setOrders([]);
+            setCalls([]);
+          }
         } catch {}
       };
       es.onerror = () => {
@@ -220,6 +226,8 @@ export default function WaiterCabinetPage() {
       try { await waiterApi.endShift(); } catch {}
       setShift(null);
       setTables([]);
+      setOrders([]);
+      setCalls([]);
     } else {
       const s = await waiterApi.startShift();
       setShift(s);

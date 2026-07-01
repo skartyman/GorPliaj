@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../lib/prisma');
+const { broadcastToWaiter } = require('./waiterSseService');
 const { ADMIN_AUTH_SECRET, isLocalDevelopment } = require('../config/env');
 
 const effectiveSecret = ADMIN_AUTH_SECRET || (() => {
@@ -153,11 +154,26 @@ async function startShift(waiterId) {
 }
 
 async function endShift(shiftId) {
-  return prisma.waiterShift.update({
+  const shift = await prisma.waiterShift.update({
     where: { id: shiftId },
     data: { isActive: false, endedAt: new Date() },
     select: { id: true, waiterId: true, startedAt: true, endedAt: true, isActive: true }
   });
+
+  await prisma.waiterShiftTable.deleteMany({ where: { shiftId } });
+
+  await prisma.tableOrder.updateMany({
+    where: { waiterId: shift.waiterId, status: { in: ['PENDING', 'ACCEPTED', 'PREPARING'] } },
+    data: { status: 'CANCELLED' }
+  });
+
+  await prisma.waiterCall.deleteMany({
+    where: { waiterId: shift.waiterId, status: 'PENDING' }
+  });
+
+  broadcastToWaiter(shift.waiterId, { type: 'SHIFT_ENDED' });
+
+  return shift;
 }
 
 async function getActiveShift(waiterId) {
