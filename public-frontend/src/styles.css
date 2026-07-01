@@ -1199,11 +1199,11 @@ h3 {
 
 .menu-service-bar {
   min-height: 36px;
-  padding: 6px 12px;
+  padding: 6px 0;
   margin: 0 0 6px;
-  background: rgba(238, 234, 224, 0.88);
-  color: #2f2a22;
-  border: 1px solid rgba(125, 106, 72, 0.14);
+  background: transparent;
+  color: rgba(248, 250, 252, 0.94);
+  border: 1px solid transparent;
   border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 800;
@@ -1213,6 +1213,13 @@ h3 {
   overflow-x: auto;
   scrollbar-width: none;
   white-space: nowrap;
+}
+
+[data-theme="light"] .menu-service-bar {
+  padding: 6px 12px;
+  background: rgba(238, 234, 224, 0.88);
+  color: #2f2a22;
+  border-color: rgba(125, 106, 72, 0.14);
 }
 
 .menu-service-bar::-webkit-scrollbar {
@@ -1231,8 +1238,12 @@ h3 {
 .menu-service-divider {
   width: 1px;
   height: 18px;
-  background: rgba(125, 106, 72, 0.24);
+  background: rgba(248, 250, 252, 0.12);
   flex: 0 0 auto;
+}
+
+[data-theme="light"] .menu-service-divider {
+  background: rgba(125, 106, 72, 0.24);
 }
 
 [data-theme="dark"] .menu-service-divider {
@@ -1243,9 +1254,9 @@ h3 {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 1px solid rgba(125, 106, 72, 0.24);
-  background: rgba(255, 255, 255, 0.68);
-  color: #2f2a22;
+  border: 1px solid rgba(248, 250, 252, 0.12);
+  background: transparent;
+  color: rgba(248, 250, 252, 0.92);
   font-size: 0.9rem;
   line-height: 1;
   cursor: pointer;
@@ -1254,6 +1265,12 @@ h3 {
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+
+[data-theme="light"] .menu-service-bell {
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(125, 106, 72, 0.24);
+  color: #2f2a22;
 }
 
 .menu-service-bell.called {
