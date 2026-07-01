@@ -3,6 +3,7 @@ const { getOptionalEnv } = require('../config/env');
 const waiterService = require('./waiterService');
 
 const WAITER_BOT_TOKEN = getOptionalEnv('WAITER_BOT_TOKEN', '');
+const WAITER_ADMIN_CHAT_ID = getOptionalEnv('WAITER_ADMIN_CHAT_ID', '');
 const bot = WAITER_BOT_TOKEN ? new Telegraf(WAITER_BOT_TOKEN) : null;
 let botUsernamePromise = null;
 
@@ -12,6 +13,15 @@ if (!WAITER_BOT_TOKEN) {
 
 function getBot() {
   return bot;
+}
+
+async function sendTelegramMessage(chatId, text, options = {}, logLabel = 'Telegram notify') {
+  if (!bot || !chatId) return;
+  try {
+    await bot.telegram.sendMessage(chatId, text, options);
+  } catch (err) {
+    console.error(`${logLabel} error:`, err.message);
+  }
 }
 
 async function getWaiterBotLink(startToken) {
@@ -25,7 +35,7 @@ async function getWaiterBotLink(startToken) {
 }
 
 async function notifyWaiterNewOrder(waiter, order, tableId) {
-  if (!bot || !waiter.telegramChatId) return;
+  if (!bot) return;
   const itemsText = order.items
     .map(i => `  ${i.quantity}x ${i.name || `#${i.menuItemId}`}`)
     .join('\n');
@@ -40,21 +50,25 @@ async function notifyWaiterNewOrder(waiter, order, tableId) {
     order.notes ? `\n💬 ${order.notes}` : ''
   ].filter(Boolean).join('\n');
 
-  try {
-    await bot.telegram.sendMessage(waiter.telegramChatId, text, {
+  await Promise.all([
+    sendTelegramMessage(waiter.telegramChatId, text, {
       reply_markup: {
         inline_keyboard: [
           [{ text: '✅ Прийняти', callback_data: `order_accept:${order.id}` }]
         ]
       }
-    });
-  } catch (err) {
-    console.error('Waiter Telegram notify error:', err.message);
-  }
+    }, 'Waiter Telegram order notify'),
+    sendTelegramMessage(
+      WAITER_ADMIN_CHAT_ID,
+      [`👀 Адмін-дубль`, waiter?.name ? `👤 Офіціант: ${waiter.name}` : '', text].filter(Boolean).join('\n'),
+      {},
+      'Admin Telegram order notify'
+    )
+  ]);
 }
 
 async function notifyWaiterNewCall(waiter, tableId, customerName) {
-  if (!bot || !waiter.telegramChatId) return;
+  if (!bot) return;
 
   const text = [
     `📞 Гість викликає офіціанта!`,
@@ -62,17 +76,21 @@ async function notifyWaiterNewCall(waiter, tableId, customerName) {
     customerName ? `👤 ${customerName}` : ''
   ].filter(Boolean).join('\n');
 
-  try {
-    await bot.telegram.sendMessage(waiter.telegramChatId, text, {
+  await Promise.all([
+    sendTelegramMessage(waiter.telegramChatId, text, {
       reply_markup: {
         inline_keyboard: [
           [{ text: '✅ Прийняти', callback_data: `call_respond:${waiter.id}` }]
         ]
       }
-    });
-  } catch (err) {
-    console.error('Waiter Telegram call notify error:', err.message);
-  }
+    }, 'Waiter Telegram call notify'),
+    sendTelegramMessage(
+      WAITER_ADMIN_CHAT_ID,
+      [`👀 Адмін-дубль`, waiter?.name ? `👤 Офіціант: ${waiter.name}` : '', text].filter(Boolean).join('\n'),
+      {},
+      'Admin Telegram call notify'
+    )
+  ]);
 }
 
 function setupWaiterBotWebhook(app) {
