@@ -13,6 +13,10 @@ const STATUS_LABELS = {
   CANCELLED: { ua: 'Скасовано', ru: 'Отменено', en: 'Cancelled', color: '#6b7280' },
 };
 
+const WAITER_THEME_KEY = 'gorpliaj-waiter-theme';
+const WAITER_NOTEBOOK_ENABLED_KEY = 'gorpliaj-waiter-notebook-enabled';
+const WAITER_NOTEBOOK_TEXT_KEY = 'gorpliaj-waiter-notebook-text';
+
 function timeAgo(dateStr, locale) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const min = Math.floor(diff / 60000);
@@ -39,6 +43,12 @@ export default function WaiterCabinetPage() {
   const [scanMode, setScanMode] = useState(false);
   const [scannedList, setScannedList] = useState([]);
   const [scanToast, setScanToast] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [waiterTheme, setWaiterTheme] = useState(() => localStorage.getItem(WAITER_THEME_KEY) || 'dark');
+  const [notebookEnabled, setNotebookEnabled] = useState(() => localStorage.getItem(WAITER_NOTEBOOK_ENABLED_KEY) === '1');
+  const [notebookText, setNotebookText] = useState(() => localStorage.getItem(WAITER_NOTEBOOK_TEXT_KEY) || '');
+  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
+  const [settingsToast, setSettingsToast] = useState('');
   const eventSourceRef = useRef(null);
   const html5QrCodeRef = useRef(null);
   const lastScanRef = useRef({ code: '', time: 0 });
@@ -77,6 +87,20 @@ export default function WaiterCabinetPage() {
     if (token) loadInitial();
     else setLoading(false);
   }, [loadInitial]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = waiterTheme === 'light' ? 'light' : '';
+    localStorage.setItem(WAITER_THEME_KEY, waiterTheme);
+  }, [waiterTheme]);
+
+  useEffect(() => {
+    localStorage.setItem(WAITER_NOTEBOOK_ENABLED_KEY, notebookEnabled ? '1' : '0');
+    if (!notebookEnabled && tab === 'notebook') setTab('orders');
+  }, [notebookEnabled, tab]);
+
+  useEffect(() => {
+    localStorage.setItem(WAITER_NOTEBOOK_TEXT_KEY, notebookText);
+  }, [notebookText]);
 
   useEffect(() => {
     if (Notification && Notification.permission === 'default') {
@@ -274,6 +298,21 @@ export default function WaiterCabinetPage() {
     setCalls((p) => p.filter((c) => c.id !== id));
   }
 
+  async function connectTelegram() {
+    setTelegramLinkLoading(true);
+    setSettingsToast('');
+    try {
+      const result = await waiterApi.getTelegramLink();
+      if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (err) {
+      setSettingsToast(err.message || 'Telegram error');
+    } finally {
+      setTelegramLinkLoading(false);
+    }
+  }
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#ccc', background: '#0f172a', minHeight: '100vh' }}>Loading...</div>;
 
   if (!waiter) {
@@ -294,16 +333,19 @@ export default function WaiterCabinetPage() {
   const pendingOrders = orders.filter((o) => o.status === 'PENDING');
   const activeOrders = orders.filter((o) => o.status === 'ACCEPTED' || o.status === 'PREPARING');
   const doneOrders = orders.filter((o) => o.status === 'COMPLETED' || o.status === 'CANCELLED');
+  const waiterTabs = notebookEnabled ? ['orders', 'calls', 'tables', 'notebook'] : ['orders', 'calls', 'tables'];
+  const isLightTheme = waiterTheme === 'light';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a' }}>
-      <div style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div style={{ minHeight: '100vh', background: isLightTheme ? '#f8fafc' : '#0f172a' }}>
+      <div style={{ background: isLightTheme ? '#ffffff' : '#1e293b', borderBottom: `1px solid ${isLightTheme ? '#e2e8f0' : '#334155'}`, padding: '12px 16px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <strong style={{ color: '#f8fafc', fontSize: '1.05rem' }}>{waiter.name}</strong>
+            <strong style={{ color: isLightTheme ? '#0f172a' : '#f8fafc', fontSize: '1.05rem' }}>{waiter.name}</strong>
             {shift && <span style={{ marginLeft: 8, fontSize: '0.8rem', color: '#4ade80', background: '#052e16', padding: '2px 8px', borderRadius: 10 }}>● {c({ ua: 'Смена', ru: 'Смена', en: 'Shift' })}</span>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.9rem', background: isLightTheme ? '#e2e8f0' : '#334155', color: isLightTheme ? '#0f172a' : '#f8fafc', border: 'none' }} onClick={() => setSettingsOpen(true)} aria-label={c({ ua: 'Налаштування', ru: 'Настройки', en: 'Settings' })}>⚙</button>
             <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#334155', color: '#f8fafc', border: 'none' }} onClick={toggleShift}>
               {shift ? c({ ua: 'Завершити', ru: 'Завершить', en: 'End' }) : c({ ua: 'Почати', ru: 'Начать', en: 'Start' })}
             </button>
@@ -312,12 +354,13 @@ export default function WaiterCabinetPage() {
         </div>
         {shift && (
           <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-            {['orders', 'calls', 'tables'].map((t) => (
+            {waiterTabs.map((t) => (
               <button key={t} type="button" onClick={() => setTab(t)}
-                style={{ padding: '7px 14px', borderRadius: 20, border: tab === t ? 'none' : '1px solid #475569', background: tab === t ? '#3b82f6' : '#1e293b', color: tab === t ? '#fff' : '#94a3b8', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                style={{ padding: '7px 14px', borderRadius: 20, border: tab === t ? 'none' : `1px solid ${isLightTheme ? '#cbd5e1' : '#475569'}`, background: tab === t ? '#3b82f6' : (isLightTheme ? '#fff' : '#1e293b'), color: tab === t ? '#fff' : (isLightTheme ? '#334155' : '#94a3b8'), fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
                 {t === 'orders' && `${c({ ua: 'Замовлення', ru: 'Заказы', en: 'Orders' })} ${pendingOrders.length ? `(${pendingOrders.length})` : ''}`}
                 {t === 'calls' && `${c({ ua: 'Виклики', ru: 'Вызовы', en: 'Calls' })} ${calls.length ? `(${calls.length})` : ''}`}
                 {t === 'tables' && `${c({ ua: 'Столи', ru: 'Столы', en: 'Tables' })} (${tables.length})`}
+                {t === 'notebook' && c({ ua: 'Блокнот', ru: 'Блокнот', en: 'Notes' })}
               </button>
             ))}
           </div>
@@ -458,7 +501,44 @@ export default function WaiterCabinetPage() {
             ))}
           </div>
         )}
+
+        {shift && tab === 'notebook' && notebookEnabled && (
+          <div style={{ background: isLightTheme ? '#ffffff' : '#1e293b', border: `1px solid ${isLightTheme ? '#e2e8f0' : '#334155'}`, borderRadius: 14, padding: 16 }}>
+            <textarea
+              value={notebookText}
+              onChange={(e) => setNotebookText(e.target.value)}
+              placeholder={c({ ua: 'Нотатки зміни...', ru: 'Заметки смены...', en: 'Shift notes...' })}
+              style={{ width: '100%', minHeight: 260, resize: 'vertical', border: 'none', outline: 'none', background: 'transparent', color: isLightTheme ? '#0f172a' : '#f8fafc', fontSize: '1rem', lineHeight: 1.5 }}
+            />
+          </div>
+        )}
       </div>
+
+      {settingsOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 16px' }}>
+          <div style={{ width: '100%', maxWidth: 420, background: isLightTheme ? '#ffffff' : '#1e293b', border: `1px solid ${isLightTheme ? '#e2e8f0' : '#334155'}`, borderRadius: 16, padding: 18, boxShadow: '0 20px 70px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <strong style={{ color: isLightTheme ? '#0f172a' : '#f8fafc', fontSize: '1.05rem' }}>{c({ ua: 'Налаштування', ru: 'Настройки', en: 'Settings' })}</strong>
+              <button type="button" onClick={() => setSettingsOpen(false)} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: isLightTheme ? '#e2e8f0' : '#334155', color: isLightTheme ? '#0f172a' : '#fff', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <button type="button" onClick={() => setWaiterTheme((prev) => (prev === 'light' ? 'dark' : 'light'))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: `1px solid ${isLightTheme ? '#e2e8f0' : '#334155'}`, background: isLightTheme ? '#f8fafc' : '#0f172a', color: isLightTheme ? '#0f172a' : '#f8fafc', cursor: 'pointer' }}>
+                <span>{c({ ua: 'Тема', ru: 'Тема', en: 'Theme' })}</span>
+                <strong>{waiterTheme === 'light' ? c({ ua: 'День', ru: 'День', en: 'Day' }) : c({ ua: 'Ніч', ru: 'Ночь', en: 'Night' })}</strong>
+              </button>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: `1px solid ${isLightTheme ? '#e2e8f0' : '#334155'}`, background: isLightTheme ? '#f8fafc' : '#0f172a', color: isLightTheme ? '#0f172a' : '#f8fafc' }}>
+                <span>{c({ ua: 'Вкладка "Блокнот"', ru: 'Вкладка "Блокнот"', en: 'Notes tab' })}</span>
+                <input type="checkbox" checked={notebookEnabled} onChange={(e) => setNotebookEnabled(e.target.checked)} />
+              </label>
+              <button type="button" onClick={connectTelegram} disabled={telegramLinkLoading} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: 'none', background: waiter.telegramChatId ? '#16a34a' : '#3b82f6', color: '#fff', cursor: telegramLinkLoading ? 'default' : 'pointer', fontWeight: 700 }}>
+                <span>{waiter.telegramChatId ? c({ ua: 'Telegram підключено', ru: 'Telegram подключен', en: 'Telegram connected' }) : c({ ua: 'Додати Telegram', ru: 'Добавить Telegram', en: 'Add Telegram' })}</span>
+                <span>{telegramLinkLoading ? '...' : '↗'}</span>
+              </button>
+              {settingsToast && <p style={{ margin: 0, color: '#f87171', fontSize: '0.9rem' }}>{settingsToast}</p>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {scanMode && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', flexDirection: 'column' }}>

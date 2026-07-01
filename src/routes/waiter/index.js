@@ -9,6 +9,7 @@ const router = Router();
 router.post('/auth/login', waiterController.login);
 router.get('/auth/me', requireWaiterAuth, waiterController.me);
 router.post('/auth/logout', waiterController.logout);
+router.get('/telegram/link', requireWaiterAuth, waiterController.getTelegramLink);
 
 router.post('/shift/start', requireWaiterAuth, waiterController.startShift);
 router.post('/shift/end', requireWaiterAuth, waiterController.endShift);

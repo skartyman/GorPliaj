@@ -72,6 +72,20 @@ async function getShift(req, res) {
   }
 }
 
+async function getTelegramLink(req, res) {
+  try {
+    const { createTelegramLinkToken } = waiterService;
+    const { getWaiterBotLink } = require('../services/waiterTelegramService');
+    const token = createTelegramLinkToken(req.waiterAuth.sub);
+    const url = await getWaiterBotLink(token);
+    if (!url) return res.status(503).json({ message: 'Waiter Telegram bot is not configured.' });
+    res.json({ url, expiresInSeconds: 600 });
+  } catch (err) {
+    console.error('Get waiter Telegram link error:', err);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}
+
 async function scanTable(req, res) {
   try {
     const { tableId } = req.body;
@@ -163,6 +177,6 @@ async function scanTableByCode(req, res) {
 
 module.exports = {
   login, me, logout,
-  startShift, endShift, getShift,
+  startShift, endShift, getShift, getTelegramLink,
   scanTable, scanTableByCode, removeTable, getTables
 };

@@ -12,6 +12,7 @@ const effectiveSecret = ADMIN_AUTH_SECRET || (() => {
 })();
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
+const TELEGRAM_LINK_TTL_MS = 1000 * 60 * 10;
 
 function encodePayload(payload) {
   return Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -27,6 +28,37 @@ function decodePayload(tokenPart) {
 
 function signTokenPart(tokenPart) {
   return crypto.createHmac('sha256', effectiveSecret).update(tokenPart).digest('base64url');
+}
+
+function signTelegramLink(waiterId, exp) {
+  return crypto
+    .createHmac('sha256', effectiveSecret)
+    .update(`${waiterId}.${exp}`)
+    .digest('base64url')
+    .slice(0, 22);
+}
+
+function createTelegramLinkToken(waiterId) {
+  const idPart = Number(waiterId).toString(36);
+  const expPart = Math.floor((Date.now() + TELEGRAM_LINK_TTL_MS) / 1000).toString(36);
+  const signature = signTelegramLink(idPart, expPart);
+  return `w_${idPart}_${expPart}_${signature}`;
+}
+
+function verifyTelegramLinkToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('_');
+  if (parts.length !== 4 || parts[0] !== 'w') return null;
+  const [, idPart, expPart, signature] = parts;
+  const waiterId = parseInt(idPart, 36);
+  const exp = parseInt(expPart, 36);
+  if (!Number.isFinite(waiterId) || waiterId <= 0 || !Number.isFinite(exp)) return null;
+  if (Date.now() > exp * 1000) return null;
+
+  const expected = signTelegramLink(idPart, expPart);
+  if (!signature || signature.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(signature, 'utf8'), Buffer.from(expected, 'utf8'))) return null;
+  return { waiterId, exp };
 }
 
 function generateWaiterToken(waiter) {
@@ -55,11 +87,11 @@ function verifyWaiterToken(token) {
 async function loginByPin(pinCode) {
   const waiter = await prisma.waiter.findUnique({
     where: { pinCode },
-    select: { id: true, name: true, isActive: true }
+    select: { id: true, name: true, telegramChatId: true, isActive: true }
   });
   if (!waiter || !waiter.isActive) return null;
   const token = generateWaiterToken(waiter);
-  return { token, waiter: { id: waiter.id, name: waiter.name } };
+  return { token, waiter: { id: waiter.id, name: waiter.name, telegramChatId: waiter.telegramChatId } };
 }
 
 async function getWaiterById(id) {
@@ -98,6 +130,14 @@ async function updateWaiter(id, data) {
 
 async function deleteWaiter(id) {
   await prisma.waiter.delete({ where: { id } });
+}
+
+async function setWaiterTelegramChatId(waiterId, telegramChatId) {
+  return prisma.waiter.update({
+    where: { id: waiterId },
+    data: { telegramChatId: String(telegramChatId) },
+    select: { id: true, name: true, telegramChatId: true, isActive: true }
+  });
 }
 
 async function startShift(waiterId) {
@@ -227,6 +267,9 @@ module.exports = {
   createWaiter,
   updateWaiter,
   deleteWaiter,
+  createTelegramLinkToken,
+  verifyTelegramLinkToken,
+  setWaiterTelegramChatId,
   startShift,
   endShift,
   getActiveShift,

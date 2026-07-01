@@ -1,8 +1,10 @@
 const { Telegraf } = require('telegraf');
 const { getOptionalEnv } = require('../config/env');
+const waiterService = require('./waiterService');
 
 const WAITER_BOT_TOKEN = getOptionalEnv('WAITER_BOT_TOKEN', '');
 const bot = WAITER_BOT_TOKEN ? new Telegraf(WAITER_BOT_TOKEN) : null;
+let botUsernamePromise = null;
 
 if (!WAITER_BOT_TOKEN) {
   console.warn('WAITER_BOT_TOKEN not set. Waiter Telegram notifications are disabled.');
@@ -10,6 +12,16 @@ if (!WAITER_BOT_TOKEN) {
 
 function getBot() {
   return bot;
+}
+
+async function getWaiterBotLink(startToken) {
+  if (!bot) return null;
+  if (!botUsernamePromise) {
+    botUsernamePromise = bot.telegram.getMe().then((me) => me.username);
+  }
+  const username = await botUsernamePromise;
+  if (!username) return null;
+  return `https://t.me/${username}?start=${encodeURIComponent(startToken)}`;
 }
 
 async function notifyWaiterNewOrder(waiter, order, tableId) {
@@ -82,6 +94,23 @@ function setupWaiterBotWebhook(app) {
     }, 1000);
   }
 
+  bot.start(async (ctx) => {
+    const payload = ctx.startPayload || String(ctx.message?.text || '').split(/\s+/)[1] || '';
+    const verified = waiterService.verifyTelegramLinkToken(payload);
+    if (!verified) {
+      await ctx.reply('Посилання недійсне або застаріло. Відкрийте кабінет офіціанта і натисніть "Додати Telegram" ще раз.');
+      return;
+    }
+
+    try {
+      const waiter = await waiterService.setWaiterTelegramChatId(verified.waiterId, ctx.chat.id);
+      await ctx.reply(`✅ Telegram підключено для офіціанта ${waiter.name}. Нові замовлення і виклики будуть приходити сюди.`);
+    } catch (err) {
+      console.error('Waiter Telegram link error:', err.message);
+      await ctx.reply('Не вдалося підключити Telegram. Спробуйте ще раз з кабінету офіціанта.');
+    }
+  });
+
   bot.action(/order_accept:(\d+)/, async (ctx) => {
     const orderId = parseInt(ctx.match[1], 10);
     await ctx.answerCbQuery(`Замовлення #${orderId} прийнято`);
@@ -97,6 +126,7 @@ function setupWaiterBotWebhook(app) {
 
 module.exports = {
   getBot,
+  getWaiterBotLink,
   notifyWaiterNewOrder,
   notifyWaiterNewCall,
   setupWaiterBotWebhook

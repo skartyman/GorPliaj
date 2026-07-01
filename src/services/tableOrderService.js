@@ -62,7 +62,7 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
 
   if (waiter) {
     broadcastToWaiter(waiter.id, { type: 'NEW_ORDER', order: orderData });
-    notifyWaiterNewOrder(waiter, orderData, tableId).catch(() => {});
+    notifyWaiterNewOrder(waiter, orderData, orderData.tableCode || tableId).catch(() => {});
   } else {
     broadcastToAllWaiters({ type: 'NEW_ORDER', order: orderData });
   }
@@ -182,7 +182,7 @@ async function createWaiterCall({ tableId, customerName }) {
 
   if (waiter) {
     broadcastToWaiter(waiter.id, { type: 'NEW_CALL', call: callData, customerName });
-    notifyWaiterNewCall(waiter, tableId, customerName).catch(() => {});
+    notifyWaiterNewCall(waiter, callData.tableCode || tableId, customerName).catch(() => {});
   } else {
     broadcastToAllWaiters({ type: 'NEW_CALL', call: callData, customerName });
   }

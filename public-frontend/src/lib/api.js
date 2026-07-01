@@ -139,6 +139,7 @@ export const waiterApi = {
   scanTableByCode: (code) => request('/waiter/tables/scan-by-code', { method: 'POST', body: JSON.stringify({ code }) }),
   removeTable: (tableId) => request(`/waiter/tables/${tableId}`, { method: 'DELETE' }),
   getTables: () => request('/waiter/tables'),
+  getTelegramLink: () => request('/waiter/telegram/link'),
   getOrders: () => request('/waiter/orders'),
   acceptOrder: (id) => request(`/waiter/orders/${id}/accept`, { method: 'PATCH' }),
   completeOrder: (id) => request(`/waiter/orders/${id}/complete`, { method: 'PATCH' }),
