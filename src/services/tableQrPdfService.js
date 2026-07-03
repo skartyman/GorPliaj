@@ -10,12 +10,11 @@ const MARGIN = 36;
 const COLS = 3;
 const ROWS = 4;
 const CELL_W = (PAGE_W - MARGIN * 2) / COLS;
-const CELL_H = (PAGE_H - MARGIN * 2 - 60) / ROWS;
+const CELL_H = 175;
 
-const QR_SOURCE = 500;
-const QR_RENDER = 160;
-const ZONE_SIZE = 120;
-const LOGO_SIZE = 80;
+const QR_SOURCE = 1000;
+const QR_RENDER = 135;
+const LOGO_SIZE = 160;
 
 async function generateTableQrPdf(baseUrl) {
   const tables = await prisma.venueTable.findMany({
@@ -29,44 +28,35 @@ async function generateTableQrPdf(baseUrl) {
   const logoPath = getLogoPath();
   const logoBuffer = logoPath ? await loadImageBuffer(logoPath) : null;
 
-  const whiteSquare = await sharp({
-    create: { width: ZONE_SIZE, height: ZONE_SIZE, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 255 } }
-  }).png().toBuffer();
+  const LOGO_SIZE_ACTUAL = 400; // Увеличен в 2 раза по просьбе пользователя
 
   let logoPng = null;
   if (logoBuffer) {
-    const meta = await sharp(logoBuffer).metadata();
-    const cropSize = Math.min(meta.width, meta.height);
-    const left = Math.floor((meta.width - cropSize) / 2);
-    const top = Math.floor((meta.height - cropSize) / 2);
     logoPng = await sharp(logoBuffer)
-      .extract({ left, top, width: cropSize, height: cropSize })
-      .resize(LOGO_SIZE, LOGO_SIZE)
+      .resize({ width: LOGO_SIZE_ACTUAL, height: LOGO_SIZE_ACTUAL, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
       .png()
       .toBuffer();
   }
 
-  const qrCenter = Math.floor((QR_SOURCE - ZONE_SIZE) / 2);
-  const logoCenter = Math.floor((QR_SOURCE - LOGO_SIZE) / 2);
+  const logoCenter = Math.floor((QR_SOURCE - LOGO_SIZE_ACTUAL) / 2);
 
-  const qrBuffers = await Promise.all(
-    tables.map(async (t) => {
-      const url = `${baseUrl}/menu?table=${encodeURIComponent(t.code)}`;
-      const raw = await QRCode.toBuffer(url, {
-        width: QR_SOURCE,
-        margin: 0,
-        errorCorrectionLevel: 'H',
-        color: { dark: '#000000', light: '#ffffff' }
-      });
-      const qrPng = await sharp(raw).png().toBuffer();
+  const qrBuffers = [];
+  for (const t of tables) {
+    const url = `${baseUrl}/menu?table=${encodeURIComponent(t.code)}`;
+    const raw = await QRCode.toBuffer(url, {
+      width: QR_SOURCE,
+      margin: 0,
+      errorCorrectionLevel: 'H',
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+    const qrPng = await sharp(raw).png().toBuffer();
 
-      const layers = [{ input: whiteSquare, left: qrCenter, top: qrCenter }];
-      if (logoPng) layers.push({ input: logoPng, left: logoCenter, top: logoCenter });
+    const layers = [];
+    if (logoPng) layers.push({ input: logoPng, left: logoCenter, top: logoCenter });
 
-      const composited = await sharp(qrPng).composite(layers).png().toBuffer();
-      return sharp(composited).resize(QR_RENDER, QR_RENDER).jpeg({ quality: 95 }).toBuffer();
-    })
-  );
+    const composited = layers.length > 0 ? await sharp(qrPng).composite(layers).png().toBuffer() : qrPng;
+    qrBuffers.push(composited);
+  }
 
   const fontPaths = getFontPaths();
   const headerLogo = logoBuffer
@@ -74,7 +64,7 @@ async function generateTableQrPdf(baseUrl) {
     : null;
 
   return new Promise((resolve) => {
-    const doc = new PDFDocument({ size: 'A4', margin: MARGIN, autoFirstPage: false });
+    const doc = new PDFDocument({ size: 'A4', margins: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: 10 }, autoFirstPage: false });
 
     if (fontPaths.regular) doc.registerFont('QR', fontPaths.regular);
     if (fontPaths.bold) doc.registerFont('QR-Bold', fontPaths.bold);

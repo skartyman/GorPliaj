@@ -3538,10 +3538,14 @@ h3 {
   color: var(--muted);
 }
 
+.footer-rights,
+.footer-developed {
+  white-space: nowrap;
+}
+
 .footer-credit-link {
   display: inline-flex;
   align-items: center;
-  margin-left: 4px;
   padding: 7px 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 2px;
@@ -3957,6 +3961,31 @@ h3 {
 
   .footer-top {
     gap: 20px;
+  }
+
+  .footer-bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    align-items: flex-start;
+    column-gap: 16px;
+    row-gap: 18px;
+  }
+
+  .footer-credit {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 128px;
+  }
+
+  .footer-credit-link {
+    padding: 7px 9px;
+    font-size: 0.76rem;
+  }
+
+  .footer-legal-links,
+  .footer-credit {
+    font-size: 0.78rem;
   }
 
   .footer-map,

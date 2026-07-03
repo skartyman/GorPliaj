@@ -20,6 +20,24 @@ function mapItems(items) {
   }));
 }
 
+function mapOrder(order) {
+  return {
+    id: order.id,
+    tableId: order.tableId,
+    tableCode: order.table?.code || null,
+    table: order.table ? { id: order.table.id, code: order.table.code } : null,
+    status: order.status,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    notes: order.notes,
+    waiterName: order.waiter?.name || null,
+    createdAt: order.createdAt?.toISOString?.() || order.createdAt,
+    acceptedAt: order.acceptedAt?.toISOString?.() || order.acceptedAt || null,
+    completedAt: order.completedAt?.toISOString?.() || order.completedAt || null,
+    items: mapItems(order.items || [])
+  };
+}
+
 async function createTableOrder({ tableId, customerName, customerPhone, notes, items }) {
   const waiter = await getWaiterForTable(tableId);
 
@@ -46,19 +64,7 @@ async function createTableOrder({ tableId, customerName, customerPhone, notes, i
     }
   });
 
-  const orderData = {
-    id: order.id,
-    tableId: order.tableId,
-    tableCode: order.table?.code || null,
-    table: order.table ? { id: order.table.id, code: order.table.code } : null,
-    status: order.status,
-    customerName: order.customerName,
-    customerPhone: order.customerPhone,
-    notes: order.notes,
-    waiterName: order.waiter?.name || null,
-    createdAt: order.createdAt.toISOString(),
-    items: mapItems(order.items)
-  };
+  const orderData = mapOrder(order);
 
   if (waiter) {
     broadcastToWaiter(waiter.id, { type: 'NEW_ORDER', order: orderData });
@@ -82,13 +88,21 @@ async function acceptOrder(orderId, waiterId) {
   const order = await prisma.tableOrder.update({
     where: { id: orderId },
     data: { status: 'ACCEPTED', acceptedAt: new Date(), waiterId },
-    include: { items: true }
+    include: {
+      items: { include: { menuItem: { select: { name: true } } } },
+      waiter: { select: { id: true, name: true } },
+      table: { select: { id: true, code: true } }
+    }
   });
 
+  const orderData = mapOrder(order);
   const statusData = { id: order.id, status: order.status, acceptedAt: order.acceptedAt?.toISOString() };
   broadcastToGuest(order.id, { type: 'STATUS_UPDATE', ...statusData });
+  if (order.waiterId) {
+    broadcastToWaiter(order.waiterId, { type: 'ORDER_STATUS_CHANGED', order: orderData });
+  }
 
-  return order;
+  return orderData;
 }
 
 async function completeOrder(orderId) {

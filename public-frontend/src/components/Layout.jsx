@@ -102,11 +102,6 @@ export default function Layout() {
   const rulesLinkText = localizedCopy({ ua: 'Правила перебування', ru: 'Правила пребывания', en: 'Venue Rules' }, locale);
   const privacyLinkText = localizedCopy({ ua: 'Політика конфіденційності', ru: 'Политика конфиденциальности', en: 'Privacy Policy' }, locale);
   const paymentReturnsLinkText = localizedCopy({ ua: 'Умови оплати і повернення', ru: 'Условия оплаты и возврата', en: 'Payment and Refund Terms' }, locale);
-  const menuServiceNotice = localizedCopy({
-    ua: 'Звертаємо увагу, що до кінцевого рахунку за меню буде додано 10% за обслуговування гостя.',
-    ru: 'Обращаем внимание, что к итоговому счету за меню будет добавлено 10% за обслуживание гостя.',
-    en: 'Please note that a 10% guest service charge will be added to the final menu bill.'
-  }, locale);
   const workingHoursText = settings?.workingHours?.mon?.open
     ? localizedCopy({
         ua: `Пн-Чт ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Пт-Нд ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`,
@@ -257,10 +252,10 @@ export default function Layout() {
               <NavLink to="/rules">{rulesLinkText}</NavLink>
               <NavLink to="/privacy">{privacyLinkText}</NavLink>
               <NavLink to="/payment-returns">{paymentReturnsLinkText}</NavLink>
-              <span className="footer-legal-note">{menuServiceNotice}</span>
             </div>
             <span className="footer-credit">
-              {rightsText} · {localizedCopy({ ua: 'Розроблено ', ru: 'Разработано ', en: 'Developed by ' }, locale)}
+              <span className="footer-rights">{rightsText}</span>
+              <span className="footer-developed">{localizedCopy({ ua: 'Розроблено', ru: 'Разработано', en: 'Developed by' }, locale)}</span>
               <a
                 href="https://velych.pp.ua"
                 target="_blank"

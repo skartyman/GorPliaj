@@ -131,6 +131,22 @@ function setupWaiterBotWebhook(app) {
 
   bot.action(/order_accept:(\d+)/, async (ctx) => {
     const orderId = parseInt(ctx.match[1], 10);
+    try {
+      const waiter = await waiterService.getWaiterByTelegramChatId(ctx.from?.id || ctx.chat?.id);
+      if (!waiter) {
+        await ctx.answerCbQuery('\u0422elegram \u043d\u0435 \u043f\u0456\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u043e \u0434\u043e \u043e\u0444\u0456\u0446\u0456\u0430\u043d\u0442\u0430', { show_alert: true });
+        return;
+      }
+
+      const tableOrderService = require('./tableOrderService');
+      await tableOrderService.acceptOrder(orderId, waiter.id);
+      await ctx.answerCbQuery(`\u0417\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043d\u044f #${orderId} \u043f\u0440\u0438\u0439\u043d\u044f\u0442\u043e`);
+      await ctx.editMessageText(`\u2705 \u0417\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043d\u044f #${orderId} \u043f\u0440\u0438\u0439\u043d\u044f\u0442\u043e`);
+    } catch (err) {
+      console.error('Waiter Telegram order accept error:', err.message);
+      await ctx.answerCbQuery('\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u043f\u0440\u0438\u0439\u043d\u044f\u0442\u0438 \u0437\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043d\u044f', { show_alert: true });
+    }
+    return;
     await ctx.answerCbQuery(`Замовлення #${orderId} прийнято`);
     await ctx.editMessageText(`✅ Замовлення #${orderId} прийнято`);
   });

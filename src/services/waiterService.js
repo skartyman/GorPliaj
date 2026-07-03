@@ -102,6 +102,13 @@ async function getWaiterById(id) {
   });
 }
 
+async function getWaiterByTelegramChatId(telegramChatId) {
+  return prisma.waiter.findFirst({
+    where: { telegramChatId: String(telegramChatId), isActive: true },
+    select: { id: true, name: true, telegramChatId: true, isActive: true }
+  });
+}
+
 async function listWaiters() {
   return prisma.waiter.findMany({
     orderBy: { id: 'asc' },
@@ -285,6 +292,7 @@ module.exports = {
   verifyWaiterToken,
   loginByPin,
   getWaiterById,
+  getWaiterByTelegramChatId,
   listWaiters,
   createWaiter,
   updateWaiter,
