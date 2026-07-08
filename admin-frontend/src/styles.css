@@ -97,7 +97,7 @@ h1, h2, h3, p { margin: 0; }
 }
 
 @media (min-width: 961px) {
-  .sidebar-collapsed .sidebar { padding-left: 0; padding-right: 0; border-right: 0; }
+  .sidebar-collapsed .sidebar { padding-left: 0; padding-right: 0; border-right: 0; width: 0; min-width: 0; }
 }
 
 .sidebar-header {

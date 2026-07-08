@@ -1,0 +1,69 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - link "GorPliaj GorPliaj" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - img "GorPliaj" [ref=e6]
+      - generic [ref=e7]: GorPliaj
+    - navigation [ref=e8]:
+      - link "Головна" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e11]
+        - generic [ref=e14]: Головна
+      - link "Афіша" [ref=e15] [cursor=pointer]:
+        - /url: /events
+        - img [ref=e17]
+        - generic [ref=e19]: Афіша
+      - link "Меню" [ref=e20] [cursor=pointer]:
+        - /url: /menu
+        - img [ref=e22]
+        - generic [ref=e25]: Меню
+      - link "Мапа" [ref=e26] [cursor=pointer]:
+        - /url: /map-preview
+        - img [ref=e28]
+        - generic [ref=e31]: Мапа
+      - link "Бронь" [ref=e32] [cursor=pointer]:
+        - /url: /booking
+        - img [ref=e34]
+        - generic [ref=e37]: Бронь
+      - link "Про нас" [ref=e38] [cursor=pointer]:
+        - /url: /about
+        - img [ref=e40]
+        - generic [ref=e42]: Про нас
+    - generic [ref=e43]:
+      - button "UA" [ref=e44] [cursor=pointer]
+      - button "🌙" [ref=e45] [cursor=pointer]
+  - generic [ref=e48]: Завантаження мапи закладу...
+  - contentinfo [ref=e49]:
+    - generic [ref=e50]:
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: GorPliaj
+          - paragraph [ref=e54]: Сучасний ресторан біля моря з живою музикою, кухнею та вечірніми подіями.
+        - generic [ref=e55]:
+          - heading "Контакти" [level=3] [ref=e56]
+          - paragraph [ref=e57]:
+            - text: 📞
+            - link "+38 (000) 000-00-00" [ref=e58] [cursor=pointer]:
+              - /url: tel:+380000000000
+          - paragraph [ref=e59]: 📍 пляж Відрада, Одеса
+          - paragraph [ref=e60]: 🕐 Щодня 09:00-21:00
+      - generic [ref=e61]:
+        - heading "Як знайти заклад" [level=3] [ref=e62]
+        - iframe [ref=e64]:
+          
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]: © 2026 GorPliaj
+          - link "Правила перебування" [ref=e68] [cursor=pointer]:
+            - /url: /rules
+          - link "Політика конфіденційності" [ref=e69] [cursor=pointer]:
+            - /url: /privacy
+          - link "Умови оплати і повернення" [ref=e70] [cursor=pointer]:
+            - /url: /payment-returns
+        - generic [ref=e71]:
+          - generic [ref=e72]: Усі права захищені
+          - generic [ref=e73]: Розроблено
+          - link "// VELYCH.CO" [ref=e74] [cursor=pointer]:
+            - /url: https://velych.pp.ua
+            - generic [ref=e75]: //
+            - text: VELYCH.CO

@@ -4980,3 +4980,86 @@ h3 {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 }
+
+/* Tablet map guard: the legacy iPad fallback above is intentionally broad for
+   old Safari, but modern tablet PWAs still need the desktop map layout. */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: flex;
+  }
+
+  .top-bar,
+  .bottom-nav {
+    display: none;
+  }
+
+  .main-content {
+    display: flex;
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+  }
+
+  .page-container {
+    width: min(1200px, 100%);
+    max-width: none;
+    padding: 32px 24px 100px;
+    overflow-x: visible;
+  }
+
+  .map-filter-bar {
+    top: 0;
+  }
+
+  .visual-schedule {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .map-preview-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .map-preview-container .map-zone-board {
+    max-width: none;
+  }
+
+  .map-preview-container .public-map-viewport {
+    height: 62vh;
+    min-height: 440px;
+  }
+
+  .map-zoom-pill {
+    background: var(--bg-secondary);
+    color: var(--text);
+    border-color: var(--line);
+    box-shadow: var(--shadow-md);
+  }
+
+  .public-map-zone-tabs {
+    max-width: 100%;
+  }
+
+  .map-side-panel {
+    display: none;
+    position: relative;
+    width: 100%;
+    max-height: none;
+    margin-top: 0;
+  }
+
+  .map-side-panel.is-open {
+    display: block;
+  }
+
+  .mobile-map-sticky-summary {
+    display: none;
+  }
+}
