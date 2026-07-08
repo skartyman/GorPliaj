@@ -74,7 +74,7 @@ export const mapApi = {
   byId: (mapId) => request(`/maps/${mapId}`),
   availability: (mapId, reservationDate, timeFrom) =>
     request(`/maps/${mapId}/availability?date=${encodeURIComponent(reservationDate)}&timeFrom=${encodeURIComponent(timeFrom)}`),
-  bookableUnits: (mapId, params) => {
+  bookableUnits: (mapId, params) => { console.log('DEBUG_AGY_API', mapId, params);
     const search = new URLSearchParams({
       date: params.date,
       timeFrom: params.timeFrom

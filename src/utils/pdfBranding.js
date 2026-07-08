@@ -42,6 +42,7 @@ function registerPdfFonts(doc) {
 
 function getLogoPath() {
   return findFirstExistingPath([
+    path.join(process.cwd(), 'public', 'icons', 'qr-logo.png'),
     path.join(process.cwd(), 'public', 'icons', 'Logo.png'),
     path.join(process.cwd(), 'public', 'icons', 'Logo.jpg'),
     path.join(process.cwd(), 'public', 'icons', 'logo1.png')

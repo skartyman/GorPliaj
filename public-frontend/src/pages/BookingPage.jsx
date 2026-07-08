@@ -748,6 +748,7 @@ export default function BookingPage() {
     let cancelled = false;
 
     Promise.all(eventDateOptions.map(async (option) => {
+      if (!option.date || !option.timeFrom) return;
       const checks = await Promise.allSettled(
         mapsState.maps.map((map) => mapApi.bookableUnits(map.id, {
           date: option.date,
@@ -782,7 +783,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     console.log('DEBUG_AGY: unitsState useEffect running', { mapId: selected.mapId, date: form.date, timeFrom: form.timeFrom, guests: form.guests, resolvedBookingKind });
-    if (!selected.mapId || (bookingFlow === 'EVENT' && !activeEventDateOption)) {
+    if (!selected.mapId || !form.date || !form.timeFrom || (bookingFlow === 'EVENT' && !activeEventDateOption)) {
       console.log('DEBUG_AGY: unitsState useEffect early return (mapId is 0 or event date missing)', { mapId: selected.mapId });
       setUnitsState({ loading: false, error: '', map: null, zones: [], units: [] });
       return;
@@ -1593,6 +1594,16 @@ export default function BookingPage() {
 </>)}
 
         {currentStep === 3 && (<>
+          <div className="mobile-map-sticky-summary">
+            <div style={{ display: 'flex', gap: '12px', color: 'var(--muted)' }}>
+              <span>📅 <strong style={{color:'var(--text)'}}>{form.date.split('-').reverse().join('.')}</strong></span>
+              {form.timeFrom && <span>🕒 <strong style={{color:'var(--text)'}}>{form.timeFrom}</strong></span>}
+              <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {c({ ua: 'чол.', ru: 'чел.', en: 'ppl.' })}</strong></span>
+            </div>
+            <button type="button" onClick={() => setCurrentStep(2)} style={{ background: 'none', border: 'none', color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, padding: '4px 8px', cursor: 'pointer' }}>
+              {c({ ua: 'Змінити', ru: 'Изменить', en: 'Change' })}
+            </button>
+          </div>
         {(mapsState.loading || unitsState.loading || (mapsState.maps.length > 0 && !selected.mapId)) ? (
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <div className="state-msg">
@@ -1600,6 +1611,16 @@ export default function BookingPage() {
                 ua: 'Завантажуємо доступні місця...',
                 ru: 'Загружаем доступные места...',
                 en: 'Loading available places...'
+              })}
+            </div>
+          </div>
+        ) : mapsState.maps.length === 0 ? (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <div className="state-msg" style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)' }}>
+              {c({
+                ua: 'Для обраного формату наразі немає доступних карт.',
+                ru: 'Для выбранного формата пока нет доступных карт.',
+                en: 'There are currently no maps available for the selected format.'
               })}
             </div>
           </div>

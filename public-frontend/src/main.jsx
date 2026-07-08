@@ -66,7 +66,7 @@ const isWaiterRoute = window.location.pathname.startsWith('/waiter');
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const swUrl = isWaiterRoute ? '/waiter/sw.js?v=1' : '/sw.js?v=7';
+    const swUrl = isWaiterRoute ? '/waiter/sw.js?v=1' : '/sw.js?v=10';
     navigator.serviceWorker.register(swUrl)
       .then(reg => console.log('SW registered:', swUrl))
       .catch(err => console.log('SW error', err));

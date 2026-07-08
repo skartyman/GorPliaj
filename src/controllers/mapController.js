@@ -57,7 +57,7 @@ async function getMapAvailability(req, res) {
     const mapId = Number(req.params.mapId);
     const { date, timeFrom } = req.query;
 
-    if (!mapId || !date || !timeFrom) {
+    if (!mapId || !date || !timeFrom) { console.log('DEBUG_AGY_BACKEND: missing params', { mapId, date, timeFrom, rawReqParams: req.params, rawReqQuery: req.query });
       return res.status(400).json({ message: 'Потрібні параметри mapId, date, timeFrom.' });
     }
 

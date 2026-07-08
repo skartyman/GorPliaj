@@ -1095,6 +1095,7 @@ textarea { resize: vertical; min-height: 96px; }
 .dot.confirmed { background: var(--info-text); }
 .dot.held { background: #F97316; }
 .dot.unavailable { background: var(--text-muted); }
+.dot.completed, .dot.busy { background: #EF4444; }
 .dot.neutral { background: var(--border-warm); }
 
 .placeholder-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }

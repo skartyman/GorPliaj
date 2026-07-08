@@ -1624,7 +1624,7 @@ export default function MapPage() {
                               {status !== 'FREE' && status !== 'UNAVAILABLE' && activeReservation ? (
                                 <ReservationCountdown reservation={activeReservation} />
                               ) : null}
-                              {status === 'FREE' ? (
+                              {status === 'FREE' && selectedDate <= getDateKey() ? (
                                 <span
                                   className="table-arrive-btn"
                                   role="button"
@@ -1671,8 +1671,10 @@ export default function MapPage() {
 
                     {selectedStatus === 'FREE' && !bookingFormState.open ? (
                       <div className="actions grid-2" style={{ width: '100%', marginTop: 8 }}>
-                        <button type="button" className="btn btn-success w-full" onClick={() => handleFreeTableArrive(selectedTable)}>Прийшли</button>
-                        <button type="button" className="btn w-full" onClick={() => onBookTable(selectedTable)}>Забронювати</button>
+                        {selectedDate <= getDateKey() && (
+                          <button type="button" className="btn btn-success w-full" onClick={() => handleFreeTableArrive(selectedTable)}>Прийшли</button>
+                        )}
+                        <button type="button" className="btn w-full" style={selectedDate > getDateKey() ? { gridColumn: 'span 2' } : {}} onClick={() => onBookTable(selectedTable)}>Забронювати</button>
                       </div>
                     ) : null}
 
@@ -1707,7 +1709,9 @@ export default function MapPage() {
                                 ) : null}
                                 {reservation.status === 'CONFIRMED' ? (
                                   <>
-                                    <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'SEATED')}>Посадити</button>
+                                    {reservation.reservationDate && reservation.reservationDate.slice(0, 10) <= getDateKey() ? (
+                                      <button type="button" className="btn btn-small btn-success" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'SEATED')}>Посадити</button>
+                                    ) : null}
                                     <button type="button" className="btn btn-small btn-danger" style={{ flex: 1 }} onClick={() => updateReservationStatusOnMap(reservation.id, 'CANCELLED')}>Cancel</button>
                                   </>
                                 ) : null}

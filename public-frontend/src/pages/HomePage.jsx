@@ -10,8 +10,6 @@ import GalleryCarousel from '../components/GalleryCarousel';
 import WeatherBlock from '../components/WeatherBlock';
 import EventCard from '../components/EventCard';
 
-const fallbackMenuPhotos = ['/icons/piano.jpg', '/icons/moonpirs.jpg', '/icons/zakat.jpg', '/icons/photo_2026-03-22_18-51-11.jpg', '/icons/photo_2026-03-22_18-51-20.jpg'];
-
 export default function HomePage() {
   const { t, locale } = useLocale();
   const { settings } = useSettings();
@@ -34,7 +32,7 @@ export default function HomePage() {
     load().catch(() => {});
   }, []);
 
-  const menuPhotos = state.menuPreviewImages.length ? state.menuPreviewImages : fallbackMenuPhotos;
+  const menuPhotos = state.menuPreviewImages;
   const c = (values) => localizedCopy(values, locale);
 
   const isEn = locale === 'en';
@@ -53,11 +51,13 @@ export default function HomePage() {
         en: `Mon-Thu ${settings.workingHours.mon.open}-${settings.workingHours.mon.close}, Fri-Sun ${settings.workingHours.fri.open}-${settings.workingHours.fri.close}`
       })
     : c({ ua: 'Щодня 09:00-21:00', ru: 'Ежедневно 09:00-21:00', en: 'Daily 09:00-21:00' });
-
   return (
     <>
       {/* Hero */}
       <section className="hero">
+        <video className="hero-video" autoPlay muted loop playsInline preload="auto">
+          <source src="https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/videos/sea-loop.mp4" type="video/mp4" />
+        </video>
         <div className="hero-content">
           <h1>{heroTitle}</h1>
           <p>{heroSubtitle}</p>

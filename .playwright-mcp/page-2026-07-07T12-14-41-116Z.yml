@@ -1,0 +1,171 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - link "GorPliaj GorPliaj" [ref=e5] [cursor=pointer]:
+      - /url: /
+      - img "GorPliaj" [ref=e6]
+      - generic [ref=e7]: GorPliaj
+    - navigation [ref=e8]:
+      - link "Головна" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e11]
+        - generic [ref=e14]: Головна
+      - link "Афіша" [ref=e15] [cursor=pointer]:
+        - /url: /events
+        - img [ref=e17]
+        - generic [ref=e19]: Афіша
+      - link "Меню" [ref=e20] [cursor=pointer]:
+        - /url: /menu
+        - img [ref=e22]
+        - generic [ref=e25]: Меню
+      - link "Мапа" [ref=e26] [cursor=pointer]:
+        - /url: /map-preview
+        - img [ref=e28]
+        - generic [ref=e31]: Мапа
+      - link "Бронь" [ref=e32] [cursor=pointer]:
+        - /url: /booking
+        - img [ref=e34]
+        - generic [ref=e37]: Бронь
+      - link "Про нас" [ref=e38] [cursor=pointer]:
+        - /url: /about
+        - img [ref=e40]
+        - generic [ref=e42]: Про нас
+    - generic [ref=e43]:
+      - button "UA" [ref=e44] [cursor=pointer]
+      - button "☀️" [ref=e45] [cursor=pointer]
+  - main [ref=e48]:
+    - generic [ref=e51]:
+      - heading "GorPliaj" [level=1] [ref=e52]
+      - paragraph [ref=e53]: Пляжно-ресторанний простір із живою музикою, кухнею та вечірніми подіями на пляжі Відрада, Одеса
+      - generic [ref=e54]:
+        - link "Забронювати стіл" [ref=e55] [cursor=pointer]:
+          - /url: /booking
+        - link "Переглянути меню" [ref=e56] [cursor=pointer]:
+          - /url: /menu
+      - navigation "Home sections" [ref=e57]:
+        - link "Бронь" [ref=e58] [cursor=pointer]:
+          - /url: /booking
+        - link "Меню" [ref=e59] [cursor=pointer]:
+          - /url: /menu
+        - link "Афіша" [ref=e60] [cursor=pointer]:
+          - /url: /events
+        - link "Мапа" [ref=e61] [cursor=pointer]:
+          - /url: /map-preview
+        - link "Про нас" [ref=e62] [cursor=pointer]:
+          - /url: /about
+    - generic [ref=e63]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - heading "Вартість послуг" [level=2] [ref=e68]
+          - img "Вартість послуг" [ref=e70]
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - heading "Афіша" [level=2] [ref=e73]
+            - link "Усі події →" [ref=e74] [cursor=pointer]:
+              - /url: /events
+          - generic [ref=e76]: Нові події скоро зʼявляться
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - heading "Меню" [level=2] [ref=e79]
+          - link "Повне меню →" [ref=e80] [cursor=pointer]:
+            - /url: /menu
+        - generic [ref=e81]:
+          - link "Позиція меню" [ref=e83] [cursor=pointer]:
+            - /url: /menu
+            - img "Позиція меню" [ref=e84]
+          - link "Позиція меню" [ref=e86] [cursor=pointer]:
+            - /url: /menu
+            - img "Позиція меню" [ref=e87]
+          - link "Позиція меню" [ref=e89] [cursor=pointer]:
+            - /url: /menu
+            - img "Позиція меню" [ref=e90]
+          - link "Позиція меню" [ref=e92] [cursor=pointer]:
+            - /url: /menu
+            - img "Позиція меню" [ref=e93]
+          - link "Позиція меню" [ref=e95] [cursor=pointer]:
+            - /url: /menu
+            - img "Позиція меню" [ref=e96]
+      - generic [ref=e97]:
+        - heading "Бронювання" [level=2] [ref=e99]
+        - generic [ref=e100]:
+          - heading "Що бажаєте забронювати?" [level=3] [ref=e101]
+          - generic [ref=e102]:
+            - 'link "TABLE Стіл Ресторан, тераса, пірс та вечірні посадки. Столи: час бронювання 09:00 - 20:00 09:00 20:00 Час бронювання" [ref=e103] [cursor=pointer]':
+              - /url: /booking?kind=TABLE
+              - generic:
+                - img "TABLE"
+              - strong [ref=e104]: Стіл
+              - generic [ref=e105]: Ресторан, тераса, пірс та вечірні посадки.
+              - generic [ref=e106]:
+                - generic [ref=e107]: "Столи: час бронювання 09:00 - 20:00"
+                - generic [ref=e110]:
+                  - generic [ref=e111]: 09:00
+                  - generic [ref=e112]: 20:00
+                - generic [ref=e114]: Час бронювання
+            - 'link "BEACH Пляж Бунгало, ліжка та інші пляжні послуги. Пляж: бронь на весь день (обовʼязкова явка 09:00 - 13:00) 09:00 13:00 20:00 Реєстрація (явка) Час відпочинку (бронь діє)" [ref=e116] [cursor=pointer]':
+              - /url: /booking?kind=BEACH
+              - generic:
+                - img "BEACH"
+              - strong [ref=e117]: Пляж
+              - generic [ref=e118]: Бунгало, ліжка та інші пляжні послуги.
+              - generic [ref=e119]:
+                - generic [ref=e120]: "Пляж: бронь на весь день (обовʼязкова явка 09:00 - 13:00)"
+                - generic [ref=e124]:
+                  - generic [ref=e125]: 09:00
+                  - generic [ref=e126]: 13:00
+                  - generic [ref=e127]: 20:00
+                - generic [ref=e128]:
+                  - generic [ref=e129]: Реєстрація (явка)
+                  - generic [ref=e131]: Час відпочинку (бронь діє)
+      - generic [ref=e136]: Завантаження погоди...
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - heading "Локація" [level=3] [ref=e140]
+          - paragraph [ref=e141]: пляж Відрада, Одеса
+          - paragraph [ref=e142]: Щодня 09:00-21:00
+        - generic [ref=e143]:
+          - heading "Контакти" [level=3] [ref=e144]
+          - paragraph [ref=e145]:
+            - link "+38 (000) 000-00-00" [ref=e146] [cursor=pointer]:
+              - /url: tel:+380000000000
+        - generic [ref=e147]:
+          - heading "Онлайн" [level=3] [ref=e148]
+          - paragraph [ref=e149]:
+            - link "Афіша подій" [ref=e150] [cursor=pointer]:
+              - /url: /events
+          - paragraph [ref=e151]:
+            - link "Публічне меню" [ref=e152] [cursor=pointer]:
+              - /url: /menu
+  - contentinfo [ref=e153]:
+    - generic [ref=e154]:
+      - generic [ref=e155]:
+        - generic [ref=e156]:
+          - paragraph [ref=e157]: GorPliaj
+          - paragraph [ref=e158]: Сучасний ресторан біля моря з живою музикою, кухнею та вечірніми подіями.
+        - generic [ref=e159]:
+          - heading "Контакти" [level=3] [ref=e160]
+          - paragraph [ref=e161]:
+            - text: 📞
+            - link "+38 (000) 000-00-00" [ref=e162] [cursor=pointer]:
+              - /url: tel:+380000000000
+          - paragraph [ref=e163]: 📍 пляж Відрада, Одеса
+          - paragraph [ref=e164]: 🕐 Щодня 09:00-21:00
+      - generic [ref=e165]:
+        - heading "Як знайти заклад" [level=3] [ref=e166]
+        - iframe [ref=e168]:
+          
+      - generic [ref=e169]:
+        - generic [ref=e170]:
+          - generic [ref=e171]: © 2026 GorPliaj
+          - link "Правила перебування" [ref=e172] [cursor=pointer]:
+            - /url: /rules
+          - link "Політика конфіденційності" [ref=e173] [cursor=pointer]:
+            - /url: /privacy
+          - link "Умови оплати і повернення" [ref=e174] [cursor=pointer]:
+            - /url: /payment-returns
+        - generic [ref=e175]:
+          - generic [ref=e176]: Усі права захищені
+          - generic [ref=e177]: Розроблено
+          - link "// VELYCH.CO" [ref=e178] [cursor=pointer]:
+            - /url: https://velych.pp.ua
+            - generic [ref=e179]: //
+            - text: VELYCH.CO

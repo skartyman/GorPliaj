@@ -719,6 +719,34 @@ export default function MapPage() {
 
   const navigate = useNavigate();
 
+  const dateOptions = useMemo(() => {
+    const list = [];
+    const baseDate = new Date();
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      let label = '';
+      if (i === 0) {
+        label = locale === 'ua' ? 'Сьогодні' : locale === 'ru' ? 'Сегодня' : 'Today';
+      } else if (i === 1) {
+        label = locale === 'ua' ? 'Завтра' : locale === 'ru' ? 'Завтра' : 'Tomorrow';
+      } else {
+        const weekday = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'short' });
+        const dayMonth = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' });
+        const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        label = `${formattedWeekday}, ${dayMonth}`;
+      }
+      
+      list.push({ date: dateStr, label });
+    }
+    return list;
+  }, [locale]);
+
   const [bookingKind, setBookingKind] = useState(searchParams.get('kind') === 'TABLE' ? 'TABLE' : 'BEACH');
   const [usageMode, setUsageMode] = useState(
     searchParams.get('usageMode') === 'EVENING'
@@ -1219,6 +1247,19 @@ export default function MapPage() {
     return <div className="state-msg state-error">{state.error || t('mapLoadFailed')}</div>;
   }
 
+  const renderBookingSummary = () => (
+    <div className="selected-booking-summary" style={{ background: 'var(--bg)', padding: '12px', borderRadius: '8px', marginTop: '12px', marginBottom: '16px', border: '1px solid var(--line)', fontSize: '0.9rem' }}>
+      <strong style={{ display: 'block', marginBottom: '8px', color: 'var(--text)' }}>
+        {locale === 'ua' ? 'Ваш вибір:' : locale === 'ru' ? 'Ваш выбор:' : 'Your selection:'}
+      </strong>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', color: 'var(--muted)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>📅 <span style={{ fontWeight: 600, color: 'var(--text)' }}>{date.split('-').reverse().join('.')}</span></span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>🕒 <span style={{ fontWeight: 600, color: 'var(--text)' }}>{timeFrom}</span></span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>👥 <span style={{ fontWeight: 600, color: 'var(--text)' }}>{guests} {locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.'}</span></span>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       <div className="section-header">
@@ -1228,7 +1269,22 @@ export default function MapPage() {
         </div>
       </div>
 
-      <div className="map-filter-bar" style={{ display: 'flex', gap: 12, padding: '0 0 12px', flexWrap: 'wrap', alignItems: 'end' }}>
+      <div className="map-filter-bar" style={{ display: 'flex', gap: 12, padding: '12px 0', flexWrap: 'wrap', alignItems: 'end', position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg)', borderBottom: '1px solid var(--line)', marginBottom: 16 }}>
+        <div className="quick-date-switcher" style={{ width: '100%', marginBottom: '4px' }}>
+          {dateOptions.map((opt) => {
+            const isActive = date === opt.date;
+            return (
+              <button
+                key={opt.date}
+                type="button"
+                className={`quick-date-btn ${isActive ? 'active' : ''}`}
+                onClick={() => setDate(opt.date)}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
           <input type="date" className="form-input" value={date} min={today} onChange={(e) => setDate(e.target.value)} style={{ fontSize: '0.85rem', height: 38 }} />
@@ -1308,9 +1364,20 @@ export default function MapPage() {
             {locale === 'ua' ? 'За правилами закладу, при бронюванні пляжу явка обовʼязкова до 13:00.' : locale === 'ru' ? 'По правилам заведения, при бронировании пляжа явка обязательна до 13:00.' : 'According to venue rules, arrival for beach bookings is mandatory before 13:00.'}
           </p>
         ) : null}
-        
-        <VisualSchedule bookingKind={resolvedBookingKind} locale={locale} />
       </div>
+
+      <div className="mobile-map-sticky-summary">
+        <div style={{ display: 'flex', gap: '12px', color: 'var(--muted)' }}>
+          <span>📅 <strong style={{color:'var(--text)'}}>{date.split('-').reverse().join('.')}</strong></span>
+          <span>🕒 <strong style={{color:'var(--text)'}}>{timeFrom}</strong></span>
+          <span>👥 <strong style={{color:'var(--text)'}}>{guests} {locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.'}</strong></span>
+        </div>
+        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ background: 'none', border: 'none', color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, padding: '4px 8px', cursor: 'pointer' }}>
+          {locale === 'ua' ? 'Змінити' : locale === 'ru' ? 'Изменить' : 'Change'}
+        </button>
+      </div>
+
+      <VisualSchedule bookingKind={resolvedBookingKind} locale={locale} />
 
       <div className="map-container map-preview-container">
         <article className="map-zone-board">
@@ -1603,6 +1670,7 @@ export default function MapPage() {
               <p className="muted">
                 {t('mapSeats')}: {selectedTable.seatsMin}-{selectedTable.seatsMax}
               </p>
+              {renderBookingSummary()}
               {date === today && timeFrom <= currentTime ? (
                 <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
                   {locale === 'ua' ? 'Обраний час вже минув. Оберіть інший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Выберите другое время.' : 'Selected time has already passed. Please choose another time.'}
@@ -1665,6 +1733,7 @@ export default function MapPage() {
                   <p className="muted">
                     {t('mapStatus')}: {selectedObjectTable.status === 'free' && tableFitsGuests(selectedObjectTable) ? t('mapFree') : t('mapBusy')}
                   </p>
+                  {renderBookingSummary()}
                   {date === today && timeFrom <= currentTime ? (
                     <p className="muted" style={{ color: 'var(--danger)', fontSize: '0.8rem', lineHeight: 1.4 }}>
                       {locale === 'ua' ? 'Обраний час вже минув. Оберіть інший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Выберите другое время.' : 'Selected time has already passed. Please choose another time.'}
