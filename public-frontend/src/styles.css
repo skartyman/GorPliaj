@@ -4672,8 +4672,8 @@ h3 {
   html,
   body,
   #root {
-    background: #0e0e10;
-    color: #f0efe9;
+    background: var(--bg);
+    color: var(--text);
   }
 
   body {
@@ -4699,8 +4699,8 @@ h3 {
 
   .top-bar {
     display: flex;
-    background: #0e0e10;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
   }
 
   .sidebar {
@@ -4768,14 +4768,14 @@ h3 {
   }
 
   .btn-primary {
-    background: #c9a86c;
-    color: #0e0e10;
+    background: var(--brand);
+    color: var(--bg);
   }
 
   .btn-secondary {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.08);
-    color: #f0efe9;
+    border: 1px solid var(--line);
+    background: var(--line-light);
+    color: var(--text);
   }
 
   .content-section {
@@ -4789,26 +4789,26 @@ h3 {
   }
 
   h1 {
-    color: #f0efe9;
+    color: var(--text);
   }
 
   h2 {
     margin: 0 0 10px;
-    color: #f0efe9;
+    color: var(--text);
     font-size: 22px;
     font-weight: 400;
     line-height: 1.25;
   }
 
   h3 {
-    color: #f0efe9;
+    color: var(--text);
   }
 
   .text-link,
   .event-link,
   .info-block a,
   .footer-contacts a {
-    color: #c9a86c;
+    color: var(--brand);
   }
 
   .promo-grid,
@@ -4832,10 +4832,10 @@ h3 {
   .weather-ticker-wrap {
     display: block;
     margin: 0 0 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--line);
     border-radius: 8px;
-    background: #18181c;
-    color: #f0efe9;
+    background: var(--bg-secondary);
+    color: var(--text);
     box-shadow: none;
   }
 
@@ -4893,7 +4893,7 @@ h3 {
     margin-right: 14px;
     border-radius: 8px;
     overflow: hidden;
-    background: #18181c;
+    background: var(--bg-secondary);
   }
 
   .gallery-item img {
@@ -4912,26 +4912,26 @@ h3 {
   .source-note,
   .weather-updated,
   .weather-feels {
-    color: #9a9a9a;
+    color: var(--muted);
   }
 
   .bottom-nav {
     display: flex;
-    background: #18181c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-secondary);
+    border: 1px solid var(--line);
   }
 
   .bottom-nav-item {
-    color: #9a9a9a;
+    color: var(--muted);
   }
 
   .bottom-nav-item.active {
-    color: #c9a86c;
+    color: var(--brand);
   }
 
   .site-footer {
     margin-left: 0;
-    background: #0e0e10;
+    background: var(--bg);
   }
 
   .footer-inner {
@@ -5120,69 +5120,5 @@ h3 {
 
   .site-footer {
     margin-left: var(--sidebar-width);
-  }
-
-  /* Override hardcoded dark colors from legacy iPad fallback */
-  html,
-  body,
-  #root {
-    background: var(--bg);
-    color: var(--text);
-  }
-
-  .promo-prices-card,
-  .promo-events-card,
-  .event-card,
-  .booking-kind-card,
-  .info-block,
-  .weather-card,
-  .state-msg,
-  .promo-prices-container,
-  .weather-ticker-wrap {
-    background: var(--bg-secondary);
-    color: var(--text);
-    border-color: var(--line);
-  }
-
-  .event-card-body,
-  .weather-card,
-  .info-block {
-    padding: 20px;
-  }
-
-  h1,
-  h2,
-  h3 {
-    color: var(--text);
-  }
-
-  .text-link,
-  .event-link,
-  .info-block a,
-  .footer-contacts a {
-    color: var(--brand);
-  }
-
-  .visual-schedule-title,
-  .booking-kind-card > span,
-  .muted,
-  .source-note,
-  .weather-updated,
-  .weather-feels {
-    color: var(--muted);
-  }
-
-  .site-footer {
-    background: var(--bg-secondary);
-  }
-
-  .gallery-item {
-    background: var(--bg-secondary);
-  }
-
-  .btn-secondary {
-    border: 1px solid var(--line);
-    background: var(--line-light);
-    color: var(--text);
   }
 }
