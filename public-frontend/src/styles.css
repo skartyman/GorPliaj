@@ -5121,4 +5121,68 @@ h3 {
   .site-footer {
     margin-left: var(--sidebar-width);
   }
+
+  /* Override hardcoded dark colors from legacy iPad fallback */
+  html,
+  body,
+  #root {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .promo-prices-card,
+  .promo-events-card,
+  .event-card,
+  .booking-kind-card,
+  .info-block,
+  .weather-card,
+  .state-msg,
+  .promo-prices-container,
+  .weather-ticker-wrap {
+    background: var(--bg-secondary);
+    color: var(--text);
+    border-color: var(--line);
+  }
+
+  .event-card-body,
+  .weather-card,
+  .info-block {
+    padding: 20px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--text);
+  }
+
+  .text-link,
+  .event-link,
+  .info-block a,
+  .footer-contacts a {
+    color: var(--brand);
+  }
+
+  .visual-schedule-title,
+  .booking-kind-card > span,
+  .muted,
+  .source-note,
+  .weather-updated,
+  .weather-feels {
+    color: var(--muted);
+  }
+
+  .site-footer {
+    background: var(--bg-secondary);
+  }
+
+  .gallery-item {
+    background: var(--bg-secondary);
+  }
+
+  .btn-secondary {
+    border: 1px solid var(--line);
+    background: var(--line-light);
+    color: var(--text);
+  }
 }
