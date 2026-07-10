@@ -63,7 +63,7 @@ export default function AdminLayout({ children }) {
     const path = window.location.pathname;
     return path.startsWith('/admin/map-editor') || path === '/admin/map';
   });
-  const { t, toggleLanguage } = useAdminI18n();
+  const { t, toggleLanguage, language } = useAdminI18n();
   const diagRef2 = useRef({ pathname: '', tRef: null, userRef: null });
   const d2 = diagRef2.current;
   if (d2.pathname !== location.pathname) { console.warn('[DIAG] AdminLayout pathname changed', d2.pathname, '->', location.pathname); d2.pathname = location.pathname; }
@@ -82,6 +82,17 @@ export default function AdminLayout({ children }) {
       setSidebarCollapsed(false);
     }
   }, [isMapFullscreen, location.pathname]);
+
+  useEffect(() => {
+    if (openSidebar) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [openSidebar]);
 
   async function onLogout() {
     await apiRequest('/api/admin/auth/logout', { method: 'POST' }).catch(() => null);
@@ -169,7 +180,7 @@ export default function AdminLayout({ children }) {
         <div className="sidebar-footer">
           <button type="button" className="nav-link nav-action" onClick={openPasswordModal}>
             <IconKey />
-            <span>Изменить пароль</span>
+            <span>{language === 'ua' ? 'Змінити пароль' : 'Изменить пароль'}</span>
           </button>
         </div>
       </aside>
@@ -211,15 +222,15 @@ export default function AdminLayout({ children }) {
           <form className="admin-modal-card password-modal-card" onSubmit={submitPasswordChange}>
             <div className="admin-modal-head">
               <div>
-                <h2>Изменить пароль</h2>
-                <p className="muted">Аккаунт: {user?.email}</p>
+                <h2>{language === 'ua' ? 'Змінити пароль' : 'Изменить пароль'}</h2>
+                <p className="muted">{language === 'ua' ? 'Акаунт' : 'Аккаунт'}: {user?.email}</p>
               </div>
-              <button type="button" className="icon-btn" onClick={() => setPasswordModalOpen(false)} disabled={passwordState.saving} aria-label="Закрыть">
+              <button type="button" className="icon-btn" onClick={() => setPasswordModalOpen(false)} disabled={passwordState.saving} aria-label={language === 'ua' ? 'Закрити' : 'Закрыть'}>
                 ×
               </button>
             </div>
             <label className="form-field">
-              <span>Текущий пароль</span>
+              <span>{language === 'ua' ? 'Поточний пароль' : 'Текущий пароль'}</span>
               <input
                 type="password"
                 autoComplete="current-password"
@@ -229,7 +240,7 @@ export default function AdminLayout({ children }) {
               />
             </label>
             <label className="form-field">
-              <span>Новый пароль</span>
+              <span>{language === 'ua' ? 'Новий пароль' : 'Новый пароль'}</span>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -240,7 +251,7 @@ export default function AdminLayout({ children }) {
               />
             </label>
             <label className="form-field">
-              <span>Повторите новый пароль</span>
+              <span>{language === 'ua' ? 'Повторіть новий пароль' : 'Повторите новый пароль'}</span>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -253,9 +264,9 @@ export default function AdminLayout({ children }) {
             {passwordState.error ? <p className="state-msg state-error">{passwordState.error}</p> : null}
             {passwordState.success ? <p className="state-msg state-success">{passwordState.success}</p> : null}
             <div className="admin-modal-actions">
-              <button type="button" className="btn" onClick={() => setPasswordModalOpen(false)} disabled={passwordState.saving}>Отмена</button>
+              <button type="button" className="btn" onClick={() => setPasswordModalOpen(false)} disabled={passwordState.saving}>{language === 'ua' ? 'Скасувати' : 'Отмена'}</button>
               <button type="submit" className="btn btn-primary" disabled={passwordState.saving}>
-                {passwordState.saving ? 'Сохраняем...' : 'Сохранить пароль'}
+                {passwordState.saving ? (language === 'ua' ? 'Збереження...' : 'Сохраняем...') : (language === 'ua' ? 'Зберегти пароль' : 'Сохранить пароль')}
               </button>
             </div>
           </form>

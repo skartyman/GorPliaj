@@ -73,6 +73,7 @@ export default function Layout() {
   const { settings } = useSettings();
   const isMenuRoute = location.pathname === '/menu';
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme === 'light' ? 'light' : '';
@@ -81,7 +82,20 @@ export default function Layout() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    setIsSidebarOpen(false);
   }, [location.pathname]);
+
+  // Prevent body scroll when sidebar is manually expanded (e.g. on tablet)
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isSidebarOpen]);
 
   const brandName = localizeField(settings?.title, locale) || 'GorPliaj';
   const logoUrl = settings?.logoUrl || '/icons/Logo.png';
@@ -114,7 +128,19 @@ export default function Layout() {
     <div className={`app-shell${isMenuRoute ? ' menu-route' : ''}`}>
       <ClientInstallPrompt />
 
-      <aside className="sidebar">
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <aside 
+        className={`sidebar ${isSidebarOpen ? 'expanded' : ''}`}
+        onMouseEnter={() => setIsSidebarOpen(true)}
+        onMouseLeave={() => setIsSidebarOpen(false)}
+        onClick={() => setIsSidebarOpen(true)}
+      >
         <NavLink to="/" className="sidebar-logo">
           <img src={logoUrl} alt={brandName} />
           <span className="sidebar-logo-text">{brandName}</span>

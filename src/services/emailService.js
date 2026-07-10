@@ -66,7 +66,6 @@ function buildTicketHtml({
   const hasDeposit = deposit > 0;
   const hasEntry = Number(entryTicketsAmount || 0) > 0;
   const appBaseUrl = getBaseUrl();
-
   return `<!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -74,92 +73,10 @@ function buildTicketHtml({
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GorPliaj Booking</title>
 </head>
-<body style="margin:0;padding:0;background:#f4ede2;font-family:Arial,Helvetica,sans-serif;color:#2f2219;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4ede2;padding:24px 0;">
+<body style="margin:0;padding:0;background:#0E0E11;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#FFFFFF;line-height:1.5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0E0E11;padding:40px 0;">
     <tr>
       <td align="center">
-        <table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;background:#fffdf9;border-radius:28px;overflow:hidden;box-shadow:0 16px 40px rgba(76,52,31,0.12);">
-          <tr>
-            <td style="padding:0;background:linear-gradient(135deg,#3f2416 0%,#6d4328 55%,#c89241 100%);">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding:32px 34px 26px;">
-                    <div style="font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:#f7e8cf;opacity:0.92;">GorPliaj</div>
-                    <div style="font-size:32px;line-height:1.15;font-weight:700;color:#ffffff;margin-top:10px;">Ваше бронювання підтверджено</div>
-                    <div style="font-size:15px;line-height:1.6;color:#f6e8d8;margin-top:12px;">
-                      Показуйте цей лист або PDF на вході. Оплата за користування місцем вже зарахована.
-                    </div>
-                    <div style="margin-top:22px;display:inline-block;padding:12px 18px;border-radius:16px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.18);color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.12em;">
-                      ${escapeHtml(ticketCode)}
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 34px 10px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding:0 0 18px;">
-                    <div style="background:#fbf6ef;border:1px solid #eadbca;border-radius:22px;padding:22px 24px;">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        ${renderFactRow('Гість', customerName)}
-                        ${renderFactRow('Телефон', customerPhone || '—')}
-                        ${renderFactRow('Позиція', localizedText(tableName) || '—')}
-                        ${renderFactRow('Зона', localizedText(zoneName) || '—')}
-                        ${eventTitle ? renderFactRow('Подія', localizedText(eventTitle)) : ''}
-                        ${renderFactRow('Дата', formatDate(reservationDate))}
-                        ${renderFactRow('Час', `${formatTime(timeFrom)} - ${formatTime(timeTo)}`)}
-                        ${renderFactRow('Гостей', String(guests))}
-                        ${renderFactRow('Статус оплати', isPaid ? 'Оплачено' : 'Очікує оплати')}
-                      </table>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:0 0 18px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="width:50%;padding-right:8px;vertical-align:top;">
-                          <div style="background:#3f2416;border-radius:22px;padding:20px 22px;min-height:126px;">
-                            <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#d8bf9e;">Оренда позиції</div>
-                            <div style="font-size:28px;font-weight:700;color:#ffffff;margin-top:10px;">${formatMoney(rental || deposit || 0)}</div>
-                            <div style="font-size:13px;line-height:1.6;color:#f0dfcf;margin-top:10px;">Оплата за користування місцем.</div>
-                          </div>
-                        </td>
-                        <td style="width:50%;padding-left:8px;vertical-align:top;">
-                          <div style="background:#f5efe6;border-radius:22px;padding:20px 22px;min-height:126px;">
-                            <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#8f6a44;">Онлайн-оплата</div>
-                            <div style="font-size:28px;font-weight:700;color:#402719;margin-top:10px;">${formatMoney(totalPaid || 0)}</div>
-                            <div style="font-size:13px;line-height:1.6;color:#6d5948;margin-top:10px;">${hasEntry ? `Включно з вхідними квитками: ${formatMoney(entryTicketsAmount || 0)}.` : 'Без додаткових вхідних квитків.'}</div>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:0 0 18px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="width:50%;padding-right:8px;vertical-align:top;text-align:center;">
-                          <div style="background:#fff;border:1px solid #eadbca;border-radius:22px;padding:18px 18px 14px;">
-                            ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR вхід" width="146" height="146" style="display:block;margin:0 auto;border-radius:16px;" />` : ''}
-                            <div style="font-size:14px;font-weight:700;color:#2f2219;margin-top:14px;">QR для входу</div>
-                            <div style="font-size:12px;line-height:1.5;color:#8a745f;margin-top:6px;">Скан для перевірки бронювання, гостей та статусу.</div>
-                          </div>
-                        </td>
-                        <td style="width:50%;padding-left:8px;vertical-align:top;text-align:center;">
-                          <div style="background:#fff;border:1px solid #eadbca;border-radius:22px;padding:18px 18px 14px;">
-                            ${depositQrDataUrl ? `<img src="${depositQrDataUrl}" alt="QR депозит" width="146" height="146" style="display:block;margin:0 auto;border-radius:16px;" />` : ''}
-                            <div style="font-size:14px;font-weight:700;color:#2f2219;margin-top:14px;">QR депозиту</div>
-                            <div style="font-size:12px;line-height:1.5;color:#8a745f;margin-top:6px;">Окремий QR для підтвердження суми депозиту та факту оплати.</div>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
                 </tr>
                 <tr>
                   <td style="padding:6px 0 4px;">

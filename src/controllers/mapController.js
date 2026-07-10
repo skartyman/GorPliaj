@@ -77,6 +77,7 @@ async function getMapAvailability(req, res) {
       return res.status(400).json({ message: 'Час початку має бути раніше за час закриття закладу.' });
     }
 
+    await reservationService.expireStaleReservations();
     const availability = await reservationService.getMapAvailability({
       mapId,
       reservationDate,
@@ -112,6 +113,8 @@ async function getMapBookableUnits(req, res) {
       return res.status(400).json({ message: 'Invalid date or time.' });
     }
 
+    await reservationService.expireStaleReservations();
+    
     const result = await bookableUnitService.getMapBookableUnits({
       mapId,
       reservationDate,

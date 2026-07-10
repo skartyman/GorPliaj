@@ -1,6 +1,8 @@
 const reservationService = require('../services/reservationService');
 const bookableUnitService = require('../services/bookableUnitService');
 const hutkoService = require('../services/hutkoService');
+const { sendTicketEmail } = require('../services/emailService');
+const waiterTelegramService = require('../services/waiterTelegramService');
 const { generateTicketCode } = require('../utils/ticket');
 const {
   buildVerifyUrl,
@@ -62,6 +64,7 @@ function isSameBookingDay(left, right) {
 
 async function getReservations(req, res) {
   try {
+    await reservationService.expireStaleReservations();
     const reservations = await reservationService.getReservations();
     return res.json(reservations);
   } catch (error) {
@@ -317,6 +320,8 @@ async function createReservation(req, res) {
     const commentCustomer = [normalizeText(req.body.commentCustomer), paymentComment].filter(Boolean).join('\n\n');
     const ticketCode = generateTicketCode();
 
+    const isAwaitingPayment = totalAmount > 0;
+
     const reservation = await reservationService.createReservation({
       tableId,
       mapId,
@@ -335,7 +340,8 @@ async function createReservation(req, res) {
       depositRequired: depositAmount > 0,
       depositAmount,
       rentalAmount: rental > 0 ? rental : null,
-      status: totalAmount > 0 ? 'AWAITING_PAYMENT' : 'PENDING',
+      status: isAwaitingPayment ? 'AWAITING_PAYMENT' : 'CONFIRMED',
+      expiresAt: isAwaitingPayment ? new Date(Date.now() + 15 * 60 * 1000) : null,
       source: event ? 'EVENT' : 'WEB',
       ticketCode
     });
@@ -365,6 +371,35 @@ async function createReservation(req, res) {
       }
       if (checkout.type === 'PROVIDER_ERROR') {
         return res.status(502).json({ message: checkout.message, reservation, access });
+      }
+    } else {
+      // Free booking -> Auto-confirmed.
+      if (customerEmail) {
+        try {
+          await sendTicketEmail({
+            to: customerEmail,
+            ticketCode: reservation.ticketCode,
+            customerName: reservation.customerName,
+            eventTitle: entryBreakdown?.eventTitle || '',
+            ticketPrice: 0,
+            ticketCount: reservation.guests,
+            amountPaid: 0,
+            currency: 'UAH',
+            reservationDate: reservation.reservationDate,
+            timeFrom: reservation.timeFrom,
+            tableName: getBookingPositionName(table),
+            downloadUrl: `${req.protocol}://${req.get('host')}${access.downloadUrl}`
+          });
+        } catch (emailError) {
+          console.error(`[reservationController] Failed to send ticket email for free reservation #${reservation.id}:`, emailError.message);
+        }
+      }
+      
+      // Send Telegram notification
+      try {
+        await waiterTelegramService.sendNewReservationMessage(reservation);
+      } catch (telegramError) {
+        console.error(`[reservationController] Failed to send telegram notification for free reservation #${reservation.id}:`, telegramError.message);
       }
     }
 
@@ -428,7 +463,7 @@ async function getPublicReservationStatus(req, res) {
         reservationDate: fresh.reservationDate,
         timeFrom: fresh.timeFrom
       },
-      downloadUrl: fresh.payment?.status === 'PAID' ? access.downloadUrl : null
+      downloadUrl: (fresh.status === 'CONFIRMED' || fresh.payment?.status === 'PAID') ? access.downloadUrl : null
     });
   } catch (error) {
     console.error('[reservationController.getPublicReservationStatus] Failed.', error);

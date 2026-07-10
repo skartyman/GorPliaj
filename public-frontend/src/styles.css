@@ -74,8 +74,16 @@ img { display: block; max-width: 100%; }
   overflow: hidden;
 }
 
-.sidebar:hover {
+.sidebar.expanded {
   width: var(--sidebar-expanded);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.4);
+  touch-action: none;
 }
 
 .sidebar-logo {
@@ -112,7 +120,7 @@ img { display: block; max-width: 100%; }
   transition: opacity var(--transition);
 }
 
-.sidebar:hover .sidebar-logo-text {
+.sidebar.expanded .sidebar-logo-text {
   opacity: 1;
 }
 
@@ -182,7 +190,7 @@ img { display: block; max-width: 100%; }
   transition: opacity var(--transition);
 }
 
-.sidebar:hover .sidebar-label {
+.sidebar.expanded .sidebar-label {
   opacity: 1;
 }
 
@@ -5061,5 +5069,56 @@ h3 {
 
   .mobile-map-sticky-summary {
     display: none;
+  }
+
+  /* Restore grids destroyed by legacy iPad fallback */
+  .promo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+
+  .booking-kind-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .weather-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footer-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-bottom-map {
+    height: 300px;
+  }
+
+  .section-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .site-footer {
+    margin-left: var(--sidebar-width);
   }
 }

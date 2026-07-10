@@ -50,7 +50,8 @@ function createReservation(payload) {
     paidInCash,
     status,
     source,
-    ticketCode
+    ticketCode,
+    expiresAt
   } = payload;
 
   return prisma.reservation.create({
@@ -75,7 +76,8 @@ function createReservation(payload) {
       paidInCash: Boolean(paidInCash),
       status: status || undefined,
       source: source || undefined,
-      ticketCode: ticketCode || undefined
+      ticketCode: ticketCode || undefined,
+      expiresAt: expiresAt || null
     },
     include: {
       table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, deposit: true, rowId: true, row: { select: { sortOrder: true } } } },
@@ -393,6 +395,23 @@ async function deleteReservation(id) {
   }
 }
 
+async function expireStaleReservations() {
+  try {
+    const expired = await prisma.reservation.updateMany({
+      where: {
+        status: { in: ['PENDING', 'AWAITING_PAYMENT'] },
+        expiresAt: { lt: new Date() }
+      },
+      data: { status: 'CANCELLED' }
+    });
+    if (expired.count > 0) {
+      console.log(`[reservationService] Cancelled ${expired.count} stale reservations.`);
+    }
+  } catch (err) {
+    console.error('[reservationService.expireStaleReservations] Failed.', err);
+  }
+}
+
 module.exports = {
   getReservations,
   createReservation,
@@ -406,6 +425,7 @@ module.exports = {
   createTableHold,
   releaseTableHold,
   consumeTableHold,
+  expireStaleReservations,
   getMapAvailability,
   updateReservationStatus,
   deleteReservation
