@@ -5077,6 +5077,17 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* Remove card borders from promo sections — they're layout wrappers, not cards */
+  .promo-prices-card,
+  .promo-events-card {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+    padding: 0;
+  }
+
   .events-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
