@@ -12,6 +12,8 @@ const waiterRoutes = require('./routes/waiter');
 const { extractInvoiceData } = require('./services/groqVisionService');
 const { setupBotWebhook } = require('./services/botService');
 const { setupWaiterBotWebhook } = require('./services/waiterTelegramService');
+const reservationService = require('./services/reservationService');
+const ticketSalesService = require('./services/ticketSalesService');
 
 const app = express();
 const publicDir = path.join(__dirname, '..', 'public');
@@ -168,5 +170,31 @@ app.get('*', (req, res) => {
 
 setupBotWebhook(app);
 setupWaiterBotWebhook(app);
+
+let reservationMaintenanceRunning = false;
+async function runReservationMaintenance() {
+  if (reservationMaintenanceRunning) return;
+  reservationMaintenanceRunning = true;
+  try {
+    await reservationService.expireStaleReservations();
+    await reservationService.completeClosedDayReservations();
+    await ticketSalesService.expireStaleOrders();
+    await ticketSalesService.expireFinishedEventTickets();
+  } finally {
+    reservationMaintenanceRunning = false;
+  }
+}
+
+setTimeout(() => {
+  runReservationMaintenance().catch((error) => {
+    console.error('[reservationMaintenance] Initial run failed.', error);
+  });
+}, 5000);
+
+setInterval(() => {
+  runReservationMaintenance().catch((error) => {
+    console.error('[reservationMaintenance] Scheduled run failed.', error);
+  });
+}, 60 * 1000);
 
 module.exports = app;

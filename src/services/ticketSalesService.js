@@ -7,7 +7,7 @@ const ORDER_STATUSES = new Set(['PENDING', 'AWAITING_PAYMENT', 'PAID', 'CANCELLE
 const ORDER_TRANSITIONS = {
   PENDING: new Set(['AWAITING_PAYMENT', 'PAID', 'CANCELLED', 'EXPIRED']),
   AWAITING_PAYMENT: new Set(['PAID', 'CANCELLED', 'EXPIRED']),
-  PAID: new Set(['CANCELLED', 'REFUNDED']),
+  PAID: new Set(['CANCELLED', 'EXPIRED', 'REFUNDED']),
   CANCELLED: new Set(),
   EXPIRED: new Set(),
   REFUNDED: new Set()
@@ -79,6 +79,27 @@ function toOrder(row) {
     eventSession: toEventSession(row.eventSession),
     tickets: Array.isArray(row.tickets) ? row.tickets.map(toTicket) : []
   };
+}
+
+function getEventValidUntil(event) {
+  if (!event) return null;
+  const candidates = [];
+  if (event.endAt) candidates.push(new Date(event.endAt));
+  if (event.startAt) candidates.push(new Date(event.startAt));
+  if (Array.isArray(event.sessions)) {
+    for (const session of event.sessions) {
+      if (session?.endsAt) candidates.push(new Date(session.endsAt));
+      if (session?.startsAt) candidates.push(new Date(session.startsAt));
+    }
+  }
+  const validDates = candidates.filter((date) => !Number.isNaN(date.getTime()));
+  if (!validDates.length) return null;
+  return new Date(Math.max(...validDates.map((date) => date.getTime())));
+}
+
+function eventHasEnded(event, now = new Date()) {
+  const validUntil = getEventValidUntil(event);
+  return Boolean(validUntil && validUntil < now);
 }
 
 async function deliverOrderIfPaid(order) {
@@ -412,7 +433,62 @@ async function expireStaleOrders() {
   return staleOrders.length;
 }
 
+async function expireFinishedEventTickets({ now = new Date(), ticketCode = null } = {}) {
+  const where = {
+    status: 'VALID',
+    ...(ticketCode ? { code: normalizeText(ticketCode).toUpperCase() } : {})
+  };
+
+  const tickets = await prisma.ticket.findMany({
+    where,
+    select: {
+      id: true,
+      orderId: true,
+      event: {
+        select: {
+          id: true,
+          startAt: true,
+          endAt: true,
+          sessions: {
+            select: { startsAt: true, endsAt: true }
+          }
+        }
+      }
+    }
+  });
+
+  const expiredTicketIds = tickets
+    .filter((ticket) => eventHasEnded(ticket.event, now))
+    .map((ticket) => ticket.id);
+
+  if (!expiredTicketIds.length) return 0;
+
+  const orderIds = [...new Set(tickets.filter((ticket) => expiredTicketIds.includes(ticket.id)).map((ticket) => ticket.orderId))];
+
+  await prisma.$transaction(async (tx) => {
+    await tx.ticket.updateMany({
+      where: { id: { in: expiredTicketIds }, status: 'VALID' },
+      data: { status: 'EXPIRED', cancelledAt: now }
+    });
+
+    for (const orderId of orderIds) {
+      const remaining = await tx.ticket.count({
+        where: { orderId, status: { in: ['RESERVED', 'VALID'] } }
+      });
+      if (remaining === 0) {
+        await tx.ticketOrder.updateMany({
+          where: { id: orderId, status: 'PAID' },
+          data: { status: 'EXPIRED', cancelledAt: now }
+        });
+      }
+    }
+  });
+
+  return expiredTicketIds.length;
+}
+
 async function listOrders(filters = {}) {
+  await expireFinishedEventTickets();
   const rows = await prisma.ticketOrder.findMany({
     where: {
       ...(filters.eventId ? { eventId: filters.eventId } : {}),
@@ -435,6 +511,7 @@ async function listOrders(filters = {}) {
 }
 
 async function getOrder(id) {
+  await expireFinishedEventTickets();
   const row = await prisma.ticketOrder.findUnique({
     where: { id },
     include: {
@@ -491,11 +568,13 @@ async function updateOrderStatus(id, status) {
 
     const ticketStatus = normalizedStatus === 'PAID'
       ? 'VALID'
-      : normalizedStatus === 'REFUNDED'
-        ? 'REFUNDED'
-        : cancelling
-          ? 'CANCELLED'
-          : 'RESERVED';
+      : normalizedStatus === 'EXPIRED'
+        ? 'EXPIRED'
+        : normalizedStatus === 'REFUNDED'
+          ? 'REFUNDED'
+          : cancelling
+            ? 'CANCELLED'
+            : 'RESERVED';
 
     await tx.ticket.updateMany({
       where: { orderId: id, status: { not: 'USED' } },
@@ -511,7 +590,7 @@ async function updateOrderStatus(id, status) {
       data: {
         status: normalizedStatus,
         ...(normalizedStatus === 'PAID' ? { paidAt: existing.paidAt || new Date() } : {}),
-        ...(normalizedStatus === 'CANCELLED' ? { cancelledAt: new Date() } : {})
+        ...(cancelling ? { cancelledAt: new Date() } : {})
       },
       include: {
         event: true,
@@ -532,6 +611,7 @@ async function updateOrderStatus(id, status) {
 }
 
 async function listTickets(filters = {}) {
+  await expireFinishedEventTickets();
   const rows = await prisma.ticket.findMany({
     where: {
       ...(filters.eventId ? { eventId: filters.eventId } : {}),
@@ -554,6 +634,7 @@ async function listTickets(filters = {}) {
 }
 
 async function verifyTicket(code) {
+  await expireFinishedEventTickets({ ticketCode: code });
   const ticket = await prisma.ticket.findUnique({
     where: { code: normalizeText(code).toUpperCase() },
     include: {
@@ -573,6 +654,7 @@ async function verifyTicket(code) {
 
 async function useTicket(code, adminUserId) {
   const normalizedCode = normalizeText(code).toUpperCase();
+  await expireFinishedEventTickets({ ticketCode: normalizedCode });
   const result = await prisma.$transaction(async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { code: normalizedCode } });
     if (!ticket) return { type: 'NOT_FOUND' };
@@ -619,5 +701,6 @@ module.exports = {
   listTickets,
   verifyTicket,
   useTicket,
-  expireStaleOrders
+  expireStaleOrders,
+  expireFinishedEventTickets
 };
