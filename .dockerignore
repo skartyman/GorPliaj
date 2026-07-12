@@ -4,7 +4,13 @@ node_modules/
 .agents/
 .codex-remote-attachments/
 scratch/
+live-snapshot/
+snapshots/
 test-results/
+public-frontend/node_modules/
+admin-frontend/node_modules/
+public-frontend/dist/
+admin-frontend/dist/
 .DS_Store
 npm-debug.log*
 *.log

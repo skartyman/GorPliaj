@@ -91,28 +91,46 @@ app.get(['/app', '/app/*'], (req, res) => {
   return sendPublicIndex(res);
 });
 
-app.get(['/booking', '/booking/*'], (req, res) => {
-  return sendPublicIndex(res);
+app.get('/menu', (req, res) => {
+  const qs = new URLSearchParams(req.query).toString();
+  return res.redirect(307, `/app/menu${qs ? '?' + qs : ''}`);
 });
 
-app.get('/menu', (req, res) => {
-  return sendPublicIndex(res);
+app.get('/booking', (req, res) => {
+  const qs = new URLSearchParams(req.query).toString();
+  return res.redirect(307, `/app/booking${qs ? '?' + qs : ''}`);
+});
+
+app.get('/booking/*', (req, res) => {
+  return res.redirect(307, `/app${req.url}`);
 });
 
 app.get('/events', (req, res) => {
-  return sendPublicIndex(res);
+  return res.redirect(307, '/app/events');
 });
 
 app.get('/events/:slug', (req, res) => {
-  return sendPublicIndex(res);
+  return res.redirect(307, `/app/events/${req.params.slug}`);
 });
 
 app.get('/map-preview', (req, res) => {
-  return sendPublicIndex(res);
+  return res.redirect(307, '/app/map-preview');
 });
 
 app.get('/about', (req, res) => {
-  return sendPublicIndex(res);
+  return res.redirect(307, '/app/about');
+});
+
+app.get('/rules', (req, res) => {
+  return res.redirect(307, '/app/rules');
+});
+
+app.get('/privacy', (req, res) => {
+  return res.redirect(307, '/app/privacy');
+});
+
+app.get('/payment-returns', (req, res) => {
+  return res.redirect(307, '/app/payment-returns');
 });
 
 app.get('/waiter', (req, res) => {

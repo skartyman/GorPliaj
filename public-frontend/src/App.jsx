@@ -4,7 +4,8 @@ import HomePage from './pages/HomePage';
 import EventsPage from './pages/EventsPage';
 import EventDetailPage from './pages/EventDetailPage';
 import MenuPage from './pages/MenuPage';
-import UnifiedBookingPage from './pages/UnifiedBookingPage';
+import MapPage from './pages/MapPage';
+import BookingPage from './pages/BookingPage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import PaymentReturnsPage from './pages/PaymentReturnsPage';
@@ -19,8 +20,8 @@ export default function App() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:slug" element={<EventDetailPage />} />
         <Route path="/menu" element={<MenuPage />} />
-        <Route path="/map-preview" element={<Navigate to="/booking" replace />} />
-        <Route path="/booking" element={<UnifiedBookingPage />} />
+        <Route path="/map-preview" element={<MapPage />} />
+        <Route path="/booking" element={<BookingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
