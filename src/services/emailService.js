@@ -11,7 +11,7 @@ const {
 } = require('../utils/deliveryPresentation');
 
 function isMailConfigured() {
-  return !!(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASS);
+  return Boolean(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASS);
 }
 
 function createTransport() {
@@ -32,7 +32,7 @@ function renderFactRow(label, value) {
   return `
     <tr>
       <td style="padding:8px 0;color:#8a745f;font-size:13px;vertical-align:top;width:132px;">${escapeHtml(label)}</td>
-      <td style="padding:8px 0;color:#2f2219;font-size:14px;font-weight:600;">${escapeHtml(value || '—')}</td>
+      <td style="padding:8px 0;color:#2f2219;font-size:14px;font-weight:600;">${escapeHtml(value || '-')}</td>
     </tr>
   `;
 }
@@ -59,13 +59,19 @@ function buildTicketHtml({
   statusUrl,
   downloadUrl
 }) {
-  const isPaid = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
+  const isConfirmed = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
   const rental = Number(rentalAmount || 0);
   const deposit = Number(depositAmount || 0);
+  const entry = Number(entryTicketsAmount || 0);
   const hasRental = rental > 0;
   const hasDeposit = deposit > 0;
-  const hasEntry = Number(entryTicketsAmount || 0) > 0;
+  const hasEntry = entry > 0;
   const appBaseUrl = getBaseUrl();
+  const statusLabel = isConfirmed ? 'Confirmed' : 'Awaiting payment';
+  const totalLabel = hasRental || hasDeposit || hasEntry
+    ? formatMoney(totalPaid || rental + deposit + entry)
+    : 'No online payment required';
+
   return `<!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -77,11 +83,44 @@ function buildTicketHtml({
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0E0E11;padding:40px 0;">
     <tr>
       <td align="center">
+        <table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;background:#fffdf9;border-radius:28px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,0.28);">
+          <tr>
+            <td style="padding:30px 34px 18px;background:#402719;color:#fffdf9;">
+              <div style="font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#d9bd8b;font-weight:700;">GorPliaj</div>
+              <h1 style="margin:12px 0 0;font-size:28px;line-height:1.15;font-weight:800;">Booking confirmation</h1>
+              <p style="margin:10px 0 0;color:#f3dcc0;font-size:15px;">Your booking code is <strong>${escapeHtml(ticketCode)}</strong>.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 34px 10px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:top;padding-right:22px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      ${renderFactRow('Guest', customerName)}
+                      ${renderFactRow('Phone', customerPhone)}
+                      ${renderFactRow('Date', formatDate(reservationDate))}
+                      ${renderFactRow('Time', `${formatTime(timeFrom)} - ${formatTime(timeTo)}`)}
+                      ${renderFactRow('Guests', guests)}
+                      ${renderFactRow('Position', localizedText(tableName))}
+                      ${renderFactRow('Zone', localizedText(zoneName))}
+                      ${eventTitle ? renderFactRow('Event', localizedText(eventTitle)) : ''}
+                      ${renderFactRow('Status', statusLabel)}
+                      ${renderFactRow('Online payment', totalLabel)}
+                      ${hasRental ? renderFactRow('Rental', formatMoney(rental)) : ''}
+                      ${hasDeposit ? renderFactRow('Deposit', formatMoney(deposit)) : ''}
+                      ${hasEntry ? renderFactRow('Event entry', formatMoney(entry)) : ''}
+                    </table>
+                  </td>
+                  <td style="vertical-align:top;width:190px;text-align:center;">
+                    ${qrDataUrl ? `<div style="padding:12px;border:1px solid #eadbc8;border-radius:20px;background:#ffffff;"><img src="${escapeHtml(qrDataUrl)}" alt="QR code" width="160" height="160" style="display:block;width:160px;height:160px;margin:0 auto;" /><div style="font-size:11px;color:#8a745f;font-weight:700;margin-top:8px;text-transform:uppercase;letter-spacing:1px;">Scan at entrance</div></div>` : ''}
+                    ${depositQrDataUrl ? `<div style="padding:12px;border:1px solid #eadbc8;border-radius:20px;background:#ffffff;margin-top:14px;"><img src="${escapeHtml(depositQrDataUrl)}" alt="Deposit QR code" width="130" height="130" style="display:block;width:130px;height:130px;margin:0 auto;" /><div style="font-size:11px;color:#8a745f;font-weight:700;margin-top:8px;text-transform:uppercase;letter-spacing:1px;">Deposit scan</div></div>` : ''}
+                  </td>
                 </tr>
                 <tr>
-                  <td style="padding:6px 0 4px;">
-                    ${downloadUrl ? `<a href="${escapeHtml(downloadUrl)}" style="display:inline-block;padding:14px 22px;border-radius:16px;background:#402719;color:#fff;text-decoration:none;font-weight:700;margin-right:10px;">Завантажити PDF</a>` : ''}
-                    ${statusUrl ? `<a href="${escapeHtml(statusUrl)}" style="display:inline-block;padding:14px 22px;border-radius:16px;background:#f4ede2;color:#402719;text-decoration:none;font-weight:700;border:1px solid #ddc8ae;">Перевірити статус бронювання</a>` : ''}
+                  <td colspan="2" style="padding:22px 0 4px;">
+                    ${downloadUrl ? `<a href="${escapeHtml(downloadUrl)}" style="display:inline-block;padding:14px 22px;border-radius:16px;background:#402719;color:#fff;text-decoration:none;font-weight:700;margin:0 10px 10px 0;">Download PDF</a>` : ''}
+                    ${statusUrl ? `<a href="${escapeHtml(statusUrl)}" style="display:inline-block;padding:14px 22px;border-radius:16px;background:#f4ede2;color:#402719;text-decoration:none;font-weight:700;border:1px solid #ddc8ae;margin-bottom:10px;">Check booking status</a>` : ''}
                   </td>
                 </tr>
               </table>
@@ -89,11 +128,11 @@ function buildTicketHtml({
           </tr>
           <tr>
             <td style="padding:10px 34px 28px;color:#8a745f;font-size:12px;line-height:1.6;">
-              Бронювання дійсне на дату та кількість гостей, вказані у цьому листі. Якщо у вас зміняться деталі візиту, повідомте адміністрацію заздалегідь.
+              The booking is valid for the date, time and guest count shown in this email. If visit details change, please contact the venue administration in advance.
             </td>
           </tr>
         </table>
-        <div style="padding-top:16px;font-size:11px;color:#a8947f;">GorPliaj • Otrada, Odesa • ${escapeHtml(appBaseUrl)}</div>
+        <div style="padding-top:16px;font-size:11px;color:#a8947f;">GorPliaj - Otrada, Odesa - ${escapeHtml(appBaseUrl)}</div>
       </td>
     </tr>
   </table>
@@ -135,6 +174,13 @@ async function sendTicketEmail({
     return { sent: false, reason: 'mail_transport_failed' };
   }
 
+  let resolvedQrDataUrl = qrDataUrl || null;
+  if (!resolvedQrDataUrl && verifyUrl) {
+    try {
+      resolvedQrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
+    } catch {}
+  }
+
   let depositQrDataUrl = null;
   if (depositQrUrl) {
     try {
@@ -157,7 +203,7 @@ async function sendTicketEmail({
     rentalAmount,
     totalPaid,
     entryTicketsAmount,
-    qrDataUrl,
+    qrDataUrl: resolvedQrDataUrl,
     depositQrDataUrl,
     status,
     paymentStatus,
@@ -203,7 +249,7 @@ async function sendTicketEmail({
     await transport.sendMail({
       from: process.env.MAIL_FROM || process.env.MAIL_USER,
       to,
-      subject: `GorPliaj - бронювання ${ticketCode}`,
+      subject: `GorPliaj - booking ${ticketCode}`,
       html,
       attachments
     });
