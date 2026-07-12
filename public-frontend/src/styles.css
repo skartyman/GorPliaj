@@ -5871,3 +5871,33 @@ h3 {
     margin-left: var(--sidebar-width);
   }
 }
+
+/* Final hero guard: keep actions inside the visual viewport on mobile browsers. */
+@media (max-width: 768px) {
+  .hero {
+    min-height: calc(100dvh - var(--header-height));
+    padding-top: 24px;
+    padding-bottom: calc(var(--bottom-nav-height) + 78px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  .hero h1 {
+    font-weight: 650;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.42), 0 4px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  .hero p {
+    font-weight: 550;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.42), 0 3px 14px rgba(0, 0, 0, 0.16);
+  }
+}
+
+@media (min-width: 769px) {
+  .hero h1 {
+    font-weight: 600;
+  }
+
+  .hero p {
+    font-weight: 500;
+  }
+}
