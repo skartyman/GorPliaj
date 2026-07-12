@@ -5133,3 +5133,20 @@ h3 {
     margin-left: var(--sidebar-width);
   }
 }
+
+/* UnifiedBookingPage side panel (overlay) */
+.unified-side-panel {
+  background: var(--bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.unified-side-panel .form-input {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .unified-side-panel {
+    -webkit-overflow-scrolling: touch;
+  }
+}

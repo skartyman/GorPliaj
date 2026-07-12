@@ -29,17 +29,10 @@ const navItems = [
       <line x1="10.08" y1="3.38" x2="13.92" y2="3.38"/>
     </svg>
   )},
-  { to: '/map-preview', labelKey: 'navMap', icon: (
+  { to: '/booking', labelKey: 'navBooking', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
       <circle cx="12" cy="10" r="3"/>
-    </svg>
-  )},
-  { to: '/booking', labelKey: 'navBooking', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4h16v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/>
-      <polyline points="8 10 12 14 16 10"/>
-      <line x1="12" y1="2" x2="12" y2="6"/>
     </svg>
   )},
   { to: '/about', labelKey: 'navAbout', icon: (
