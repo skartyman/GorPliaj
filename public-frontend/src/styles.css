@@ -5373,7 +5373,7 @@ h3 {
   .hero {
     display: flex;
     min-height: 100vh;
-    padding: 0 20px 80px;
+    padding: 0 20px 120px;
     margin: 0 -14px;
     width: calc(100% + 28px);
   }
@@ -5664,12 +5664,13 @@ h3 {
     align-items: center;
     justify-content: space-between;
     padding: 8px 16px;
-    background: rgba(26, 27, 30, 0.95);
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--line);
     margin: -16px -20px 16px -20px;
     font-size: 0.8rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
   }
 }
 
