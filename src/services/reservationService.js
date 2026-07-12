@@ -5,6 +5,7 @@ const { localizeMessage } = require('../utils/localization');
 const { getClosingTimeString, getVenueClockParts, VENUE_UTC_OFFSET, VENUE_TIME_ZONE } = require('../utils/venueTime');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 const HOLD_TTL_MS = 15 * 60 * 1000;
+const BEACH_CLOSING_MINUTES = 20 * 60;
 
 function matchesGuestCapacity(target, guests) {
   const normalizedGuests = Number(guests || 0);
@@ -220,6 +221,23 @@ function timeToMinutes(value) {
   return hours * 60 + minutes;
 }
 
+function getVenueWeekdayKey(date) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: VENUE_TIME_ZONE,
+    weekday: 'short'
+  }).format(date).slice(0, 3).toLowerCase();
+}
+
+async function getConfiguredClosingTime(now) {
+  const fallback = getClosingTimeString();
+  const settings = await prisma.frontendSettings.findFirst({
+    select: { workingHours: true }
+  });
+  const weekday = getVenueWeekdayKey(now);
+  const configured = settings?.workingHours?.[weekday]?.close;
+  return timeToMinutes(configured) === null ? fallback : configured;
+}
+
 async function findReservationConflict({ tableId, reservationDate, timeFrom, timeTo }) {
   const { start, end } = getDateRange(reservationDate);
 
@@ -429,7 +447,8 @@ async function expireStaleReservations() {
 
 async function completeClosedDayReservations(now = new Date()) {
   try {
-    const closingMinutes = timeToMinutes(getClosingTimeString());
+    const closingTime = await getConfiguredClosingTime(now);
+    const closingMinutes = timeToMinutes(closingTime);
     if (closingMinutes === null) return 0;
 
     const venueNow = getVenueClockParts(now);
@@ -438,8 +457,18 @@ async function completeClosedDayReservations(now = new Date()) {
       { reservationDate: { lt: todayRange.start } }
     ];
 
+    if (venueNow.minutes >= BEACH_CLOSING_MINUTES) {
+      dateFilters.push({
+        bookingKind: 'BEACH',
+        reservationDate: { gte: todayRange.start, lt: todayRange.end }
+      });
+    }
+
     if (venueNow.minutes >= closingMinutes) {
-      dateFilters.push({ reservationDate: { gte: todayRange.start, lt: todayRange.end } });
+      dateFilters.push({
+        bookingKind: 'TABLE',
+        reservationDate: { gte: todayRange.start, lt: todayRange.end }
+      });
     }
 
     const reservations = await prisma.reservation.findMany({
@@ -449,7 +478,8 @@ async function completeClosedDayReservations(now = new Date()) {
       },
       select: {
         id: true,
-        status: true
+        status: true,
+        bookingKind: true
       }
     });
 
@@ -465,20 +495,22 @@ async function completeClosedDayReservations(now = new Date()) {
 
       if (result.count > 0) {
         completedCount += result.count;
+        const isBeach = reservation.bookingKind === 'BEACH';
+        const automaticClosingTime = isBeach ? '20:00' : closingTime;
         await prisma.reservationLog.create({
           data: {
             reservationId: reservation.id,
-            action: 'AUTO_COMPLETE_AT_CLOSING',
+            action: isBeach ? 'AUTO_COMPLETE_BEACH_AT_20' : 'AUTO_COMPLETE_AT_CLOSING',
             oldStatus: reservation.status,
             newStatus: 'COMPLETED',
-            comment: `Automatically completed after venue closing time ${getClosingTimeString()} (${VENUE_TIME_ZONE}).`
+            comment: `Automatically completed at ${automaticClosingTime} (${VENUE_TIME_ZONE}).`
           }
         });
       }
     }
 
     if (completedCount > 0) {
-      console.log(`[reservationService] Completed ${completedCount} reservations after venue closing.`);
+      console.log(`[reservationService] Completed ${completedCount} reservations by automatic closing rules.`);
     }
 
     return completedCount;
