@@ -5501,11 +5501,11 @@ h3 {
   .weather-ticker-wrap {
     display: block;
     margin: 0 0 20px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     color: var(--text);
     box-shadow: none;
   }
@@ -5519,8 +5519,8 @@ h3 {
   [data-theme="light"] .state-msg,
   [data-theme="light"] .promo-prices-container,
   [data-theme="light"] .weather-ticker-wrap {
-    border-color: rgba(0, 0, 0, 0.06);
-    background: rgba(0, 0, 0, 0.02);
+    border-color: transparent;
+    background: transparent;
   }
 
   .promo-prices-container {
