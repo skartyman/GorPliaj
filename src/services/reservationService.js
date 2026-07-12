@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const venueTableOverrideService = require('./venueTableOverrideService');
 const { localizeMessage } = require('../utils/localization');
+const { getClosingTimeString, getVenueClockParts, VENUE_UTC_OFFSET, VENUE_TIME_ZONE } = require('../utils/venueTime');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 const HOLD_TTL_MS = 15 * 60 * 1000;
 
@@ -199,10 +200,24 @@ function getPublicReservationByTicketCode(ticketCode) {
 }
 
 function getDateRange(date) {
-  const start = new Date(date);
-  const end = new Date(start);
+  const { dateKey } = getVenueClockParts(date instanceof Date ? date : new Date(date));
+  const start = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
+  const end = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
   end.setDate(end.getDate() + 1);
   return { start, end };
+}
+
+function getDateKeyRange(dateKey) {
+  const start = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
+  const end = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+function timeToMinutes(value) {
+  const [hours, minutes] = String(value || '').split(':').map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
 }
 
 async function findReservationConflict({ tableId, reservationDate, timeFrom, timeTo }) {
@@ -412,6 +427,67 @@ async function expireStaleReservations() {
   }
 }
 
+async function completeClosedDayReservations(now = new Date()) {
+  try {
+    const closingMinutes = timeToMinutes(getClosingTimeString());
+    if (closingMinutes === null) return 0;
+
+    const venueNow = getVenueClockParts(now);
+    const todayRange = getDateKeyRange(venueNow.dateKey);
+    const dateFilters = [
+      { reservationDate: { lt: todayRange.start } }
+    ];
+
+    if (venueNow.minutes >= closingMinutes) {
+      dateFilters.push({ reservationDate: { gte: todayRange.start, lt: todayRange.end } });
+    }
+
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        status: { in: ACTIVE_RESERVATION_STATUSES },
+        OR: dateFilters
+      },
+      select: {
+        id: true,
+        status: true
+      }
+    });
+
+    let completedCount = 0;
+    for (const reservation of reservations) {
+      const result = await prisma.reservation.updateMany({
+        where: {
+          id: reservation.id,
+          status: { in: ACTIVE_RESERVATION_STATUSES }
+        },
+        data: { status: 'COMPLETED' }
+      });
+
+      if (result.count > 0) {
+        completedCount += result.count;
+        await prisma.reservationLog.create({
+          data: {
+            reservationId: reservation.id,
+            action: 'AUTO_COMPLETE_AT_CLOSING',
+            oldStatus: reservation.status,
+            newStatus: 'COMPLETED',
+            comment: `Automatically completed after venue closing time ${getClosingTimeString()} (${VENUE_TIME_ZONE}).`
+          }
+        });
+      }
+    }
+
+    if (completedCount > 0) {
+      console.log(`[reservationService] Completed ${completedCount} reservations after venue closing.`);
+    }
+
+    return completedCount;
+  } catch (err) {
+    console.error('[reservationService.completeClosedDayReservations] Failed.', err);
+    return 0;
+  }
+}
+
 module.exports = {
   getReservations,
   createReservation,
@@ -426,6 +502,7 @@ module.exports = {
   releaseTableHold,
   consumeTableHold,
   expireStaleReservations,
+  completeClosedDayReservations,
   getMapAvailability,
   updateReservationStatus,
   deleteReservation

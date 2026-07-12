@@ -1,5 +1,5 @@
 const reservationService = require('../services/reservationService');
-const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+const { getClosingDateTime, toDateTime, VENUE_UTC_OFFSET } = require('../utils/venueTime');
 const { localizeMessage } = require('../utils/localization');
 
 function normalizeText(value) {
@@ -16,7 +16,7 @@ async function createHold(req, res) {
   try {
     const locale = getLocale(req);
     const tableId = Number(req.body.tableId);
-    const reservationDate = new Date(`${normalizeText(req.body.date)}T00:00:00`);
+    const reservationDate = new Date(`${normalizeText(req.body.date)}T00:00:00${VENUE_UTC_OFFSET}`);
     const timeFrom = toDateTime(req.body.date, normalizeText(req.body.timeFrom));
     const timeTo = req.body.timeTo
       ? toDateTime(req.body.date, normalizeText(req.body.timeTo))

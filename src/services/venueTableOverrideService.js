@@ -1,11 +1,12 @@
 const prisma = require('../lib/prisma');
 const { normalizeLocalizedField } = require('../utils/localization');
+const { VENUE_UTC_OFFSET, getVenueClockParts } = require('../utils/venueTime');
 
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 
 function getDayRange(value) {
-  const start = new Date(value);
-  start.setHours(0, 0, 0, 0);
+  const { dateKey } = getVenueClockParts(value instanceof Date ? value : new Date(value));
+  const start = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   return { start, end };
@@ -507,7 +508,7 @@ async function listReservationPositionsManagement({
     : null;
 
   const effectiveDate = reservationDate
-    ? new Date(`${reservationDate}T00:00:00`)
+    ? new Date(`${reservationDate}T00:00:00${VENUE_UTC_OFFSET}`)
     : (selectedEvent?.startAt ? new Date(selectedEvent.startAt) : today);
   effectiveDate.setHours(0, 0, 0, 0);
 
@@ -681,7 +682,7 @@ async function listReservationPositionsManagement({
 
   return {
     scope: {
-      reservationDate: effectiveDate.toISOString().slice(0, 10),
+      reservationDate: getVenueClockParts(effectiveDate).dateKey,
       eventId: selectedEvent?.id || null
     },
     events: events.map((event) => ({

@@ -1,7 +1,7 @@
 const contentService = require('../services/contentService');
 const bookableUnitService = require('../services/bookableUnitService');
 const reservationService = require('../services/reservationService');
-const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+const { getClosingDateTime, toDateTime, VENUE_UTC_OFFSET } = require('../utils/venueTime');
 
 async function listPublicMaps(req, res) {
   try {
@@ -61,7 +61,7 @@ async function getMapAvailability(req, res) {
       return res.status(400).json({ message: 'Потрібні параметри mapId, date, timeFrom.' });
     }
 
-    const reservationDate = new Date(`${date}T00:00:00`);
+    const reservationDate = new Date(`${date}T00:00:00${VENUE_UTC_OFFSET}`);
     const dateTimeFrom = toDateTime(date, timeFrom);
     const dateTimeTo = getClosingDateTime(date);
 
@@ -101,7 +101,7 @@ async function getMapBookableUnits(req, res) {
       return res.status(400).json({ message: 'Required parameters: mapId, date, timeFrom.' });
     }
 
-    const reservationDate = new Date(`${date}T00:00:00`);
+    const reservationDate = new Date(`${date}T00:00:00${VENUE_UTC_OFFSET}`);
     const dateTimeFrom = toDateTime(date, timeFrom);
     const dateTimeTo = getClosingDateTime(date);
 

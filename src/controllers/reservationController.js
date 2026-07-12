@@ -13,7 +13,7 @@ const {
   verifyTicketSignature
 } = require('../utils/ticketSignature');
 const { generateTicketPdf } = require('../services/ticketPdfService');
-const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+const { getClosingDateTime, toDateTime, VENUE_UTC_OFFSET, getVenueClockParts } = require('../utils/venueTime');
 const { localizeMessage } = require('../utils/localization');
 
 const LEGACY_STATUS_ALIASES = {
@@ -54,7 +54,7 @@ function getBookingPositionLabel(table, bookingKind) {
 }
 
 function toDateOnly(value) {
-  return new Date(value).toISOString().slice(0, 10);
+  return getVenueClockParts(new Date(value)).dateKey;
 }
 
 function isSameBookingDay(left, right) {
@@ -206,7 +206,7 @@ async function createReservation(req, res) {
       return res.status(400).json({ message: 'Guest count must be greater than 0.' });
     }
 
-    const reservationDate = new Date(`${req.body.reservationDate}T00:00:00`);
+    const reservationDate = new Date(`${req.body.reservationDate}T00:00:00${VENUE_UTC_OFFSET}`);
     const timeFrom = toDateTime(req.body.reservationDate, req.body.timeFrom);
     const timeTo = getClosingDateTime(req.body.reservationDate);
 
@@ -262,15 +262,14 @@ async function createReservation(req, res) {
     const locale = req.body?.locale || 'ua';
     const holdToken = normalizeText(req.body.holdToken);
     if (holdToken) {
-      const conflict = await reservationService.findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo });
-      if (conflict && conflict.holdToken !== holdToken) {
+      const holdConflict = await reservationService.findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo });
+      if (holdConflict && holdConflict.holdToken !== holdToken) {
         return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
       }
-    } else {
-      const conflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
-      if (conflict) {
-        return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
-      }
+    }
+    const reservationConflict = await reservationService.findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
+    if (reservationConflict) {
+      return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
     }
 
     const objectId = Number(req.body.objectId || bookableUnit?.objectId || 0);
@@ -312,8 +311,8 @@ async function createReservation(req, res) {
     const depositAmount = Number(deposit.depositAmount);
     const rental = rentalAmount ? Number(rentalAmount) : 0;
     const totalAmount = rental + depositAmount + Number(entryBreakdown?.amount || 0);
-    if (totalAmount > 0 && !customerEmail) {
-      return res.status(400).json({ message: 'Email is required for paid bookings so we can send the PDF confirmation.' });
+    if (!customerEmail) {
+      return res.status(400).json({ message: 'Email is required so we can send the QR code and PDF confirmation.' });
     }
 
     const paymentComment = buildPaymentComment({ rentalAmount: rental, depositAmount, entryBreakdown, totalAmount });
@@ -373,26 +372,36 @@ async function createReservation(req, res) {
         return res.status(502).json({ message: checkout.message, reservation, access });
       }
     } else {
-      // Free booking -> Auto-confirmed.
-      if (customerEmail) {
-        try {
-          await sendTicketEmail({
-            to: customerEmail,
-            ticketCode: reservation.ticketCode,
-            customerName: reservation.customerName,
-            eventTitle: entryBreakdown?.eventTitle || '',
-            ticketPrice: 0,
-            ticketCount: reservation.guests,
-            amountPaid: 0,
-            currency: 'UAH',
-            reservationDate: reservation.reservationDate,
-            timeFrom: reservation.timeFrom,
-            tableName: getBookingPositionName(table),
-            downloadUrl: `${req.protocol}://${req.get('host')}${access.downloadUrl}`
-          });
-        } catch (emailError) {
-          console.error(`[reservationController] Failed to send ticket email for free reservation #${reservation.id}:`, emailError.message);
-        }
+      // Free booking -> Auto-confirmed and receives the same QR/PDF package as paid bookings.
+      try {
+        const verifyUrl = buildVerifyUrl(reservation.ticketCode, reservation.reservationDate);
+        const statusUrl = buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate);
+        const downloadUrl = buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate);
+
+        await sendTicketEmail({
+          to: customerEmail,
+          ticketCode: reservation.ticketCode,
+          customerName: reservation.customerName,
+          customerPhone: reservation.customerPhone || '',
+          reservationDate: reservation.reservationDate,
+          timeFrom: reservation.timeFrom,
+          timeTo: reservation.timeTo,
+          guests: reservation.guests,
+          tableName: getBookingPositionName(table),
+          zoneName: reservation.zone?.name || '',
+          eventTitle: entryBreakdown?.eventTitle || '',
+          depositAmount,
+          rentalAmount: rental,
+          totalPaid: 0,
+          entryTicketsAmount: 0,
+          verifyUrl,
+          statusUrl,
+          downloadUrl,
+          status: reservation.status,
+          paymentStatus: null
+        });
+      } catch (emailError) {
+        console.error(`[reservationController] Failed to send ticket email for free reservation #${reservation.id}:`, emailError.message);
       }
       
       // Send Telegram notification
@@ -483,8 +492,9 @@ async function downloadPublicReservationPdf(req, res) {
     if (!verifyTicketSignature(ticketCode, reservation.reservationDate, signature)) {
       return res.status(403).json({ message: 'Reservation link is invalid.' });
     }
-    if (reservation.payment?.status !== 'PAID') {
-      return res.status(409).json({ message: 'Reservation is not paid yet.' });
+    const canDownloadPdf = reservation.status === 'CONFIRMED' || reservation.payment?.status === 'PAID';
+    if (!canDownloadPdf) {
+      return res.status(409).json({ message: 'Reservation is not confirmed yet.' });
     }
 
     const pdf = await generateTicketPdf(buildReservationPdfPayload(reservation));

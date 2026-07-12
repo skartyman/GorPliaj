@@ -5,7 +5,7 @@ const reservationService = require('../services/reservationService');
 const venueTableOverrideService = require('../services/venueTableOverrideService');
 const { ADMIN_AUTH_COOKIE_NAME } = require('../middleware/adminAuth');
 const { NODE_ENV } = require('../config/env');
-const { getClosingDateTime, toDateTime } = require('../utils/venueTime');
+const { getClosingDateTime, toDateTime, VENUE_UTC_OFFSET, getVenueClockParts } = require('../utils/venueTime');
 const { generateTicketCode } = require('../utils/ticket');
 const { verifyTicketSignature } = require('../utils/ticketSignature');
 const prisma = require('../lib/prisma');
@@ -536,10 +536,10 @@ async function createAdminTableArrive(req, res) {
 
     const arrivedGuests = req.body.arrivedGuests ? Number(req.body.arrivedGuests) : table.seatsMin || 1;
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    const todayStr = getVenueClockParts(now).dateKey;
     const timeFrom = new Date(now);
     timeFrom.setSeconds(0, 0);
-    const timeTo = new Date(todayStr + 'T23:59:00');
+    const timeTo = toDateTime(todayStr, '23:59');
 
     const ticketCode = generateTicketCode();
 
@@ -610,7 +610,7 @@ async function createAdminReservation(req, res) {
       return res.status(400).json({ message: 'Guests must be greater than 0.' });
     }
 
-    const reservationDate = new Date(`${body.reservationDate}T00:00:00`);
+    const reservationDate = new Date(`${body.reservationDate}T00:00:00${VENUE_UTC_OFFSET}`);
     const timeFrom = toDateTime(body.reservationDate, body.timeFrom);
     const timeTo = body.timeTo ? toDateTime(body.reservationDate, body.timeTo) : getClosingDateTime(body.reservationDate);
 
