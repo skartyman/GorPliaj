@@ -387,7 +387,7 @@ h3 {
 
 [data-theme="light"] .sea-video-overlay {
   background:
-    linear-gradient(to bottom, rgba(15, 16, 18, 0.25) 0%, rgba(15, 16, 18, 0.0) 20%, rgba(15, 16, 18, 0.0) 50%, rgba(250, 250, 248, 0.6) 75%, rgba(250, 250, 248, 1) 100%);
+    linear-gradient(to bottom, rgba(15, 16, 18, 0.18) 0%, rgba(15, 16, 18, 0.0) 20%, rgba(15, 16, 18, 0.0) 50%, rgba(250, 250, 248, 0.3) 75%, rgba(250, 250, 248, 0.85) 100%);
 }
 
 /* ===== Hero Section ===== */
@@ -438,11 +438,21 @@ h3 {
 }
 
 [data-theme="light"] .hero h1 {
-  color: #fffaf0;
+  color: #1a1a1a;
+  text-shadow: 0 2px 16px rgba(255, 255, 255, 0.35);
 }
 
 [data-theme="light"] .hero p {
-  color: rgba(255, 250, 240, 0.92);
+  color: rgba(26, 26, 26, 0.85);
+  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="light"] .hero .btn-secondary {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #1a1a1a;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ===== Wave Reveal Sections ===== */
@@ -4819,7 +4829,7 @@ h3 {
 
   .hero {
     min-height: 100vh;
-    padding: 0 16px 60px;
+    padding: 0 16px 130px;
   }
 
   .events-grid {
