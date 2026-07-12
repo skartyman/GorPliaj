@@ -736,7 +736,7 @@ export default function UnifiedBookingPage() {
   const [ticketTypes, setTicketTypes] = useState([]);
 
   const [bookingFlow] = useState('STANDARD');
-  const activeEventSlug = '';
+  const activeEventSlug = searchParams.get('event') || '';
 
   const [eveningCandidateTime, setEveningCandidateTime] = useState(
     searchParams.get('timeFrom') >= EVENING_TABLE_START ? searchParams.get('timeFrom') : EVENING_TABLE_START
@@ -1665,7 +1665,6 @@ export default function UnifiedBookingPage() {
           {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
           <input type="date" className="form-input" value={form.date} min={today} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} style={{ fontSize: '0.85rem', height: 38 }} />
         </label>
-        <div style={{ display: 'none' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapTime') || (locale === 'ua' ? 'Час' : locale === 'ru' ? 'Время' : 'Time')}
           {timeSlots.length === 0 ? (
@@ -1685,8 +1684,6 @@ export default function UnifiedBookingPage() {
             </select>
           )}
         </label>
-        </div>
-        <div style={{ display: 'none' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
           <input type="number" className="form-input" value={form.guests} min={1} max={20} onChange={(e) => setForm((current) => ({ ...current, guests: Number(e.target.value) || 0 }))} style={{ fontSize: '0.85rem', width: 70, height: 38 }} />
@@ -1711,7 +1708,6 @@ export default function UnifiedBookingPage() {
             </select>
           </label>
         )}
-        </div>
         {form.date === today && form.timeFrom <= currentTime ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'Обраний час вже минув. Будь ласка, оберіть пізніший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Пожалуйста, выберите более позднее время.' : 'The selected time has already passed. Please choose a later time.'}
