@@ -34,6 +34,31 @@ import {
 const MAP_PADDING = 24;
 const MAP_PREVIEW_GUTTER = 20;
 const PINCH_SENSITIVITY = 0.006;
+const EVENING_TABLE_START = '20:00';
+
+function generateTableTimeSlots(date, today, currentTime, start = '09:00', end = '22:00') {
+  const slots = [];
+  const [startHour, startMinute = 0] = String(start || '09:00').split(':').map(Number);
+  const [endHour, endMinute = 0] = String(end || '22:00').split(':').map(Number);
+  const startValue = startHour * 60 + startMinute;
+  const endValue = endHour * 60 + endMinute;
+
+  for (let hour = startHour; hour <= endHour; hour += 1) {
+    for (const min of ['00', '30']) {
+      const timeStr = `${String(hour).padStart(2, '0')}:${min}`;
+      const timeValue = hour * 60 + Number(min);
+      if (timeValue < startValue || timeValue > endValue) continue;
+      if (date === today && timeStr <= currentTime) continue;
+      slots.push(timeStr);
+    }
+  }
+
+  return slots;
+}
+
+function isPierCode(value) {
+  return /^P-\d+/i.test(String(value || '').trim());
+}
 
 function getObjectRenderPriority(object, meta = parseMetaJson(object?.metaJson)) {
   const type = String(object?.type || '').toUpperCase();
@@ -713,6 +738,12 @@ export default function UnifiedBookingPage() {
   const [bookingFlow] = useState('STANDARD');
   const activeEventSlug = '';
 
+  const [eveningCandidateTime, setEveningCandidateTime] = useState(
+    searchParams.get('timeFrom') >= EVENING_TABLE_START ? searchParams.get('timeFrom') : EVENING_TABLE_START
+  );
+  const [eveningUnitsState, setEveningUnitsState] = useState({ loading: false, error: '', units: [] });
+  const [scenarioSelected, setScenarioSelected] = useState(false);
+
   useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
 
   const mapId = searchParams.get('mapId') || '';
@@ -731,8 +762,8 @@ export default function UnifiedBookingPage() {
   }), [mapDimensions.height, mapDimensions.width]);
 
   const matchedEventForDate = useMemo(() => findEventForDate(eventOptionsState.events, form.date), [eventOptionsState.events, form.date]);
-  const usageMode = activeEventSlug ? 'EVENING' : (matchedEventForDate && form.timeFrom >= '17:00') ? 'EVENING' : 'DAY';
-  const resolvedBookingKind = usageMode === 'EVENING' ? 'TABLE' : bookingKind;
+  const usageMode = activeEventSlug ? 'EVENING' : 'DAY';
+  const resolvedBookingKind = activeEventSlug ? 'TABLE' : bookingKind;
 
   const timeSlots = useMemo(() => {
     return generateTimeSlots(form.date, today, currentTime, resolvedBookingKind);
@@ -760,7 +791,7 @@ export default function UnifiedBookingPage() {
 
   useEffect(() => {
     let cancelled = false;
-    mapApi.list({ usageMode, bookingKind: resolvedBookingKind, guests: form.guests })
+    mapApi.list({ usageMode, guests: form.guests })
       .then((result) => {
         if (cancelled) return;
         const maps = Array.isArray(result?.maps) ? result.maps : [];
@@ -799,6 +830,38 @@ export default function UnifiedBookingPage() {
       .then((result) => setState({ loading: false, error: '', result }))
       .catch((error) => setState({ loading: false, error: error?.message || t('mapLoadFailed'), result: null }));
   }, [form.date, form.timeFrom, mapId, t, searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEveningUnitsState({ loading: true, error: '', units: [] });
+    mapApi.list({ usageMode: 'EVENING', bookingKind: 'TABLE', guests: form.guests })
+      .then((result) => {
+        const maps = Array.isArray(result?.maps) ? result.maps : [];
+        return Promise.all(
+          maps.map((map) =>
+            mapApi.bookableUnits(map.id, {
+              date: form.date,
+              timeFrom: eveningCandidateTime,
+              guests: form.guests,
+              bookingKind: 'TABLE'
+            }).then((payload) => (
+              Array.isArray(payload?.units)
+                ? payload.units.map((unit) => ({ ...unit, eveningMapId: map.id }))
+                : []
+            )).catch(() => [])
+          )
+        );
+      })
+      .then((groups) => {
+        if (cancelled) return;
+        setEveningUnitsState({ loading: false, error: '', units: groups.flat() });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setEveningUnitsState({ loading: false, error: error?.message || 'Failed to load evening pier tables.', units: [] });
+      });
+    return () => { cancelled = true; };
+  }, [form.date, eveningCandidateTime, form.guests]);
 
   useEffect(() => {
     if (!state.result || !viewportRef.current) return undefined;
@@ -1018,6 +1081,10 @@ export default function UnifiedBookingPage() {
   function selectTable(tableId) {
     setSelectedTableId(tableId);
     setSelectedObjectId(null);
+    const foundTable = tableById.get(tableId);
+    if (foundTable?.bookingKind) {
+      setBookingKind(foundTable.bookingKind);
+    }
     if (!viewportRef.current || !state.result) return;
     const foundObject = state.result.map.objects.find((item) => item.tableId === tableId);
     if (!foundObject) return;
@@ -1036,12 +1103,17 @@ export default function UnifiedBookingPage() {
 
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
+    const foundTable = object.tableId ? tableById.get(object.tableId) : null;
+    if (foundTable?.bookingKind) {
+      setBookingKind(foundTable.bookingKind);
+    }
     centerOnObject(object);
   }
 
   function closePanel() {
     setSelectedTableId(null);
     setSelectedObjectId(null);
+    setScenarioSelected(false);
   }
 
   useEffect(() => {
@@ -1242,7 +1314,9 @@ export default function UnifiedBookingPage() {
       return;
     }
 
-    if (resolvedBookingKind === 'BEACH') {
+    const submitBookingKind = activeTable.bookingKind || resolvedBookingKind;
+
+    if (submitBookingKind === 'BEACH') {
       if (form.timeFrom > '13:00') {
         setErrorMessage(c({
           ua: 'За правилами закладу, при бронюванні пляжних послуг обовʼязкова явка гостя — до 13:00.',
@@ -1297,8 +1371,8 @@ export default function UnifiedBookingPage() {
 
       const result = await bookingsApi.create({
         mapId: state.result?.map?.id,
-        bookableUnitId: activeTable.id,
-        bookingKind: resolvedBookingKind,
+        bookableUnitId: `table:${activeTable.id}`,
+        bookingKind: submitBookingKind,
         customerName: form.customerName,
         customerPhone: form.customerPhone,
         customerEmail: form.customerEmail,
@@ -1343,47 +1417,168 @@ export default function UnifiedBookingPage() {
   const activePanelTable = selectedObjectTable || selectedTable;
   const activePanelTablePhoto = selectedObjectTablePhoto || selectedTablePhoto;
   const activePanelObject = selectedObject;
+  const activePanelObjectTable = selectedObjectTable;
   const activePanelObjectMeta = selectedObjectMeta;
   const activePanelLabel = selectedObject
     ? selectedObjectLabel
     : (selectedTable ? (localizeField(selectedTable.name, locale) || selectedTable.code) : '');
   const isFreeTable = activePanelTable && activePanelTable.status === 'free' && tableFitsGuests(activePanelTable);
+  const activeBookingKind = activePanelTable?.bookingKind || resolvedBookingKind;
+  const activeTimeSlots = useMemo(() => {
+    if (activeBookingKind === 'BEACH') {
+      return generateTimeSlots(form.date, today, currentTime, 'BEACH');
+    }
+    return generateTableTimeSlots(form.date, today, currentTime, '09:00', '22:00');
+  }, [activeBookingKind, form.date, today, currentTime]);
+  const isPierBeachPosition = activePanelTable?.bookingKind === 'BEACH' && isPierCode(activePanelTable.code);
+
+  const pairedEveningUnit = useMemo(() => {
+    if (!activePanelTable?.code || !isPierCode(activePanelTable.code)) return null;
+    const selectedCode = String(activePanelTable.code).trim().toUpperCase();
+    return eveningUnitsState.units.find((unit) => String(unit.code || '').trim().toUpperCase() === selectedCode) || null;
+  }, [activePanelTable, eveningUnitsState.units]);
+
+  const tableScenarioSlots = useMemo(
+    () => generateTableTimeSlots(form.date, today, currentTime, '09:00', '20:00'),
+    [form.date, today, currentTime]
+  );
+  const eveningScenarioSlots = useMemo(
+    () => generateTableTimeSlots(form.date, today, currentTime, EVENING_TABLE_START, '22:00'),
+    [form.date, today, currentTime]
+  );
+
+  useEffect(() => {
+    if (!activePanelTable || !activeTimeSlots.length) return;
+    if (!activeTimeSlots.includes(form.timeFrom)) {
+      setForm((current) => ({ ...current, timeFrom: activeTimeSlots[0] }));
+    }
+  }, [activePanelTable, activeTimeSlots, form.timeFrom]);
+
+  const renderScenarioActions = (unit, canBook) => {
+    if (!unit) return null;
+    const isBeach = unit.bookingKind === 'BEACH';
+    const isTable = unit.bookingKind === 'TABLE';
+    const isPierBeach = isBeach && isPierCode(unit.code);
+    const beachArrivalSlots = generateTimeSlots(form.date, today, currentTime, 'BEACH');
+    const beachTime = beachArrivalSlots.includes(form.timeFrom) ? form.timeFrom : (beachArrivalSlots[0] || '');
+    const tableTime = tableScenarioSlots.includes(form.timeFrom) ? form.timeFrom : (tableScenarioSlots[0] || '');
+    const eveningTime = eveningScenarioSlots.includes(eveningCandidateTime)
+      ? eveningCandidateTime
+      : (eveningScenarioSlots[0] || EVENING_TABLE_START);
+    const eveningCanBook = Boolean(pairedEveningUnit && pairedEveningUnit.status === 'free');
+
+    function selectScenario(kind, time) {
+      setBookingKind(kind);
+      setForm((current) => ({ ...current, timeFrom: time }));
+      setScenarioSelected(true);
+    }
+
+    return (
+      <div className="booking-scenario-stack">
+        {isBeach ? (
+          <div className="booking-scenario-card is-primary">
+            <div>
+              <span className="booking-scenario-kicker">{locale === 'ua' ? 'Денний сценарій' : locale === 'ru' ? 'Дневной сценарий' : 'Day scenario'}</span>
+              <strong>{locale === 'ua' ? 'Пляжна позиція на день' : locale === 'ru' ? 'Пляжная позиция на день' : 'Beach place for the day'}</strong>
+              <p>{locale === 'ua' ? 'Бронь діє на день, явка обовʼязкова з 09:00 до 13:00.' : locale === 'ru' ? 'Бронь действует на день, явка обязательна с 09:00 до 13:00.' : 'The booking is valid for the day, arrival is required from 09:00 to 13:00.'}</p>
+            </div>
+            {beachArrivalSlots.length ? (
+              <label className="booking-scenario-field">
+                <span>{locale === 'ua' ? 'Час явки' : locale === 'ru' ? 'Время прихода' : 'Arrival time'}</span>
+                <select className="form-input" value={beachTime} onChange={(event) => { setForm((c) => ({ ...c, timeFrom: event.target.value })); setBookingKind('BEACH'); }}>
+                  {beachArrivalSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+                </select>
+              </label>
+            ) : (
+              <p className="booking-scenario-alert">{locale === 'ua' ? 'На сьогодні пляжну бронь вже закрито.' : locale === 'ru' ? 'На сегодня пляжная бронь уже закрыта.' : 'Beach booking is already closed for today.'}</p>
+            )}
+            <button className="btn btn-primary" type="button" disabled={!canBook || !beachTime} onClick={() => selectScenario('BEACH', beachTime)}>
+              {locale === 'ua' ? 'Обрати пляж' : locale === 'ru' ? 'Выбрать пляж' : 'Choose beach'}
+            </button>
+          </div>
+        ) : null}
+
+        {isTable ? (
+          <div className="booking-scenario-card">
+            <div>
+              <span className="booking-scenario-kicker">{locale === 'ua' ? 'Ресторан' : locale === 'ru' ? 'Ресторан' : 'Restaurant'}</span>
+              <strong>{locale === 'ua' ? 'Бронь столу' : locale === 'ru' ? 'Бронь стола' : 'Table booking'}</strong>
+              <p>{locale === 'ua' ? 'Оберіть час приходу, місце буде закріплено до закриття закладу.' : locale === 'ru' ? 'Выберите время прихода, место будет закреплено до закрытия заведения.' : 'Choose arrival time, the place is kept until venue closing.'}</p>
+            </div>
+            <label className="booking-scenario-field">
+              <span>{locale === 'ua' ? 'Час приходу' : locale === 'ru' ? 'Время прихода' : 'Arrival time'}</span>
+              <select className="form-input" value={tableTime} onChange={(event) => { setForm((c) => ({ ...c, timeFrom: event.target.value })); setBookingKind('TABLE'); }}>
+                {tableScenarioSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+              </select>
+            </label>
+            <button className="btn btn-primary" type="button" disabled={!canBook || !tableTime} onClick={() => selectScenario('TABLE', tableTime)}>
+              {locale === 'ua' ? 'Обрати стіл' : locale === 'ru' ? 'Выбрать стол' : 'Choose table'}
+            </button>
+          </div>
+        ) : null}
+
+        {isPierBeach ? (
+          <div className="booking-scenario-card is-evening">
+            <div>
+              <span className="booking-scenario-kicker">{locale === 'ua' ? 'Після 20:00' : locale === 'ru' ? 'После 20:00' : 'After 20:00'}</span>
+              <strong>{locale === 'ua' ? 'Вечірній стіл на пірсі' : locale === 'ru' ? 'Вечерний стол на пирсе' : 'Evening pier table'}</strong>
+              <p>{locale === 'ua' ? 'Та сама позиція ввечері працює як стіл.' : locale === 'ru' ? 'Эта же позиция вечером работает как стол.' : 'The same place works as a table in the evening.'}</p>
+            </div>
+            <label className="booking-scenario-field">
+              <span>{locale === 'ua' ? 'Час приходу' : locale === 'ru' ? 'Время прихода' : 'Arrival time'}</span>
+              <select className="form-input" value={eveningTime} onChange={(event) => { setEveningCandidateTime(event.target.value); setBookingKind('TABLE'); }}>
+                {eveningScenarioSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+              </select>
+            </label>
+            {eveningUnitsState.loading ? (
+              <p className="booking-scenario-alert">{locale === 'ua' ? 'Шукаємо вечірній стіл...' : locale === 'ru' ? 'Ищем вечерний стол...' : 'Looking for the evening table...'}</p>
+            ) : !pairedEveningUnit ? (
+              <p className="booking-scenario-alert">{locale === 'ua' ? 'Для цієї позиції ще не привʼязаний вечірній стіл.' : locale === 'ru' ? 'Для этой позиции еще не привязан вечерний стол.' : 'No linked evening table is configured for this place yet.'}</p>
+            ) : pairedEveningUnit.status !== 'free' ? (
+              <p className="booking-scenario-alert">{locale === 'ua' ? 'На цей час вечірній стіл зайнятий.' : locale === 'ru' ? 'На это время вечерний стол занят.' : 'The evening table is busy at this time.'}</p>
+            ) : null}
+            <button className="btn btn-primary" type="button" disabled={!eveningCanBook || !eveningTime} onClick={() => selectScenario('TABLE', eveningTime)}>
+              {locale === 'ua' ? 'Обрати вечірній стіл' : locale === 'ru' ? 'Выбрать вечерний стол' : 'Choose evening table'}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const sidePanelOpen = Boolean(activePanelTable || activePanelObject);
 
   const sidePanelStyle = isMobileViewport
     ? {
-        position: 'fixed',
-        top: 'auto',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        display: sidePanelOpen ? 'block' : 'none',
+        position: 'relative',
         width: '100%',
-        height: '70vh',
-        borderRadius: '16px 16px 0 0',
-        transform: sidePanelOpen ? 'translateY(0)' : 'translateY(100%)',
-        transition: 'transform 0.3s ease',
-        zIndex: 50,
+        height: 'auto',
+        maxHeight: 'none',
+        marginTop: 12,
+        borderRadius: '18px',
+        transform: 'none',
+        transition: 'none',
+        zIndex: 1,
         background: 'var(--bg)',
-        overflowY: 'auto',
-        borderTop: '1px solid var(--line)',
+        overflow: 'visible',
+        border: '1px solid var(--line)',
         padding: '16px',
         boxSizing: 'border-box'
       }
     : {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: '400px',
-        height: '100%',
-        transform: sidePanelOpen ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.3s ease',
-        zIndex: 50,
-        background: 'var(--bg)',
+        display: 'block',
+        position: 'sticky',
+        top: 80,
+        height: 'auto',
+        maxHeight: '80vh',
         overflowY: 'auto',
+        zIndex: 1,
+        background: 'var(--bg)',
+        padding: '0',
+        boxSizing: 'border-box',
         borderLeft: '1px solid var(--line)',
-        padding: '16px',
-        boxSizing: 'border-box'
+        borderRadius: '0 18px 18px 0'
       };
 
   const dateOptions = useMemo(() => {
@@ -1434,7 +1629,7 @@ export default function UnifiedBookingPage() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+    <div className="unified-booking-page">
       <div className="section-header">
         <div>
           <h1>{t('mapTitle')}</h1>
@@ -1442,7 +1637,7 @@ export default function UnifiedBookingPage() {
         </div>
       </div>
 
-      <div className="map-filter-bar" style={{ display: 'flex', gap: 12, padding: '12px 0', flexWrap: 'wrap', alignItems: 'end', position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg)', borderBottom: '1px solid var(--line)', marginBottom: 16 }}>
+      <div className="map-filter-bar unified-booking-filter">
         <div className="quick-date-switcher" style={{ width: '100%', marginBottom: '4px' }}>
           {dateOptions.map((opt) => {
             const isActive = form.date === opt.date;
@@ -1462,6 +1657,7 @@ export default function UnifiedBookingPage() {
           {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
           <input type="date" className="form-input" value={form.date} min={today} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} style={{ fontSize: '0.85rem', height: 38 }} />
         </label>
+        <div style={{ display: 'none' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapTime') || (locale === 'ua' ? 'Час' : locale === 'ru' ? 'Время' : 'Time')}
           {timeSlots.length === 0 ? (
@@ -1481,6 +1677,8 @@ export default function UnifiedBookingPage() {
             </select>
           )}
         </label>
+        </div>
+        <div style={{ display: 'none' }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
           {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
           <input type="number" className="form-input" value={form.guests} min={1} max={20} onChange={(e) => setForm((current) => ({ ...current, guests: Number(e.target.value) || 0 }))} style={{ fontSize: '0.85rem', width: 70, height: 38 }} />
@@ -1505,6 +1703,7 @@ export default function UnifiedBookingPage() {
             </select>
           </label>
         )}
+        </div>
         {form.date === today && form.timeFrom <= currentTime ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'Обраний час вже минув. Будь ласка, оберіть пізніший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Пожалуйста, выберите более позднее время.' : 'The selected time has already passed. Please choose a later time.'}
@@ -1531,10 +1730,13 @@ export default function UnifiedBookingPage() {
         </button>
       </div>
 
-      <VisualSchedule bookingKind={resolvedBookingKind} locale={locale} />
+      <div className="booking-flow-guide unified-booking-guide">
+        <strong>{locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u043c\u0456\u0441\u0446\u0435 \u043d\u0430 \u043a\u0430\u0440\u0442\u0456.' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043c\u0435\u0441\u0442\u043e \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.' : 'Choose a place on the map.'}</strong>
+        <span>{locale === 'ua' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u0446\u0456\u0454\u0457 \u043f\u043e\u0437\u0438\u0446\u0456\u0457.' : locale === 'ru' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0439 \u043f\u043e\u0437\u0438\u0446\u0438\u0438.' : 'The system will show rules for that specific place.'}</span>
+      </div>
 
-      <div className="map-container map-preview-container" style={{ position: 'relative', gridTemplateColumns: '1fr' }}>
-        <article className="map-zone-board" style={{ maxWidth: 'none' }}>
+      <div className={`map-container map-preview-container unified-booking-map-container ${isMobileViewport ? '' : 'has-panel'}`}>
+        <article className="map-zone-board unified-map-board">
           <div className="map-controls">
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(safeTransform.scale * 1.15)}>
               {t('mapZoomIn')}
@@ -1554,11 +1756,11 @@ export default function UnifiedBookingPage() {
           </div>
 
           <div
-            className={`public-map-shell ${isDragging ? 'is-dragging' : ''}`}
-            style={{
-              backgroundColor: state.result?.map?.backgroundColor || '#d8e7f8',
-              borderRadius: '12px',
-              border: '1px solid var(--line)'
+              className={`public-map-shell unified-map-shell ${isDragging ? 'is-dragging' : ''}`}
+              style={{
+              backgroundColor: 'transparent',
+              borderRadius: '18px',
+              border: '0'
             }}
           >
             {zoneFocusItems.length ? (
@@ -1909,16 +2111,71 @@ export default function UnifiedBookingPage() {
                 </p>
               ) : null}
 
-              {holdError ? (
-                <p className="muted" style={{ color: 'var(--danger)', marginTop: 8 }}>{holdError}</p>
-              ) : null}
+              {!scenarioSelected ? (
+                <>
+                  {isFreeTable ? (
+                    renderScenarioActions(activePanelTable, true)
+                  ) : (
+                    <p className="muted" style={{ marginTop: 8 }}>
+                      {locale === 'ua' ? 'Ця позиція недоступна для обраної дати, часу або кількості гостей.' : locale === 'ru' ? 'Эта позиция недоступна для выбранной даты, времени или количества гостей.' : 'This object is not available for the selected date, time, or guest count.'}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="text-link"
+                    onClick={() => setScenarioSelected(false)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 12, fontSize: '0.85rem' }}
+                  >
+                    ← {locale === 'ua' ? 'Назад до вибору' : locale === 'ru' ? 'Назад к выбору' : 'Back to options'}
+                  </button>
 
-              {isFreeTable ? (
-                <form onSubmit={handleBookingSubmit} style={{ marginTop: 16 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}>
-                        {c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}
+                  <div className="unified-place-rule-card">
+                    <span className="booking-scenario-kicker">
+                      {activeBookingKind === 'BEACH'
+                        ? (locale === 'ua' ? '\u041f\u043b\u044f\u0436\u043d\u0430 \u0431\u0440\u043e\u043d\u044c' : locale === 'ru' ? '\u041f\u043b\u044f\u0436\u043d\u0430\u044f \u0431\u0440\u043e\u043d\u044c' : 'Beach booking')
+                        : (locale === 'ua' ? '\u0411\u0440\u043e\u043d\u044c \u0441\u0442\u043e\u043b\u0443' : locale === 'ru' ? '\u0411\u0440\u043e\u043d\u044c \u0441\u0442\u043e\u043b\u0430' : 'Table booking')}
+                    </span>
+                    <strong>
+                      {activeBookingKind === 'BEACH'
+                        ? (locale === 'ua' ? '\u0414\u0456\u0454 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : locale === 'ru' ? '\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : 'Valid for the day, arrival 09:00-13:00')
+                        : (locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u0447\u0430\u0441 \u043f\u0440\u0438\u0445\u043e\u0434\u0443' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0440\u0435\u043c\u044f \u043f\u0440\u0438\u0445\u043e\u0434\u0430' : 'Choose arrival time')}
+                    </strong>
+                    {isPierBeachPosition ? (
+                      <p>{locale === 'ua' ? '\u0412\u0432\u0435\u0447\u0435\u0440\u0456 \u0446\u044f \u043f\u043e\u0437\u0438\u0446\u0456\u044f \u0437\u043c\u043e\u0436\u0435 \u043f\u0440\u0430\u0446\u044e\u0432\u0430\u0442\u0438 \u044f\u043a \u0441\u0442\u0456\u043b \u043d\u0430 \u043f\u0456\u0440\u0441\u0456.' : locale === 'ru' ? '\u0412\u0435\u0447\u0435\u0440\u043e\u043c \u044d\u0442\u0430 \u043f\u043e\u0437\u0438\u0446\u0438\u044f \u0441\u043c\u043e\u0436\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u043a\u0430\u043a \u0441\u0442\u043e\u043b \u043d\u0430 \u043f\u0438\u0440\u0441\u0435.' : 'In the evening this place can work as a pier table.'}</p>
+                    ) : null}
+                    <label className="booking-scenario-field">
+                      <span>{activeBookingKind === 'BEACH'
+                        ? (locale === 'ua' ? '\u0427\u0430\u0441 \u044f\u0432\u043a\u0438' : locale === 'ru' ? '\u0412\u0440\u0435\u043c\u044f \u043f\u0440\u0438\u0445\u043e\u0434\u0430' : 'Arrival time')
+                        : (locale === 'ua' ? '\u0427\u0430\u0441 \u043f\u0440\u0438\u0445\u043e\u0434\u0443' : locale === 'ru' ? '\u0412\u0440\u0435\u043c\u044f \u043f\u0440\u0438\u0445\u043e\u0434\u0430' : 'Arrival time')}</span>
+                      {activeTimeSlots.length ? (
+                        <select
+                          className="form-input"
+                          value={activeTimeSlots.includes(form.timeFrom) ? form.timeFrom : activeTimeSlots[0]}
+                          onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
+                        >
+                          {activeTimeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+                        </select>
+                      ) : (
+                        <span className="booking-scenario-alert">
+                          {locale === 'ua' ? '\u041d\u0430 \u0446\u044e \u0434\u0430\u0442\u0443 \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e\u0433\u043e \u0447\u0430\u0441\u0443.' : locale === 'ru' ? '\u041d\u0430 \u044d\u0442\u0443 \u0434\u0430\u0442\u0443 \u043d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e\u0433\u043e \u0432\u0440\u0435\u043c\u0435\u043d\u0438.' : 'No available time for this date.'}
+                        </span>
+                      )}
+                    </label>
+                  </div>
+
+                  {holdError ? (
+                    <p className="muted" style={{ color: 'var(--danger)', marginTop: 8 }}>{holdError}</p>
+                  ) : null}
+
+                  {isFreeTable ? (
+                    <form onSubmit={handleBookingSubmit} style={{ marginTop: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}>
+                            {c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}
                       </label>
                       <input
                         type="text"
@@ -1989,7 +2246,7 @@ export default function UnifiedBookingPage() {
                     <button
                       type="submit"
                       className="btn btn-primary"
-                      disabled={submitting || !form.customerName || !form.customerPhone || !form.agreeAll || (paymentPreview.totalAmount > 0 && !form.customerEmail)}
+                      disabled={submitting || !activeTimeSlots.length || !form.customerName || !form.customerPhone || !form.agreeAll || (paymentPreview.totalAmount > 0 && !form.customerEmail)}
                       style={{ width: '100%', boxSizing: 'border-box' }}
                     >
                       {submitting
@@ -2003,7 +2260,9 @@ export default function UnifiedBookingPage() {
                   {locale === 'ua' ? 'Ця позиція недоступна для обраної дати, часу або кількості гостей.' : locale === 'ru' ? 'Эта позиция недоступна для выбранной даты, времени или количества гостей.' : 'This object is not available for the selected date, time, or guest count.'}
                 </p>
               )}
-            </>
+              </>
+            )}
+          </>
           ) : null}
         </aside>
       </div>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { contentApi, eventsApi } from '../lib/api';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { contentApi, eventsApi, mapApi } from '../lib/api';
 import { formatEventDateRange } from '../lib/events';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
@@ -9,12 +9,41 @@ import { localizedCopy, localizeField } from '../lib/i18n';
 import GalleryCarousel from '../components/GalleryCarousel';
 import WeatherBlock from '../components/WeatherBlock';
 import EventCard from '../components/EventCard';
+import MapPreview from '../components/MapPreview';
 
 export default function HomePage() {
   const { t, locale } = useLocale();
   const { settings } = useSettings();
   const [state, setState] = useState({ events: [], menuPreviewImages: [] });
+  const [mapPreview, setMapPreview] = useState({ loading: true, error: false, map: null, objects: [], zones: [], units: [], date: '', timeFrom: '' });
+  const sectionsRef = useRef([]);
   useMeta(t('homeMetaTitle'), t('homeMetaDescription'));
+
+  const addSectionRef = useCallback((el) => {
+    if (el && !sectionsRef.current.includes(el)) {
+      sectionsRef.current.push(el);
+    }
+  }, []);
+
+  useEffect(() => {
+    const sections = sectionsRef.current.filter(Boolean);
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [state]);
 
   useEffect(() => {
     async function load() {
@@ -32,8 +61,63 @@ export default function HomePage() {
     load().catch(() => {});
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMapPreview() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const date = `${year}-${month}-${day}`;
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const openMinutes = 9 * 60;
+      const lastPreviewMinutes = 21 * 60;
+      const previewMinutes = Math.min(Math.max(currentMinutes, openMinutes), lastPreviewMinutes);
+      const timeFrom = `${String(Math.floor(previewMinutes / 60)).padStart(2, '0')}:${String(previewMinutes % 60).padStart(2, '0')}`;
+      const mapsResult = await mapApi.list({ usageMode: 'DAY', guests: 2 });
+      const maps = Array.isArray(mapsResult?.maps) ? mapsResult.maps : [];
+      const preferred = maps.find((item) => item.isDefault) || maps[0];
+      if (!preferred) return;
+
+      const [mapResult, unitsResult] = await Promise.all([
+        mapApi.byId(preferred.id),
+        mapApi.bookableUnits(preferred.id, { date, timeFrom, guests: 2 })
+      ]);
+
+      if (cancelled) return;
+      setMapPreview({
+        loading: false,
+        error: false,
+        map: mapResult?.map || unitsResult?.map || preferred || null,
+        objects: Array.isArray(mapResult?.objects) ? mapResult.objects : [],
+        zones: Array.isArray(mapResult?.zones) ? mapResult.zones : [],
+        units: Array.isArray(unitsResult?.units) ? unitsResult.units : [],
+        date,
+        timeFrom
+      });
+    }
+
+    loadMapPreview().catch(() => {
+      if (!cancelled) {
+        setMapPreview((current) => ({ ...current, loading: false, error: true }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const menuPhotos = state.menuPreviewImages;
   const c = (values) => localizedCopy(values, locale);
+  const mapOccupancy = (() => {
+    const units = Array.isArray(mapPreview.units) ? mapPreview.units : [];
+    const free = units.filter((unit) => unit.status === 'free').length;
+    const held = units.filter((unit) => unit.status === 'held').length;
+    const busy = units.filter((unit) => unit.status === 'busy').length;
+    const unavailable = units.filter((unit) => unit.status === 'unavailable').length;
+    return { total: units.length, free, held, busy, unavailable };
+  })();
 
   const isEn = locale === 'en';
   const heroTitle = localizeField(settings?.heroTitle, locale) || 'GorPliaj';
@@ -53,23 +137,25 @@ export default function HomePage() {
     : c({ ua: 'Щодня 09:00-21:00', ru: 'Ежедневно 09:00-21:00', en: 'Daily 09:00-21:00' });
   return (
     <>
-      {/* Hero */}
+      {/* Fullscreen sea video background */}
+      <video className="sea-video-bg" autoPlay muted loop playsInline preload="auto">
+        <source src="https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/videos/sea-loop.mp4" type="video/mp4" />
+      </video>
+      <div className="sea-video-overlay" />
+
+      {/* Hero: text + buttons over the wave */}
       <section className="hero">
-        <video className="hero-video" autoPlay muted loop playsInline preload="auto">
-          <source src="https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/videos/sea-loop.mp4" type="video/mp4" />
-        </video>
-        <div className="hero-content">
-          <h1>{heroTitle}</h1>
-          <p>{heroSubtitle}</p>
-          <div className="btn-group">
-            <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
-            <Link to="/menu" className="btn btn-secondary">{c({ ua: 'Переглянути меню', ru: 'Открыть меню', en: 'View menu' })}</Link>
-          </div>
+        <h1>{heroTitle}</h1>
+        <p>{heroSubtitle}</p>
+        <div className="btn-group">
+          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
+          <Link to="/menu" className="btn btn-secondary">{c({ ua: 'Переглянути меню', ru: 'Открыть меню', en: 'View menu' })}</Link>
         </div>
       </section>
 
+      <div className="home-sections-wrap">
       {/* Services Prices & Events */}
-      <section className="content-section promo-grid-section">
+      <section ref={addSectionRef} className="content-section promo-grid-section wave-section glass">
         <div className="promo-grid">
           <div className="promo-prices-card">
             <div className="section-header">
@@ -98,7 +184,7 @@ export default function HomePage() {
       </section>
 
       {/* Menu */}
-      <section className="content-section">
+      <section ref={addSectionRef} className="content-section home-menu-section wave-section glass">
         <div className="section-header">
           <h2>{c({ ua: 'Меню', ru: 'Меню', en: 'Menu' })}</h2>
           <Link to="/menu" className="text-link">{c({ ua: 'Повне меню', ru: 'Открыть меню', en: 'Full menu' })} →</Link>
@@ -114,59 +200,61 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Booking CTA */}
-      <section className="content-section">
-        <div className="section-header">
-          <h2>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Booking' })}</h2>
+      {/* Booking CTA with Map */}
+      <section ref={addSectionRef} className="content-section home-map-booking-section wave-section glass">
+        <div className="section-header home-map-booking-header">
+          <div>
+            <h2>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Booking' })}</h2>
+            <p className="muted">{c({
+              ua: 'Оберіть місце на карті, а правила броні система покаже сама.',
+              ru: 'Выберите место на карте, а правила брони система покажет сама.',
+              en: 'Choose a place on the map, and the system will show the right booking rules.'
+            })}</p>
+          </div>
+          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}</Link>
         </div>
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', padding: '32px 24px' }}>
-          <h3 style={{ marginBottom: 16, textAlign: 'center', fontSize: '1.25rem', fontWeight: 600 }}>
-            {c({ ua: 'Що бажаєте забронювати?', ru: 'Что хотите забронировать?', en: 'What would you like to book?' })}
-          </h3>
-          <div className="booking-kind-grid" style={{ marginTop: 24 }}>
-            {[
-              {
-                value: 'TABLE',
-                icon: '/icons/booking-table.png',
-                copy: {
-                  ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірній лаунж.' },
-                  ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерний лаунж.' },
-                  en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening lounge.' }
-                }
-              },
-              {
-                value: 'BEACH',
-                icon: '/icons/booking-beach.png',
-                copy: {
-                  ua: { title: 'Пляж', body: 'Бунгало, ліжка та інші пляжні послуги.' },
-                  ru: { title: 'Пляж', body: 'Бунгало, кровати и другие пляжные услуги.' },
-                  en: { title: 'Beach', body: 'Bungalows, daybeds, and other beach services.' }
-                }
-              }
-            ].map((option) => {
-              const localized = option.copy[locale === 'ua' ? 'ua' : locale === 'ru' ? 'ru' : 'en'] || option.copy['en'];
-              return (
-                <Link
-                  key={option.value}
-                  to={`/booking?kind=${option.value}`}
-                  className={`booking-kind-card booking-kind-card-${option.value.toLowerCase()}`}
-                  style={{ textDecoration: 'none', color: 'inherit', textAlign: 'left' }}
-                >
-                  <div className="booking-kind-icon">
-                    <img src={option.icon} alt={option.value} />
-                  </div>
-                  <strong style={{ display: 'block', fontSize: '1.2rem', marginBottom: 6 }}>{localized.title}</strong>
-                  <span style={{ display: 'block', fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: 12 }}>{localized.body}</span>
-                  <VisualSchedule bookingKind={option.value} locale={locale} />
-                </Link>
-              );
-            })}
+        <div className="home-booking-map">
+          <div className="home-booking-map-copy">
+            <span>{c({ ua: 'Новий швидкий флоу', ru: 'Новый быстрый флоу', en: 'New fast flow' })}</span>
+            <strong>{c({ ua: 'Карта одразу покаже, що можна забронювати', ru: 'Карта сразу покажет, что можно забронировать', en: 'The map shows what can be booked right away' })}</strong>
+            <div className="home-map-occupancy" aria-label="Venue occupancy">
+              <span><i className="legend-dot free" />{c({ ua: 'Вільно', ru: 'Свободно', en: 'Free' })}: {mapOccupancy.free}</span>
+              <span><i className="legend-dot busy" />{c({ ua: 'Зайнято', ru: 'Занято', en: 'Busy' })}: {mapOccupancy.busy}</span>
+              <span><i className="legend-dot held" />{c({ ua: 'Утримано', ru: 'Удержано', en: 'Held' })}: {mapOccupancy.held}</span>
+            </div>
+            {mapPreview.timeFrom ? (
+              <small className="home-map-occupancy-time">
+                {c({ ua: 'Стан на', ru: 'Статус на', en: 'Status at' })} {mapPreview.timeFrom}
+              </small>
+            ) : null}
+          </div>
+          <div className="home-booking-map-visual">
+            {mapPreview.map ? (
+              <MapPreview
+                mapData={mapPreview.map}
+                mapObjects={mapPreview.objects}
+                zones={mapPreview.zones}
+                units={mapPreview.units}
+                height={420}
+                isPreview
+                onOpenFullMap={() => { window.location.href = '/booking'; }}
+              />
+            ) : mapPreview.loading ? (
+              <div className="home-map-loading">
+                {c({ ua: 'Завантажуємо актуальну карту...', ru: 'Загружаем актуальную карту...', en: 'Loading live map...' })}
+              </div>
+            ) : (
+              <div className="home-booking-map-cta">
+                <p>{c({ ua: 'Оберіть місце на нашій карті', ru: 'Выберите место на нашей карте', en: 'Choose your spot on our map' })}</p>
+                <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}</Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {settings?.galleryImages?.length > 0 ? (
-        <section className="content-section">
+        <section ref={addSectionRef} className="content-section home-gallery-section wave-section glass">
           <div className="section-header">
             <h2>{c({ ua: 'Галерея', ru: 'Галерея', en: 'Gallery' })}</h2>
           </div>
@@ -174,10 +262,12 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <WeatherBlock />
+      <div ref={addSectionRef} className="wave-section home-weather-section glass">
+        <WeatherBlock />
+      </div>
 
       {/* About / Info */}
-      <section className="content-section">
+      <section ref={addSectionRef} className="content-section home-info-section wave-section glass">
         <div className="info-grid">
           <div className="info-block">
             <h3>{c({ ua: 'Локація', ru: 'Локация', en: 'Location' })}</h3>
@@ -191,9 +281,8 @@ export default function HomePage() {
               <div className="info-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
                 {socialLinks.map((social, idx) => {
                   const isInstagram = social.platform === 'instagram';
-                  // Извлекаем логин из ссылки инстаграма
                   const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;
-                  
+
                   return (
                     <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <i className={`fab fa-${social.platform === 'telegram' ? 'telegram-plane' : social.platform}`} style={{ fontSize: '1.2rem' }}></i>
@@ -211,6 +300,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      </div>
     </>
   );
 }
@@ -219,7 +309,7 @@ function VisualSchedule({ bookingKind, locale }) {
   const isBeach = bookingKind === 'BEACH';
   const startHour = 8;
   const endHour = 22;
-  const totalHours = endHour - startHour; // 14
+  const totalHours = endHour - startHour;
 
   const activeStart = 9;
   const tableWidthPercent = ((20 - 9) / totalHours) * 100;
