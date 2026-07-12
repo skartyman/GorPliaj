@@ -1548,6 +1548,14 @@ export default function UnifiedBookingPage() {
 
   const sidePanelOpen = Boolean(activePanelTable || activePanelObject);
 
+  useEffect(() => {
+    if (sidePanelOpen && isMobileViewport && sidePanelRef.current) {
+      setTimeout(() => {
+        sidePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [sidePanelOpen, isMobileViewport]);
+
   const sidePanelStyle = isMobileViewport
     ? {
         display: sidePanelOpen ? 'block' : 'none',

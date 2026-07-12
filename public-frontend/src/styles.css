@@ -566,8 +566,10 @@ h3 {
   flex-direction: column;
 }
 
-.home-sections-wrap .promo-grid-section {
-  margin-bottom: 96px;
+@media (min-width: 901px) {
+  .home-sections-wrap .promo-grid-section {
+    margin-bottom: 96px;
+  }
 }
 
 .content-section {
@@ -5729,6 +5731,11 @@ h3 {
   .map-preview-container .public-map-viewport {
     height: 62vh;
     min-height: 440px;
+  }
+
+  .unified-map-shell .public-map-viewport {
+    height: 50vh;
+    min-height: 340px;
   }
 
   .map-zoom-pill {
