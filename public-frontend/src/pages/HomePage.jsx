@@ -129,9 +129,9 @@ export default function HomePage() {
                 value: 'TABLE',
                 icon: '/icons/booking-table.png',
                 copy: {
-                  ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірні посадки.' },
-                  ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерние посадки.' },
-                  en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening seating.' }
+                  ua: { title: 'Стіл', body: 'Ресторан, тераса, пірс та вечірній лаунж.' },
+                  ru: { title: 'Стол', body: 'Ресторан, терраса, пирс и вечерний лаунж.' },
+                  en: { title: 'Table', body: 'Restaurant, terrace, pier, and evening lounge.' }
                 }
               },
               {

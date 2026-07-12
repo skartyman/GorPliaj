@@ -29,8 +29,8 @@ function formatSessionRange(session, locale) {
     month: 'long',
     year: 'numeric'
   });
-  const startTime = start.toLocaleTimeString(formatLocale, { hour: '2-digit', minute: '2-digit' });
-  const endTime = end.toLocaleTimeString(formatLocale, { hour: '2-digit', minute: '2-digit' });
+  const startTime = start.toLocaleTimeString(formatLocale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
+  const endTime = end.toLocaleTimeString(formatLocale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
   return `${datePart}, ${startTime} - ${endTime}`;
 }
 
