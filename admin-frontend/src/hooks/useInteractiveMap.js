@@ -56,8 +56,23 @@ function getCenter(a, b) {
   return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
 }
 
-function isInteractiveTarget(el) {
-  return el && el.closest('button, a, input, select, textarea, [role="button"]');
+function getTranslateBounds(viewportSize, scaledSize, slack) {
+  if (scaledSize <= viewportSize) {
+    const centered = (viewportSize - scaledSize) / 2;
+    return {
+      min: centered - slack,
+      max: centered + slack
+    };
+  }
+
+  return {
+    min: viewportSize - scaledSize - slack,
+    max: slack
+  };
+}
+
+function isFormControlTarget(el) {
+  return el && el.closest('input, select, textarea');
 }
 
 export function useInteractiveMap({
@@ -76,6 +91,7 @@ export function useInteractiveMap({
   const pointersRef = useRef(new Map());
   const panStartRef = useRef(null);
   const pinchStartRef = useRef(null);
+  const movedRef = useRef(false);
 
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const viewportRef = useRef(viewport);
@@ -104,18 +120,14 @@ export function useInteractiveMap({
       const boundedScale = clamp(finiteNumber(scale, DEFAULT_TRANSFORM.scale), viewportMinScale, maxScale);
       const scaledWidth = worldWidth * boundedScale;
       const scaledHeight = worldHeight * boundedScale;
-      const edgeLimit = 64;
+      const edgeLimitX = Math.max(180, finiteNumber(safeViewport.width, 0) * 0.65);
+      const edgeLimitY = Math.max(180, finiteNumber(safeViewport.height, 0) * 0.65);
 
       const rawTranslateX = finiteNumber(translateX, DEFAULT_TRANSFORM.translateX);
       const rawTranslateY = finiteNumber(translateY, DEFAULT_TRANSFORM.translateY);
 
-      const rawXMin = finiteNumber(safeViewport.width, 0) - scaledWidth - edgeLimit;
-      const rawXMax = edgeLimit;
-      const xBounds = { min: Math.min(rawXMin, rawXMax), max: Math.max(rawXMin, rawXMax) };
-
-      const rawYMin = finiteNumber(safeViewport.height, 0) - scaledHeight - edgeLimit;
-      const rawYMax = edgeLimit;
-      const yBounds = { min: Math.min(rawYMin, rawYMax), max: Math.max(rawYMin, rawYMax) };
+      const xBounds = getTranslateBounds(finiteNumber(safeViewport.width, 0), scaledWidth, edgeLimitX);
+      const yBounds = getTranslateBounds(finiteNumber(safeViewport.height, 0), scaledHeight, edgeLimitY);
 
       return {
         scale: boundedScale,
@@ -191,7 +203,7 @@ export function useInteractiveMap({
     if (!node) return;
 
     function onPointerDown(event) {
-      if (isInteractiveTarget(event.target)) return;
+      if (isFormControlTarget(event.target)) return;
       event.preventDefault();
       try {
         node.setPointerCapture(event.pointerId);
@@ -202,6 +214,7 @@ export function useInteractiveMap({
         const t = normalizeTransform(transformRef.current);
         panStartRef.current = { x: event.clientX, y: event.clientY, translateX: t.translateX, translateY: t.translateY };
         pinchStartRef.current = null;
+        movedRef.current = false;
         return;
       }
 
@@ -209,12 +222,12 @@ export function useInteractiveMap({
         const [first, second] = [...pointersRef.current.values()];
         pinchStartRef.current = { distance: Math.max(getDistance(first, second), 1), scale: normalizeTransform(transformRef.current).scale };
         panStartRef.current = null;
+        movedRef.current = true;
       }
     }
 
     function onPointerMove(event) {
       if (!pointersRef.current.has(event.pointerId)) return;
-      if (isInteractiveTarget(event.target)) return;
       event.preventDefault();
       pointersRef.current.set(event.pointerId, event);
 
@@ -222,6 +235,9 @@ export function useInteractiveMap({
       if (pointersRef.current.size === 1 && panStart) {
         const deltaX = event.clientX - panStart.x;
         const deltaY = event.clientY - panStart.y;
+        if (Math.hypot(deltaX, deltaY) > 6) {
+          movedRef.current = true;
+        }
         const nextTranslateX = finiteNumber(panStart.translateX, DEFAULT_TRANSFORM.translateX) + deltaX;
         const nextTranslateY = finiteNumber(panStart.translateY, DEFAULT_TRANSFORM.translateY) + deltaY;
         setTransform((current) => {
@@ -233,6 +249,7 @@ export function useInteractiveMap({
 
       const pinchStart = pinchStartRef.current;
       if (pointersRef.current.size === 2 && pinchStart) {
+        movedRef.current = true;
         const [first, second] = [...pointersRef.current.values()];
         const nextDistance = Math.max(getDistance(first, second), 1);
         const ratio = nextDistance / Math.max(finiteNumber(pinchStart.distance, 1), 1);
@@ -266,17 +283,26 @@ export function useInteractiveMap({
       zoomAtPointRef.current(normalizeTransform(transformRef.current).scale * zoomFactor, event.clientX, event.clientY);
     }
 
-    node.addEventListener('pointerdown', onPointerDown);
-    node.addEventListener('pointermove', onPointerMove);
-    node.addEventListener('pointerup', onPointerUp);
-    node.addEventListener('pointercancel', onPointerUp);
+    function onClick(event) {
+      if (!movedRef.current) return;
+      event.preventDefault();
+      event.stopPropagation();
+      movedRef.current = false;
+    }
+
+    node.addEventListener('pointerdown', onPointerDown, true);
+    node.addEventListener('pointermove', onPointerMove, true);
+    node.addEventListener('pointerup', onPointerUp, true);
+    node.addEventListener('pointercancel', onPointerUp, true);
+    node.addEventListener('click', onClick, true);
     node.addEventListener('wheel', onWheel, { passive: false });
 
     return () => {
-      node.removeEventListener('pointerdown', onPointerDown);
-      node.removeEventListener('pointermove', onPointerMove);
-      node.removeEventListener('pointerup', onPointerUp);
-      node.removeEventListener('pointercancel', onPointerUp);
+      node.removeEventListener('pointerdown', onPointerDown, true);
+      node.removeEventListener('pointermove', onPointerMove, true);
+      node.removeEventListener('pointerup', onPointerUp, true);
+      node.removeEventListener('pointercancel', onPointerUp, true);
+      node.removeEventListener('click', onClick, true);
       node.removeEventListener('wheel', onWheel);
     };
   }, [containerNode, clampTranslate]);
