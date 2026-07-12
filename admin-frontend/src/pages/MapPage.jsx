@@ -15,7 +15,14 @@ function getTimeKey(date) {
 }
 
 function getDateKey(value = new Date()) {
-  return value.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(value);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${obj.year}-${obj.month}-${obj.day}`;
 }
 
 function getRoundedTimeKey(value = new Date()) {
@@ -554,44 +561,91 @@ function getNextZoneCode(zoneId, tables, zones, map, language) {
   return `${prefix}${maxNumber + 1}`;
 }
 
-function formatCountdown(reservation) {
-  if (!reservation?.timeFrom) return null;
-  
-  let target;
-  if (String(reservation.timeFrom).includes('T') || String(reservation.timeFrom).includes('-')) {
-    // It is a full ISO date-time string
-    target = new Date(reservation.timeFrom);
-  } else {
-    // It is a time string like "11:30" or "11:30:00"
-    const [h, m] = String(reservation.timeFrom).split(':').map(Number);
-    target = new Date();
-    if (reservation.reservationDate) {
-      const resDate = new Date(reservation.reservationDate);
-      if (!isNaN(resDate.getTime())) {
-        target.setFullYear(resDate.getFullYear(), resDate.getMonth(), resDate.getDate());
-      }
-    }
-    target.setHours(h, m, 0, 0);
+const ARRIVAL_TIMER_STATUSES = new Set(['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT']);
+const FINISHED_RESERVATION_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'NO_SHOW']);
+
+function getReservationDateKey(reservation) {
+  const value = reservation?.reservationDate;
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return getDateKey(date);
+}
+
+function getReservationTimeKey(reservation) {
+  const value = reservation?.timeFrom;
+  if (!value) return '';
+
+  const text = String(value);
+  const isoMatch = text.match(/T(\d{2}):(\d{2})/);
+  if (isoMatch) {
+    let hours = Number(isoMatch[1]);
+    const minutes = isoMatch[2];
+    hours = (hours + 3) % 24;
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
   }
 
-  if (isNaN(target.getTime())) return null;
+  const timeMatch = text.match(/^(\d{1,2}):(\d{2})/);
+  if (!timeMatch) return '';
+
+  return `${String(Number(timeMatch[1])).padStart(2, '0')}:${timeMatch[2]}`;
+}
+
+function getReservationArrivalAt(reservation) {
+  const value = reservation?.timeFrom;
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date;
+}
+
+function isMapActiveReservation(reservation) {
+  return reservation?.table?.id && !FINISHED_RESERVATION_STATUSES.has(reservation.status);
+}
+
+function getMapTimerReservation(reservations = []) {
+  const now = Date.now();
+  const active = reservations
+    .filter((reservation) => ARRIVAL_TIMER_STATUSES.has(reservation.status))
+    .map((reservation) => ({ reservation, arrivalAt: getReservationArrivalAt(reservation) }))
+    .filter((item) => item.arrivalAt)
+    .sort((a, b) => {
+      const aDiff = a.arrivalAt.getTime() - now;
+      const bDiff = b.arrivalAt.getTime() - now;
+      if (aDiff >= 0 && bDiff < 0) return -1;
+      if (aDiff < 0 && bDiff >= 0) return 1;
+      return Math.abs(aDiff) - Math.abs(bDiff);
+    });
+
+  return active[0]?.reservation || null;
+}
+
+function formatCountdown(reservation) {
+  const target = getReservationArrivalAt(reservation);
+  if (!target) return null;
+
   const diff = target.getTime() - Date.now();
   
   if (diff > 0) {
-    const mins = Math.floor(diff / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
+    const totalMinutes = Math.ceil(diff / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
     return {
-      text: `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+      text: `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`,
       type: 'countdown',
       val: diff
     };
   } else {
-    if (['PENDING', 'CONFIRMED', 'AWAITING_PAYMENT'].includes(reservation.status)) {
+    if (ARRIVAL_TIMER_STATUSES.has(reservation.status)) {
       const lateMs = Math.abs(diff);
-      const mins = Math.floor(lateMs / 60000);
-      const secs = Math.floor((lateMs % 60000) / 1000);
+      const totalMinutes = Math.floor(lateMs / 60000);
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
       return {
-        text: `+${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`,
+        text: `+${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`,
         type: 'late',
         val: lateMs
       };
@@ -607,7 +661,7 @@ function ReservationCountdown({ reservation, className = 'table-countdown', styl
     setTimerData(formatCountdown(reservation));
     const interval = setInterval(() => {
       setTimerData(formatCountdown(reservation));
-    }, 1000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [reservation]);
 
@@ -854,14 +908,8 @@ export default function MapPage() {
 
   const reservationsByTable = useMemo(() => {
     const grouped = {};
-    const FINISHED_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'NO_SHOW']);
-
     state.reservations.forEach((reservation) => {
-      if (String(reservation.reservationDate).slice(0, 10) !== selectedDate || !reservation.table?.id) {
-        return;
-      }
-
-      if (FINISHED_STATUSES.has(reservation.status)) {
+      if (getReservationDateKey(reservation) !== selectedDate || !isMapActiveReservation(reservation)) {
         return;
       }
 
@@ -869,6 +917,14 @@ export default function MapPage() {
         grouped[reservation.table.id] = [];
       }
       grouped[reservation.table.id].push(reservation);
+    });
+
+    Object.values(grouped).forEach((reservations) => {
+      reservations.sort((a, b) => {
+        const aArrival = getReservationArrivalAt(a)?.getTime() || 0;
+        const bArrival = getReservationArrivalAt(b)?.getTime() || 0;
+        return aArrival - bArrival;
+      });
     });
 
     return grouped;
@@ -1557,7 +1613,7 @@ export default function MapPage() {
                               ? getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds)
                               : null;
                             const activeReservation = isBookable
-                              ? (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status))
+                              ? getMapTimerReservation(reservationsByTable[object.table?.id] || [])
                               : null;
                             const isSelected = isBookable && (selectedObjectId === object.id || selectedTableId === object.tableId);
 
@@ -1582,9 +1638,6 @@ export default function MapPage() {
                                   opacity: Number.isFinite(meta.opacity) ? meta.opacity : undefined
                                 }}
                                 title={objectLabel}
-                                onPointerDown={isBookable ? (event) => {
-                                  event.stopPropagation();
-                                } : undefined}
                                 onClick={isBookable ? () => {
                                   setSelectedTableId(object.tableId);
                                   setSelectedObjectId(null);
@@ -1605,7 +1658,7 @@ export default function MapPage() {
 
                           const status = getTableDisplayStatus(object.table, reservationsByTable, heldTableIds, busyTableIds);
                           const tableShape = String(object.table?.shape || 'ROUND').toUpperCase();
-                          const activeReservation = (reservationsByTable[object.table?.id] || []).find((r) => ['CONFIRMED', 'AWAITING_PAYMENT', 'PENDING'].includes(r.status));
+                          const activeReservation = getMapTimerReservation(reservationsByTable[object.table?.id] || []);
 
                           return (
                             <button
@@ -1617,7 +1670,6 @@ export default function MapPage() {
                                 borderRadius: tableShape === 'ROUND' ? 999 : 12
                               }}
                               title={localizeField(object.table?.name, language) || object.table?.code || t('map.fields.table')}
-                              onPointerDown={(event) => { event.stopPropagation(); }}
                               onClick={() => { setSelectedTableId(object.tableId); setSelectedObjectId(null); }}
                             >
                               <span>{object.table?.code || localizeField(object.table?.name, language) || 'T'}</span>
@@ -1692,10 +1744,15 @@ export default function MapPage() {
                                 <StatusPill status={reservation.status} />
                               </div>
                               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                {reservation.customerName || t('common.guest')} • {formatDate(reservation.reservationDate, dateLocale)} {formatTime(reservation.timeFrom, dateLocale)}
+                                {reservation.customerName || t('common.guest')} • {formatDate(reservation.reservationDate, dateLocale)} {getReservationTimeKey(reservation) || formatTime(reservation.timeFrom, dateLocale)}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 9px', borderRadius: 8, background: 'rgba(30, 41, 59, 0.06)', border: '1px solid rgba(30, 41, 59, 0.08)' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>Час броні</span>
+                                <strong style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1 }}>{getReservationTimeKey(reservation) || formatTime(reservation.timeFrom, dateLocale)}</strong>
                               </div>
                               {reservation.status !== 'COMPLETED' && reservation.status !== 'CANCELLED' ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>До приходу</span>
                                   <ReservationCountdown reservation={reservation} style={{ position: 'static', display: 'inline-block' }} />
                                 </div>
                               ) : null}

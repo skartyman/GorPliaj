@@ -53,10 +53,16 @@ function getDateLocale(language) {
 function toDateInput(value) {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) {
-    return new Date().toISOString().slice(0, 10);
+    date.setTime(Date.now());
   }
-
-  return date.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${obj.year}-${obj.month}-${obj.day}`;
 }
 
 function buildBookingForm(position, reservationDate, eventId) {

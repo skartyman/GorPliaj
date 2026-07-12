@@ -8,9 +8,15 @@ const STATUS_CLASS_MAP = {
   SEATED: 'completed',
   COMPLETED: 'completed',
   CANCELLED: 'danger',
+  EXPIRED: 'danger',
   NO_SHOW: 'danger',
   UNAVAILABLE: 'neutral',
-  FREE: 'success'
+  FREE: 'success',
+  PAID: 'success',
+  VALID: 'success',
+  USED: 'completed',
+  RESERVED: 'pending',
+  REFUNDED: 'warning'
 };
 
 export default function StatusPill({ status }) {

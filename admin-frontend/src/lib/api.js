@@ -42,7 +42,7 @@ export function formatTime(value, locale = 'ru-RU') {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? '—'
-    : date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    : date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' });
 }
 
 const invalidTextValues = new Set(['[object Object]', 'object Object', '[object object]', 'undefined', 'null']);
