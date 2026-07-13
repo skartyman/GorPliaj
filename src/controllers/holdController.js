@@ -13,16 +13,19 @@ function getLocale(req) {
 }
 
 async function createHold(req, res) {
+  const locale = getLocale(req);
   try {
-    const locale = getLocale(req);
     const tableId = Number(req.body.tableId);
+    const tableIds = Array.isArray(req.body.tableIds)
+      ? [...new Set(req.body.tableIds.map(Number).filter((id) => Number.isInteger(id) && id > 0))]
+      : [];
     const reservationDate = new Date(`${normalizeText(req.body.date)}T00:00:00${VENUE_UTC_OFFSET}`);
     const timeFrom = toDateTime(req.body.date, normalizeText(req.body.timeFrom));
     const timeTo = req.body.timeTo
       ? toDateTime(req.body.date, normalizeText(req.body.timeTo))
       : getClosingDateTime(req.body.date);
 
-    if (!tableId || Number.isNaN(reservationDate.getTime()) || Number.isNaN(timeFrom.getTime()) || Number.isNaN(timeTo.getTime())) {
+    if ((!tableId && !tableIds.length) || Number.isNaN(reservationDate.getTime()) || Number.isNaN(timeFrom.getTime()) || Number.isNaN(timeTo.getTime())) {
       return res.status(400).json({ message: localizeMessage('hold.invalid.params', locale) });
     }
 
@@ -30,13 +33,15 @@ async function createHold(req, res) {
       return res.status(400).json({ message: localizeMessage('hold.time.order', locale) });
     }
 
-    const hold = await reservationService.createTableHold({
-      tableId,
-      reservationDate,
-      timeFrom,
-      timeTo,
-      locale
-    });
+    const hold = tableIds.length > 1
+      ? await reservationService.createTableHolds({ tableIds, reservationDate, timeFrom, timeTo, locale })
+      : await reservationService.createTableHold({
+        tableId: tableIds[0] || tableId,
+        reservationDate,
+        timeFrom,
+        timeTo,
+        locale
+      });
 
     return res.status(201).json(hold);
   } catch (error) {

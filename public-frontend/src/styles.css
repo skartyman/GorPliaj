@@ -2595,6 +2595,10 @@ h3 {
 
 .booking-scenario-field .form-input {
   height: 42px;
+  min-height: 42px;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.2;
 }
 
 .booking-scenario-alert {
@@ -2700,6 +2704,87 @@ h3 {
 
 .booking-event-scenario {
   border-color: rgba(201, 168, 108, 0.48);
+}
+
+.booking-event-ticket-summary {
+  display: grid;
+}
+
+.booking-event-quantity {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  width: max-content;
+  height: 40px;
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(201, 168, 108, 0.34);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.booking-event-quantity button {
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: background 140ms ease-out, color 140ms ease-out, transform 140ms ease-out;
+}
+
+.booking-event-quantity button:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.booking-event-quantity button:last-child {
+  border-left: 1px solid var(--line);
+}
+
+.booking-event-quantity button:hover:not(:disabled) {
+  background: rgba(201, 168, 108, 0.14);
+  color: var(--brand);
+}
+
+.booking-event-quantity button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.booking-event-quantity button:focus-visible {
+  z-index: 1;
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.booking-event-quantity button:first-child:focus-visible {
+  border-radius: 7px 0 0 7px;
+}
+
+.booking-event-quantity button:last-child:focus-visible {
+  border-radius: 0 7px 7px 0;
+}
+
+.booking-event-quantity button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.booking-event-quantity output {
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  place-items: center;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-event-quantity output strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1;
 }
 
 .booking-event-guarantee {
@@ -3057,6 +3142,75 @@ h3 {
 .booking-selection-context div:last-child {
   min-width: 48px;
   text-align: right;
+}
+
+.booking-group-suggestion {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 12px;
+  border: 1px solid rgba(201, 168, 108, 0.28);
+  border-radius: 8px;
+  background: rgba(201, 168, 108, 0.08);
+}
+
+.booking-group-suggestion.is-incomplete {
+  border-color: rgba(190, 62, 54, 0.28);
+  background: rgba(190, 62, 54, 0.07);
+}
+
+.booking-group-suggestion-head {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+}
+
+.booking-group-suggestion-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: var(--brand);
+  font-family: Arial, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.booking-group-suggestion-head strong,
+.booking-group-suggestion-head span {
+  display: block;
+}
+
+.booking-group-suggestion-head strong {
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.booking-group-suggestion-head div > span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.booking-group-position-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 31px;
+}
+
+.booking-group-position-list span {
+  padding: 5px 8px;
+  border: 1px solid rgba(201, 168, 108, 0.28);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 750;
 }
 
 .public-map-object.selected {

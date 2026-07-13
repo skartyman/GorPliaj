@@ -16,6 +16,7 @@ const {
 const { generateTicketPdf } = require('../services/ticketPdfService');
 const { getClosingDateTime, toDateTime, VENUE_UTC_OFFSET, getVenueClockParts } = require('../utils/venueTime');
 const { localizeMessage } = require('../utils/localization');
+const crypto = require('crypto');
 
 const LEGACY_STATUS_ALIASES = {
   new: 'PENDING',
@@ -85,8 +86,9 @@ function hasMissingRequiredFields(body) {
 
   const hasLegacySelection = body.tableId && body.mapId && body.zoneId;
   const hasBookableUnitSelection = body.bookableUnitId;
+  const hasBookableUnitGroup = Array.isArray(body.bookableUnitIds) && body.bookableUnitIds.length > 0;
 
-  return requiredFields.some((field) => !body[field]) || (!hasLegacySelection && !hasBookableUnitSelection);
+  return requiredFields.some((field) => !body[field]) || (!hasLegacySelection && !hasBookableUnitSelection && !hasBookableUnitGroup);
 }
 
 function getDepositFromObject(object) {
@@ -179,28 +181,32 @@ function buildPublicReservationAccess(reservation) {
 }
 
 function buildReservationPdfPayload(reservation) {
+  const groupReservations = reservation.groupReservations?.length ? reservation.groupReservations : [reservation];
   const totalPaid = Number(reservation.payment?.amount || 0);
-  const depositAmount = Number(reservation.depositAmount || 0);
-  const rentalAmount = Number(reservation.rentalAmount || 0);
+  const depositAmount = groupReservations.reduce((sum, item) => sum + Number(item.depositAmount || 0), 0);
+  const rentalAmount = groupReservations.reduce((sum, item) => sum + Number(item.rentalAmount || 0), 0);
   const entryTicketsAmount = Math.max(totalPaid - depositAmount - rentalAmount, 0);
+  const totalGuests = Number(reservation.groupGuestCount || reservation.guests || 0);
+  const tableName = groupReservations.map((item) => getBookingPositionName(item.table)).filter(Boolean).join(', ');
+  const zoneName = [...new Set(groupReservations.map((item) => localizeJson(item.zone?.name)).filter(Boolean))].join(', ');
 
   return {
     ticketCode: reservation.ticketCode,
     customerName: reservation.customerName,
     customerPhone: reservation.customerPhone || '',
-    guests: reservation.guests,
+    guests: totalGuests,
     reservationDate: reservation.reservationDate,
     timeFrom: reservation.timeFrom,
     timeTo: reservation.timeTo,
-    tableName: getBookingPositionName(reservation.table),
-    zoneName: reservation.zone?.name || '',
+    tableName,
+    zoneName,
     eventTitle: localizeJson(reservation.event?.title),
     depositAmount,
     rentalAmount,
     totalPaid,
     entryTicketsAmount,
-    entryTicketCount: entryTicketsAmount > 0 ? reservation.guests : 0,
-    entryTicketPrice: entryTicketsAmount > 0 && reservation.guests ? entryTicketsAmount / reservation.guests : 0,
+    entryTicketCount: entryTicketsAmount > 0 ? totalGuests : 0,
+    entryTicketPrice: entryTicketsAmount > 0 && totalGuests ? entryTicketsAmount / totalGuests : 0,
     status: reservation.status,
     paymentStatus: reservation.payment?.status || null,
     verifyUrl: buildVerifyUrl(reservation.ticketCode, reservation.reservationDate),
@@ -208,6 +214,221 @@ function buildReservationPdfPayload(reservation) {
     downloadUrl: buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate),
     depositVerifyUrl: depositAmount > 0 ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate) : null
   };
+}
+
+function allocateGuestsAcrossTables(tables, totalGuests) {
+  let remaining = totalGuests;
+  return tables.map((table, index) => {
+    const tablesLeft = tables.length - index - 1;
+    const capacity = Math.max(1, Number(table.seatsMax || 1));
+    const allocated = index === tables.length - 1
+      ? remaining
+      : Math.min(capacity, Math.max(1, remaining - tablesLeft));
+    remaining -= allocated;
+    return allocated;
+  });
+}
+
+async function createGroupReservation(req, res, context) {
+  const { guests, reservationDate, timeFrom, timeTo, event, eventSlug, customerEmail, locale } = context;
+  const requestedIds = [...new Set(req.body.bookableUnitIds.map((value) => normalizeText(value)).filter(Boolean))];
+  if (requestedIds.length < 2) return null;
+
+  const requestedMapId = Number(req.body.mapId);
+  const units = [];
+  for (const bookableUnitId of requestedIds) {
+    const unit = await bookableUnitService.getReservationUnit({
+      bookableUnitId,
+      mapId: requestedMapId,
+      reservationDate,
+      eventId: event?.id || null
+    });
+    if (!unit) return res.status(400).json({ message: 'One of the selected booking positions is not available.' });
+    units.push(unit);
+  }
+
+  const tables = [];
+  for (const unit of units) {
+    const table = await reservationService.getReservationTable({
+      tableId: Number(unit.tableId),
+      mapId: Number(unit.mapId),
+      zoneId: Number(unit.zoneId),
+      reservationDate,
+      eventId: event?.id || null
+    });
+    if (!table) return res.status(400).json({ message: 'One of the selected booking positions is not available.' });
+    tables.push(table);
+  }
+
+  const bookingKind = units[0].bookingKind || tables[0].bookingKind || 'TABLE';
+  const sameBookingContext = units.every((unit) => Number(unit.mapId) === Number(units[0].mapId) && (unit.bookingKind || bookingKind) === bookingKind);
+  if (!sameBookingContext) {
+    return res.status(400).json({ message: 'Grouped positions must belong to the same map and booking scenario.' });
+  }
+
+  const totalCapacity = tables.reduce((sum, table) => sum + Math.max(1, Number(table.seatsMax || 1)), 0);
+  if (totalCapacity < guests) {
+    return res.status(400).json({ message: 'The selected positions do not have enough capacity for all guests.' });
+  }
+
+  const holdTokens = new Map((Array.isArray(req.body.holdTokens) ? req.body.holdTokens : [])
+    .map((hold) => [Number(hold?.tableId), normalizeText(hold?.holdToken)]));
+
+  for (const table of tables) {
+    const holdConflict = await reservationService.findTableHoldConflict({ tableId: table.id, reservationDate, timeFrom, timeTo });
+    if (holdConflict && holdConflict.holdToken !== holdTokens.get(table.id)) {
+      return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
+    }
+    const reservationConflict = await reservationService.findReservationConflict({ tableId: table.id, reservationDate, timeFrom, timeTo });
+    if (reservationConflict) {
+      return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
+    }
+  }
+
+  const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests);
+  if (event && !entryBreakdown) {
+    return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });
+  }
+  const eventArrivalWindow = getEventArrivalWindow(entryBreakdown);
+  if (eventArrivalWindow && (timeFrom < eventArrivalWindow.earliest || timeFrom > eventArrivalWindow.latest)) {
+    return res.status(400).json({ message: 'Arrival time must be within the selected event session and no earlier than one hour before it starts.' });
+  }
+
+  const positionAmounts = units.map((unit, index) => ({
+    deposit: Number(unit.depositAmount ?? tables[index].deposit ?? 0) || 0,
+    rental: event ? 0 : (Number(unit.rentalAmount ?? tables[index].price ?? 0) || 0)
+  }));
+  const depositAmount = positionAmounts.reduce((sum, amount) => sum + amount.deposit, 0);
+  const rentalAmount = positionAmounts.reduce((sum, amount) => sum + amount.rental, 0);
+  const totalAmount = rentalAmount + depositAmount + Number(entryBreakdown?.amount || 0);
+  const isAwaitingPayment = totalAmount > 0;
+  const expiresAt = isAwaitingPayment ? new Date(Date.now() + 15 * 60 * 1000) : null;
+  const bookingGroupId = crypto.randomUUID();
+  const allocations = allocateGuestsAcrossTables(tables, guests);
+  const positionNames = tables.map((table) => getBookingPositionName(table) || table.code || `#${table.id}`);
+  const groupComment = `Grouped booking ${bookingGroupId}: ${positionNames.join(', ')}. Total guests: ${guests}.`;
+  const paymentComment = `${buildPaymentComment({ rentalAmount, depositAmount, entryBreakdown, totalAmount })}\n${groupComment}`;
+  const customerComment = [normalizeText(req.body.commentCustomer), paymentComment].filter(Boolean).join('\n\n');
+
+  const payloads = tables.map((table, index) => ({
+    bookingGroupId,
+    isGroupLead: index === 0,
+    groupGuestCount: index === 0 ? guests : null,
+    tableId: table.id,
+    mapId: Number(units[index].mapId),
+    zoneId: Number(units[index].zoneId),
+    eventId: entryBreakdown?.eventId || event?.id || null,
+    bookingKind,
+    customerName: req.body.customerName,
+    customerPhone: req.body.customerPhone,
+    customerEmail,
+    guests: allocations[index],
+    reservationDate,
+    timeFrom,
+    timeTo,
+    commentCustomer: customerComment,
+    commentAdmin: paymentComment,
+    depositRequired: positionAmounts[index].deposit > 0,
+    depositAmount: positionAmounts[index].deposit || null,
+    rentalAmount: positionAmounts[index].rental || null,
+    status: isAwaitingPayment ? 'AWAITING_PAYMENT' : 'CONFIRMED',
+    expiresAt,
+    source: event ? 'EVENT' : 'WEB',
+    ticketCode: generateTicketCode()
+  }));
+
+  const reservation = await reservationService.createReservationGroup(payloads);
+  let linkedTicketOrder = null;
+  if (entryBreakdown) {
+    const ticketOrderResult = await ticketSalesService.createOrder({
+      eventId: entryBreakdown.eventId,
+      eventSessionId: entryBreakdown.eventSessionId,
+      customerName: req.body.customerName,
+      customerEmail,
+      customerPhone: req.body.customerPhone,
+      items: [{ ticketTypeId: entryBreakdown.ticketTypeId, quantity: guests }],
+      enforceSalesWindow: true,
+      expiresAt
+    });
+    if (ticketOrderResult.type !== 'SUCCESS') {
+      await reservationService.cancelReservationAfterTicketFailure(reservation.id);
+      return res.status(ticketOrderResult.type === 'CONFLICT' ? 409 : 400).json({ message: ticketOrderResult.message });
+    }
+    linkedTicketOrder = ticketOrderResult.order;
+  }
+
+  for (const table of tables) {
+    const token = holdTokens.get(table.id);
+    if (token) await reservationService.consumeTableHold(token, reservation.id);
+  }
+
+  const access = buildPublicReservationAccess(reservation);
+  let checkout = null;
+  if (totalAmount > 0) {
+    const returnTo = `/booking?reservation=${encodeURIComponent(access.ticketCode)}&t=${encodeURIComponent(access.token)}${eventSlug ? `&event=${encodeURIComponent(eventSlug)}` : ''}`;
+    checkout = await hutkoService.createCheckoutSession({
+      reservationId: reservation.id,
+      ticketOrderId: linkedTicketOrder?.id || null,
+      amount: totalAmount,
+      description: `GorPliaj group booking: ${positionNames.join(', ')}; rental ${rentalAmount} UAH, deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${guests} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
+      currency: entryBreakdown?.currency || 'UAH',
+      customerEmail,
+      customerPhone: req.body.customerPhone,
+      returnTo
+    });
+    if (checkout.type === 'NOT_CONFIGURED' || checkout.type === 'PROVIDER_ERROR') {
+      if (linkedTicketOrder) await ticketSalesService.updateOrderStatus(linkedTicketOrder.id, 'CANCELLED');
+      await reservationService.cancelReservationAfterTicketFailure(reservation.id);
+      return res.status(checkout.type === 'NOT_CONFIGURED' ? 503 : 502).json({ message: checkout.message, reservation, access });
+    }
+  } else {
+    try {
+      await sendTicketEmail({
+        to: customerEmail,
+        ticketCode: reservation.ticketCode,
+        customerName: reservation.customerName,
+        customerPhone: reservation.customerPhone || '',
+        reservationDate: reservation.reservationDate,
+        timeFrom: reservation.timeFrom,
+        timeTo: reservation.timeTo,
+        guests,
+        tableName: positionNames.join(', '),
+        zoneName: reservation.zone?.name || '',
+        eventTitle: entryBreakdown?.eventTitle || '',
+        depositAmount,
+        rentalAmount,
+        totalPaid: 0,
+        entryTicketsAmount: 0,
+        verifyUrl: buildVerifyUrl(reservation.ticketCode, reservation.reservationDate),
+        statusUrl: buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate),
+        downloadUrl: buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate),
+        status: reservation.status,
+        paymentStatus: null
+      });
+    } catch (emailError) {
+      console.error(`[reservationController] Failed to send grouped booking email #${reservation.id}:`, emailError.message);
+    }
+  }
+
+  return res.status(201).json({
+    success: true,
+    reservation,
+    group: { id: bookingGroupId, positions: positionNames, totalGuests: guests, totalCapacity },
+    paymentUrl: checkout?.paymentUrl || null,
+    paymentId: checkout?.paymentId || null,
+    access,
+    paymentBreakdown: {
+      depositAmount,
+      rentalAmount,
+      entryTicketsAmount: entryBreakdown?.amount || 0,
+      entryTicketCount: entryBreakdown?.ticketCount || 0,
+      entryTicketPrice: entryBreakdown?.ticketPrice || 0,
+      eventTitle: entryBreakdown?.eventTitle || '',
+      totalAmount,
+      currency: entryBreakdown?.currency || 'UAH'
+    },
+    ticketOrder: linkedTicketOrder ? { orderNumber: linkedTicketOrder.orderNumber, ticketCount: guests } : null
+  });
 }
 
 async function createReservation(req, res) {
@@ -241,6 +462,19 @@ async function createReservation(req, res) {
     let bookableUnit = null;
     const eventSlug = normalizeText(req.body.eventSlug);
     const event = eventSlug ? await reservationService.getPublicEventWithEntryTicket(eventSlug) : null;
+
+    if (Array.isArray(req.body.bookableUnitIds) && req.body.bookableUnitIds.length > 1) {
+      return createGroupReservation(req, res, {
+        guests,
+        reservationDate,
+        timeFrom,
+        timeTo,
+        event,
+        eventSlug,
+        customerEmail,
+        locale: req.body?.locale || 'ua'
+      });
+    }
 
     if (req.body.bookableUnitId) {
       bookableUnit = await bookableUnitService.getReservationUnit({
@@ -503,21 +737,27 @@ async function getPublicReservationStatus(req, res) {
 
     const fresh = await reservationService.getPublicReservationByTicketCode(ticketCode);
     const access = buildPublicReservationAccess(fresh);
+    const groupReservations = fresh.groupReservations?.length ? fresh.groupReservations : [fresh];
+    const groupDepositAmount = groupReservations.reduce((sum, item) => sum + Number(item.depositAmount || 0), 0);
+    const groupRentalAmount = groupReservations.reduce((sum, item) => sum + Number(item.rentalAmount || 0), 0);
+    const groupTableNames = groupReservations.map((item) => getBookingPositionName(item.table)).filter(Boolean);
+    const groupZoneNames = [...new Set(groupReservations.map((item) => localizeJson(item.zone?.name)).filter(Boolean))];
     return res.json({
       reservation: {
         ticketCode: fresh.ticketCode,
         status: fresh.status,
         paymentStatus: fresh.payment?.status || null,
         paymentAmount: fresh.payment ? Number(fresh.payment.amount || 0) : null,
-        rentalAmount: Number(fresh.rentalAmount || 0),
-        depositAmount: Number(fresh.depositAmount || 0),
-        entryTicketsAmount: Math.max(Number(fresh.payment?.amount || 0) - Number(fresh.rentalAmount || 0) - Number(fresh.depositAmount || 0), 0),
+        rentalAmount: groupRentalAmount,
+        depositAmount: groupDepositAmount,
+        entryTicketsAmount: Math.max(Number(fresh.payment?.amount || 0) - groupRentalAmount - groupDepositAmount, 0),
         customerName: fresh.customerName,
-        guests: fresh.guests,
-        tableName: getBookingPositionName(fresh.table),
+        guests: Number(fresh.groupGuestCount || fresh.guests),
+        tableName: groupTableNames.join(', '),
+        positions: groupTableNames,
         bookingKind: fresh.bookingKind || fresh.table?.bookingKind || 'TABLE',
         positionType: fresh.table?.positionType || null,
-        zoneName: fresh.zone?.name || '',
+        zoneName: groupZoneNames.join(', '),
         reservationDate: fresh.reservationDate,
         timeFrom: fresh.timeFrom
       },

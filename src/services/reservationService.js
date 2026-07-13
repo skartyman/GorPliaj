@@ -30,63 +30,66 @@ function getReservations() {
   });
 }
 
-function createReservation(payload) {
-  const {
-    tableId,
-    mapId,
-    zoneId,
-    eventId,
-    bookingKind,
-    customerName,
-    customerPhone,
-    customerEmail,
-    guests,
-    reservationDate,
-    timeFrom,
-    timeTo,
-    commentCustomer,
-    commentAdmin,
-    depositRequired,
-    depositAmount,
-    rentalAmount,
-    paidInCash,
-    status,
-    source,
-    ticketCode,
-    expiresAt
-  } = payload;
+function reservationCreateData(payload) {
+  return {
+    bookingGroupId: payload.bookingGroupId || null,
+    isGroupLead: Boolean(payload.isGroupLead),
+    groupGuestCount: payload.groupGuestCount || null,
+    tableId: payload.tableId,
+    mapId: payload.mapId,
+    zoneId: payload.zoneId,
+    eventId: payload.eventId || null,
+    bookingKind: payload.bookingKind || undefined,
+    customerName: payload.customerName,
+    customerPhone: payload.customerPhone,
+    customerEmail: payload.customerEmail || null,
+    guests: payload.guests,
+    reservationDate: payload.reservationDate,
+    timeFrom: payload.timeFrom,
+    timeTo: payload.timeTo,
+    commentCustomer: payload.commentCustomer || null,
+    commentAdmin: payload.commentAdmin || null,
+    depositRequired: Boolean(payload.depositRequired),
+    depositAmount: payload.depositAmount === null || payload.depositAmount === undefined || payload.depositAmount === '' ? null : payload.depositAmount,
+    rentalAmount: payload.rentalAmount === null || payload.rentalAmount === undefined || payload.rentalAmount === '' ? null : payload.rentalAmount,
+    paidInCash: Boolean(payload.paidInCash),
+    status: payload.status || undefined,
+    source: payload.source || undefined,
+    ticketCode: payload.ticketCode || undefined,
+    expiresAt: payload.expiresAt || null
+  };
+}
 
+const reservationInclude = {
+  table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, deposit: true, rowId: true, row: { select: { sortOrder: true } } } },
+  zone: { select: { id: true, name: true } },
+  event: { select: { id: true, slug: true, title: true, startAt: true } },
+  payment: true
+};
+
+function createReservation(payload) {
   return prisma.reservation.create({
-    data: {
-      tableId,
-      mapId,
-      zoneId,
-      eventId: eventId || null,
-      bookingKind: bookingKind || undefined,
-      customerName,
-      customerPhone,
-      customerEmail: customerEmail || null,
-      guests,
-      reservationDate,
-      timeFrom,
-      timeTo,
-      commentCustomer: commentCustomer || null,
-      commentAdmin: commentAdmin || null,
-      depositRequired: Boolean(depositRequired),
-      depositAmount: depositAmount === null || depositAmount === undefined || depositAmount === '' ? null : depositAmount,
-      rentalAmount: rentalAmount === null || rentalAmount === undefined || rentalAmount === '' ? null : rentalAmount,
-      paidInCash: Boolean(paidInCash),
-      status: status || undefined,
-      source: source || undefined,
-      ticketCode: ticketCode || undefined,
-      expiresAt: expiresAt || null
-    },
+    data: reservationCreateData(payload),
+    include: reservationInclude
+  });
+}
+
+async function createReservationGroup(payloads) {
+  if (!Array.isArray(payloads) || !payloads.length) {
+    throw new Error('Reservation group requires at least one position.');
+  }
+
+  const created = await prisma.$transaction(payloads.map((payload) => prisma.reservation.create({
+    data: reservationCreateData(payload),
     include: {
-      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, deposit: true, rowId: true, row: { select: { sortOrder: true } } } },
-      zone: { select: { id: true, name: true } },
-      event: { select: { id: true, slug: true, title: true, startAt: true } },
-      payment: true
+      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, deposit: true } },
+      zone: { select: { id: true, name: true } }
     }
+  })));
+
+  return prisma.reservation.findUnique({
+    where: { id: created[0].id },
+    include: reservationInclude
   });
 }
 
@@ -188,8 +191,8 @@ function getPublicEventWithEntryTicket(slug) {
   });
 }
 
-function getPublicReservationByTicketCode(ticketCode) {
-  return prisma.reservation.findUnique({
+async function getPublicReservationByTicketCode(ticketCode) {
+  const reservation = await prisma.reservation.findUnique({
     where: { ticketCode },
     include: {
       table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, rowId: true, row: { select: { sortOrder: true } } } },
@@ -198,6 +201,19 @@ function getPublicReservationByTicketCode(ticketCode) {
       payment: true
     }
   });
+  if (!reservation?.bookingGroupId) return reservation;
+
+  const groupReservations = await prisma.reservation.findMany({
+    where: { bookingGroupId: reservation.bookingGroupId },
+    orderBy: [{ isGroupLead: 'desc' }, { id: 'asc' }],
+    include: {
+      table: { select: { id: true, code: true, name: true, serviceName: true, bookingKind: true, positionType: true, rowId: true, row: { select: { sortOrder: true } } } },
+      zone: { select: { id: true, name: true } },
+      payment: true
+    }
+  });
+  const leadPayment = groupReservations.find((item) => item.isGroupLead)?.payment || null;
+  return { ...reservation, payment: reservation.payment || leadPayment, groupReservations };
 }
 
 function getDateRange(date) {
@@ -312,6 +328,73 @@ async function createTableHold({ tableId, reservationDate, timeFrom, timeTo, loc
   });
 
   return { holdToken, expiresAt: hold.expiresAt };
+}
+
+async function createTableHolds({ tableIds, reservationDate, timeFrom, timeTo, locale }) {
+  const uniqueTableIds = [...new Set((tableIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+  if (!uniqueTableIds.length) {
+    const error = new Error(localizeMessage('hold.invalid.params', locale));
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const { start, end } = getDateRange(reservationDate);
+  const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existingReservation = await tx.reservation.findFirst({
+        where: {
+          tableId: { in: uniqueTableIds },
+          reservationDate: { gte: start, lt: end },
+          status: { in: ACTIVE_RESERVATION_STATUSES },
+          timeFrom: { lt: timeTo },
+          timeTo: { gt: timeFrom }
+        },
+        select: { tableId: true }
+      });
+      if (existingReservation) {
+        const error = new Error(localizeMessage('hold.conflict.reservation', locale));
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const existingHold = await tx.tableHold.findFirst({
+        where: {
+          tableId: { in: uniqueTableIds },
+          reservationDate: { gte: start, lt: end },
+          status: 'ACTIVE',
+          expiresAt: { gt: new Date() },
+          timeFrom: { lt: timeTo },
+          timeTo: { gt: timeFrom }
+        },
+        select: { tableId: true }
+      });
+      if (existingHold) {
+        const error = new Error(localizeMessage('hold.conflict.hold', locale));
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const holds = [];
+      for (const tableId of uniqueTableIds) {
+        const holdToken = crypto.randomUUID();
+        await tx.tableHold.create({
+          data: { tableId, reservationDate, timeFrom, timeTo, holdToken, expiresAt, status: 'ACTIVE' }
+        });
+        holds.push({ tableId, holdToken });
+      }
+
+      return { holds, holdToken: holds[0].holdToken, expiresAt };
+    }, { isolationLevel: 'Serializable' });
+  } catch (error) {
+    if (error?.code === 'P2034') {
+      const conflict = new Error(localizeMessage('hold.conflict.hold', locale));
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+    throw error;
+  }
 }
 
 async function releaseTableHold(holdToken) {
@@ -446,8 +529,15 @@ async function expireStaleReservations() {
 }
 
 async function cancelReservationAfterTicketFailure(reservationId) {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    select: { bookingGroupId: true }
+  });
   return prisma.reservation.updateMany({
-    where: { id: reservationId, status: { in: ['PENDING', 'AWAITING_PAYMENT'] } },
+    where: {
+      ...(reservation?.bookingGroupId ? { bookingGroupId: reservation.bookingGroupId } : { id: reservationId }),
+      status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
+    },
     data: { status: 'CANCELLED' }
   });
 }
@@ -564,6 +654,7 @@ async function completeClosedDayReservations(now = new Date()) {
 module.exports = {
   getReservations,
   createReservation,
+  createReservationGroup,
   getReservationTable,
   getReservationObject,
   getPublicEventWithEntryTicket,
@@ -572,6 +663,7 @@ module.exports = {
   findReservationConflict,
   findTableHoldConflict,
   createTableHold,
+  createTableHolds,
   releaseTableHold,
   consumeTableHold,
   cancelReservationAfterTicketFailure,

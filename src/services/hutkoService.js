@@ -5,6 +5,12 @@ const { sendTicketEmail } = require('./emailService');
 const { buildVerifyUrl, buildReservationStatusUrl, buildReservationPdfUrl, buildDepositVerifyUrl } = require('../utils/ticketSignature');
 const QRCode = require('qrcode');
 
+function localizedValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value.ua || value.ru || value.en || '';
+}
+
 function postToHutko(path, data) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ request: data });
@@ -357,8 +363,15 @@ async function processCallback(payload) {
     }
 
     try {
+      const groupLead = await prisma.reservation.findUnique({
+        where: { id: reservationId },
+        select: { bookingGroupId: true }
+      });
       await prisma.reservation.updateMany({
-        where: { id: reservationId, status: { in: ['PENDING', 'AWAITING_PAYMENT'] } },
+        where: {
+          ...(groupLead?.bookingGroupId ? { bookingGroupId: groupLead.bookingGroupId } : { id: reservationId }),
+          status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
+        },
         data: { status: 'CONFIRMED' }
       });
 
@@ -371,6 +384,16 @@ async function processCallback(payload) {
           payment: true
         }
       });
+      const groupReservations = reservation?.bookingGroupId
+        ? await prisma.reservation.findMany({
+          where: { bookingGroupId: reservation.bookingGroupId },
+          orderBy: [{ isGroupLead: 'desc' }, { id: 'asc' }],
+          include: {
+            table: { select: { name: true, serviceName: true, code: true } },
+            zone: { select: { name: true } }
+          }
+        })
+        : (reservation ? [reservation] : []);
 
       if (reservation?.payment?.ticketOrderId) {
         const ticketSalesService = require('./ticketSalesService');
@@ -378,16 +401,22 @@ async function processCallback(payload) {
       }
 
       if (reservation && reservation.customerEmail) {
+        const totalGuests = Number(reservation.groupGuestCount || reservation.guests || 0);
+        const tableName = groupReservations
+          .map((item) => localizedValue(item.table?.serviceName) || localizedValue(item.table?.name) || item.table?.code || '')
+          .filter(Boolean)
+          .join(', ');
+        const zoneName = [...new Set(groupReservations.map((item) => localizedValue(item.zone?.name)).filter(Boolean))].join(', ');
+        const rentalAmt = groupReservations.reduce((sum, item) => sum + Number(item.rentalAmount || 0), 0);
+        const depositAmt = groupReservations.reduce((sum, item) => sum + Number(item.depositAmount || 0), 0);
         const verifyUrl = buildVerifyUrl(reservation.ticketCode, reservation.reservationDate);
         const statusUrl = buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate);
         const downloadUrl = buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate);
-        const depositQrUrl = Number(reservation.depositAmount || 0) > 0
+        const depositQrUrl = depositAmt > 0
           ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate)
           : null;
         const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
 
-        const rentalAmt = Number(reservation.rentalAmount || 0);
-        const depositAmt = Number(reservation.depositAmount || 0);
         const payAmt = Number(reservation.payment?.amount || payment.amount || 0);
 
         await sendTicketEmail({
@@ -398,9 +427,9 @@ async function processCallback(payload) {
           reservationDate: reservation.reservationDate,
           timeFrom: reservation.timeFrom,
           timeTo: reservation.timeTo,
-          guests: reservation.guests,
-          tableName: reservation.table?.name || '',
-          zoneName: reservation.zone?.name || '',
+          guests: totalGuests,
+          tableName,
+          zoneName,
           eventTitle: reservation.event?.title || null,
           depositAmount: depositAmt,
           rentalAmount: rentalAmt,
@@ -509,8 +538,15 @@ async function syncReservationPaymentStatus(reservationId) {
   });
 
   if (ourStatus === 'PAID') {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { bookingGroupId: true }
+    });
     await prisma.reservation.updateMany({
-      where: { id: reservationId, status: { in: ['PENDING', 'AWAITING_PAYMENT'] } },
+      where: {
+        ...(reservation?.bookingGroupId ? { bookingGroupId: reservation.bookingGroupId } : { id: reservationId }),
+        status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
+      },
       data: { status: 'CONFIRMED' }
     });
   }

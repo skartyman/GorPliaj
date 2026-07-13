@@ -98,10 +98,10 @@ export const bookingsApi = {
 };
 
 export const holdsApi = {
-  create: ({ tableId, date, timeFrom, timeTo }) =>
+  create: ({ tableId, tableIds, date, timeFrom, timeTo, locale }) =>
     request('/holds', {
       method: 'POST',
-      body: JSON.stringify({ tableId, date, timeFrom, timeTo })
+      body: JSON.stringify({ tableId, tableIds, date, timeFrom, timeTo, locale })
     }),
   release: (holdToken) =>
     request(`/holds/${encodeURIComponent(holdToken)}`, {
