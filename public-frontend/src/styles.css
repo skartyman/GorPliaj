@@ -2726,14 +2726,17 @@ h3 {
 }
 
 .unified-booking-page .floating-booking-hint,
-.unified-booking-page .map-legend-toggle,
+.unified-booking-page .map-legend-toggle {
+  display: none !important;
+}
+
 .unified-booking-page .map-legend {
   display: none !important;
 }
 
 .unified-place-rule-card {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin: 14px 0;
   padding: 14px;
@@ -2745,7 +2748,7 @@ h3 {
 }
 
 .unified-place-rule-card > * {
-  grid-column: 2;
+  grid-column: 1;
 }
 
 .unified-place-rule-card strong {
@@ -2948,6 +2951,18 @@ h3 {
 .public-map-object.selectable {
   isolation: isolate;
   transition: translate 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.unified-place-rule-card .booking-refund-warning {
+  padding: 8px 10px;
+  border: 1px solid rgba(190, 62, 54, 0.2);
+  border-left: 3px solid rgba(190, 62, 54, 0.72);
+  border-radius: 0 8px 8px 0;
+  background: rgba(190, 62, 54, 0.08);
+  color: color-mix(in srgb, var(--danger) 82%, var(--text));
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .public-map-object.selected {

@@ -462,7 +462,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
     <div style={{ position: 'relative' }}>
       {zones.length && !isPreview ? (
         <div className="public-map-zone-tabs" aria-label="Map zones">
-          <button type="button" className={`public-map-zone-tab ${activeZoneId === 'all' ? 'active' : ''}`} onClick={fitWholeMap}>Вся карта</button>
+          <button type="button" className={`public-map-zone-tab ${activeZoneId === 'all' ? 'active' : ''}`} onClick={fitWholeMap}>Вся мапа</button>
           {zones.map((zone) => (
             <button key={zone.id} type="button" className={`public-map-zone-tab ${activeZoneId === String(zone.id) ? 'active' : ''}`} onClick={() => focusZone(zone.id)}>
               {localizeField(zone.name, 'ua') || zone.label}

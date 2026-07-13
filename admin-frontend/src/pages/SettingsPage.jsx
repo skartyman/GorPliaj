@@ -309,7 +309,7 @@ export default function SettingsPage() {
             </div>
 
             <button className="btn btn-primary" onClick={() => updateField('contacts', { phone: form.phone, address: form.address, mapEmbedUrl: form.mapEmbedUrl })}>
-              {savingStatus.contacts ? 'Зберігаємо...' : 'Зберегти контакти та карту'}
+              {savingStatus.contacts ? 'Зберігаємо...' : 'Зберегти контакти та мапу'}
             </button>
           </div>
         </PageCard>

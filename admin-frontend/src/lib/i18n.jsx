@@ -62,7 +62,7 @@ const translations = {
     login: {
       eyebrow: 'Доступ до адмінки',
       title: 'Панель управління GorPliaj',
-      description: 'Мобільна сторінка входу для управління бронюваннями, картою залу та контентом.',
+      description: 'Мобільна сторінка входу для управління бронюваннями, мапою залу та контентом.',
       access: 'Доступ',
       admin: 'Єдина адмінка',
       email: 'Email',
@@ -90,9 +90,9 @@ const translations = {
           meta: 'Хостес'
         },
         openMap: {
-          title: 'Відкрити карту посадки',
+          title: 'Відкрити мапу посадки',
           description: 'Швидко вибрати вільне місце, посадити гостя або перевірити поточні бронювання.',
-          meta: 'Карта'
+          meta: 'Мапа'
         },
         stopList: {
           title: 'Скласти стоп-лист',
@@ -208,18 +208,18 @@ const translations = {
         scopeDate: 'Дата',
         event: 'Подія',
         noEvent: 'Без події',
-        map: 'Карта',
-        allMaps: 'Усі карти',
+        map: 'Мапа',
+        allMaps: 'Усі мапи',
         zone: 'Зона',
         allZones: 'Усі зони',
         search: 'Пошук',
-        searchPlaceholder: 'Код, карта, зона, сервіс',
+        searchPlaceholder: 'Код, мапа, зона, сервіс',
         loading: 'Завантажуємо позиції...',
         empty: 'Позицій не знайдено.',
         flat: {
           code: 'Код',
           type: 'Тип',
-          zone: 'Зона / Карта',
+          zone: 'Зона / Мапа',
           capacity: 'Місця',
           deposit: 'Депозит',
           status: 'Статус',
@@ -237,7 +237,7 @@ const translations = {
         },
         columns: {
           type: 'Тип',
-          mapZone: 'Карта / зона',
+          mapZone: 'Мапа / зона',
           capacity: 'Місця',
           effective: 'Статус',
           bookings: 'Броні',
@@ -320,7 +320,7 @@ const translations = {
         table: 'Стіл',
         zone: 'Зона',
         status: 'Статус',
-        map: 'Карта',
+        map: 'Мапа',
         deposit: 'Депозит',
         row: 'Ряд'
       }
@@ -353,31 +353,31 @@ const translations = {
       }
     },
     mapEditor: {
-      title: 'Редактор карти',
-      description: 'Адмінський редактор об’єктів поточної карти без впливу на публічний flow бронювання.',
+      title: 'Редактор мапи',
+      description: 'Адмінський редактор об’єктів поточної мапи без впливу на публічний flow бронювання.',
       eyebrow: 'Редактор схеми майданчика',
       heroTitle: 'Створюйте, переміщуйте, дублюйте та налаштовуйте об’єкти майданчика',
-      heroDescription: 'Редактор завантажує поточну дефолтну карту, дозволяє налаштовувати повноцінний фон плану закладу, додавати нові об’єкти та зберігає актуальний список назад через admin API.',
+      heroDescription: 'Редактор завантажує поточну дефолтну мапу, дозволяє налаштовувати повноцінний фон плану закладу, додавати нові об’єкти та зберігає актуальний список назад через admin API.',
       note: 'Використовуйте верхню панель для швидкого додавання об’єктів, а праву колонку — для точного налаштування обраного елемента.',
       editorNote: 'Додавайте нові елементи у вкладці «Об’єкти», а точні параметри змінюйте у «Властивостях».',
-      mapVariant: 'Варіант карти',
+      mapVariant: 'Варіант мапи',
       defaultMapBadge: 'дефолт',
-      newMapPreset: 'Тип нової карти',
-      newMapName: 'Назва карти',
-      newMapDescription: 'Опис карти',
-      newMapNamePlaceholder: 'Назва нової карти (наприклад, Нічна посадка)',
+      newMapPreset: 'Тип нової мапи',
+      newMapName: 'Назва мапи',
+      newMapDescription: 'Опис мапи',
+      newMapNamePlaceholder: 'Назва нової мапи (наприклад, Нічна посадка)',
       newMapDescriptionPlaceholder: 'Опис (наприклад, Концертна розсадка)',
       makeDefault: 'Зробити дефолтною',
-      createMap: 'Створити варіант карти',
+      createMap: 'Створити варіант мапи',
       creatingMap: 'Створюємо...',
-      mapCreatedSuccess: 'Новий варіант карти створено.',
-      deleteMap: 'Видалити карту',
-      deleteMapConfirm: 'Видалити карту «{name}»?',
-      mapDeletedSuccess: 'Карту видалено.',
-      manageMaps: 'Карти',
+      mapCreatedSuccess: 'Новий варіант мапи створено.',
+      deleteMap: 'Видалити мапу',
+      deleteMapConfirm: 'Видалити мапу «{name}»?',
+      mapDeletedSuccess: 'Мапу видалено.',
+      manageMaps: 'Мапи',
       addObjects: 'Додати об’єкти',
-      loading: 'Завантажуємо редактор карти...',
-      save: 'Зберегти карту',
+      loading: 'Завантажуємо редактор мапи...',
+      save: 'Зберегти мапу',
       saving: 'Зберігаємо...',
       reset: 'Скинути правки',
       undo: 'Назад',
@@ -394,7 +394,7 @@ const translations = {
       deleteConfirm: 'Видалити об’єкт «{name}»?',
       deleteManyConfirm: 'Видалити {count} об’єктів?',
       polygonDefault: 'Полігон',
-      polygonHint: 'Клікніть по карті, щоб додати точки полігону. Точок: {count}',
+      polygonHint: 'Клікніть по мапі, щоб додати точки полігону. Точок: {count}',
       finishPolygon: 'Завершити полігон',
       cancelPolygon: 'Скасувати',
       texturesTitle: 'Текстури',
@@ -419,12 +419,12 @@ const translations = {
       newObjectDefault: 'Новий об’єкт',
       rotateLeft: '↺ -15°',
       rotateRight: '↻ +15°',
-      saveSuccess: 'Зміни карти збережено.',
-      meta: 'Карта: {map} • Розмір: {size} • Об’єктів: {objects} • Столів: {tables}',
+      saveSuccess: 'Зміни мапи збережено.',
+      meta: 'Мапа: {map} • Розмір: {size} • Об’єктів: {objects} • Столів: {tables}',
       canvasTitle: 'Полотно для редагування',
       canvasDescription: 'Клікніть по об’єкту для вибору, тягніть для переміщення та використовуйте ручки для resize.',
-      mapSettingsTitle: 'Налаштування карти',
-      mapSettingsDescription: 'Задайте колір та зображення фону, щоб перетворити сітку на повноцінну карту закладу.',
+      mapSettingsTitle: 'Налаштування мапи',
+      mapSettingsDescription: 'Задайте колір та зображення фону, щоб перетворити сітку на повноцінну мапу закладу.',
       propertiesTitle: 'Властивості об’єкта',
       propertiesDescription: 'Точні координати та параметри активного об’єкта.',
       noSelection: 'Оберіть об’єкт на схемі, щоб редагувати його властивості.',
@@ -441,7 +441,7 @@ const translations = {
         graphics: 'Графіка',
         graphicsDesc: 'Текстура, прозорість, SVG, обводка',
         transform: 'Позиція',
-        transformDesc: 'Координати, розмір, поворот на карті'
+        transformDesc: 'Координати, розмір, поворот на мапі'
       },
       tools: {
         select: 'Вибір',
@@ -467,8 +467,8 @@ const translations = {
         isActive: 'Активний',
         tableId: 'Пов’язаний стіл',
         tablePhotoUrl: 'Фото столу',
-        mapWidth: 'Ширина карти',
-        mapHeight: 'Висота карти',
+        mapWidth: 'Ширина мапи',
+        mapHeight: 'Висота мапи',
         backgroundImage: 'URL фонової схеми',
         backgroundColor: 'Колір фону',
         texture: 'Текстура',
@@ -499,10 +499,10 @@ const translations = {
         TEXT: 'Текст'
       },
       errors: {
-        load: 'Не вдалося завантажити редактор карти.',
-        save: 'Не вдалося зберегти зміни карти.',
-        createMap: 'Не вдалося створити варіант карти.',
-        deleteMap: 'Не вдалося видалити карту.'
+        load: 'Не вдалося завантажити редактор мапи.',
+        save: 'Не вдалося зберегти зміни мапи.',
+        createMap: 'Не вдалося створити варіант мапи.',
+        deleteMap: 'Не вдалося видалити мапу.'
       }
     },
     menuAdmin: {
@@ -598,20 +598,20 @@ const translations = {
       itemsCountSuffix: 'поз.'
     },
     map: {
-      title: 'Карта майданчика',
-      description: 'Операційна карта залу з візуальними статусами столів та деталями бронювань.',
+      title: 'Мапа майданчика',
+      description: 'Операційна мапа залу з візуальними статусами столів та деталями бронювань.',
       openEditor: 'Відкрити редактор',
       eyebrow: 'Жива схема',
       heroTitle: 'Статуси столів, зони та швидкий контекст',
-      heroDescription: 'Карта починається як мобільний вертикальний сценарій і розширюється в split-layout на великих екранах.',
+      heroDescription: 'Мапа починається як мобільний вертикальний сценарій і розширюється в split-layout на великих екранах.',
       note: 'Натисніть на стіл, щоб побачити його поточний статус.',
-      loading: 'Завантажуємо карту...',
+      loading: 'Завантажуємо мапу...',
       errors: {
-        load: 'Не вдалося завантажити карту.'
+        load: 'Не вдалося завантажити мапу.'
       },
-      meta: 'Карта: {map} • Зон: {zones} • Столів: {tables}',
+      meta: 'Мапа: {map} • Зон: {zones} • Столів: {tables}',
       tableDetails: 'Деталі столу',
-      tableDetailsDescription: 'Оберіть стіл на карті, щоб побачити деталі та дії.',
+      tableDetailsDescription: 'Оберіть стіл на мапі, щоб побачити деталі та дії.',
       noTableSelected: 'Оберіть стіл, щоб побачити деталі та пов’язані бронювання.',
       activeReservations: 'Активні бронювання',
       noActiveReservations: 'Для цього столу зараз немає активних бронювань.',
@@ -802,7 +802,7 @@ const translations = {
         actions: 'Дії'
       },
       filters: {
-        map: 'Карта',
+        map: 'Мапа',
         zone: 'Зона',
         positionType: 'Тип позиції',
         bookingKind: 'Тип бронювання',
@@ -829,7 +829,7 @@ const translations = {
         sortOrder: 'Сортування',
         positionSide: 'Сторона',
         row: 'Ряд',
-        map: 'Карта'
+        map: 'Мапа'
       },
       errors: {
         load: 'Не вдалося завантажити позиції.',

@@ -206,17 +206,17 @@ export default function HomePage() {
           <div>
             <h2>{c({ ua: 'Бронювання', ru: 'Бронирование', en: 'Booking' })}</h2>
             <p className="muted">{c({
-              ua: 'Оберіть місце на карті, а правила броні система покаже сама.',
+              ua: 'Оберіть місце на мапі, а правила броні система покаже сама.',
               ru: 'Выберите место на карте, а правила брони система покажет сама.',
               en: 'Choose a place on the map, and the system will show the right booking rules.'
             })}</p>
           </div>
-          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}</Link>
+          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити мапу', ru: 'Открыть карту', en: 'Open map' })}</Link>
         </div>
         <div className="home-booking-map">
           <div className="home-booking-map-copy">
             <span>{c({ ua: 'Новий швидкий флоу', ru: 'Новый быстрый флоу', en: 'New fast flow' })}</span>
-            <strong>{c({ ua: 'Карта одразу покаже, що можна забронювати', ru: 'Карта сразу покажет, что можно забронировать', en: 'The map shows what can be booked right away' })}</strong>
+            <strong>{c({ ua: 'Мапа одразу покаже, що можна забронювати', ru: 'Карта сразу покажет, что можно забронировать', en: 'The map shows what can be booked right away' })}</strong>
             <div className="home-map-occupancy" aria-label="Venue occupancy">
               <span><i className="legend-dot free" />{c({ ua: 'Вільно', ru: 'Свободно', en: 'Free' })}: {mapOccupancy.free}</span>
               <span><i className="legend-dot busy" />{c({ ua: 'Зайнято', ru: 'Занято', en: 'Busy' })}: {mapOccupancy.busy}</span>
@@ -241,12 +241,12 @@ export default function HomePage() {
               />
             ) : mapPreview.loading ? (
               <div className="home-map-loading">
-                {c({ ua: 'Завантажуємо актуальну карту...', ru: 'Загружаем актуальную карту...', en: 'Loading live map...' })}
+                {c({ ua: 'Завантажуємо актуальну мапу...', ru: 'Загружаем актуальную карту...', en: 'Loading live map...' })}
               </div>
             ) : (
               <div className="home-booking-map-cta">
-                <p>{c({ ua: 'Оберіть місце на нашій карті', ru: 'Выберите место на нашей карте', en: 'Choose your spot on our map' })}</p>
-                <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити карту', ru: 'Открыть карту', en: 'Open map' })}</Link>
+                <p>{c({ ua: 'Оберіть місце на нашій мапі', ru: 'Выберите место на нашей карте', en: 'Choose your spot on our map' })}</p>
+                <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити мапу', ru: 'Открыть карту', en: 'Open map' })}</Link>
               </div>
             )}
           </div>

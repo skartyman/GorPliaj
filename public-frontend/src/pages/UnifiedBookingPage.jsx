@@ -591,7 +591,7 @@ function SidePanelHint({ locale }) {
     <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted, #64748b)' }}>
       <div style={{ fontSize: '48px', marginBottom: '16px' }}>📍</div>
       <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', margin: '0 0 8px' }}>
-        {locale === 'ua' ? 'Оберіть місце на карті' : locale === 'ru' ? 'Выберите место на карте' : 'Select a place on the map'}
+        {locale === 'ua' ? 'Оберіть місце на мапі' : locale === 'ru' ? 'Выберите место на карте' : 'Select a place on the map'}
       </p>
       <p style={{ fontSize: '0.82rem', lineHeight: 1.4, margin: 0 }}>
         {locale === 'ua' ? 'Клацніть на стіл, шезлонг або ліжко, щоб забронювати.' : locale === 'ru' ? 'Кликните на стол, шезлонг или кровать, чтобы забронировать.' : 'Click on a table, sunbed, or daybed to book.'}
@@ -672,6 +672,7 @@ export default function UnifiedBookingPage() {
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
+  const gestureMovedRef = useRef(false);
   const transformRef = useRef(safeTransform);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
@@ -1178,19 +1179,20 @@ export default function UnifiedBookingPage() {
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
-    if (event.pointerType !== 'touch') {
-      try {
-        viewportRef.current?.setPointerCapture(event.pointerId);
-      } catch (err) {
-        console.warn('Pointer capture failed:', err);
-      }
-    }
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 1) {
+      gestureMovedRef.current = false;
       dragStartRef.current = { x: event.clientX, y: event.clientY, translateX: safeTransform.translateX, translateY: safeTransform.translateY };
-      setIsDragging(true);
     }
     if (pointersRef.current.size === 2) {
+      gestureMovedRef.current = true;
+      pointersRef.current.forEach((_point, pointerId) => {
+        try {
+          viewportRef.current?.setPointerCapture(pointerId);
+        } catch (err) {
+          console.warn('Pointer capture failed:', err);
+        }
+      });
       const [a, b] = Array.from(pointersRef.current.values());
       if (a && b && Number.isFinite(a.x) && Number.isFinite(b.x)) {
         pinchStartRef.current = {
@@ -1207,9 +1209,19 @@ export default function UnifiedBookingPage() {
     if (!pointersRef.current.has(event.pointerId)) return;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
-    if (pointersRef.current.size === 1 && isDragging) {
+    if (pointersRef.current.size === 1) {
       const dx = event.clientX - dragStartRef.current.x;
       const dy = event.clientY - dragStartRef.current.y;
+      if (!gestureMovedRef.current && Math.hypot(dx, dy) <= 5) return;
+      if (!gestureMovedRef.current) {
+        setIsDragging(true);
+        try {
+          viewportRef.current?.setPointerCapture(event.pointerId);
+        } catch (err) {
+          console.warn('Pointer capture failed:', err);
+        }
+      }
+      gestureMovedRef.current = true;
       applyTransform(safeTransform.scale, dragStartRef.current.translateX + dx, dragStartRef.current.translateY + dy);
       return;
     }
@@ -1246,14 +1258,12 @@ export default function UnifiedBookingPage() {
   }
 
   function handlePointerEnd(event) {
-    if (event.pointerType !== 'touch') {
-      try {
-        if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
-          viewportRef.current.releasePointerCapture(event.pointerId);
-        }
-      } catch (err) {
-        console.warn('Pointer release failed:', err);
+    try {
+      if (viewportRef.current?.hasPointerCapture(event.pointerId)) {
+        viewportRef.current.releasePointerCapture(event.pointerId);
       }
+    } catch (err) {
+      console.warn('Pointer release failed:', err);
     }
     pointersRef.current.delete(event.pointerId);
     if (!pointersRef.current.size) {
@@ -1587,6 +1597,7 @@ export default function UnifiedBookingPage() {
     ? {
         display: sidePanelOpen ? 'block' : 'none',
         position: 'relative',
+        top: 0,
         width: '100%',
         height: 'auto',
         maxHeight: 'none',
@@ -1739,7 +1750,7 @@ export default function UnifiedBookingPage() {
       </div>
 
       <div className="booking-flow-guide unified-booking-guide">
-        <strong>{locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u043c\u0456\u0441\u0446\u0435 \u043d\u0430 \u043a\u0430\u0440\u0442\u0456.' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043c\u0435\u0441\u0442\u043e \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.' : 'Choose a place on the map.'}</strong>
+        <strong>{locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u043c\u0456\u0441\u0446\u0435 \u043d\u0430 \u043c\u0430\u043f\u0456.' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043c\u0435\u0441\u0442\u043e \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.' : 'Choose a place on the map.'}</strong>
         <span>{locale === 'ua' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u0446\u0456\u0454\u0457 \u043f\u043e\u0437\u0438\u0446\u0456\u0457.' : locale === 'ru' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0439 \u043f\u043e\u0437\u0438\u0446\u0438\u0438.' : 'The system will show rules for that specific place.'}</span>
       </div>
 
@@ -1771,7 +1782,7 @@ export default function UnifiedBookingPage() {
                 onClick={fitWholeMap}
                 aria-pressed={activeZoneFocusId === 'all'}
               >
-                Вся карта
+                Вся мапа
               </button>
               {zoneFocusItems.map(({ zone, bounds }) => (
                 <button
@@ -1869,9 +1880,12 @@ export default function UnifiedBookingPage() {
                             zIndex: getObjectZIndex(object),
                             borderRadius: object.width === object.height ? 999 : 8
                           }}
-                          onClick={() => selectTable(activeTable.id)}
-                          onPointerDown={(event) => event.stopPropagation()}
-                          disabled={disabled}
+                          onClick={(event) => {
+                            if (disabled || (event.detail !== 0 && gestureMovedRef.current)) return;
+                            selectTable(activeTable.id);
+                          }}
+                          aria-disabled={disabled}
+                          tabIndex={disabled ? -1 : 0}
                         >
                           {activeTable.code}
                         </button>
@@ -1927,8 +1941,10 @@ export default function UnifiedBookingPage() {
                         }}
                         title={objectLabel}
                         tabIndex={isSelectableObj ? 0 : undefined}
-                        onPointerDown={isSelectableObj ? (event) => event.stopPropagation() : undefined}
-                        onClick={isSelectableObj ? () => selectObject(object) : undefined}
+                        onClick={isSelectableObj ? (event) => {
+                          if (event.detail !== 0 && gestureMovedRef.current) return;
+                          selectObject(object);
+                        } : undefined}
                       >
                         <PublicMapObjectGraphic object={object} meta={meta} label={objectLabel} />
                         {activeTable ? (
@@ -2160,6 +2176,15 @@ export default function UnifiedBookingPage() {
                     </strong>
                     {isPierBeachPosition ? (
                       <p>{locale === 'ua' ? '\u0412\u0432\u0435\u0447\u0435\u0440\u0456 \u0446\u044f \u043f\u043e\u0437\u0438\u0446\u0456\u044f \u0437\u043c\u043e\u0436\u0435 \u043f\u0440\u0430\u0446\u044e\u0432\u0430\u0442\u0438 \u044f\u043a \u0441\u0442\u0456\u043b \u043d\u0430 \u043f\u0456\u0440\u0441\u0456.' : locale === 'ru' ? '\u0412\u0435\u0447\u0435\u0440\u043e\u043c \u044d\u0442\u0430 \u043f\u043e\u0437\u0438\u0446\u0438\u044f \u0441\u043c\u043e\u0436\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u043a\u0430\u043a \u0441\u0442\u043e\u043b \u043d\u0430 \u043f\u0438\u0440\u0441\u0435.' : 'In the evening this place can work as a pier table.'}</p>
+                    ) : null}
+                    {activeBookingKind === 'BEACH' ? (
+                      <p className="booking-refund-warning">
+                        {c({
+                          ua: 'Якщо гість не прибув до 13:00, бронювання може бути скасоване, а 50% передоплати утримується за резервування місця.',
+                          ru: 'Если гость не прибыл до 13:00, бронь может быть отменена, а 50% предоплаты удерживается за резервирование места.',
+                          en: 'If the guest has not arrived by 1:00 PM, the booking may be cancelled and 50% of the prepayment retained for holding the place.'
+                        })}
+                      </p>
                     ) : null}
                     <label className="booking-scenario-field">
                       <span>{activeBookingKind === 'BEACH'

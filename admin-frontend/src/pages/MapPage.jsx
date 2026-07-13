@@ -1525,7 +1525,7 @@ export default function MapPage() {
                         onClick={focusWholeMap}
                         aria-pressed={activeZoneFocusId === 'all'}
                       >
-                        Вся карта
+                        Вся мапа
                       </button>
                       {zoneFocusItems.map(({ zone, bounds }) => (
                         <button
@@ -1887,7 +1887,7 @@ export default function MapPage() {
                         ? 'Select a table or bed on the map to view details, register guest arrivals, or manage bookings.'
                         : (language === 'ru'
                           ? 'Выберите стол или кровать на карте, чтобы просмотреть детали, отметить приход гостей или создать бронь.'
-                          : 'Оберіть стіл або ліжко на карті, щоб переглянути деталі, відмітити прихід гостей або створити бронь.')}
+                          : 'Оберіть стіл або ліжко на мапі, щоб переглянути деталі, відмітити прихід гостей або створити бронь.')}
                     </p>
                   </div>
                 )}

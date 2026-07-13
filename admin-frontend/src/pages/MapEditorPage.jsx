@@ -34,9 +34,9 @@ const MAP_VARIANT_PRESETS = [
   { key: 'CONCERT', name: 'Concert seating', slugPrefix: 'concert-seating', description: 'Concert with seated zones', usageMode: 'EVENT' }
 ];
 const MAP_USAGE_MODE_OPTIONS = [
-  { value: 'DAY', label: 'Денна карта' },
-  { value: 'EVENING', label: 'Вечірня карта' },
-  { value: 'EVENT', label: 'Івент-карта' }
+  { value: 'DAY', label: 'Денна мапа' },
+  { value: 'EVENING', label: 'Вечірня мапа' },
+  { value: 'EVENT', label: 'Івент-мапа' }
 ];
 const BOOKING_KIND_OPTIONS = [
   { value: 'TABLE', label: 'Стіл / посадка' },
@@ -52,7 +52,7 @@ const TEXTURE_CHOICES = [
   { value: 'dark_wood', label: 'Темне дерево' }
 ];
 const PROPERTY_FIELDS = [
-  { key: 'label', type: 'text', section: 'General', hint: 'Назва на карті' },
+  { key: 'label', type: 'text', section: 'General', hint: 'Назва на мапі' },
   { key: 'text', type: 'text', section: 'Text', hint: 'Текст, який побачить гість' },
   { key: 'fontSize', type: 'number', section: 'Text', step: 1, hint: 'Розмір шрифту в пікселях' },
   { key: 'fontColor', type: 'color', section: 'Text', hint: 'Колір тексту та виносної лінії' },
@@ -79,8 +79,8 @@ const PROPERTY_FIELDS = [
   { key: 'svgCode', type: 'textarea', section: 'Graphics', placeholder: '<svg>...</svg>', hint: 'SVG-код для кастомного зображення' },
   { key: 'strokeWidth', type: 'number', section: 'Graphics', step: 1, hint: 'Товщина обводки в пікселях' },
   { key: 'strokeColor', type: 'color', section: 'Graphics', hint: 'Колір обводки' },
-  { key: 'x', type: 'number', section: 'Transform', step: 1, hint: 'Координата X на карті' },
-  { key: 'y', type: 'number', section: 'Transform', step: 1, hint: 'Координата Y на карті' },
+  { key: 'x', type: 'number', section: 'Transform', step: 1, hint: 'Координата X на мапі' },
+  { key: 'y', type: 'number', section: 'Transform', step: 1, hint: 'Координата Y на мапі' },
   { key: 'width', type: 'number', section: 'Transform', step: 1, hint: 'Ширина об\'єкта' },
   { key: 'height', type: 'number', section: 'Transform', step: 1, hint: 'Висота об\'єкта' },
   { key: 'rotation', type: 'number', section: 'Transform', step: 1, hint: 'Поворот у градусах' },
@@ -1043,7 +1043,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
     <div className="editor-properties-stack">
       <div className="editor-form-grid map-settings-grid">
         <label className="map-settings-span-2">
-          <span>Назва карти (UA)</span>
+          <span>Назва мапи (UA)</span>
           <input
             type="text"
             value={map.name?.ua || (typeof map.name === 'string' ? map.name : '')}
@@ -1055,7 +1055,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
         </label>
 
         <label className="map-settings-span-2">
-          <span>Назва карти (RU)</span>
+          <span>Назва мапи (RU)</span>
           <input
             type="text"
             value={map.name?.ru || ''}
@@ -1067,7 +1067,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
         </label>
 
         <label className="map-settings-span-2">
-          <span>Назва карти (EN)</span>
+          <span>Назва мапи (EN)</span>
           <input
             type="text"
             value={map.name?.en || ''}
@@ -1141,7 +1141,7 @@ function MapSettings({ map, onMapFieldChange, t }) {
         </label>
 
         <label>
-          <span>Режим карти</span>
+          <span>Режим мапи</span>
           <select value={map.usageMode || 'DAY'} onChange={(event) => onMapFieldChange('usageMode', event.target.value)}>
             {MAP_USAGE_MODE_OPTIONS.map((item) => (
               <option key={item.value} value={item.value}>{item.label}</option>
@@ -4548,7 +4548,7 @@ export default function MapEditorPage() {
       current: nextData,
       selectedObjectId: nextData.objects[0]?.id || null,
       selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : [],
-      saveMessage: 'Карту встановлено як основну.'
+      saveMessage: 'Мапу встановлено як основну.'
     }));
   }
 
@@ -4592,7 +4592,7 @@ export default function MapEditorPage() {
       current: nextData,
       selectedObjectId: nextData.objects[0]?.id || null,
       selectedObjectIds: nextData.objects[0]?.id ? [nextData.objects[0].id] : [],
-      saveMessage: 'Карту активовано.'
+      saveMessage: 'Мапу активовано.'
     }));
   }
 
@@ -4711,7 +4711,7 @@ export default function MapEditorPage() {
               />
             </label>
             <fieldset className="map-create-mode">
-              <legend>Основа карти</legend>
+              <legend>Основа мапи</legend>
               <label>
                 <input
                   type="radio"
@@ -5425,4 +5425,3 @@ export default function MapEditorPage() {
     </AdminLayout>
   );
 }
-

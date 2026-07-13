@@ -17,7 +17,7 @@ export const dictionary = {
     aboutMetaDescription: 'Локація, контакти та інформація про заклад.',
     bookingTitle: 'Бронювання',
     mapTitle: 'Мапа закладу',
-    mapSubtitle: 'Оберіть параметри та натисніть на вільне місце на карті для бронювання.',
+    mapSubtitle: 'Оберіть параметри та натисніть на вільне місце на мапі для бронювання.',
     mapZoomIn: 'Збільшити',
     mapZoomOut: 'Зменшити',
     mapGoToBooking: 'Перейти до бронювання',
