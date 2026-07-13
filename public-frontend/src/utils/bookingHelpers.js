@@ -128,7 +128,10 @@ export function buildEventDateOptions(event) {
         grouped.set(dateKey, {
           key: dateKey,
           date: dateKey,
+          sessionId: session.id,
+          sessionName: session.name,
           startsAt: session.startsAt,
+          endsAt: session.endsAt,
           timeFrom: toTimeOnly(session.startsAt) || '12:00',
           label: formatEventButtonLabel(session.startsAt),
           fullLabel: formatUkrainianDate(session.startsAt)
@@ -137,6 +140,9 @@ export function buildEventDateOptions(event) {
       }
       if (new Date(session.startsAt) < new Date(current.startsAt)) {
         current.startsAt = session.startsAt;
+        current.sessionId = session.id;
+        current.sessionName = session.name;
+        current.endsAt = session.endsAt;
         current.timeFrom = toTimeOnly(session.startsAt) || current.timeFrom;
         current.label = formatEventButtonLabel(session.startsAt);
         current.fullLabel = formatUkrainianDate(session.startsAt);

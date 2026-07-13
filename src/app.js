@@ -195,6 +195,7 @@ async function runReservationMaintenance() {
   reservationMaintenanceRunning = true;
   try {
     await reservationService.expireStaleReservations();
+    await reservationService.releaseMissedEventTables();
     await reservationService.completeClosedDayReservations();
     await ticketSalesService.expireStaleOrders();
     await ticketSalesService.expireFinishedEventTickets();

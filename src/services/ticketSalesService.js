@@ -343,7 +343,7 @@ async function createOrder(input) {
           amount,
           currency: types[0].currency,
           status: input.status === 'PAID' ? 'PAID' : 'PENDING',
-          expiresAt: input.status === 'PAID' ? null : new Date(Date.now() + 30 * 60 * 1000),
+          expiresAt: input.status === 'PAID' ? null : (normalizeDate(input.expiresAt) || new Date(Date.now() + 30 * 60 * 1000)),
           paidAt: input.status === 'PAID' ? new Date() : null,
           tickets: {
             create: types.flatMap((type) =>

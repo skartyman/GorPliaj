@@ -2698,6 +2698,35 @@ h3 {
   border-radius: 0 18px 18px 0;
 }
 
+.booking-event-scenario {
+  border-color: rgba(201, 168, 108, 0.48);
+}
+
+.booking-event-guarantee {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border-left: 3px solid var(--brand);
+  background: rgba(201, 168, 108, 0.09);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.booking-event-guarantee strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.booking-event-final-note {
+  padding: 10px 11px;
+  border-left: 3px solid var(--brand);
+  background: rgba(201, 168, 108, 0.09);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .unified-side-panel::-webkit-scrollbar {
   width: 8px;
 }
@@ -4370,6 +4399,10 @@ h3 {
   margin: 0;
 }
 
+.footer-socials {
+  margin-bottom: 18px;
+}
+
 .footer-contacts h3 {
   color: var(--brand);
   font-size: 0.8rem;
@@ -5856,6 +5889,34 @@ h3 {
   border-radius: 8px;
   font-size: 0.78rem !important;
   box-shadow: none;
+}
+
+.booking-event-single-session {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-left: 3px solid var(--brand);
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.booking-event-single-session strong {
+  font-size: 0.82rem;
+}
+
+.booking-event-single-session span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 520px) {
+  .booking-event-single-session {
+    display: grid;
+    gap: 2px;
+    padding-block: 7px;
+  }
 }
 
 .booking-compact-field {

@@ -122,7 +122,7 @@ async function applyTicketPaymentStatus({ ticketOrderId, providerOrderId, provid
   return payment;
 }
 
-async function createCheckoutSession({ reservationId, amount, description, currency = 'UAH', customerEmail, customerPhone, returnTo }) {
+async function createCheckoutSession({ reservationId, ticketOrderId = null, amount, description, currency = 'UAH', customerEmail, customerPhone, returnTo }) {
   const config = hutkoUtils.getConfig();
   if (!config.isConfigured) {
     return { type: 'NOT_CONFIGURED', message: 'Payment gateway is not configured. Set FONDY_MERCHANT_ID and FONDY_SECRET_KEY.' };
@@ -171,6 +171,7 @@ async function createCheckoutSession({ reservationId, amount, description, curre
   const payment = await prisma.payment.upsert({
     where: { reservationId },
     update: {
+      ticketOrderId,
       provider: 'hutko',
       providerPaymentId,
       providerOrderId: orderId,
@@ -182,6 +183,7 @@ async function createCheckoutSession({ reservationId, amount, description, curre
     },
     create: {
       reservationId,
+      ticketOrderId,
       provider: 'hutko',
       providerPaymentId,
       providerOrderId: orderId,
@@ -369,6 +371,11 @@ async function processCallback(payload) {
           payment: true
         }
       });
+
+      if (reservation?.payment?.ticketOrderId) {
+        const ticketSalesService = require('./ticketSalesService');
+        await ticketSalesService.updateOrderStatus(reservation.payment.ticketOrderId, 'PAID');
+      }
 
       if (reservation && reservation.customerEmail) {
         const verifyUrl = buildVerifyUrl(reservation.ticketCode, reservation.reservationDate);

@@ -1,6 +1,7 @@
 const reservationService = require('../services/reservationService');
 const bookableUnitService = require('../services/bookableUnitService');
 const hutkoService = require('../services/hutkoService');
+const ticketSalesService = require('../services/ticketSalesService');
 const { sendTicketEmail } = require('../services/emailService');
 const waiterTelegramService = require('../services/waiterTelegramService');
 const { generateTicketCode } = require('../utils/ticket');
@@ -121,11 +122,26 @@ function getEventEntryBreakdown(event, reservationDate, guests) {
     eventSlug: event.slug,
     eventTitle: localizeJson(event.title),
     ticketTypeId: ticketType.id,
+    eventSessionId: ticketType.eventSessionId || null,
+    eventSession: ticketType.eventSession || null,
+    eventStartsAt: event.startAt,
+    eventEndsAt: event.endAt,
     ticketTypeName: localizeJson(ticketType.name),
     ticketPrice: price,
     ticketCount: guests,
     amount: price * guests,
     currency: ticketType.currency || 'UAH'
+  };
+}
+
+function getEventArrivalWindow(entryBreakdown) {
+  const session = entryBreakdown?.eventSession;
+  const startsAt = new Date(session?.startsAt || entryBreakdown?.eventStartsAt);
+  const endsAt = new Date(session?.endsAt || entryBreakdown?.eventEndsAt || entryBreakdown?.eventStartsAt);
+  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return null;
+  return {
+    earliest: new Date(startsAt.getTime() - 60 * 60 * 1000),
+    latest: endsAt
   };
 }
 
@@ -300,13 +316,18 @@ async function createReservation(req, res) {
       }
     }
 
+    // Evening event tables use a deposit, never a rental charge.
+    if (event) {
+      rentalAmount = null;
+    }
+
     const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests);
-    const eventMatchesReservationDay = event && (
-      isSameBookingDay(event.startAt, reservationDate)
-      || event.ticketTypes?.some((ticketType) => ticketType.eventSession?.isActive && isSameBookingDay(ticketType.eventSession.startsAt, reservationDate))
-    );
-    if (eventMatchesReservationDay && !entryBreakdown) {
+    if (event && !entryBreakdown) {
       return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });
+    }
+    const eventArrivalWindow = getEventArrivalWindow(entryBreakdown);
+    if (eventArrivalWindow && (timeFrom < eventArrivalWindow.earliest || timeFrom > eventArrivalWindow.latest)) {
+      return res.status(400).json({ message: 'Arrival time must be within the selected event session and no earlier than one hour before it starts.' });
     }
     const depositAmount = Number(deposit.depositAmount);
     const rental = rentalAmount ? Number(rentalAmount) : 0;
@@ -345,6 +366,25 @@ async function createReservation(req, res) {
       ticketCode
     });
 
+    let linkedTicketOrder = null;
+    if (entryBreakdown) {
+      const ticketOrderResult = await ticketSalesService.createOrder({
+        eventId: entryBreakdown.eventId,
+        eventSessionId: entryBreakdown.eventSessionId,
+        customerName: req.body.customerName,
+        customerEmail,
+        customerPhone: req.body.customerPhone,
+        items: [{ ticketTypeId: entryBreakdown.ticketTypeId, quantity: guests }],
+        enforceSalesWindow: true,
+        expiresAt: reservation.expiresAt
+      });
+      if (ticketOrderResult.type !== 'SUCCESS') {
+        await reservationService.cancelReservationAfterTicketFailure(reservation.id);
+        return res.status(ticketOrderResult.type === 'CONFLICT' ? 409 : 400).json({ message: ticketOrderResult.message });
+      }
+      linkedTicketOrder = ticketOrderResult.order;
+    }
+
     if (holdToken) {
       await reservationService.consumeTableHold(holdToken, reservation.id);
     }
@@ -357,6 +397,7 @@ async function createReservation(req, res) {
       const returnTo = `/booking?reservation=${encodeURIComponent(access.ticketCode)}&t=${encodeURIComponent(access.token)}${eventSlug ? `&event=${encodeURIComponent(eventSlug)}` : ''}`;
       checkout = await hutkoService.createCheckoutSession({
         reservationId: reservation.id,
+        ticketOrderId: linkedTicketOrder?.id || null,
         amount: totalAmount,
         description: `GorPliaj ${bookingLabel} ${positionName}: rental ${rental} UAH, deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
         currency: entryBreakdown?.currency || 'UAH',
@@ -366,9 +407,13 @@ async function createReservation(req, res) {
       });
 
       if (checkout.type === 'NOT_CONFIGURED') {
+        if (linkedTicketOrder) await ticketSalesService.updateOrderStatus(linkedTicketOrder.id, 'CANCELLED');
+        await reservationService.cancelReservationAfterTicketFailure(reservation.id);
         return res.status(503).json({ message: checkout.message, reservation, access });
       }
       if (checkout.type === 'PROVIDER_ERROR') {
+        if (linkedTicketOrder) await ticketSalesService.updateOrderStatus(linkedTicketOrder.id, 'CANCELLED');
+        await reservationService.cancelReservationAfterTicketFailure(reservation.id);
         return res.status(502).json({ message: checkout.message, reservation, access });
       }
     } else {
@@ -427,7 +472,11 @@ async function createReservation(req, res) {
         totalAmount,
         currency: entryBreakdown?.currency || 'UAH',
         note: 'The booking deposit is included in the final bill at the venue.'
-      }
+      },
+      ticketOrder: linkedTicketOrder ? {
+        orderNumber: linkedTicketOrder.orderNumber,
+        ticketCount: linkedTicketOrder.tickets?.length || guests
+      } : null
     });
   } catch (error) {
     console.error('[reservationController.createReservation] Failed to create reservation.', error);

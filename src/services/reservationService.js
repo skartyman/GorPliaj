@@ -445,6 +445,47 @@ async function expireStaleReservations() {
   }
 }
 
+async function cancelReservationAfterTicketFailure(reservationId) {
+  return prisma.reservation.updateMany({
+    where: { id: reservationId, status: { in: ['PENDING', 'AWAITING_PAYMENT'] } },
+    data: { status: 'CANCELLED' }
+  });
+}
+
+async function releaseMissedEventTables(now = new Date()) {
+  const deadline = new Date(now.getTime() - 30 * 60 * 1000);
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      source: 'EVENT',
+      eventId: { not: null },
+      status: 'CONFIRMED',
+      arrivedAt: null,
+      timeFrom: { lte: deadline }
+    },
+    select: { id: true, status: true, timeFrom: true }
+  });
+
+  let released = 0;
+  for (const reservation of reservations) {
+    const result = await prisma.reservation.updateMany({
+      where: { id: reservation.id, status: 'CONFIRMED', arrivedAt: null },
+      data: { status: 'NO_SHOW' }
+    });
+    if (result.count !== 1) continue;
+    released += 1;
+    await prisma.reservationLog.create({
+      data: {
+        reservationId: reservation.id,
+        action: 'AUTO_RELEASE_EVENT_TABLE_AFTER_30_MIN',
+        oldStatus: reservation.status,
+        newStatus: 'NO_SHOW',
+        comment: 'Table guarantee expired 30 minutes after the selected arrival time. Event tickets remain valid.'
+      }
+    });
+  }
+  return released;
+}
+
 async function completeClosedDayReservations(now = new Date()) {
   try {
     const closingTime = await getConfiguredClosingTime(now);
@@ -533,6 +574,8 @@ module.exports = {
   createTableHold,
   releaseTableHold,
   consumeTableHold,
+  cancelReservationAfterTicketFailure,
+  releaseMissedEventTables,
   expireStaleReservations,
   completeClosedDayReservations,
   getMapAvailability,

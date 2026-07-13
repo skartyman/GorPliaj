@@ -14,9 +14,6 @@ import {
   bookingKindTitle,
   unitStatusLabel,
   positionTypeLabel,
-  findEventForDate,
-  getEventDateRange,
-  formatEventRangeLabel,
   buildEventDateOptions
 } from '../utils/bookingHelpers';
 import {
@@ -35,6 +32,41 @@ const MAP_PADDING = 24;
 const MAP_PREVIEW_GUTTER = 20;
 const PINCH_SENSITIVITY = 0.006;
 const EVENING_TABLE_START = '20:00';
+
+function toLocalDateKey(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function toLocalMinutes(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.getHours() * 60 + date.getMinutes();
+}
+
+function minutesToTime(value) {
+  const minutes = ((value % 1440) + 1440) % 1440;
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+function buildEventArrivalSlots(session, date, today, currentTime) {
+  if (!session?.startsAt || !session?.endsAt) return [];
+  const start = toLocalMinutes(session.startsAt);
+  const end = toLocalMinutes(session.endsAt);
+  if (start === null || end === null) return [];
+  const first = Math.max(0, start - 60);
+  const last = end >= first ? end : 23 * 60 + 30;
+  const slots = [];
+  for (let minute = first; minute <= last; minute += 30) {
+    const time = minutesToTime(minute);
+    if (date === today && time <= currentTime) continue;
+    slots.push(time);
+  }
+  return slots;
+}
 
 function generateTableTimeSlots(date, today, currentTime, start = '09:00', end = '22:00') {
   const slots = [];
@@ -738,7 +770,6 @@ export default function UnifiedBookingPage() {
   const [reservationAccess, setReservationAccess] = useState(null);
 
   const [positionTypes, setPositionTypes] = useState([]);
-  const [eventOptionsState, setEventOptionsState] = useState({ loading: false, error: '', events: [] });
   const [eventInfo, setEventInfo] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
 
@@ -770,13 +801,26 @@ export default function UnifiedBookingPage() {
     offsetY: MAP_PREVIEW_GUTTER
   }), [mapDimensions.height, mapDimensions.width]);
 
-  const matchedEventForDate = useMemo(() => findEventForDate(eventOptionsState.events, form.date), [eventOptionsState.events, form.date]);
   const usageMode = activeEventSlug ? 'EVENING' : 'DAY';
   const resolvedBookingKind = activeEventSlug ? 'TABLE' : bookingKind;
 
+  const eventDateOptions = useMemo(() => activeEventSlug ? buildEventDateOptions(eventInfo) : [], [activeEventSlug, eventInfo]);
+  const activeEventSession = useMemo(() => {
+    const sessions = Array.isArray(eventInfo?.sessions) ? eventInfo.sessions : [];
+    return sessions.find((session) => session.isActive !== false && toLocalDateKey(session.startsAt) === form.date)
+      || (eventInfo?.startAt && toLocalDateKey(eventInfo.startAt) === form.date
+        ? { id: null, name: eventInfo.title, startsAt: eventInfo.startAt, endsAt: eventInfo.endAt || eventInfo.startAt, isActive: true }
+        : null);
+  }, [eventInfo, form.date]);
+  const eventArrivalSlots = useMemo(
+    () => buildEventArrivalSlots(activeEventSession, form.date, today, currentTime),
+    [activeEventSession, form.date, today, currentTime]
+  );
+
   const timeSlots = useMemo(() => {
+    if (activeEventSlug) return eventArrivalSlots;
     return generateTimeSlots(form.date, today, currentTime, resolvedBookingKind);
-  }, [form.date, today, currentTime, resolvedBookingKind]);
+  }, [activeEventSlug, eventArrivalSlots, form.date, today, currentTime, resolvedBookingKind]);
 
   useEffect(() => {
     if (timeSlots.length > 0) {
@@ -787,6 +831,40 @@ export default function UnifiedBookingPage() {
       setForm((current) => ({ ...current, timeFrom: '' }));
     }
   }, [timeSlots, form.timeFrom]);
+
+  useEffect(() => {
+    if (!activeEventSlug) {
+      setEventInfo(null);
+      setTicketTypes([]);
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all([eventsApi.bySlug(activeEventSlug), eventsApi.ticketTypes(activeEventSlug)])
+      .then(([event, sales]) => {
+        if (cancelled) return;
+        const sessions = Array.isArray(sales?.sessions) && sales.sessions.length ? sales.sessions : (event?.sessions || []);
+        setEventInfo({ ...event, sessions });
+        setTicketTypes(Array.isArray(sales?.ticketTypes) ? sales.ticketTypes : []);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setEventInfo({ loadError: error?.message || 'Unable to load event.' });
+        setTicketTypes([]);
+      });
+    return () => { cancelled = true; };
+  }, [activeEventSlug]);
+
+  useEffect(() => {
+    if (!activeEventSlug || !eventDateOptions.length) return;
+    const selected = eventDateOptions.find((option) => option.date === form.date) || eventDateOptions[0];
+    const session = eventInfo?.sessions?.find((item) => item.id === selected.sessionId);
+    const slots = buildEventArrivalSlots(session, selected.date, today, currentTime);
+    setForm((current) => ({
+      ...current,
+      date: selected.date,
+      timeFrom: slots.includes(current.timeFrom) ? current.timeFrom : (slots[0] || '')
+    }));
+  }, [activeEventSlug, eventDateOptions, eventInfo, today, currentTime]);
 
   useEffect(() => {
     const next = new URLSearchParams(window.location.search);
@@ -851,7 +929,8 @@ export default function UnifiedBookingPage() {
     mapApi.bookableUnits(mapId, {
       date: form.date,
       timeFrom: form.timeFrom,
-      guests: form.guests
+      guests: form.guests,
+      eventId: eventInfo?.id || undefined
     })
       .then((payload) => {
         if (cancelled) return;
@@ -867,7 +946,7 @@ export default function UnifiedBookingPage() {
       });
 
     return () => { cancelled = true; };
-  }, [mapId, form.date, form.timeFrom, form.guests]);
+  }, [mapId, form.date, form.timeFrom, form.guests, eventInfo?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -975,24 +1054,6 @@ export default function UnifiedBookingPage() {
       .then((r) => r.json())
       .then((body) => { if (Array.isArray(body)) setPositionTypes(body); })
       .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setEventOptionsState((current) => ({ ...current, loading: true, error: '' }));
-    eventsApi.list(false)
-      .then((events) => {
-        if (cancelled) return;
-        const availableEvents = Array.isArray(events)
-          ? events.filter((event) => ['BOOKING', 'BOTH'].includes(event.ctaType))
-          : [];
-        setEventOptionsState({ loading: false, error: '', events: availableEvents });
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setEventOptionsState({ loading: false, error: error.message, events: [] });
-      });
-    return () => { cancelled = true; };
   }, []);
 
   const selectedTablePhoto = useMemo(() => {
@@ -1381,14 +1442,14 @@ export default function UnifiedBookingPage() {
 
   const entryTicketType = useMemo(() => {
     if (!eventInfo) return null;
-    const range = getEventDateRange(eventInfo);
-    if (!range.includes(form.date)) return null;
-    return ticketTypes[0] || null;
-  }, [eventInfo, form.date, ticketTypes]);
+    return ticketTypes.find((ticketType) => ticketType.eventSessionId === activeEventSession?.id)
+      || ticketTypes.find((ticketType) => !ticketType.eventSessionId)
+      || null;
+  }, [eventInfo, activeEventSession, ticketTypes]);
 
   const paymentPreview = useMemo(() => {
     const activeUnit = selectedObjectTable || selectedTable;
-    const rentalAmount = Number(activeUnit?.rentalAmount || 0);
+    const rentalAmount = activeEventSlug ? 0 : Number(activeUnit?.rentalAmount || 0);
     const depositAmount = Number(activeUnit?.depositAmount || 0);
     const entryTicketPrice = Number(entryTicketType?.price || 0);
     const entryTicketsAmount = entryTicketPrice > 0 ? entryTicketPrice * Number(form.guests || 0) : 0;
@@ -1400,7 +1461,7 @@ export default function UnifiedBookingPage() {
       totalAmount: rentalAmount + depositAmount + entryTicketsAmount,
       currency: entryTicketType?.currency || 'UAH'
     };
-  }, [selectedObjectTable, selectedTable, entryTicketType, form.guests]);
+  }, [activeEventSlug, selectedObjectTable, selectedTable, entryTicketType, form.guests]);
 
   async function handleBookingSubmit(event) {
     event.preventDefault();
@@ -1522,11 +1583,12 @@ export default function UnifiedBookingPage() {
   const isFreeTable = activePanelTable && activePanelTable.status === 'free' && tableFitsGuests(activePanelTable);
   const activeBookingKind = activePanelTable?.bookingKind || resolvedBookingKind;
   const activeTimeSlots = useMemo(() => {
+    if (activeEventSlug) return eventArrivalSlots;
     if (activeBookingKind === 'BEACH') {
       return generateTimeSlots(form.date, today, currentTime, 'BEACH');
     }
     return generateTableTimeSlots(form.date, today, currentTime, '09:00', '22:00');
-  }, [activeBookingKind, form.date, today, currentTime]);
+  }, [activeEventSlug, eventArrivalSlots, activeBookingKind, form.date, today, currentTime]);
   const isPierBeachPosition = activePanelTable?.bookingKind === 'BEACH' && isPierCode(activePanelTable.code);
 
   const pairedEveningUnit = useMemo(() => {
@@ -1553,6 +1615,36 @@ export default function UnifiedBookingPage() {
 
   const renderScenarioActions = (unit, canBook) => {
     if (!unit) return null;
+    if (activeEventSlug) {
+      const selectedTime = eventArrivalSlots.includes(form.timeFrom) ? form.timeFrom : (eventArrivalSlots[0] || '');
+      const sessionName = localizeField(activeEventSession?.name, locale)
+        || localizeField(eventInfo?.title, locale)
+        || (locale === 'ua' ? 'Вечірня подія' : locale === 'ru' ? 'Вечернее событие' : 'Evening event');
+      return (
+        <div className="booking-scenario-stack">
+          <div className="booking-scenario-card booking-event-scenario is-primary">
+            <div>
+              <span className="booking-scenario-kicker">{sessionName}</span>
+              <strong>{locale === 'ua' ? `${form.guests} квит. + бронювання столу` : locale === 'ru' ? `${form.guests} бил. + бронирование стола` : `${form.guests} tickets + table booking`}</strong>
+              <p>{locale === 'ua' ? 'Кількість гостей дорівнює кількості вхідних квитків.' : locale === 'ru' ? 'Количество гостей равно количеству входных билетов.' : 'Guest count equals the number of entry tickets.'}</p>
+            </div>
+            <label className="booking-scenario-field">
+              <span>{locale === 'ua' ? 'Час приходу' : locale === 'ru' ? 'Время прихода' : 'Arrival time'}</span>
+              <select className="form-input" value={selectedTime} onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}>
+                {eventArrivalSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+              </select>
+            </label>
+            <div className="booking-event-guarantee" role="note">
+              <strong>{locale === 'ua' ? 'Столик гарантовано 30 хвилин' : locale === 'ru' ? 'Стол гарантирован 30 минут' : 'Table guaranteed for 30 minutes'}</strong>
+              <span>{locale === 'ua' ? 'Від обраного часу приходу. Після цього столик може бути переданий іншим гостям, але ваші квитки залишаться дійсними до завершення події.' : locale === 'ru' ? 'От выбранного времени прихода. После этого стол могут передать другим гостям, но ваши билеты останутся действительными до конца мероприятия.' : 'From the selected arrival time. After that the table may be released, while your tickets stay valid through the event.'}</span>
+            </div>
+            <button className="btn btn-primary" type="button" disabled={!canBook || !selectedTime} onClick={() => { setBookingKind('TABLE'); setScenarioSelected(true); }}>
+              {locale === 'ua' ? 'Продовжити з цим столиком' : locale === 'ru' ? 'Продолжить с этим столом' : 'Continue with this table'}
+            </button>
+          </div>
+        </div>
+      );
+    }
     const isBeach = unit.bookingKind === 'BEACH';
     const isTable = unit.bookingKind === 'TABLE';
     const isPierBeach = isBeach && isPierCode(unit.code);
@@ -1706,6 +1798,7 @@ export default function UnifiedBookingPage() {
       };
 
   const dateOptions = useMemo(() => {
+    if (activeEventSlug) return eventDateOptions;
     const list = [];
     const minDateStr = resolvedBookingKind === 'BEACH' && currentTime >= '12:00' ? defaultDate : today;
 
@@ -1742,7 +1835,7 @@ export default function UnifiedBookingPage() {
       list.push({ date: dateStr, label });
     }
     return list;
-  }, [resolvedBookingKind, currentTime, defaultDate, today, locale, c]);
+  }, [activeEventSlug, eventDateOptions, resolvedBookingKind, currentTime, defaultDate, today, locale, c]);
 
   if (state.loading) {
     return <div className="state-msg">{t('mapLoading') || 'Loading map...'}</div>;
@@ -1756,14 +1849,19 @@ export default function UnifiedBookingPage() {
     <div className="unified-booking-page">
       <div className="section-header">
         <div>
-          <h1>{t('mapTitle')}</h1>
-          <p className="muted">{t('mapSubtitle')}</p>
+          <h1>{activeEventSlug ? (localizeField(eventInfo?.title, locale) || (locale === 'ua' ? 'Бронювання на подію' : locale === 'ru' ? 'Бронирование на мероприятие' : 'Event booking')) : t('mapTitle')}</h1>
+          <p className="muted">{activeEventSlug ? (locale === 'ua' ? 'Оберіть столик на вечірній мапі. Дату, квитки та правила події ми вже врахували.' : locale === 'ru' ? 'Выберите стол на вечерней карте. Дату, билеты и правила мероприятия мы уже учли.' : 'Choose a table on the evening map. Event dates, tickets and rules are already applied.') : t('mapSubtitle')}</p>
         </div>
       </div>
 
       <div className="map-filter-bar unified-booking-filter">
         <div className="quick-date-switcher unified-date-switcher">
-          {dateOptions.map((opt) => {
+          {activeEventSlug && dateOptions.length === 1 ? (
+            <div className="booking-event-single-session">
+              <strong>{localizeField(dateOptions[0].sessionName, locale) || dateOptions[0].label}</strong>
+              <span>{dateOptions[0].fullLabel}</span>
+            </div>
+          ) : dateOptions.map((opt) => {
             const isActive = form.date === opt.date;
             return (
               <button
@@ -1772,18 +1870,18 @@ export default function UnifiedBookingPage() {
                 className={`quick-date-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setForm((current) => ({ ...current, date: opt.date }))}
               >
-                {opt.label}
+                {activeEventSlug ? (localizeField(opt.sessionName, locale) || opt.label) : opt.label}
               </button>
             );
           })}
         </div>
-        <label className="booking-compact-field">
+        {!activeEventSlug ? <label className="booking-compact-field">
           {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
           <input type="date" className="form-input booking-compact-control" value={form.date} min={today} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} />
-        </label>
+        </label> : null}
         <div className="booking-compact-field">
-          <span>{t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}</span>
-          <div className="booking-guests-stepper" role="group" aria-label={t('mapGuests') || 'Guests'}>
+          <span>{activeEventSlug ? (locale === 'ua' ? 'Гості = квитки' : locale === 'ru' ? 'Гости = билеты' : 'Guests = tickets') : (t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests'))}</span>
+          <div className="booking-guests-stepper" role="group" aria-label={activeEventSlug ? (locale === 'ua' ? 'Кількість квитків' : locale === 'ru' ? 'Количество билетов' : 'Ticket count') : (t('mapGuests') || 'Guests')}>
             <output className="booking-guests-value" aria-live="polite">{form.guests}</output>
             <div className="booking-guests-arrows">
               <button
@@ -1823,13 +1921,13 @@ export default function UnifiedBookingPage() {
       <div className="mobile-map-sticky-summary">
         <div style={{ display: 'flex', gap: '12px', color: 'var(--muted)' }}>
           <span>📅 <strong style={{color:'var(--text)'}}>{form.date.split('-').reverse().join('.')}</strong></span>
-          <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.'}</strong></span>
+          <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {activeEventSlug ? (locale === 'ua' ? 'квит.' : locale === 'ru' ? 'бил.' : 'tickets') : (locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.')}</strong></span>
         </div>
       </div>
 
       <div className="booking-flow-guide unified-booking-guide">
-        <strong>{locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u043c\u0456\u0441\u0446\u0435 \u043d\u0430 \u043c\u0430\u043f\u0456.' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043c\u0435\u0441\u0442\u043e \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.' : 'Choose a place on the map.'}</strong>
-        <span>{locale === 'ua' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u0446\u0456\u0454\u0457 \u043f\u043e\u0437\u0438\u0446\u0456\u0457.' : locale === 'ru' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0439 \u043f\u043e\u0437\u0438\u0446\u0438\u0438.' : 'The system will show rules for that specific place.'}</span>
+        <strong>{activeEventSlug ? (locale === 'ua' ? 'Оберіть столик на вечірній мапі.' : locale === 'ru' ? 'Выберите стол на вечерней карте.' : 'Choose a table on the evening map.') : (locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u043c\u0456\u0441\u0446\u0435 \u043d\u0430 \u043c\u0430\u043f\u0456.' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043c\u0435\u0441\u0442\u043e \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.' : 'Choose a place on the map.')}</strong>
+        <span>{activeEventSlug ? (locale === 'ua' ? 'Після вибору уточніть час приходу та перейдіть до єдиної оплати столика й квитків.' : locale === 'ru' ? 'После выбора уточните время прихода и перейдите к единой оплате стола и билетов.' : 'Then confirm arrival time and pay for the table and tickets together.') : (locale === 'ua' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u0446\u0456\u0454\u0457 \u043f\u043e\u0437\u0438\u0446\u0456\u0457.' : locale === 'ru' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0439 \u043f\u043e\u0437\u0438\u0446\u0438\u0438.' : 'The system will show rules for that specific place.')}</span>
       </div>
 
       <div className={`map-container map-preview-container unified-booking-map-container ${isMobileViewport ? '' : 'has-panel'}`}>
@@ -2207,9 +2305,15 @@ export default function UnifiedBookingPage() {
 
               {paymentPreview.totalAmount > 0 ? (
                 <p className="muted" style={{ margin: '4px 0', color: 'var(--primary)', fontWeight: 600 }}>
-                  {c({ ua: 'Оренда', ru: 'Аренда', en: 'Rental' })}: {money(paymentPreview.rentalAmount, paymentPreview.currency)}
+                  {activeEventSlug ? (
+                    <>{c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: {money(paymentPreview.depositAmount, paymentPreview.currency)}</>
+                  ) : paymentPreview.rentalAmount > 0 ? (
+                    <>{c({ ua: 'Оренда', ru: 'Аренда', en: 'Rental' })}: {money(paymentPreview.rentalAmount, paymentPreview.currency)}</>
+                  ) : paymentPreview.depositAmount > 0 ? (
+                    <>{c({ ua: 'Депозит', ru: 'Депозит', en: 'Deposit' })}: {money(paymentPreview.depositAmount, paymentPreview.currency)}</>
+                  ) : null}
                   {paymentPreview.entryTicketsAmount > 0 ? (
-                    <> + {c({ ua: 'Квитки', ru: 'Билеты', en: 'Tickets' })}: {money(paymentPreview.entryTicketsAmount, paymentPreview.currency)}</>
+                    <>{(activeEventSlug || paymentPreview.rentalAmount > 0 || paymentPreview.depositAmount > 0) ? ' + ' : ''}{c({ ua: 'Квитки', ru: 'Билеты', en: 'Tickets' })}: {money(paymentPreview.entryTicketsAmount, paymentPreview.currency)}</>
                   ) : null}
                 </p>
               ) : null}
@@ -2222,14 +2326,14 @@ export default function UnifiedBookingPage() {
                     : new Date(`${form.date}T12:00:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</dd>
                 </div>
                 <div>
-                  <dt>{c({ ua: 'Гості', ru: 'Гости', en: 'Guests' })}</dt>
+                  <dt>{activeEventSlug ? c({ ua: 'Квитки', ru: 'Билеты', en: 'Tickets' }) : c({ ua: 'Гості', ru: 'Гости', en: 'Guests' })}</dt>
                   <dd>{form.guests}</dd>
                 </div>
               </dl>
 
               {holdTimerDisplay ? (
                 <p className="muted" style={{ margin: '4px 0', color: 'var(--warning, #f59e0b)', fontWeight: 600 }}>
-                  ⏱ {holdTimerDisplay}
+                  ⏱ {activeEventSlug ? (locale === 'ua' ? 'Час на оформлення: ' : locale === 'ru' ? 'Время на оформление: ' : 'Checkout time: ') : ''}{holdTimerDisplay}
                 </p>
               ) : null}
 
@@ -2256,12 +2360,16 @@ export default function UnifiedBookingPage() {
 
                   <div className="unified-place-rule-card">
                     <span className="booking-scenario-kicker">
-                      {activeBookingKind === 'BEACH'
+                      {activeEventSlug
+                        ? (localizeField(activeEventSession?.name, locale) || localizeField(eventInfo?.title, locale))
+                        : activeBookingKind === 'BEACH'
                         ? (locale === 'ua' ? '\u041f\u043b\u044f\u0436\u043d\u0430 \u0431\u0440\u043e\u043d\u044c' : locale === 'ru' ? '\u041f\u043b\u044f\u0436\u043d\u0430\u044f \u0431\u0440\u043e\u043d\u044c' : 'Beach booking')
                         : (locale === 'ua' ? '\u0411\u0440\u043e\u043d\u044c \u0441\u0442\u043e\u043b\u0443' : locale === 'ru' ? '\u0411\u0440\u043e\u043d\u044c \u0441\u0442\u043e\u043b\u0430' : 'Table booking')}
                     </span>
                     <strong>
-                      {activeBookingKind === 'BEACH'
+                      {activeEventSlug
+                        ? (locale === 'ua' ? 'Столик гарантовано 30 хвилин від часу приходу' : locale === 'ru' ? 'Стол гарантирован 30 минут от времени прихода' : 'Table guaranteed for 30 minutes from arrival time')
+                        : activeBookingKind === 'BEACH'
                         ? (locale === 'ua' ? '\u0414\u0456\u0454 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : locale === 'ru' ? '\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : 'Valid for the day, arrival 09:00-13:00')
                         : (locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u0447\u0430\u0441 \u043f\u0440\u0438\u0445\u043e\u0434\u0443' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0440\u0435\u043c\u044f \u043f\u0440\u0438\u0445\u043e\u0434\u0430' : 'Choose arrival time')}
                     </strong>
@@ -2275,6 +2383,11 @@ export default function UnifiedBookingPage() {
                           ru: 'Если гость не прибыл до 13:00, бронь может быть отменена, а 50% предоплаты удерживается за резервирование места.',
                           en: 'If the guest has not arrived by 1:00 PM, the booking may be cancelled and 50% of the prepayment retained for holding the place.'
                         })}
+                      </p>
+                    ) : null}
+                    {activeEventSlug ? (
+                      <p className="booking-event-final-note">
+                        {locale === 'ua' ? 'Якщо ви запізнюєтеся більш ніж на 30 хвилин, столик може бути переданий іншим гостям. Вхідні квитки залишаються дійсними до завершення події.' : locale === 'ru' ? 'Если вы опаздываете более чем на 30 минут, стол могут передать другим гостям. Входные билеты остаются действительными до конца мероприятия.' : 'If you arrive more than 30 minutes late, the table may be released. Entry tickets remain valid through the event.'}
                       </p>
                     ) : null}
                     <label className="booking-scenario-field">
