@@ -755,6 +755,7 @@ export default function UnifiedBookingPage() {
   useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
 
   const mapId = searchParams.get('mapId') || '';
+  const draftMode = searchParams.get('draft') === '1';
   const focusTableId = Number(searchParams.get('tableId') || '0');
   const focusObjectId = Number(searchParams.get('objectId') || '0');
 
@@ -834,10 +835,10 @@ export default function UnifiedBookingPage() {
   }, []);
 
   useEffect(() => {
-    getPublicMapData(mapApi, { date: form.date, timeFrom: form.timeFrom, mapId, draft: searchParams.get('draft') === '1' })
+    getPublicMapData(mapApi, { date: form.date, timeFrom: form.timeFrom, mapId, draft: draftMode })
       .then((result) => setState({ loading: false, error: '', result }))
       .catch((error) => setState({ loading: false, error: error?.message || t('mapLoadFailed'), result: null }));
-  }, [form.date, form.timeFrom, mapId, t, searchParams]);
+  }, [form.date, form.timeFrom, mapId, t, draftMode]);
 
   useEffect(() => {
     if (!mapId || !form.date || !form.timeFrom) {
@@ -1226,10 +1227,10 @@ export default function UnifiedBookingPage() {
       }
     }
 
+    focusedFromQueryRef.current = focusKey;
     if (bookingKind === 'BEACH') {
       const leftBeachFocus = zoneFocusItems.find(item => item.zone.id === 1 || String(item.zone.id) === '1');
       if (leftBeachFocus) {
-        focusedFromQueryRef.current = focusKey;
         focusZoneBounds(leftBeachFocus.zone.id, leftBeachFocus.bounds);
       }
     }
