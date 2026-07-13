@@ -661,6 +661,7 @@ export default function UnifiedBookingPage() {
   const [activeZoneFocusId, setActiveZoneFocusId] = useState('all');
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAutoFocusing, setIsAutoFocusing] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null });
   const safeTransform = transform || { scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null };
@@ -674,6 +675,8 @@ export default function UnifiedBookingPage() {
   const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
   const gestureMovedRef = useRef(false);
   const transformRef = useRef(safeTransform);
+  const autoFocusTimerRef = useRef(null);
+  const autoFocusScaleRef = useRef(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   const today = useMemo(() => {
@@ -1078,6 +1081,8 @@ export default function UnifiedBookingPage() {
     transformRef.current = safeTransform;
   }, [safeTransform]);
 
+  useEffect(() => () => window.clearTimeout(autoFocusTimerRef.current), []);
+
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
@@ -1090,6 +1095,7 @@ export default function UnifiedBookingPage() {
     const rect = viewportRef.current.getBoundingClientRect();
     const boundedScale = clamp(nextScale, safeTransform.minScale || 0.45, safeTransform.maxScale || 3.5);
     if (!Number.isFinite(boundedScale)) return;
+    autoFocusScaleRef.current = boundedScale;
     const localX = Number.isFinite(pivotX) ? pivotX : rect.width / 2;
     const localY = Number.isFinite(pivotY) ? pivotY : rect.height / 2;
     const anchored = zoomAroundViewportPoint(localX, localY, boundedScale, safeTransform.scale || 1, safeTransform.translateX || 0, safeTransform.translateY || 0);
@@ -1100,6 +1106,7 @@ export default function UnifiedBookingPage() {
 
   function fitWholeMap() {
     setActiveZoneFocusId('all');
+    autoFocusScaleRef.current = null;
     applyTransform(resetTransform.scale, resetTransform.translateX, resetTransform.translateY);
   }
 
@@ -1121,16 +1128,32 @@ export default function UnifiedBookingPage() {
     const nextY = rect.height / 2 - centerY * nextScale;
 
     setActiveZoneFocusId(String(zoneId));
+    autoFocusScaleRef.current = null;
     applyTransform(nextScale, nextX, nextY);
   }
 
-  function centerOnObject(object) {
+  function focusSelectedObject(object) {
     if (!viewportRef.current || !object) return;
     const center = getObjectCenter(object);
     const rect = viewportRef.current.getBoundingClientRect();
-    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * safeTransform.scale;
-    const targetY = rect.height * 0.5 - (center.y + mapRenderFrame.offsetY) * safeTransform.scale;
-    applyTransform(safeTransform.scale, targetX, targetY);
+    const overviewScale = safeTransform.initial?.scale || safeTransform.scale || 1;
+    const currentScale = safeTransform.scale || overviewScale;
+    const autoFocusMinScale = Math.min(safeTransform.minScale || overviewScale, overviewScale);
+    const targetScale = clamp(
+      autoFocusScaleRef.current == null
+        ? currentScale * 1.4
+        : Math.max(currentScale, autoFocusScaleRef.current),
+      autoFocusMinScale,
+      safeTransform.maxScale || 3.5
+    );
+    const targetX = rect.width / 2 - (center.x + mapRenderFrame.offsetX) * targetScale;
+    const targetY = rect.height / 2 - (center.y + mapRenderFrame.offsetY) * targetScale;
+
+    window.clearTimeout(autoFocusTimerRef.current);
+    autoFocusScaleRef.current = targetScale;
+    setIsAutoFocusing(true);
+    applyTransform(targetScale, targetX, targetY);
+    autoFocusTimerRef.current = window.setTimeout(() => setIsAutoFocusing(false), 480);
   }
 
   function selectTable(tableId) {
@@ -1143,7 +1166,7 @@ export default function UnifiedBookingPage() {
     if (!viewportRef.current || !state.result) return;
     const foundObject = state.result.map.objects.find((item) => item.tableId === tableId);
     if (!foundObject) return;
-    centerOnObject(foundObject);
+    focusSelectedObject(foundObject);
   }
 
   function tableFitsGuests(table) {
@@ -1162,7 +1185,7 @@ export default function UnifiedBookingPage() {
     if (foundTable?.bookingKind) {
       setBookingKind(foundTable.bookingKind);
     }
-    centerOnObject(object);
+    focusSelectedObject(object);
   }
 
   function closePanel() {
@@ -1230,6 +1253,8 @@ export default function UnifiedBookingPage() {
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
+    window.clearTimeout(autoFocusTimerRef.current);
+    setIsAutoFocusing(false);
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 1) {
       gestureMovedRef.current = false;
@@ -1293,6 +1318,7 @@ export default function UnifiedBookingPage() {
         safeTransform.maxScale || 3.5
       );
       if (!Number.isFinite(nextScale)) return;
+      autoFocusScaleRef.current = nextScale;
 
       const anchored = zoomAroundViewportPoint(
         midpointX,
@@ -1639,7 +1665,7 @@ export default function UnifiedBookingPage() {
     if (sidePanelOpen && isMobileViewport && sidePanelRef.current) {
       const scrollTimer = setTimeout(() => {
         sidePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 420);
+      }, 1200);
       return () => clearTimeout(scrollTimer);
     }
   }, [sidePanelOpen, isMobileViewport]);
@@ -1873,7 +1899,7 @@ export default function UnifiedBookingPage() {
               }}
             >
               <div
-                className="public-map-world"
+                className={`public-map-world ${isAutoFocusing ? 'is-auto-focusing' : ''}`}
                 style={{
                   width: mapRenderFrame.width,
                   height: mapRenderFrame.height,

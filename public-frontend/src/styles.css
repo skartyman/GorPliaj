@@ -2860,6 +2860,9 @@ h3 {
 }
 
 .public-map-world { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.public-map-world.is-auto-focusing {
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 .public-map-canvas { position: absolute; overflow: visible; }
 .public-map-background { inset: 0; background-size: 100% 100%; background-position: center; position: absolute; }
 .public-map-object, .public-map-table { position: absolute; display: grid; place-items: center; font-size: 0.82rem; border: 1px solid rgba(255, 255, 255, 0.12); }
@@ -3055,6 +3058,10 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .public-map-world.is-auto-focusing {
+    transition: none;
+  }
+
   .public-map-table.selected,
   .public-map-object.selected {
     translate: 0;
