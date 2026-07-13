@@ -2686,6 +2686,8 @@ h3 {
 .unified-side-panel {
   background: var(--bg);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 139, 148, 0.68) transparent;
   padding: 16px;
   box-sizing: border-box;
   align-self: start;
@@ -2694,6 +2696,27 @@ h3 {
   max-height: 80vh;
   border-left: 1px solid var(--line);
   border-radius: 0 18px 18px 0;
+}
+
+.unified-side-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.unified-side-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.unified-side-panel::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(139, 139, 148, 0.68);
+  background-clip: padding-box;
+}
+
+.unified-side-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(174, 174, 184, 0.82);
+  background-clip: padding-box;
 }
 
 .unified-map-board .map-controls {
