@@ -352,6 +352,7 @@ function PublicMapObjectGraphic({ object, meta, label }) {
     const patternId = `public-map-texture-${safeId}`;
     const polygonPoints = pointsToSvg(polyPoints);
     const usesBuiltinPattern = !meta.textureUrl && hasBuiltinTexture(meta.texture);
+    const isWaterSurface = String(meta.texture || '').toLowerCase() === 'water';
 
     return (
       <svg className="public-map-object-asset" viewBox={`0 0 ${object.width} ${object.height}`} preserveAspectRatio="none">
@@ -370,8 +371,8 @@ function PublicMapObjectGraphic({ object, meta, label }) {
           points={polygonPoints}
           fill={meta.textureUrl || usesBuiltinPattern ? `url(#${patternId})` : getPolygonFill(meta)}
           opacity={meta.opacity}
-          stroke={meta.strokeColor || '#64748b'}
-          strokeWidth={meta.strokeWidth}
+          stroke={isWaterSurface ? 'none' : (meta.strokeColor || '#64748b')}
+          strokeWidth={isWaterSurface ? 0 : meta.strokeWidth}
           vectorEffect="non-scaling-stroke"
         />
       </svg>
@@ -664,6 +665,8 @@ export default function UnifiedBookingPage() {
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null });
   const safeTransform = transform || { scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null };
   const viewportRef = useRef(null);
+  const mapBoardRef = useRef(null);
+  const zoneTabsRef = useRef(null);
   const sidePanelRef = useRef(null);
   const focusedFromQueryRef = useRef('');
   const pointersRef = useRef(new Map());
@@ -709,7 +712,7 @@ export default function UnifiedBookingPage() {
 
   const [form, setForm] = useState({
     date: searchParams.get('date') || defaultDate,
-    guests: Number(searchParams.get('guests') || '2'),
+    guests: clamp(Math.trunc(Number(searchParams.get('guests') || '2')) || 2, 1, 20),
     timeFrom: searchParams.get('timeFrom') || '12:00',
     customerName: '',
     customerPhone: '',
@@ -1114,6 +1117,12 @@ export default function UnifiedBookingPage() {
     setSelectedTableId(null);
     setSelectedObjectId(null);
     setScenarioSelected(false);
+
+    if (isMobileViewport) {
+      window.setTimeout(() => {
+        mapBoardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+    }
   }
 
   useEffect(() => {
@@ -1549,10 +1558,28 @@ export default function UnifiedBookingPage() {
   const sidePanelOpen = Boolean(activePanelTable || activePanelObject);
 
   useEffect(() => {
+    if (!isMobileViewport || sidePanelOpen || !zoneTabsRef.current) {
+      return undefined;
+    }
+
+    const scrollTimer = window.setTimeout(() => {
+      const tabs = zoneTabsRef.current;
+      const activeTab = tabs?.querySelector('.public-map-zone-tab.active');
+      if (!tabs || !activeTab) return;
+
+      const targetLeft = activeTab.offsetLeft - (tabs.clientWidth - activeTab.offsetWidth) / 2;
+      tabs.scrollLeft = Math.max(0, targetLeft);
+    }, 40);
+
+    return () => window.clearTimeout(scrollTimer);
+  }, [activeZoneFocusId, isMobileViewport, sidePanelOpen]);
+
+  useEffect(() => {
     if (sidePanelOpen && isMobileViewport && sidePanelRef.current) {
-      setTimeout(() => {
+      const scrollTimer = setTimeout(() => {
         sidePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      }, 420);
+      return () => clearTimeout(scrollTimer);
     }
   }, [sidePanelOpen, isMobileViewport]);
 
@@ -1646,7 +1673,7 @@ export default function UnifiedBookingPage() {
       </div>
 
       <div className="map-filter-bar unified-booking-filter">
-        <div className="quick-date-switcher" style={{ width: '100%', marginBottom: '4px' }}>
+        <div className="quick-date-switcher unified-date-switcher">
           {dateOptions.map((opt) => {
             const isActive = form.date === opt.date;
             return (
@@ -1661,53 +1688,34 @@ export default function UnifiedBookingPage() {
             );
           })}
         </div>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
+        <label className="booking-compact-field">
           {t('mapDate') || (locale === 'ua' ? 'Дата' : locale === 'ru' ? 'Дата' : 'Date')}
-          <input type="date" className="form-input" value={form.date} min={today} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} style={{ fontSize: '0.85rem', height: 38 }} />
+          <input type="date" className="form-input booking-compact-control" value={form.date} min={today} onChange={(e) => setForm((current) => ({ ...current, date: e.target.value }))} />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
-          {t('mapTime') || (locale === 'ua' ? 'Час' : locale === 'ru' ? 'Время' : 'Time')}
-          {timeSlots.length === 0 ? (
-            <span style={{ fontSize: '0.8rem', color: 'var(--danger)', height: 38, display: 'flex', alignItems: 'center' }}>
-              {locale === 'ua' ? 'Немає часу' : locale === 'ru' ? 'Нет времени' : 'No times'}
-            </span>
-          ) : (
-            <select
-              className="form-input"
-              value={form.timeFrom}
-              onChange={(e) => setForm((current) => ({ ...current, timeFrom: e.target.value }))}
-              style={{ fontSize: '0.85rem', height: 38, padding: '0 8px', minWidth: 90 }}
-            >
-              {timeSlots.map((slot) => (
-                <option key={slot} value={slot}>{slot}</option>
-              ))}
-            </select>
-          )}
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
-          {t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}
-          <input type="number" className="form-input" value={form.guests} min={1} max={20} onChange={(e) => setForm((current) => ({ ...current, guests: Number(e.target.value) || 0 }))} style={{ fontSize: '0.85rem', width: 70, height: 38 }} />
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
-          {locale === 'ua' ? 'Час доби' : locale === 'ru' ? 'Время суток' : 'Time of day'}
-          <span style={{ fontSize: '0.85rem', height: 38, display: 'flex', alignItems: 'center', fontWeight: 600, color: usageMode === 'EVENING' ? 'var(--brand)' : 'var(--text)' }}>
-            {usageMode === 'EVENING' ? (locale === 'ua' ? 'Вечір' : locale === 'ru' ? 'Вечер' : 'Evening') : (locale === 'ua' ? 'День' : locale === 'ru' ? 'День' : 'Day')}
-          </span>
-        </label>
-        {usageMode === 'DAY' && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.75rem', color: 'var(--muted)' }}>
-            {locale === 'ua' ? 'Тип броні' : locale === 'ru' ? 'Тип брони' : 'Booking type'}
-            <select
-              className="form-input"
-              value={bookingKind}
-              onChange={(e) => setBookingKind(e.target.value)}
-              style={{ fontSize: '0.85rem', height: 38, padding: '0 8px', minWidth: 110 }}
-            >
-              <option value="TABLE">{locale === 'ua' ? 'Стіл' : locale === 'ru' ? 'Стол' : 'Table'}</option>
-              <option value="BEACH">{locale === 'ua' ? 'Пляж' : locale === 'ru' ? 'Пляж' : 'Beach'}</option>
-            </select>
-          </label>
-        )}
+        <div className="booking-compact-field">
+          <span>{t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests')}</span>
+          <div className="booking-guests-stepper" role="group" aria-label={t('mapGuests') || 'Guests'}>
+            <output className="booking-guests-value" aria-live="polite">{form.guests}</output>
+            <div className="booking-guests-arrows">
+              <button
+                type="button"
+                aria-label={locale === 'ua' ? 'Збільшити кількість гостей' : locale === 'ru' ? 'Увеличить количество гостей' : 'Increase guests'}
+                disabled={form.guests >= 20}
+                onClick={() => setForm((current) => ({ ...current, guests: Math.min(20, current.guests + 1) }))}
+              >
+                <span aria-hidden="true">▲</span>
+              </button>
+              <button
+                type="button"
+                aria-label={locale === 'ua' ? 'Зменшити кількість гостей' : locale === 'ru' ? 'Уменьшить количество гостей' : 'Decrease guests'}
+                disabled={form.guests <= 1}
+                onClick={() => setForm((current) => ({ ...current, guests: Math.max(1, current.guests - 1) }))}
+              >
+                <span aria-hidden="true">▼</span>
+              </button>
+            </div>
+          </div>
+        </div>
         {form.date === today && form.timeFrom <= currentTime ? (
           <p style={{ width: '100%', margin: 0, fontSize: '0.75rem', color: 'var(--danger)' }}>
             {locale === 'ua' ? 'Обраний час вже минув. Будь ласка, оберіть пізніший час.' : locale === 'ru' ? 'Выбранное время уже прошло. Пожалуйста, выберите более позднее время.' : 'The selected time has already passed. Please choose a later time.'}
@@ -1726,12 +1734,8 @@ export default function UnifiedBookingPage() {
       <div className="mobile-map-sticky-summary">
         <div style={{ display: 'flex', gap: '12px', color: 'var(--muted)' }}>
           <span>📅 <strong style={{color:'var(--text)'}}>{form.date.split('-').reverse().join('.')}</strong></span>
-          <span>🕒 <strong style={{color:'var(--text)'}}>{form.timeFrom}</strong></span>
           <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.'}</strong></span>
         </div>
-        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ background: 'none', border: 'none', color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, padding: '4px 8px', cursor: 'pointer' }}>
-          {locale === 'ua' ? 'Змінити' : locale === 'ru' ? 'Изменить' : 'Change'}
-        </button>
       </div>
 
       <div className="booking-flow-guide unified-booking-guide">
@@ -1740,7 +1744,7 @@ export default function UnifiedBookingPage() {
       </div>
 
       <div className={`map-container map-preview-container unified-booking-map-container ${isMobileViewport ? '' : 'has-panel'}`}>
-        <article className="map-zone-board unified-map-board">
+        <article ref={mapBoardRef} className="map-zone-board unified-map-board">
           <div className="map-controls">
             <button type="button" className="btn btn-secondary map-control-btn" onClick={() => zoomTo(safeTransform.scale * 1.15)}>
               {t('mapZoomIn')}
@@ -1759,37 +1763,38 @@ export default function UnifiedBookingPage() {
             <span className="map-zoom-pill">{Math.round(safeTransform.scale * 100)}%</span>
           </div>
 
+          {zoneFocusItems.length ? (
+            <div ref={zoneTabsRef} className="public-map-zone-tabs unified-map-zone-tabs" aria-label="Map zones">
+              <button
+                type="button"
+                className={`public-map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
+                onClick={fitWholeMap}
+                aria-pressed={activeZoneFocusId === 'all'}
+              >
+                Вся карта
+              </button>
+              {zoneFocusItems.map(({ zone, bounds }) => (
+                <button
+                  key={zone.id}
+                  type="button"
+                  className={`public-map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
+                  onClick={() => focusZoneBounds(zone.id, bounds)}
+                  aria-pressed={activeZoneFocusId === String(zone.id)}
+                >
+                  {zoneDisplayName(zone, locale) || `Zone #${zone.id}`}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div
-              className={`public-map-shell unified-map-shell ${isDragging ? 'is-dragging' : ''}`}
-              style={{
+            className={`public-map-shell unified-map-shell ${isDragging ? 'is-dragging' : ''}`}
+            style={{
               backgroundColor: 'transparent',
               borderRadius: '18px',
               border: '0'
             }}
           >
-            {zoneFocusItems.length ? (
-              <div className="public-map-zone-tabs" aria-label="Map zones">
-                <button
-                  type="button"
-                  className={`public-map-zone-tab ${activeZoneFocusId === 'all' ? 'active' : ''}`}
-                  onClick={fitWholeMap}
-                  aria-pressed={activeZoneFocusId === 'all'}
-                >
-                  Вся карта
-                </button>
-                {zoneFocusItems.map(({ zone, bounds }) => (
-                  <button
-                    key={zone.id}
-                    type="button"
-                    className={`public-map-zone-tab ${activeZoneFocusId === String(zone.id) ? 'active' : ''}`}
-                    onClick={() => focusZoneBounds(zone.id, bounds)}
-                    aria-pressed={activeZoneFocusId === String(zone.id)}
-                  >
-                    {zoneDisplayName(zone, locale) || `Zone #${zone.id}`}
-                  </button>
-                ))}
-              </div>
-            ) : null}
             <div
               className="public-map-viewport"
               ref={viewportRef}
@@ -1810,14 +1815,18 @@ export default function UnifiedBookingPage() {
                 style={{
                   width: mapRenderFrame.width,
                   height: mapRenderFrame.height,
-                  backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
+                  backgroundColor: state.result.map.backgroundImage
+                    ? (state.result.map.backgroundColor || '#d8e7f8')
+                    : 'transparent',
                   transform: `translate3d(${safeTransform.translateX}px, ${safeTransform.translateY}px, 0) scale(${safeTransform.scale})`
                 }}
               >
                 <div
                   className="public-map-canvas"
                   style={{
-                    backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
+                    backgroundColor: state.result.map.backgroundImage
+                      ? (state.result.map.backgroundColor || '#d8e7f8')
+                      : 'transparent',
                     left: mapRenderFrame.offsetX,
                     top: mapRenderFrame.offsetY,
                     width: mapDimensions.width,
@@ -1831,7 +1840,9 @@ export default function UnifiedBookingPage() {
                       top: 0,
                       width: mapDimensions.width,
                       height: mapDimensions.height,
-                      backgroundColor: state.result.map.backgroundColor || '#d8e7f8',
+                      backgroundColor: state.result.map.backgroundImage
+                        ? (state.result.map.backgroundColor || '#d8e7f8')
+                        : 'transparent',
                       backgroundImage: state.result.map.backgroundImage ? `url(${state.result.map.backgroundImage})` : 'none'
                     }}
                   />

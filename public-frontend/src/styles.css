@@ -2487,12 +2487,12 @@ h3 {
 }
 
 .booking-flow-guide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 3px 10px;
   margin: 0 0 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid rgba(201, 168, 108, 0.28);
   border-radius: 12px;
   background:
@@ -2501,13 +2501,35 @@ h3 {
   color: var(--text);
 }
 
+.booking-flow-guide::before,
+.unified-place-rule-card::before {
+  content: 'i';
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid rgba(201, 168, 108, 0.5);
+  border-radius: 50%;
+  background: rgba(201, 168, 108, 0.14);
+  color: var(--brand);
+  font-family: Georgia, serif;
+  font-size: 0.82rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .booking-flow-guide strong {
-  font-size: 0.92rem;
+  grid-column: 2;
+  font-size: 0.88rem;
 }
 
 .booking-flow-guide span {
+  grid-column: 2;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   line-height: 1.35;
 }
 
@@ -2684,7 +2706,12 @@ h3 {
   box-shadow: none;
 }
 
-.unified-map-shell .public-map-zone-tabs {
+.unified-map-board {
+  position: relative;
+  scroll-margin-top: calc(var(--header-height, 64px) + 54px);
+}
+
+.unified-map-zone-tabs {
   margin: 10px;
   max-width: calc(100% - 20px);
 }
@@ -2698,10 +2725,6 @@ h3 {
     transparent;
 }
 
-.unified-booking-page .mobile-map-sticky-summary span:nth-child(2) {
-  display: none;
-}
-
 .unified-booking-page .floating-booking-hint,
 .unified-booking-page .map-legend-toggle,
 .unified-booking-page .map-legend {
@@ -2710,6 +2733,7 @@ h3 {
 
 .unified-place-rule-card {
   display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
   gap: 10px;
   margin: 14px 0;
   padding: 14px;
@@ -2718,6 +2742,10 @@ h3 {
   background:
     linear-gradient(135deg, rgba(201, 168, 108, 0.13), rgba(94, 178, 160, 0.08)),
     var(--bg-secondary);
+}
+
+.unified-place-rule-card > * {
+  grid-column: 2;
 }
 
 .unified-place-rule-card strong {
@@ -2915,21 +2943,72 @@ h3 {
   opacity: 0.55;
   filter: grayscale(1);
 }
-/* Unified premium selected style (Gold pulsing highlight like hostess panel) */
-.public-map-table.selected, .public-map-object.selected {
-  outline: 4px solid #FFFFFF !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 6px #C89241, 0 0 25px 10px rgba(200, 146, 65, 0.9) !important;
-  z-index: 9999 !important;
-  animation: public-pulse-selected 2s infinite !important;
+/* Selection feedback: a clear resting state with one calm arrival pulse. */
+.public-map-table,
+.public-map-object.selectable {
+  isolation: isolate;
+  transition: translate 220ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@keyframes public-pulse-selected {
-  0%, 100% {
-    box-shadow: 0 0 0 5px #C89241, 0 0 20px 6px rgba(200, 146, 65, 0.8) !important;
+.public-map-object.selected {
+  border-radius: 10px;
+}
+
+.public-map-table.selected,
+.public-map-object.selected {
+  outline: 2px solid rgba(255, 255, 255, 0.98) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px rgba(201, 168, 108, 0.96),
+              0 13px 24px rgba(58, 39, 17, 0.5) !important;
+  filter: saturate(1.08) brightness(1.05);
+  translate: 0 -5px;
+  z-index: 999 !important;
+}
+
+.public-map-table.selected::after,
+.public-map-object.selected::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border: 3px solid rgba(225, 192, 126, 0.92);
+  border-radius: inherit;
+  opacity: 0;
+  transform: scale(0.94);
+  transform-origin: center;
+  pointer-events: none;
+  z-index: -1;
+  animation: map-selection-arrival 280ms cubic-bezier(0.23, 1, 0.32, 1) 1;
+}
+
+.public-map-object.selected .status-dot {
+  background: #b88b3e;
+  border-color: #fffdf7;
+  box-shadow: 0 2px 8px rgba(71, 45, 14, 0.48);
+}
+
+@keyframes map-selection-arrival {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.94);
   }
-  50% {
-    box-shadow: 0 0 0 8px #C89241, 0 0 35px 14px rgba(200, 146, 65, 1) !important;
+  55% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.26);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-map-table.selected,
+  .public-map-object.selected {
+    translate: 0;
+  }
+
+  .public-map-table.selected::after,
+  .public-map-object.selected::after {
+    animation: none;
   }
 }
 
@@ -4957,27 +5036,7 @@ h3 {
   }
 }
 
-/* ===== Premium Selection Pulse and Mobile Bottom Sheet ===== */
-.public-map-table.selected,
-.public-map-object.selected {
-  outline: 3px solid var(--brand, #c9a86c) !important;
-  outline-offset: 3px !important;
-  box-shadow: 0 0 0 6px #ffffff, 0 0 15px 8px rgba(201, 168, 108, 0.6) !important;
-  animation: mapPulseOutlinePublic 1.5s infinite ease-in-out !important;
-  z-index: 999 !important;
-}
-
-@keyframes mapPulseOutlinePublic {
-  0% {
-    box-shadow: 0 0 0 6px #ffffff, 0 0 8px 4px rgba(201, 168, 108, 0.5) !important;
-  }
-  50% {
-    box-shadow: 0 0 0 6px #ffffff, 0 0 18px 10px rgba(201, 168, 108, 0.8) !important;
-  }
-  100% {
-    box-shadow: 0 0 0 6px #ffffff, 0 0 8px 4px rgba(201, 168, 108, 0.5) !important;
-  }
-}
+/* ===== Mobile Bottom Sheet ===== */
 
 @media (max-width: 900px) {
   .map-side-panel {
@@ -5695,18 +5754,161 @@ h3 {
   font-size: 0.85rem !important;
 }
 
+.unified-booking-filter {
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.unified-booking-filter .unified-date-switcher {
+  width: 100%;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 2px 6px;
+}
+
+.unified-booking-filter .quick-date-btn {
+  min-height: 34px;
+  padding: 0 12px !important;
+  border-radius: 8px;
+  font-size: 0.78rem !important;
+  box-shadow: none;
+}
+
+.booking-compact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.booking-compact-control {
+  width: auto;
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+input.booking-compact-control[type='date'] {
+  width: 136px;
+}
+
+select.booking-compact-control {
+  width: 84px;
+  padding-right: 24px;
+}
+
+.booking-guests-stepper {
+  display: grid;
+  grid-template-columns: 48px 26px;
+  width: 74px;
+  height: 34px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-guests-value {
+  display: grid;
+  place-items: center;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.booking-guests-arrows {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  border-left: 1px solid var(--line);
+}
+
+.booking-guests-arrows button {
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.booking-guests-arrows button + button {
+  border-top: 1px solid var(--line);
+}
+
+.booking-guests-arrows button:hover:not(:disabled) {
+  background: rgba(201, 168, 108, 0.14);
+  color: var(--brand);
+}
+
+.booking-guests-arrows button:active:not(:disabled) {
+  background: rgba(201, 168, 108, 0.22);
+}
+
+.booking-guests-arrows button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.booking-guests-arrows span {
+  font-size: 0.46rem;
+  transform: scaleX(1.15);
+}
+
+.unified-map-zone-tabs .public-map-zone-tab {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+}
+
 .mobile-map-sticky-summary {
   display: none;
 }
 @media (max-width: 768px) {
+  .unified-map-zone-tabs {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 102;
+    width: auto;
+    margin: 0 10px;
+    padding: 10px 2px 8px;
+    background: transparent;
+  }
+
+  .unified-map-zone-tabs .public-map-zone-tab {
+    border-color: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 12px rgba(31, 23, 18, 0.16);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .unified-map-zone-tabs .public-map-zone-tab.active {
+    border-color: rgba(201, 168, 108, 0.96);
+    background: rgba(201, 168, 108, 0.96);
+    box-shadow: 0 5px 14px rgba(91, 64, 27, 0.24);
+  }
+
   .mobile-map-sticky-summary {
     display: flex;
     position: sticky;
     top: var(--header-height, 64px);
     z-index: 101;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px 16px;
+    justify-content: flex-start;
+    padding: 7px 16px;
     background: color-mix(in srgb, var(--bg) 92%, transparent);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
