@@ -75,6 +75,10 @@ function isFormControlTarget(el) {
   return el && el.closest('input, select, textarea');
 }
 
+function isClickableTarget(el) {
+  return el && el.closest('button, a, [role="button"]');
+}
+
 export function useInteractiveMap({
   worldWidth,
   worldHeight,
@@ -204,6 +208,10 @@ export function useInteractiveMap({
 
     function onPointerDown(event) {
       if (isFormControlTarget(event.target)) return;
+      if (event.pointerType !== 'touch' && isClickableTarget(event.target)) {
+        movedRef.current = false;
+        return;
+      }
       event.preventDefault();
       try {
         node.setPointerCapture(event.pointerId);
