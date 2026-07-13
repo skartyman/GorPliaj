@@ -15,7 +15,7 @@ export default function HomePage() {
   const { t, locale } = useLocale();
   const { settings } = useSettings();
   const [state, setState] = useState({ events: [], menuPreviewImages: [] });
-  const [mapPreview, setMapPreview] = useState({ loading: true, error: false, map: null, objects: [], zones: [], units: [], date: '', timeFrom: '' });
+  const [mapPreview, setMapPreview] = useState({ loading: true, error: false, map: null, objects: [], zones: [], units: [], date: '', timeFrom: '', isTomorrow: false });
   const sectionsRef = useRef([]);
   useMeta(t('homeMetaTitle'), t('homeMetaDescription'));
 
@@ -66,14 +66,25 @@ export default function HomePage() {
 
     async function loadMapPreview() {
       const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const date = `${year}-${month}-${day}`;
+      const previewDate = new Date(now);
+      const weekDay = now.getDay();
+      const schedule = weekDay === 0 || weekDay >= 5
+        ? settings?.workingHours?.fri
+        : settings?.workingHours?.mon;
+      const parseMinutes = (value, fallback) => {
+        const [hours, minutes] = String(value || fallback).split(':').map(Number);
+        return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : 0;
+      };
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const openMinutes = 9 * 60;
-      const lastPreviewMinutes = 21 * 60;
-      const previewMinutes = Math.min(Math.max(currentMinutes, openMinutes), lastPreviewMinutes);
+      const openMinutes = parseMinutes(schedule?.open, '09:00');
+      const closeMinutes = parseMinutes(schedule?.close, weekDay === 0 || weekDay >= 5 ? '22:00' : '21:00');
+      const isTomorrow = currentMinutes >= closeMinutes;
+      if (isTomorrow) previewDate.setDate(previewDate.getDate() + 1);
+      const year = previewDate.getFullYear();
+      const month = String(previewDate.getMonth() + 1).padStart(2, '0');
+      const day = String(previewDate.getDate()).padStart(2, '0');
+      const date = `${year}-${month}-${day}`;
+      const previewMinutes = isTomorrow ? openMinutes : Math.min(Math.max(currentMinutes, openMinutes), closeMinutes);
       const timeFrom = `${String(Math.floor(previewMinutes / 60)).padStart(2, '0')}:${String(previewMinutes % 60).padStart(2, '0')}`;
       const mapsResult = await mapApi.list({ usageMode: 'DAY', guests: 2 });
       const maps = Array.isArray(mapsResult?.maps) ? mapsResult.maps : [];
@@ -94,7 +105,8 @@ export default function HomePage() {
         zones: Array.isArray(mapResult?.zones) ? mapResult.zones : [],
         units: Array.isArray(unitsResult?.units) ? unitsResult.units : [],
         date,
-        timeFrom
+        timeFrom,
+        isTomorrow
       });
     }
 
@@ -106,7 +118,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [settings?.workingHours]);
 
   const menuPhotos = state.menuPreviewImages;
   const c = (values) => localizedCopy(values, locale);
@@ -118,6 +130,18 @@ export default function HomePage() {
     const unavailable = units.filter((unit) => unit.status === 'unavailable').length;
     return { total: units.length, free, held, busy, unavailable };
   })();
+  const openBookingMap = (unit) => {
+    const params = new URLSearchParams({
+      date: mapPreview.date,
+      timeFrom: mapPreview.timeFrom,
+      guests: '2',
+      usageMode: 'DAY',
+      mapId: String(mapPreview.map?.id || '')
+    });
+    if (unit?.bookingKind) params.set('kind', unit.bookingKind);
+    if (unit?.tableId) params.set('tableId', String(unit.tableId));
+    window.location.href = `/booking?${params.toString()}`;
+  };
 
   const isEn = locale === 'en';
   const heroTitle = localizeField(settings?.heroTitle, locale) || 'GorPliaj';
@@ -211,23 +235,8 @@ export default function HomePage() {
               en: 'Choose a place on the map, and the system will show the right booking rules.'
             })}</p>
           </div>
-          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити мапу', ru: 'Открыть карту', en: 'Open map' })}</Link>
         </div>
         <div className="home-booking-map">
-          <div className="home-booking-map-copy">
-            <span>{c({ ua: 'Новий швидкий флоу', ru: 'Новый быстрый флоу', en: 'New fast flow' })}</span>
-            <strong>{c({ ua: 'Мапа одразу покаже, що можна забронювати', ru: 'Карта сразу покажет, что можно забронировать', en: 'The map shows what can be booked right away' })}</strong>
-            <div className="home-map-occupancy" aria-label="Venue occupancy">
-              <span><i className="legend-dot free" />{c({ ua: 'Вільно', ru: 'Свободно', en: 'Free' })}: {mapOccupancy.free}</span>
-              <span><i className="legend-dot busy" />{c({ ua: 'Зайнято', ru: 'Занято', en: 'Busy' })}: {mapOccupancy.busy}</span>
-              <span><i className="legend-dot held" />{c({ ua: 'Утримано', ru: 'Удержано', en: 'Held' })}: {mapOccupancy.held}</span>
-            </div>
-            {mapPreview.timeFrom ? (
-              <small className="home-map-occupancy-time">
-                {c({ ua: 'Стан на', ru: 'Статус на', en: 'Status at' })} {mapPreview.timeFrom}
-              </small>
-            ) : null}
-          </div>
           <div className="home-booking-map-visual">
             {mapPreview.map ? (
               <MapPreview
@@ -235,9 +244,10 @@ export default function HomePage() {
                 mapObjects={mapPreview.objects}
                 zones={mapPreview.zones}
                 units={mapPreview.units}
-                height={420}
+                height={500}
                 isPreview
-                onOpenFullMap={() => { window.location.href = '/booking'; }}
+                onSelectUnit={openBookingMap}
+                onOpenFullMap={() => openBookingMap(null)}
               />
             ) : mapPreview.loading ? (
               <div className="home-map-loading">
@@ -246,9 +256,31 @@ export default function HomePage() {
             ) : (
               <div className="home-booking-map-cta">
                 <p>{c({ ua: 'Оберіть місце на нашій мапі', ru: 'Выберите место на нашей карте', en: 'Choose your spot on our map' })}</p>
-                <Link to="/booking" className="btn btn-primary">{c({ ua: 'Відкрити мапу', ru: 'Открыть карту', en: 'Open map' })}</Link>
               </div>
             )}
+          </div>
+          <div className="home-booking-map-status">
+            <div className="home-map-live-status">
+              <i aria-hidden="true" />
+              <div>
+                <strong>{c({ ua: 'Актуальна доступність', ru: 'Актуальная доступность', en: 'Live availability' })}</strong>
+                {mapPreview.timeFrom ? (
+                  <small className="home-map-occupancy-time">
+                    {mapPreview.isTomorrow
+                      ? c({ ua: `Завтра о ${mapPreview.timeFrom}`, ru: `Завтра в ${mapPreview.timeFrom}`, en: `Tomorrow at ${mapPreview.timeFrom}` })
+                      : `${c({ ua: 'Стан на', ru: 'Статус на', en: 'Status at' })} ${mapPreview.timeFrom}`}
+                  </small>
+                ) : null}
+              </div>
+            </div>
+            <div className="home-map-occupancy" aria-label="Venue occupancy">
+              <span><i className="legend-dot free" />{c({ ua: 'Вільно', ru: 'Свободно', en: 'Free' })}: {mapOccupancy.free}</span>
+              <span><i className="legend-dot busy" />{c({ ua: 'Зайнято', ru: 'Занято', en: 'Busy' })}: {mapOccupancy.busy}</span>
+              <span><i className="legend-dot held" />{c({ ua: 'Утримано', ru: 'Удержано', en: 'Held' })}: {mapOccupancy.held}</span>
+            </div>
+            <button type="button" className="btn btn-primary home-map-open-button" onClick={() => openBookingMap(null)}>
+              {c({ ua: 'Обрати місце', ru: 'Выбрать место', en: 'Choose a place' })}
+            </button>
           </div>
         </div>
       </section>

@@ -62,7 +62,7 @@ function getObjectAccent(object, label) {
   return '';
 }
 
-function RealMapObject({ object, scale, locale = 'ua' }) {
+function RealMapObject({ object, scale, locale = 'ua', unit, onActivate }) {
   const meta = parseMetaJson(object.metaJson);
   const label = localizeField(object.label, locale) || '';
   const x = object.x * scale;
@@ -80,21 +80,36 @@ function RealMapObject({ object, scale, locale = 'ua' }) {
     transform: `rotate(${Number(object.rotation) || 0}deg)`,
     transformOrigin: 'center',
     opacity: meta.opacity ?? 1,
-    pointerEvents: 'none',
+    pointerEvents: unit ? 'auto' : 'none',
+    cursor: unit ? 'pointer' : 'default',
     zIndex: getObjectZIndex(object)
   };
+  const interactionProps = unit ? {
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': unit.code || label,
+    onClick: (event) => onActivate?.(event, unit),
+    onKeyDown: (event) => {
+      if (event.key === 'Enter' || event.key === ' ') onActivate?.(event, unit);
+    }
+  } : {};
 
   if (meta.svgUrl) {
-    return <img src={meta.svgUrl} alt={label} style={{ ...baseStyle, objectFit: 'contain' }} />;
+    return <img src={meta.svgUrl} alt={label} style={{ ...baseStyle, objectFit: 'contain' }} {...interactionProps} />;
   }
 
   if (meta.svgCode) {
     return (
       <div
         style={baseStyle}
+        {...interactionProps}
         dangerouslySetInnerHTML={{ __html: meta.svgCode }}
       />
     );
+  }
+
+  if (subType === 'IMAGE') {
+    return null;
   }
 
   if (subType === 'POLYGON' || meta.points?.length >= 3) {
@@ -113,6 +128,7 @@ function RealMapObject({ object, scale, locale = 'ua' }) {
     return (
       <svg
         style={baseStyle}
+        {...interactionProps}
         viewBox={`0 0 ${object.width} ${object.height}`}
         preserveAspectRatio="none"
       >
@@ -138,13 +154,15 @@ function RealMapObject({ object, scale, locale = 'ua' }) {
     );
   }
 
-  if (meta.textureUrl || meta.texture || getObjectAccent(object, label)) {
+  const canUseTextureImage = subType !== 'IMAGE' && meta.textureUrl;
+  if (canUseTextureImage || meta.texture || getObjectAccent(object, label)) {
     const texture = meta.texture || getObjectAccent(object, label);
     return (
       <div
+        {...interactionProps}
         style={{
           ...baseStyle,
-          background: meta.textureUrl ? `url(${meta.textureUrl}) center / cover` : getPolygonFill({ texture }),
+          background: canUseTextureImage ? `url(${meta.textureUrl}) center / cover` : getPolygonFill({ texture }),
           borderRadius: Math.min(8, Math.max(2, w * 0.04))
         }}
       />
@@ -155,6 +173,7 @@ function RealMapObject({ object, scale, locale = 'ua' }) {
     const fontSize = Math.max(6, (meta.fontSize || 14) * scale);
     return (
       <div
+        {...interactionProps}
         style={{
           ...baseStyle,
           display: 'grid',
@@ -240,7 +259,7 @@ function MapObjectShape({ object, scale, offsetX, offsetY }) {
   );
 }
 
-function TablePreview({ table, selected, scale, offsetX, offsetY }) {
+function TablePreview({ table, selected, scale, offsetX, offsetY, onActivate }) {
   const tX = table.mapX * scale + offsetX;
   const tY = table.mapY * scale + offsetY;
   const w = Math.max((table.mapObjWidth || 32) * scale, 8);
@@ -255,7 +274,9 @@ function TablePreview({ table, selected, scale, offsetX, offsetY }) {
   const fontSize = Math.max(Math.min(w * 0.35, 11), 6);
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={(event) => onActivate?.(event, table)}
       title={`${table.code || ''} ${table.status}`}
       style={{
         position: 'absolute',
@@ -281,56 +302,70 @@ function TablePreview({ table, selected, scale, offsetX, offsetY }) {
         textShadow: '0 1px 2px rgba(0,0,0,0.3)',
         lineHeight: 1,
         overflow: 'hidden',
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        padding: 0
       }}
     >
       {w > 16 && h > 12 ? (table.code || '') : ''}
-    </div>
+    </button>
   );
 }
 
-function ObjectStatusMarker({ object, unit, scale }) {
+function ObjectStatusMarker({ object, unit, scale, onActivate }) {
   if (!unit) return null;
   const statusColor = unit.status === 'free' ? '#22c55e'
     : unit.status === 'held' ? '#f59e0b'
     : unit.status === 'busy' ? '#ef4444'
     : '#9ca3af';
-  const width = Math.max(18, Math.min(34, String(unit.code || '').length * 5 + 8));
+  const baseWidth = Math.max(20, Math.min(44, String(unit.code || '').length * 7 + 10));
+  const width = Math.max(7, baseWidth * scale);
+  const height = Math.max(7, 20 * scale);
+  const showCode = width >= 14;
   return (
-    <span
+    <button
+      type="button"
+      onClick={(event) => onActivate?.(event, unit)}
       title={`${unit.code || ''} ${unit.status}`}
       style={{
         position: 'absolute',
         left: (Number(object.x) + Number(object.width) / 2) * scale - width / 2,
-        top: (Number(object.y) + Number(object.height) / 2) * scale - 7,
+        top: (Number(object.y) + Number(object.height) / 2) * scale - height / 2,
         width,
-        height: 14,
-        borderRadius: 4,
+        height,
+        padding: 0,
+        borderRadius: 999,
         background: statusColor,
-        border: '1.5px solid rgba(255,255,255,.95)',
+        border: `${Math.max(1, 2 * scale)}px solid rgba(255,255,255,.95)`,
         boxShadow: '0 1px 3px rgba(15,23,42,.35)',
         zIndex: Math.max(20, getObjectZIndex(object) + 1),
-        pointerEvents: 'none',
+        cursor: 'pointer',
         color: '#fff',
         display: 'grid',
         placeItems: 'center',
-        fontSize: 7,
+        fontSize: Math.max(5, 8 * scale),
         fontWeight: 800,
         lineHeight: 1,
         textShadow: '0 1px 1px rgba(0,0,0,.35)'
       }}
     >
-      {unit.code || ''}
-    </span>
+      {showCode ? (unit.code || '') : ''}
+    </button>
   );
 }
 
-export default function MapPreview({ mapData, mapObjects = [], zones = [], units, selectedTableId, onOpenFullMap, height = 220, isPreview = false }) {
+export default function MapPreview({ mapData, mapObjects = [], zones = [], units, selectedTableId, onOpenFullMap, onSelectUnit, height = 220, isPreview = false }) {
+  const rootRef = useRef(null);
   const viewportRef = useRef(null);
   const pointersRef = useRef(new Map());
   const gestureRef = useRef(null);
+  const gestureMovedRef = useRef(false);
   const [view, setView] = useState(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [activeZoneId, setActiveZoneId] = useState('all');
+  const previewAspectHeight = containerWidth > 0 && mapData
+    ? Math.round(containerWidth * ((mapData.height || 760) / (mapData.width || 1200)) + 24)
+    : height;
+  const viewportHeight = isPreview ? Math.min(height, Math.max(220, previewAspectHeight)) : height;
   const attachedTableIds = useMemo(() => {
     return new Set((mapObjects || []).filter((object) => object.tableId).map((object) => Number(object.tableId)));
   }, [mapObjects]);
@@ -358,37 +393,52 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
   }, [units, attachedTableIds]);
 
   const sortedMapObjects = useMemo(() => {
-    return [...(mapObjects || [])].sort(compareMapObjects);
+    return [...(mapObjects || [])]
+      .filter((object) => object.isActive !== false)
+      .sort(compareMapObjects);
   }, [mapObjects]);
 
   const containerRef = useMemo(() => {
     if (!mapData) return null;
     const mapWidth = mapData.width || 1200;
     const mapHeight = mapData.height || 760;
-    const paddedHeight = height - 8;
-    const availableWidth = typeof window !== 'undefined'
-      ? Math.min(window.innerWidth - 64, 560)
-      : 400;
-    const viewWidth = Math.min(availableWidth, 560);
+    const paddedHeight = viewportHeight - 8;
+    const fallbackWidth = typeof window !== 'undefined' ? Math.max(280, window.innerWidth - 64) : 400;
+    const viewWidth = Math.max(240, containerWidth || fallbackWidth);
     const viewHeight = paddedHeight;
     const transform = getInitialViewTransform(mapWidth, mapHeight, viewWidth, viewHeight, 12);
     return { transform, viewWidth, viewHeight, mapWidth, mapHeight };
-  }, [mapData, height]);
+  }, [containerWidth, mapData, viewportHeight]);
+
+  useEffect(() => {
+    const element = rootRef.current;
+    if (!element) return undefined;
+
+    const updateWidth = () => setContainerWidth(Math.round(element.getBoundingClientRect().width));
+    updateWidth();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [mapData]);
 
   useEffect(() => {
     if (!containerRef) return;
     const { transform, viewWidth, viewHeight, mapWidth, mapHeight } = containerRef;
-    const scale = Math.min(transform.scale * 1.55, 1);
+    const scale = Math.min(transform.scale * (isPreview ? 1 : 1.55), 1);
     setView({
       scale,
       x: (viewWidth - mapWidth * scale) / 2,
       y: (viewHeight - mapHeight * scale) / 2
     });
-  }, [containerRef]);
+  }, [containerRef, isPreview]);
 
   if (!mapData || !containerRef) {
     return (
-      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '0.85rem', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+      <div style={{ height: viewportHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '0.85rem', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
         Завантаження мапи закладу...
       </div>
     );
@@ -400,6 +450,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
   const translateY = view?.y ?? transform.translateY;
 
   function handlePointerDown(event) {
+    gestureMovedRef.current = false;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     event.currentTarget.setPointerCapture?.(event.pointerId);
     const points = [...pointersRef.current.values()];
@@ -420,6 +471,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
     const points = [...pointersRef.current.values()];
     const gesture = gestureRef.current;
     if (points.length === 1 && gesture.type === 'pan') {
+      if (Math.hypot(points[0].x - gesture.x, points[0].y - gesture.y) > 5) gestureMovedRef.current = true;
       setView({ ...gesture.view, x: gesture.view.x + points[0].x - gesture.x, y: gesture.view.y + points[0].y - gesture.y });
     } else if (points.length === 2) {
       const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
@@ -433,9 +485,19 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
     gestureRef.current = null;
   }
 
+  function activateUnit(event, unit) {
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    if (gestureMovedRef.current) {
+      gestureMovedRef.current = false;
+      return;
+    }
+    onSelectUnit?.(unit);
+  }
+
   function fitWholeMap() {
     const { transform: initial, viewWidth, viewHeight, mapWidth: width, mapHeight: mapHeightValue } = containerRef;
-    const nextScale = Math.min(initial.scale * 1.55, 1);
+    const nextScale = Math.min(initial.scale * (isPreview ? 1 : 1.55), 1);
     setView({ scale: nextScale, x: (viewWidth - width * nextScale) / 2, y: (viewHeight - mapHeightValue * nextScale) / 2 });
     setActiveZoneId('all');
   }
@@ -459,7 +521,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={rootRef} style={{ position: 'relative' }}>
       {zones.length && !isPreview ? (
         <div className="public-map-zone-tabs" aria-label="Map zones">
           <button type="button" className={`public-map-zone-tab ${activeZoneId === 'all' ? 'active' : ''}`} onClick={fitWholeMap}>Вся мапа</button>
@@ -477,7 +539,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
         style={{
-          height,
+          height: viewportHeight,
           borderRadius: 8,
           overflow: 'hidden',
           border: '1px solid #e2e8f0',
@@ -512,6 +574,8 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
                 key={object.id}
                 object={object}
                 scale={scale}
+                unit={object.tableId ? unitByTableId.get(Number(object.tableId)) : null}
+                onActivate={activateUnit}
               />
             ))}
 
@@ -521,6 +585,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
                 object={object}
                 unit={unitByTableId.get(Number(object.tableId))}
                 scale={scale}
+                onActivate={activateUnit}
               />
             ))}
 
@@ -532,6 +597,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
                 scale={scale}
                 offsetX={0}
                 offsetY={0}
+                onActivate={activateUnit}
               />
             ))}
           </div>

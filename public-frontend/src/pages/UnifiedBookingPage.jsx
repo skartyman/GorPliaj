@@ -199,11 +199,12 @@ function hasBuiltinTemplate(subType) {
 
 function mapHasRenderableObjectGraphic(object, meta, label) {
   const subType = String(meta.subType || '').toUpperCase();
+  if (subType === 'IMAGE' && !meta.svgUrl && !meta.svgCode) return false;
   const accent = getObjectAccent(object, label);
   return Boolean(
     meta.svgUrl ||
     meta.svgCode ||
-    meta.textureUrl ||
+    (meta.textureUrl && subType !== 'IMAGE') ||
     meta.texture ||
     subType === 'POLYGON' ||
     hasBuiltinTemplate(subType) ||
@@ -422,12 +423,13 @@ function PublicMapObjectGraphic({ object, meta, label }) {
 
   const accent = getObjectAccent(object, label);
   const accentTexture = meta.texture || resolveAccentTexture(accent);
-  if (meta.textureUrl || accentTexture) {
+  const canUseTextureImage = subType !== 'IMAGE' && meta.textureUrl;
+  if (canUseTextureImage || accentTexture) {
     return (
       <div
         className="public-map-object-asset"
         style={{
-          background: meta.textureUrl ? `url(${meta.textureUrl})` : getPolygonFill({ texture: accentTexture }),
+          background: canUseTextureImage ? `url(${meta.textureUrl})` : getPolygonFill({ texture: accentTexture }),
           opacity: meta.opacity,
           borderRadius: 4
         }}

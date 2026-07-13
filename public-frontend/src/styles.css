@@ -1012,8 +1012,7 @@ h3 {
 }
 
 .home-map-booking-header {
-  align-items: flex-end;
-  gap: 18px;
+  align-items: flex-start;
 }
 
 .home-map-booking-header .muted {
@@ -1025,53 +1024,26 @@ h3 {
 .home-booking-map {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
-  align-items: stretch;
-  min-height: clamp(320px, 50vw, 560px);
+  grid-template-rows: minmax(0, 1fr) auto;
   margin-top: 18px;
   overflow: hidden;
-  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   color: inherit;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(14, 17, 20, 0.34);
 }
 
 [data-theme="light"] .home-booking-map {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.06);
-}
-
-.home-booking-map-copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: clamp(20px, 4vw, 38px);
-}
-
-.home-booking-map-copy span {
-  color: var(--brand);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.home-booking-map-copy strong {
-  max-width: 430px;
-  color: var(--text);
-  font-size: clamp(1.35rem, 3vw, 2.45rem);
-  line-height: 1.08;
-  letter-spacing: 0;
+  border-color: rgba(44, 37, 27, 0.12);
+  background: rgba(255, 255, 255, 0.44);
 }
 
 .home-map-occupancy {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  justify-content: center;
+  gap: 8px 16px;
+  margin: 0;
 }
 
 .home-map-occupancy span {
@@ -1090,17 +1062,17 @@ h3 {
 }
 
 .home-map-occupancy-time {
+  display: block;
+  margin-top: 2px;
   color: var(--muted);
-  font-weight: 700;
+  font-size: 0.74rem;
+  font-weight: 650;
 }
 
 .home-booking-map-visual {
   position: relative;
-  min-height: 100%;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  padding: clamp(14px, 3vw, 28px);
+  min-width: 0;
 }
 
 .home-booking-map-visual > div {
@@ -1109,9 +1081,9 @@ h3 {
 
 .home-booking-map-visual > div > div:first-child {
   border: 0 !important;
-  border-radius: 18px !important;
+  border-radius: 11px 11px 0 0 !important;
   background: rgba(210, 238, 247, 0.6) !important;
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 
 [data-theme="dark"] .home-booking-map-visual > div > div:first-child {
@@ -1119,16 +1091,54 @@ h3 {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-.home-booking-map-visual .btn {
-  margin-top: 10px;
+.home-booking-map-status {
+  display: grid;
+  grid-template-columns: minmax(170px, auto) minmax(0, 1fr) auto;
+  gap: clamp(18px, 4vw, 44px);
+  align-items: center;
+  min-height: 76px;
+  padding: 12px 16px 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .home-booking-map-status {
+  border-top-color: rgba(44, 37, 27, 0.1);
+}
+
+.home-map-live-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.home-map-live-status > i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #54bf8d;
+  box-shadow: 0 0 0 5px rgba(84, 191, 141, 0.12);
+}
+
+.home-map-live-status strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.home-map-open-button {
+  min-height: 42px;
+  white-space: nowrap;
 }
 
 .home-map-loading {
   display: grid;
   place-items: center;
   width: 100%;
-  height: 420px;
-  border-radius: 18px;
+  height: 500px;
+  border-radius: 11px 11px 0 0;
   background: rgba(210, 238, 247, 0.28);
   color: var(--muted);
   font-weight: 800;
@@ -1292,30 +1302,34 @@ h3 {
     align-items: stretch;
   }
 
-  .home-map-booking-header .btn {
-    width: 100%;
-  }
-
   .home-booking-map {
-    grid-template-columns: 1fr;
-    min-height: 0;
-    border-radius: 18px;
-  }
-
-  .home-booking-map-copy {
-    padding: 18px 18px 4px;
-  }
-
-  .home-booking-map-copy strong {
-    font-size: 1.38rem;
+    border-radius: 10px;
   }
 
   .home-map-occupancy span {
     font-size: 0.76rem;
   }
 
-  .home-booking-map-visual {
-    padding: 8px 12px 16px;
+  .home-booking-map-visual > div > div:first-child {
+    border-radius: 9px 9px 0 0 !important;
+  }
+
+  .home-map-loading {
+    height: 220px;
+  }
+
+  .home-booking-map-status {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .home-map-occupancy {
+    justify-content: flex-start;
+  }
+
+  .home-map-open-button {
+    width: 100%;
   }
 
   .home-booking-map-fallback {
