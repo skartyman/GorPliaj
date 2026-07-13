@@ -745,6 +745,7 @@ export default function UnifiedBookingPage() {
   const [eveningCandidateTime, setEveningCandidateTime] = useState(
     searchParams.get('timeFrom') >= EVENING_TABLE_START ? searchParams.get('timeFrom') : EVENING_TABLE_START
   );
+  const [bookableUnitsState, setBookableUnitsState] = useState({ loading: false, error: '', units: [] });
   const [eveningUnitsState, setEveningUnitsState] = useState({ loading: false, error: '', units: [] });
   const [scenarioSelected, setScenarioSelected] = useState(false);
 
@@ -836,6 +837,35 @@ export default function UnifiedBookingPage() {
   }, [form.date, form.timeFrom, mapId, t, searchParams]);
 
   useEffect(() => {
+    if (!mapId || !form.date || !form.timeFrom) {
+      setBookableUnitsState({ loading: false, error: '', units: [] });
+      return undefined;
+    }
+
+    let cancelled = false;
+    setBookableUnitsState((current) => ({ ...current, loading: true, error: '' }));
+    mapApi.bookableUnits(mapId, {
+      date: form.date,
+      timeFrom: form.timeFrom,
+      guests: form.guests
+    })
+      .then((payload) => {
+        if (cancelled) return;
+        setBookableUnitsState({
+          loading: false,
+          error: '',
+          units: Array.isArray(payload?.units) ? payload.units : []
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setBookableUnitsState({ loading: false, error: error?.message || 'Failed to load booking prices.', units: [] });
+      });
+
+    return () => { cancelled = true; };
+  }, [mapId, form.date, form.timeFrom, form.guests]);
+
+  useEffect(() => {
     let cancelled = false;
     setEveningUnitsState({ loading: true, error: '', units: [] });
     mapApi.list({ usageMode: 'EVENING', bookingKind: 'TABLE', guests: form.guests })
@@ -908,11 +938,33 @@ export default function UnifiedBookingPage() {
     });
   }, [mapDimensions.height, mapDimensions.width, mapRenderFrame.height, mapRenderFrame.width, state.result, viewportSize.height, viewportSize.width, isMobileViewport]);
 
+  const bookableUnitByTableId = useMemo(() => new Map(
+    bookableUnitsState.units
+      .map((unit) => {
+        const tableId = Number(unit.tableId || String(unit.id || '').replace(/^table:/, ''));
+        return Number.isFinite(tableId) && tableId > 0 ? [tableId, unit] : null;
+      })
+      .filter(Boolean)
+  ), [bookableUnitsState.units]);
+
+  const enrichedTables = useMemo(() => {
+    if (!state.result) return [];
+    return state.result.map.zones.flatMap((zone) => zone.tables).map((table) => {
+      const unit = bookableUnitByTableId.get(Number(table.id));
+      if (!unit) return table;
+      return {
+        ...table,
+        ...unit,
+        id: table.id,
+        tableId: table.id,
+        status: unit.status || table.status
+      };
+    });
+  }, [bookableUnitByTableId, state.result]);
+
   useEffect(() => {
-    if (!state.result) return;
-    const tables = state.result.map.zones.flatMap((zone) => zone.tables);
-    setSelectedTable(selectedTableId ? tables.find((item) => item.id === selectedTableId) || null : null);
-  }, [selectedTableId, state.result]);
+    setSelectedTable(selectedTableId ? enrichedTables.find((item) => item.id === selectedTableId) || null : null);
+  }, [selectedTableId, enrichedTables]);
 
   useEffect(() => {
     fetch('/api/position-types')
@@ -947,9 +999,8 @@ export default function UnifiedBookingPage() {
   }, [selectedTable, positionTypes]);
 
   const tableById = useMemo(() => {
-    if (!state.result) return new Map();
-    return new Map(state.result.map.zones.flatMap((zone) => zone.tables).map((table) => [table.id, table]));
-  }, [state.result]);
+    return new Map(enrichedTables.map((table) => [table.id, table]));
+  }, [enrichedTables]);
   const renderObjects = useMemo(
     () => [...(state.result?.map.objects || [])].sort(compareMapObjects),
     [state.result]
