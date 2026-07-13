@@ -2965,6 +2965,45 @@ h3 {
   line-height: 1.4;
 }
 
+.booking-selection-context {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  margin: 12px 0 4px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.booking-selection-context div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.booking-selection-context dt,
+.booking-selection-context dd {
+  margin: 0;
+}
+
+.booking-selection-context dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.booking-selection-context dd {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.booking-selection-context div:last-child {
+  min-width: 48px;
+  text-align: right;
+}
+
 .public-map-object.selected {
   border-radius: 10px;
 }

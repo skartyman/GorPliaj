@@ -2187,6 +2187,19 @@ export default function UnifiedBookingPage() {
                 </p>
               ) : null}
 
+              <dl className="booking-selection-context">
+                <div>
+                  <dt>{c({ ua: 'Дата бронювання', ru: 'Дата бронирования', en: 'Booking date' })}</dt>
+                  <dd>{locale === 'ua'
+                    ? formatUkrainianDate(`${form.date}T12:00:00`)
+                    : new Date(`${form.date}T12:00:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</dd>
+                </div>
+                <div>
+                  <dt>{c({ ua: 'Гості', ru: 'Гости', en: 'Guests' })}</dt>
+                  <dd>{form.guests}</dd>
+                </div>
+              </dl>
+
               {holdTimerDisplay ? (
                 <p className="muted" style={{ margin: '4px 0', color: 'var(--warning, #f59e0b)', fontWeight: 600 }}>
                   ⏱ {holdTimerDisplay}
