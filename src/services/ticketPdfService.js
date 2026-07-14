@@ -1,6 +1,5 @@
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
-const path = require('path');
 const {
   localizedText,
   formatDate,
@@ -8,17 +7,40 @@ const {
   formatMoney,
   getBaseUrl
 } = require('../utils/deliveryPresentation');
+const { getLogoPath, registerPdfFonts } = require('../utils/pdfBranding');
 
-const fontPath = path.join(__dirname, '..', 'fonts', 'Roboto-Regular.ttf');
-const fontBoldPath = path.join(__dirname, '..', 'fonts', 'Roboto-Bold.ttf');
-
-async function toQrBuffer(value, width = 320) {
+async function toQrBuffer(value, width = 360) {
   if (!value) return null;
   try {
-    return await QRCode.toBuffer(value, { width, margin: 2 });
+    return await QRCode.toBuffer(value, {
+      type: 'png',
+      width,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#102f35', light: '#ffffff' }
+    });
   } catch {
     return null;
   }
+}
+
+function drawFact(doc, fonts, { x, y, width, label, value, height = 54 }) {
+  doc.roundedRect(x, y, width, height, 10).fill('#f1f8f7');
+  doc.fillColor('#668589').font(fonts.regular).fontSize(8.5)
+    .text(label, x + 12, y + 10, { width: width - 24, characterSpacing: 0.35 });
+  doc.fillColor('#173d43').font(fonts.bold).fontSize(11.5)
+    .text(String(value || '-'), x + 12, y + 27, { width: width - 24, height: height - 31, ellipsis: true });
+}
+
+function drawQrCard(doc, fonts, { x, y, width, qr, label }) {
+  const height = 176;
+  doc.roundedRect(x, y, width, height, 12).fillAndStroke('#ffffff', '#d5e8e5');
+  const size = Math.min(126, width - 24);
+  if (qr) {
+    doc.image(qr, x + (width - size) / 2, y + 12, { width: size, height: size });
+  }
+  doc.fillColor('#365d62').font(fonts.bold).fontSize(9)
+    .text(label, x + 8, y + 145, { width: width - 16, align: 'center' });
 }
 
 async function generateTicketPdf({
@@ -36,27 +58,23 @@ async function generateTicketPdf({
   depositAmount,
   totalPaid,
   entryTicketsAmount,
-  entryTicketCount,
-  entryTicketPrice,
   status,
   paymentStatus,
   verifyUrl,
   statusUrl,
-  downloadUrl,
   depositVerifyUrl
 }) {
   const rental = Number(rentalAmount || 0);
   const deposit = Number(depositAmount || 0);
-  const hasRental = rental > 0;
+  const entry = Number(entryTicketsAmount || 0);
+  const total = Number(totalPaid || rental + deposit + entry || 0);
   const hasDeposit = deposit > 0;
-  const hasPayment = hasRental || hasDeposit;
+  const hasPayment = total > 0;
+  const isConfirmed = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
 
-  const doc = new PDFDocument({ size: [420, 760], margin: 24, autoFirstPage: false });
-  doc.addPage({ size: [420, 760], margin: 24 });
-
-  doc.registerFont('Roboto', fontPath);
-  doc.registerFont('Roboto-Bold', fontBoldPath);
-
+  const doc = new PDFDocument({ size: [420, 760], margin: 0, autoFirstPage: false });
+  doc.addPage({ size: [420, 760], margin: 0 });
+  const fonts = registerPdfFonts(doc);
   const buffers = [];
   doc.on('data', (chunk) => buffers.push(chunk));
 
@@ -70,130 +88,94 @@ async function generateTicketPdf({
     doc.on('error', reject);
 
     const pageWidth = 420;
-    const pageHeight = 760;
-    const margin = 20;
-    const contentWidth = pageWidth - margin * 2;
-    
-    // Brand Colors - Asphalt Theme
-    const bg = '#1F1F24'; // Asphalt
-    const cardBg = '#27272D'; // Lighter asphalt for card
-    const cardBorder = '#3A3A42'; 
-    const primaryText = '#E4E4E8'; // Less contrast than pure white
-    const secondaryText = '#9898A1'; 
-    const gold = '#C29862'; // Muted gold
-    
-    const isPaid = paymentStatus === 'PAID' || status === 'PAID' || status === 'CONFIRMED';
-    const paidTotal = Number(totalPaid || 0);
-    const reservationPosition = localizedText(tableName) || '-';
-    const reservationZone = localizedText(zoneName) || '-';
+    const margin = 18;
+    const cardWidth = pageWidth - margin * 2;
+    const innerX = margin + 20;
+    const innerWidth = cardWidth - 40;
+    const gap = 10;
+    const half = (innerWidth - gap) / 2;
     const eventName = localizedText(eventTitle);
-    const appBaseUrl = getBaseUrl();
-    let y = margin;
+    const position = localizedText(tableName) || '-';
+    const zone = localizedText(zoneName) || '-';
+    const logoPath = getLogoPath();
 
-    // Background
-    doc.rect(0, 0, pageWidth, pageHeight).fill(bg);
+    doc.rect(0, 0, 420, 760).fill('#e9f5f3');
+    doc.roundedRect(margin, 14, cardWidth, 732, 18).fill('#ffffff');
+    doc.roundedRect(margin, 14, cardWidth, 126, 18).fill('#123f47');
 
-    // Main Card
-    doc.roundedRect(margin, margin, contentWidth, pageHeight - margin * 2, 20)
-       .fillAndStroke(cardBg, cardBorder);
-
-    // Header Logo/Title
-    y += 36; // More air
-    doc.fillColor(gold).font('Roboto-Bold').fontSize(11)
-      .text('GORPLIAJ', margin, y, { width: contentWidth, align: 'center', characterSpacing: 5 });
-    
-    y += 32;
-    doc.fillColor(primaryText).font('Roboto-Bold').fontSize(18)
-      .text(eventName ? 'ВХІДНИЙ КВИТОК НА ПОДІЮ' : 'ПІДТВЕРДЖЕННЯ БРОНЮВАННЯ', margin, y, { width: contentWidth, align: 'center' });
-      
-    y += 26;
-    doc.fillColor(secondaryText).font('Roboto').fontSize(10)
-      .text(isPaid ? 'Оплачено / Успішне бронювання' : 'Очікує оплати', margin, y, { width: contentWidth, align: 'center' });
-
-    // Separator
-    y += 40;
-    doc.moveTo(margin + 32, y).lineTo(margin + contentWidth - 32, y).strokeColor(cardBorder).lineWidth(1).stroke();
-
-    // Content Start
-    y += 40;
-    
-    // Grid Setup
-    const col1 = margin + 36;
-    const col2 = margin + contentWidth / 2 + 10;
-    const rowGap = 52; // Increased inter-line spacing
-    
-    // Guest Info
-    doc.fillColor(secondaryText).font('Roboto').fontSize(9).text('ГІСТЬ', col1, y, { characterSpacing: 1 });
-    doc.fillColor(primaryText).font('Roboto-Bold').fontSize(14).text(customerName, col1, y + 16);
-
-    if (eventName) {
-      doc.fillColor(secondaryText).font('Roboto').fontSize(9).text('ПОДІЯ', col2, y, { characterSpacing: 1 });
-      doc.fillColor(primaryText).font('Roboto-Bold').fontSize(12).text(eventName, col2, y + 16, { width: contentWidth / 2 - 40 });
+    if (logoPath) {
+      try {
+        doc.image(logoPath, innerX, 31, { fit: [58, 74], align: 'center', valign: 'center' });
+      } catch {}
     }
 
-    y += rowGap;
-    
-    // Date & Time Row
-    doc.fillColor(secondaryText).font('Roboto').fontSize(9).text('ДАТА', col1, y, { characterSpacing: 1 });
-    doc.fillColor(primaryText).font('Roboto-Bold').fontSize(13).text(formatDate(reservationDate), col1, y + 16);
+    doc.fillColor('#b9ded8').font(fonts.bold).fontSize(8.5)
+      .text('ГОРПЛЯЖ · ОДЕСА', innerX + 76, 38, { width: innerWidth - 76, characterSpacing: 1.1 });
+    doc.fillColor('#ffffff').font(fonts.bold).fontSize(17)
+      .text(eventName ? 'Бронювання на подію' : 'Підтвердження бронювання', innerX + 76, 56, { width: innerWidth - 76, lineBreak: false });
+    doc.fillColor('#dcecea').font(fonts.regular).fontSize(9.5)
+      .text(isConfirmed ? 'Місце закріплено за вами' : 'Очікує завершення оплати', innerX + 76, 82, { width: innerWidth - 76 });
+    doc.fillColor('#f1d08a').font(fonts.bold).fontSize(10)
+      .text(ticketCode, innerX + 76, 102, { width: innerWidth - 76, characterSpacing: 1.2 });
 
-    doc.fillColor(secondaryText).font('Roboto').fontSize(9).text('ЧАС', col2, y, { characterSpacing: 1 });
-    doc.fillColor(primaryText).font('Roboto-Bold').fontSize(13).text(`${formatTime(timeFrom)} - ${formatTime(timeTo)}`, col2, y + 16);
+    let y = 158;
+    doc.fillColor('#173d43').font(fonts.bold).fontSize(15).text('Деталі візиту', innerX, y);
+    y += 27;
 
-    y += rowGap;
+    drawFact(doc, fonts, { x: innerX, y, width: half, label: 'ДАТА', value: formatDate(reservationDate) });
+    drawFact(doc, fonts, { x: innerX + half + gap, y, width: half, label: 'ЧАС', value: [formatTime(timeFrom), formatTime(timeTo)].filter(Boolean).join(' - ') });
+    y += 64;
+    drawFact(doc, fonts, { x: innerX, y, width: half, label: 'МІСЦЕ', value: position });
+    drawFact(doc, fonts, { x: innerX + half + gap, y, width: half, label: 'ГОСТЕЙ', value: `${guests || 0}` });
+    y += 64;
+    drawFact(doc, fonts, { x: innerX, y, width: eventName ? half : innerWidth, label: 'ЗОНА', value: zone });
+    if (eventName) drawFact(doc, fonts, { x: innerX + half + gap, y, width: half, label: 'ПОДІЯ', value: eventName });
+    y += 68;
 
-    // Position & Guests Row
-    doc.fillColor(secondaryText).font('Roboto').fontSize(9).text('ПОЗИЦІЯ', col1, y, { characterSpacing: 1 });
-    doc.fillColor(primaryText).font('Roboto-Bold').fontSize(13).text(`${reservationZone} / ${reservationPosition}`, col1, y + 16);
+    doc.roundedRect(innerX, y, innerWidth, 62, 11).fill(hasPayment ? '#fff6df' : '#edf7f5');
+    doc.fillColor(hasPayment ? '#80652d' : '#55777b').font(fonts.regular).fontSize(8.5)
+      .text('ОПЛАТА', innerX + 14, y + 11, { characterSpacing: 0.4 });
+    doc.fillColor(hasPayment ? '#5c471f' : '#173d43').font(fonts.bold).fontSize(16)
+      .text(hasPayment ? formatMoney(total) : 'Оплата не потрібна', innerX + 14, y + 27, { width: innerWidth - 28 });
+    const breakdown = [
+      rental > 0 ? `оренда ${formatMoney(rental)}` : '',
+      deposit > 0 ? `депозит ${formatMoney(deposit)}` : '',
+      entry > 0 ? `квитки ${formatMoney(entry)}` : ''
+    ].filter(Boolean).join(' · ');
+    if (breakdown) {
+      doc.fillColor('#80652d').font(fonts.regular).fontSize(7.5)
+        .text(breakdown, innerX + 138, y + 31, { width: innerWidth - 152, align: 'right' });
+    }
+    y += 78;
 
-    doc.fillColor(secondaryText).font('Roboto').fontSize(9).text('ГОСТЕЙ', col2, y, { characterSpacing: 1 });
-    doc.fillColor(primaryText).font('Roboto-Bold').fontSize(13).text(`${guests} ПЕРС.`, col2, y + 16);
-
-    // Money Block
-    y += 66; // More air before money
-    doc.roundedRect(col1, y, contentWidth - 72, 80, 12).fill('#212126');
-    
-    let moneyText = '';
-    if (hasRental && hasDeposit) moneyText = `ОРЕНДА: ${formatMoney(rental)}  •  ДЕПОЗИТ: ${formatMoney(deposit)}`;
-    else if (hasRental) moneyText = `ОРЕНДА: ${formatMoney(rental)}`;
-    else if (hasDeposit) moneyText = `ДЕПОЗИТ: ${formatMoney(deposit)}`;
-    
-    doc.fillColor(gold).font('Roboto-Bold').fontSize(18)
-       .text(formatMoney(hasPayment ? totalPaid : 0), col1, y + 24, { width: contentWidth - 72, align: 'center' });
-       
-    doc.fillColor(secondaryText).font('Roboto').fontSize(8.5)
-       .text(moneyText || 'БЕЗКОШТОВНЕ БРОНЮВАННЯ', col1, y + 50, { width: contentWidth - 72, align: 'center', characterSpacing: 0.5 });
-
-    // QR Codes
     const hasDepositQr = Boolean(depositQrBuffer && hasDeposit);
-    const qrBlockWidth = hasDepositQr ? (contentWidth - 88) / 2 : contentWidth - 72;
-    const qrImageSize = 110;
-    y += 114;
-    const qrTop = y;
-
-    if (verifyQrBuffer) {
-      const leftX = hasDepositQr ? col1 : margin + 36;
-      doc.roundedRect(leftX, qrTop, qrBlockWidth, 160, 16).fill('#FFFFFF');
-      doc.image(verifyQrBuffer, leftX + (qrBlockWidth - qrImageSize) / 2, qrTop + 16, { width: qrImageSize, height: qrImageSize });
-      doc.fillColor('#1F1F24').font('Roboto-Bold').fontSize(9)
-        .text(eventName ? 'ВХІД НА ПОДІЮ' : 'СКАН ДЛЯ ВХОДУ', leftX, qrTop + 134, { width: qrBlockWidth, align: 'center', characterSpacing: 0.5 });
-    }
-
+    const qrWidth = hasDepositQr ? half : innerWidth;
+    drawQrCard(doc, fonts, {
+      x: innerX,
+      y,
+      width: qrWidth,
+      qr: verifyQrBuffer,
+      label: eventName ? 'QR для входу на подію' : 'QR бронювання для входу'
+    });
     if (hasDepositQr) {
-      const rightX = col1 + qrBlockWidth + 16;
-      doc.roundedRect(rightX, qrTop, qrBlockWidth, 160, 16).fill('#FFFFFF');
-      doc.image(depositQrBuffer, rightX + (qrBlockWidth - qrImageSize) / 2, qrTop + 16, { width: qrImageSize, height: qrImageSize });
-      doc.fillColor('#1F1F24').font('Roboto-Bold').fontSize(9)
-        .text('СКАН ДЕПОЗИТУ', rightX, qrTop + 134, { width: qrBlockWidth, align: 'center', characterSpacing: 0.5 });
+      drawQrCard(doc, fonts, {
+        x: innerX + half + gap,
+        y,
+        width: half,
+        qr: depositQrBuffer,
+        label: 'QR депозиту'
+      });
     }
 
-    y = qrTop + 180;
-    doc.fillColor(secondaryText).font('Roboto-Bold').fontSize(11)
-      .text(ticketCode, margin, y, { width: contentWidth, align: 'center', characterSpacing: 3 });
-      
-    y += 30;
-    doc.fillColor('#56565C').font('Roboto').fontSize(8)
-      .text(appBaseUrl, margin, y, { width: contentWidth, align: 'center', characterSpacing: 1 });
+    const footerY = y + 191;
+    doc.fillColor('#365d62').font(fonts.bold).fontSize(9.5)
+      .text(customerName || 'Гість Горпляж', innerX, footerY, { width: innerWidth, align: 'center' });
+    if (customerPhone) {
+      doc.fillColor('#668589').font(fonts.regular).fontSize(8)
+        .text(customerPhone, innerX, footerY + 15, { width: innerWidth, align: 'center' });
+    }
+    doc.fillColor('#78979a').font(fonts.regular).fontSize(7.5)
+      .text(`Збережіть цей PDF у телефоні та покажіть QR на вході. · ${getBaseUrl()}`, innerX, 717, { width: innerWidth, align: 'center' });
 
     doc.end();
   });

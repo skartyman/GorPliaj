@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const sharp = require('sharp');
 const prisma = require('../lib/prisma');
 
 const PDF_CACHE_DIR = path.join(__dirname, '..', '..', 'ticket-pdfs');
@@ -13,7 +14,7 @@ const {
   formatTime,
   formatMoney
 } = require('../utils/deliveryPresentation');
-const { getLogoPath } = require('../utils/pdfBranding');
+const { getLogoPath, loadImageBuffer } = require('../utils/pdfBranding');
 
 function ensureCacheDir() {
   if (!fs.existsSync(PDF_CACHE_DIR)) {
@@ -81,101 +82,102 @@ function formatSessionLabel(session, fallbackStartAt, fallbackEndAt) {
 
 function buildTicketChips(order) {
   return order.tickets.slice(0, 6).map((ticket) => `
-    <span style="display:inline-block;padding:10px 12px;border-radius:14px;background:#ffffff;border:1px solid #e4d4c1;color:#2f2219;font-weight:700;font-size:13px;margin:0 8px 8px 0;">
+    <span style="display:inline-block;padding:9px 11px;border-radius:9px;background:#ffffff;border:1px solid #b9d8d3;color:#173d43;font-weight:700;font-size:13px;margin:0 7px 7px 0;">
       ${escapeHtml(ticket.code)}
     </span>
   `).join('');
 }
 
-function buildOrderMailHtml(order, downloadUrl) {
+function buildOrderMailHtml(order, downloadUrl, { logoSrc = '', posterSrc = '' } = {}) {
   const eventTitle = localizedText(order.event?.title) || `Подія #${order.eventId}`;
   const session = getSessionForOrder(order);
   const sessionLabel = formatSessionLabel(session, order.event?.startAt, order.event?.endAt);
   const moreCount = Math.max(0, order.tickets.length - 6);
-  const posterUrl = order.event?.posterImage ? escapeHtml(order.event.posterImage) : '';
-  const logoCid = 'gorpliaj-logo';
 
   return `<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Квитки GorPliaj</title>
+  <title>Квитки Горпляж</title>
+  <style>
+    @media only screen and (max-width: 640px) {
+      .mail-outer { padding: 0 !important; }
+      .mail-shell { width: 100% !important; border-radius: 0 !important; }
+      .mail-pad { padding-left: 20px !important; padding-right: 20px !important; }
+      .mail-column { display: block !important; width: 100% !important; padding: 0 0 10px !important; }
+      .mail-logo { display: none !important; }
+      .mail-button { display: block !important; text-align: center !important; }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#f2e8dc;font-family:Arial,Helvetica,sans-serif;color:#2f2219;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f2e8dc;padding:24px 0;">
+<body style="margin:0;padding:0;background:#e9f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#173d43;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Ваші квитки на подію ${escapeHtml(eventTitle)} готові.</div>
+  <table class="mail-outer" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#e9f5f3;padding:28px 12px;">
     <tr>
       <td align="center">
-        <table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;background:#fffdf9;border-radius:30px;overflow:hidden;box-shadow:0 16px 40px rgba(76,52,31,0.12);">
+        <table class="mail-shell" width="640" cellpadding="0" cellspacing="0" role="presentation" style="width:640px;max-width:100%;background:#ffffff;border:1px solid #d5e8e5;border-radius:20px;overflow:hidden;box-shadow:0 16px 42px rgba(25,76,82,0.10);">
           <tr>
-            <td style="background:linear-gradient(135deg,#231814 0%,#5a3523 55%,#cf9949 100%);padding:28px 34px 22px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
+            <td class="mail-pad" style="background:#123f47;padding:26px 32px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
                 <tr>
-                  <td valign="top">
-                    <div style="display:inline-block;background:rgba(255,248,238,0.96);border-radius:18px;padding:10px 14px;">
-                      <img src="cid:${logoCid}" alt="GorPliaj" style="display:block;width:54px;height:54px;object-fit:contain;" />
-                    </div>
+                  <td valign="middle">
+                    <div style="font-size:11px;letter-spacing:2.2px;text-transform:uppercase;color:#b9ded8;font-weight:700;">Горпляж · Одеса</div>
+                    <h1 style="margin:9px 0 0;font-size:27px;line-height:1.18;font-weight:750;color:#ffffff;">Ваші квитки готові</h1>
+                    <div style="font-size:13px;color:#dcecea;margin-top:8px;">Замовлення <strong style="color:#f1d08a;">${escapeHtml(order.orderNumber)}</strong></div>
                   </td>
-                  <td align="right" valign="top">
-                    <div style="display:inline-block;padding:10px 16px;border-radius:16px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.16);color:#ffffff;font-size:13px;font-weight:700;">
-                      Замовлення ${escapeHtml(order.orderNumber)}
-                    </div>
-                  </td>
+                  ${logoSrc ? `<td class="mail-logo" align="right" valign="middle" style="width:76px;"><div style="display:inline-block;padding:8px 10px;border-radius:12px;background:#ffffff;"><img src="${escapeHtml(logoSrc)}" alt="Горпляж" width="54" style="display:block;width:54px;height:auto;" /></div></td>` : ''}
                 </tr>
               </table>
-              <div style="font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:#f7e8cf;margin-top:18px;">Квитки готові</div>
-              <div style="font-size:30px;line-height:1.18;font-weight:700;color:#ffffff;margin-top:8px;">Ваші QR-квитки вже в листі</div>
-              <div style="font-size:15px;line-height:1.6;color:#f3dfca;margin-top:12px;max-width:560px;">
-                Зберігайте PDF у телефоні або відкрийте цей лист перед входом. Усі квитки на подію вже прикріплені нижче одним файлом.
-              </div>
             </td>
           </tr>
-          ${posterUrl ? `
+          ${posterSrc ? `
           <tr>
-            <td style="padding:20px 34px 0;">
-              <img src="${posterUrl}" alt="${escapeHtml(eventTitle)}" style="display:block;width:100%;max-width:612px;height:auto;border-radius:24px;" />
+            <td class="mail-pad" style="padding:20px 32px 0;">
+              <img src="${escapeHtml(posterSrc)}" alt="${escapeHtml(eventTitle)}" style="display:block;width:100%;max-width:576px;max-height:260px;object-fit:cover;border-radius:14px;" />
             </td>
           </tr>` : ''}
           <tr>
-            <td style="padding:24px 34px 10px;">
-              <div style="font-size:30px;line-height:1.2;font-weight:700;color:#2f2219;">${escapeHtml(eventTitle)}</div>
-              ${sessionLabel ? `<div style="font-size:15px;line-height:1.6;color:#7a6450;margin-top:8px;">${escapeHtml(sessionLabel)}</div>` : ''}
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;">
+            <td class="mail-pad" style="padding:24px 32px 10px;">
+              <div style="font-size:25px;line-height:1.24;font-weight:750;color:#173d43;">${escapeHtml(eventTitle)}</div>
+              ${sessionLabel ? `<div style="font-size:14px;line-height:1.6;color:#55777b;margin-top:7px;">${escapeHtml(sessionLabel)}</div>` : ''}
+              <p style="margin:16px 0 0;color:#365d62;font-size:14px;line-height:1.65;">Збережіть PDF у телефоні та покажіть QR-коди на вході. Для кожного гостя у файлі є окремий квиток.</p>
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:18px;">
                 <tr>
-                  <td style="width:50%;padding-right:8px;vertical-align:top;">
-                    <div style="background:#3d2417;border-radius:24px;padding:22px;">
-                      <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#d9c0a0;">Квитків</div>
-                      <div style="font-size:32px;font-weight:700;color:#ffffff;margin-top:10px;">${order.tickets.length}</div>
+                  <td class="mail-column" style="width:50%;padding-right:6px;vertical-align:top;">
+                    <div style="background:#edf7f5;border-radius:14px;padding:17px 18px;">
+                      <div style="font-size:12px;color:#668589;">Кількість квитків</div>
+                      <div style="font-size:27px;font-weight:750;color:#173d43;margin-top:5px;">${order.tickets.length}</div>
                     </div>
                   </td>
-                  <td style="width:50%;padding-left:8px;vertical-align:top;">
-                    <div style="background:#f6eee4;border-radius:24px;padding:22px;">
-                      <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#8f6a44;">Сума</div>
-                      <div style="font-size:32px;font-weight:700;color:#402719;margin-top:10px;">${escapeHtml(formatMoney(order.amount, order.currency))}</div>
+                  <td class="mail-column" style="width:50%;padding-left:6px;vertical-align:top;">
+                    <div style="background:#fff6df;border-radius:14px;padding:17px 18px;">
+                      <div style="font-size:12px;color:#80652d;">Сплачено</div>
+                      <div style="font-size:27px;font-weight:750;color:#5c471f;margin-top:5px;">${escapeHtml(formatMoney(order.amount, order.currency))}</div>
                     </div>
                   </td>
                 </tr>
               </table>
-              <div style="font-size:13px;line-height:1.6;color:#6d5948;margin-top:14px;">
-                Покупець: ${escapeHtml(order.customerName)} · Усі коди та QR зібрані в одному PDF
+              <div style="font-size:13px;line-height:1.6;color:#55777b;margin-top:14px;">
+                Покупець: <strong style="color:#173d43;">${escapeHtml(order.customerName)}</strong>
               </div>
-              <div style="background:#fbf6ef;border:1px solid #eadbca;border-radius:24px;padding:22px 24px;margin-top:20px;">
-                <div style="font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#8f6a44;margin-bottom:14px;">Коди квитків</div>
+              <div style="background:#f7fbfa;border:1px solid #d5e8e5;border-radius:14px;padding:18px 18px;margin-top:18px;">
+                <div style="font-size:12px;color:#55777b;font-weight:700;margin-bottom:12px;">Коди квитків</div>
                 ${buildTicketChips(order)}
-                ${moreCount ? `<div style="font-size:13px;color:#7c6b59;margin-top:8px;">Ще ${moreCount} квитків є у вкладеному PDF.</div>` : ''}
+                ${moreCount ? `<div style="font-size:13px;color:#55777b;margin-top:8px;">Ще ${moreCount} квитків є у прикріпленому PDF.</div>` : ''}
               </div>
-              <div style="padding-top:22px;">
-                <a href="${escapeHtml(downloadUrl)}" style="display:inline-block;padding:15px 24px;border-radius:18px;background:#402719;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">Завантажити PDF з квитками</a>
+              <div style="padding-top:20px;">
+                <a class="mail-button" href="${escapeHtml(downloadUrl)}" style="display:inline-block;padding:13px 20px;border-radius:10px;background:#123f47;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;">Завантажити квитки PDF</a>
               </div>
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 34px 30px;color:#8a745f;font-size:12px;line-height:1.7;">
-              На вході достатньо показати QR-код з екрана телефону. Кожен квиток дійсний для одноразового проходу. Якщо купували кілька квитків, передайте PDF гостям або відкрийте його на вході.
+            <td class="mail-pad" style="padding:12px 32px 28px;color:#55777b;font-size:12px;line-height:1.65;">
+              Кожен QR-код дійсний для одного проходу. Не надсилайте його стороннім. Якщо квитків кілька, можна передати PDF гостям або показати всі коди з одного телефона.
             </td>
           </tr>
         </table>
-        <div style="padding-top:16px;font-size:11px;color:#a8947f;">GorPliaj • Odesa • ${escapeHtml(getBaseUrl())}</div>
+        <div style="padding-top:14px;font-size:11px;color:#55777b;">Горпляж · пляж Отрада, Одеса · ${escapeHtml(getBaseUrl())}</div>
       </td>
     </tr>
   </table>
@@ -198,6 +200,17 @@ async function deliverPaidOrder(orderId) {
   }
 
   const logoPath = getLogoPath();
+  const posterSourceBuffer = await loadImageBuffer(order.event?.posterImage);
+  const posterBuffer = posterSourceBuffer
+    ? await sharp(posterSourceBuffer)
+      .rotate()
+      .resize({ width: 1200, height: 700, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 84, progressive: true })
+      .toBuffer()
+      .catch(() => null)
+    : null;
+  const logoCid = `ticket-logo-${order.orderNumber}@gorpliaj`;
+  const posterCid = `ticket-poster-${order.orderNumber}@gorpliaj`;
   const attachments = [{
     filename: `gorpliaj-${order.orderNumber}.pdf`,
     content: pdf,
@@ -208,15 +221,29 @@ async function deliverPaidOrder(orderId) {
     attachments.push({
       filename: 'gorpliaj-logo.png',
       path: logoPath,
-      cid: 'gorpliaj-logo'
+      cid: logoCid,
+      contentDisposition: 'inline'
+    });
+  }
+
+  if (posterBuffer) {
+    attachments.push({
+      filename: `gorpliaj-event-${order.orderNumber}.jpg`,
+      content: posterBuffer,
+      contentType: 'image/jpeg',
+      cid: posterCid,
+      contentDisposition: 'inline'
     });
   }
 
   await createTransport().sendMail({
     from: process.env.MAIL_FROM || process.env.MAIL_USER,
     to: order.customerEmail,
-    subject: `GorPliaj - квитки ${order.orderNumber}`,
-    html: buildOrderMailHtml(order, downloadUrl),
+    subject: `Горпляж - квитки ${order.orderNumber}`,
+    html: buildOrderMailHtml(order, downloadUrl, {
+      logoSrc: logoPath && fs.existsSync(logoPath) ? `cid:${logoCid}` : '',
+      posterSrc: posterBuffer ? `cid:${posterCid}` : ''
+    }),
     attachments
   });
 
@@ -225,6 +252,7 @@ async function deliverPaidOrder(orderId) {
 
 module.exports = {
   deliverPaidOrder,
+  buildOrderMailHtml,
   generateTicketOrderPdf,
   getOrderForDelivery,
   getDownloadUrl,

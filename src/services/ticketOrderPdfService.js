@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer-core');
 const QRCode = require('qrcode');
+const sharp = require('sharp');
 const prisma = require('../lib/prisma');
 const {
   escapeHtml,
@@ -85,7 +86,7 @@ function buildSupportLabel(settings) {
   const phone = String(settings?.phone || '').trim();
   const email = String(settings?.email || '').trim();
   if (phone && email) return `${phone} · ${email}`;
-  return phone || email || 'Адміністратор GorPliaj';
+  return phone || email || 'Адміністратор Горпляж';
 }
 
 function buildTableBookingLabel(order, settings) {
@@ -170,9 +171,8 @@ async function buildTicketPayload(order, ticket, context) {
   const session = ticket.eventSession || order.eventSession || ticket.ticketType?.eventSession || null;
   const startsAt = session?.startsAt || order.event?.startAt || null;
   const endsAt = session?.endsAt || order.event?.endAt || null;
-  const posterBuffer = await loadImageBuffer(order.event?.posterImage);
 
-  const venue = localizedText(context.settings?.title) || 'GorPliaj';
+  const venue = localizedText(context.settings?.title) || 'Горпляж';
   const address = localizedText(context.settings?.address) || 'Одеса, пляж Отрада';
   const support = buildSupportLabel(context.settings);
   const scanUrl = buildSaleTicketVerifyUrl(ticket.code);
@@ -182,7 +182,7 @@ async function buildTicketPayload(order, ticket, context) {
     ticketCode: ticket.code,
     orderId: order.id,
     orderNumber: order.orderNumber,
-    guestName: ticket.holderName || order.customerName || 'Гість GorPliaj',
+    guestName: ticket.holderName || order.customerName || 'Гість Горпляж',
     ticketType: localizedText(ticket.ticketType?.name) || 'Вхідний квиток',
     price: formatMoney(ticket.ticketType?.price || order.amount / Math.max(order.tickets.length, 1), ticket.ticketType?.currency || order.currency),
     status: ticketStatusLabel(ticket.status),
@@ -190,7 +190,7 @@ async function buildTicketPayload(order, ticket, context) {
     startsAt,
     endsAt,
     eventDateLabel: getEventDateLabel(startsAt, endsAt),
-    posterDataUrl: posterBuffer ? imageBufferToDataUrl(posterBuffer, 'image/png') : '',
+    posterDataUrl: context.posterDataUrl || '',
     venue,
     address,
     support,
@@ -216,7 +216,7 @@ function renderInfoBlock(label, value, wide = false) {
 function buildTicketHtml(ticket) {
   const posterMarkup = ticket.posterDataUrl
     ? `<img class="poster-image" src="${ticket.posterDataUrl}" alt="${sanitizeText(ticket.eventTitle, 'Poster')}" />`
-    : `<div class="poster-fallback">GorPliaj</div>`;
+    : `<div class="poster-fallback">Горпляж</div>`;
 
   return `
     <section class="sheet">
@@ -227,8 +227,8 @@ function buildTicketHtml(ticket) {
           </div>
           <div class="event-panel">
             <div class="event-topline">
-              ${ticket.logoDataUrl ? `<div class="brand-badge"><img src="${ticket.logoDataUrl}" alt="GorPliaj" /></div>` : '<div class="brand-badge brand-badge-text">GP</div>'}
-              <div class="event-chip">GorPliaj Event</div>
+              ${ticket.logoDataUrl ? `<div class="brand-badge"><img src="${ticket.logoDataUrl}" alt="Горпляж" /></div>` : '<div class="brand-badge brand-badge-text">ГП</div>'}
+              <div class="event-chip">Горпляж · Одеса</div>
             </div>
             <div class="event-kicker">Квиток на подію</div>
             <h1 class="event-title">${sanitizeText(ticket.eventTitle)}</h1>
@@ -239,7 +239,7 @@ function buildTicketHtml(ticket) {
         <div class="main-row">
           <div class="code-column">
             <div class="ticket-code">${sanitizeText(ticket.ticketCode)}</div>
-            <div class="scan-copy">Покажіть цей QR-код на вході. QR-код працює один раз і після успішного сканування квиток одразу позначається як використаний.</div>
+            <div class="scan-copy">Покажіть QR-код на вході. Після першого успішного сканування квиток буде позначено як використаний.</div>
           </div>
           <div class="qr-panel">
             <img class="qr-image" src="${ticket.qrDataUrl}" alt="QR code" />
@@ -257,11 +257,11 @@ function buildTicketHtml(ticket) {
         </div>
 
         <div class="important-block">
-          <div class="important-title">ВАЖЛИВО</div>
+          <div class="important-title">Перед входом</div>
           <ul class="important-list">
             <li>Квиток дійсний для одного проходу та прив’язаний до цього QR-коду.</li>
             <li>Не передавайте скріншот стороннім: після першого успішного сканування QR стане недійсним.</li>
-            <li>Якщо не вдається відкрити PDF, зверніться до підтримки GorPliaj до початку події.</li>
+            <li>Якщо не вдається відкрити PDF, зверніться до підтримки Горпляж до початку події.</li>
           </ul>
         </div>
       </div>
@@ -279,15 +279,15 @@ function buildDocumentHtml(tickets, context) {
         ${context.regularFontCss}
         ${context.boldFontCss}
         :root {
-          --bg: #efe5d6;
-          --card: #fffdf9;
-          --brown: #4d2f1f;
-          --brown-deep: #2c1a12;
-          --sand: #f5e0b7;
-          --sand-soft: #f7efe6;
-          --ink: #2c211b;
-          --muted: #7a6251;
-          --line: rgba(76, 47, 31, 0.08);
+          --bg: #e9f5f3;
+          --card: #ffffff;
+          --sea: #1f5d65;
+          --sea-deep: #123f47;
+          --gold: #f1d08a;
+          --foam: #edf7f5;
+          --ink: #173d43;
+          --muted: #55777b;
+          --line: #d5e8e5;
         }
         @page {
           size: A4 portrait;
@@ -316,9 +316,9 @@ function buildDocumentHtml(tickets, context) {
         .ticket-card {
           min-height: calc(297mm - 16mm);
           background: var(--card);
-          border-radius: 28px;
+          border-radius: 20px;
           padding: 10mm;
-          box-shadow: 0 12px 40px rgba(47, 28, 17, 0.08);
+          box-shadow: 0 12px 40px rgba(25, 76, 82, 0.10);
         }
         .hero {
           display: grid;
@@ -327,10 +327,10 @@ function buildDocumentHtml(tickets, context) {
           align-items: stretch;
         }
         .poster-panel {
-          border-radius: 26px;
+          border-radius: 16px;
           overflow: hidden;
           min-height: 80mm;
-          background: linear-gradient(160deg, #221511 0%, #81522f 100%);
+          background: var(--sea-deep);
         }
         .poster-image {
           width: 100%;
@@ -350,8 +350,8 @@ function buildDocumentHtml(tickets, context) {
           letter-spacing: 0.08em;
         }
         .event-panel {
-          background: linear-gradient(160deg, var(--brown-deep) 0%, var(--brown) 100%);
-          border-radius: 28px;
+          background: var(--sea-deep);
+          border-radius: 18px;
           padding: 8mm 8mm;
           color: #fff;
           display: flex;
@@ -367,7 +367,7 @@ function buildDocumentHtml(tickets, context) {
         .brand-badge {
           width: 21mm;
           height: 21mm;
-          border-radius: 16px;
+          border-radius: 12px;
           background: rgba(255, 248, 238, 0.96);
           display: flex;
           align-items: center;
@@ -381,13 +381,13 @@ function buildDocumentHtml(tickets, context) {
           object-fit: contain;
         }
         .brand-badge-text {
-          color: var(--brown);
+          color: var(--sea-deep);
           font-weight: 700;
         }
         .event-chip {
-          border-radius: 999px;
-          background: var(--sand);
-          color: var(--brown-deep);
+          border-radius: 9px;
+          background: var(--gold);
+          color: var(--sea-deep);
           padding: 4mm 6mm;
           font-size: 12px;
           font-weight: 700;
@@ -395,7 +395,7 @@ function buildDocumentHtml(tickets, context) {
         }
         .event-kicker {
           margin-top: 3.5mm;
-          color: #e9d2b2;
+          color: #b9ded8;
           font-size: 12px;
         }
         .event-title {
@@ -403,16 +403,16 @@ function buildDocumentHtml(tickets, context) {
           font-size: 21px;
           line-height: 1.12;
           font-weight: 700;
-          letter-spacing: -0.02em;
+          letter-spacing: 0;
           word-break: break-word;
         }
         .event-date-pill {
           margin-top: auto;
           align-self: flex-start;
           width: 100%;
-          background: #fff4e4;
-          color: #352117;
-          border-radius: 999px;
+          background: #f7fcfb;
+          color: var(--sea-deep);
+          border-radius: 9px;
           padding: 2.8mm 4mm;
           text-align: center;
           font-size: 12px;
@@ -430,7 +430,7 @@ function buildDocumentHtml(tickets, context) {
           line-height: 1;
           font-weight: 700;
           letter-spacing: 0.03em;
-          color: var(--brown-deep);
+          color: var(--sea-deep);
           word-break: break-word;
         }
         .scan-copy {
@@ -440,8 +440,8 @@ function buildDocumentHtml(tickets, context) {
           line-height: 1.36;
         }
         .qr-panel {
-          border-radius: 24px;
-          background: var(--sand-soft);
+          border-radius: 14px;
+          background: var(--foam);
           padding: 3mm;
           display: flex;
           align-items: center;
@@ -460,8 +460,8 @@ function buildDocumentHtml(tickets, context) {
           margin-top: 5mm;
         }
         .info-block {
-          background: var(--sand-soft);
-          border-radius: 20px;
+          background: var(--foam);
+          border-radius: 12px;
           padding: 3.2mm 3.8mm;
           min-height: 16mm;
           border: 1px solid var(--line);
@@ -471,7 +471,7 @@ function buildDocumentHtml(tickets, context) {
           min-height: 15mm;
         }
         .info-label {
-          color: #9b7c62;
+          color: #668589;
           font-size: 9px;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -487,13 +487,13 @@ function buildDocumentHtml(tickets, context) {
         .important-block {
           margin-top: 5mm;
           padding: 4mm 5mm;
-          border-radius: 24px;
-          background: #f3e8db;
-          border: 1px solid rgba(76, 47, 31, 0.08);
+          border-radius: 14px;
+          background: #f7fbfa;
+          border: 1px solid var(--line);
         }
         .important-title {
           text-align: center;
-          color: #8c6d54;
+          color: var(--sea);
           font-size: 12px;
           text-transform: uppercase;
           letter-spacing: 0.12em;
@@ -519,6 +519,16 @@ function buildDocumentHtml(tickets, context) {
 
 async function generateTicketOrderPdf(order) {
   const context = await getPdfContextAssets();
+  const posterSourceBuffer = await loadImageBuffer(order.event?.posterImage);
+  const posterBuffer = posterSourceBuffer
+    ? await sharp(posterSourceBuffer)
+      .rotate()
+      .resize({ width: 1200, height: 1600, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 86, progressive: true })
+      .toBuffer()
+      .catch(() => null)
+    : null;
+  context.posterDataUrl = posterBuffer ? imageBufferToDataUrl(posterBuffer, 'image/jpeg') : '';
   const payloads = [];
   for (const ticket of order.tickets) {
     payloads.push(await buildTicketPayload(order, ticket, context));
