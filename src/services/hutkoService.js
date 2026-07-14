@@ -3,7 +3,6 @@ const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
 const { sendTicketEmail } = require('./emailService');
 const { buildVerifyUrl, buildReservationStatusUrl, buildReservationPdfUrl, buildDepositVerifyUrl } = require('../utils/ticketSignature');
-const QRCode = require('qrcode');
 
 function localizedValue(value) {
   if (!value) return '';
@@ -415,8 +414,6 @@ async function processCallback(payload) {
         const depositQrUrl = depositAmt > 0
           ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate)
           : null;
-        const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
-
         const payAmt = Number(reservation.payment?.amount || payment.amount || 0);
 
         await sendTicketEmail({
@@ -435,7 +432,6 @@ async function processCallback(payload) {
           rentalAmount: rentalAmt,
           totalPaid: payAmt,
           entryTicketsAmount: Math.max(payAmt - rentalAmt - depositAmt, 0),
-          qrDataUrl,
           verifyUrl,
           statusUrl,
           downloadUrl,

@@ -28,6 +28,18 @@ function createTransport() {
   });
 }
 
+function dataUrlToBuffer(value) {
+  if (!value || typeof value !== 'string') return null;
+  const match = value.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) return null;
+
+  try {
+    return Buffer.from(match[1], 'base64');
+  } catch {
+    return null;
+  }
+}
+
 function renderFactRow(label, value) {
   return `
     <tr>
@@ -174,19 +186,33 @@ async function sendTicketEmail({
     return { sent: false, reason: 'mail_transport_failed' };
   }
 
-  let resolvedQrDataUrl = qrDataUrl || null;
-  if (!resolvedQrDataUrl && verifyUrl) {
+  let qrBuffer = null;
+  if (verifyUrl) {
     try {
-      resolvedQrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 300, margin: 2 });
+      qrBuffer = await QRCode.toBuffer(verifyUrl, {
+        type: 'png',
+        width: 300,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+    } catch {}
+  }
+  if (!qrBuffer) qrBuffer = dataUrlToBuffer(qrDataUrl);
+
+  let depositQrBuffer = null;
+  if (depositQrUrl) {
+    try {
+      depositQrBuffer = await QRCode.toBuffer(depositQrUrl, {
+        type: 'png',
+        width: 300,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
     } catch {}
   }
 
-  let depositQrDataUrl = null;
-  if (depositQrUrl) {
-    try {
-      depositQrDataUrl = await QRCode.toDataURL(depositQrUrl, { width: 300, margin: 2 });
-    } catch {}
-  }
+  const qrCid = `booking-qr-${ticketCode}@gorpliaj`;
+  const depositQrCid = `booking-deposit-qr-${ticketCode}@gorpliaj`;
 
   const html = buildTicketHtml({
     ticketCode,
@@ -203,8 +229,8 @@ async function sendTicketEmail({
     rentalAmount,
     totalPaid,
     entryTicketsAmount,
-    qrDataUrl: resolvedQrDataUrl,
-    depositQrDataUrl,
+    qrDataUrl: qrBuffer ? `cid:${qrCid}` : null,
+    depositQrDataUrl: depositQrBuffer ? `cid:${depositQrCid}` : null,
     status,
     paymentStatus,
     statusUrl,
@@ -212,6 +238,26 @@ async function sendTicketEmail({
   });
 
   const attachments = [];
+
+  if (qrBuffer) {
+    attachments.push({
+      filename: `gorpliaj-qr-${ticketCode.toLowerCase()}.png`,
+      content: qrBuffer,
+      contentType: 'image/png',
+      cid: qrCid,
+      contentDisposition: 'inline'
+    });
+  }
+
+  if (depositQrBuffer) {
+    attachments.push({
+      filename: `gorpliaj-deposit-qr-${ticketCode.toLowerCase()}.png`,
+      content: depositQrBuffer,
+      contentType: 'image/png',
+      cid: depositQrCid,
+      contentDisposition: 'inline'
+    });
+  }
 
   try {
     const pdfBuffer = await generateTicketPdf({
