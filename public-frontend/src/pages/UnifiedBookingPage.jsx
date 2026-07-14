@@ -774,6 +774,7 @@ export default function UnifiedBookingPage() {
   const [paymentFrameLoaded, setPaymentFrameLoaded] = useState(false);
   const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
   const [paymentReceipt, setPaymentReceipt] = useState(null);
+  const [availabilityRevision, setAvailabilityRevision] = useState(0);
 
   const [positionTypes, setPositionTypes] = useState([]);
   const [eventInfo, setEventInfo] = useState(null);
@@ -962,7 +963,7 @@ export default function UnifiedBookingPage() {
     getPublicMapData(mapApi, { date: form.date, timeFrom: form.timeFrom, mapId, draft: draftMode })
       .then((result) => setState({ loading: false, error: '', result }))
       .catch((error) => setState({ loading: false, error: error?.message || t('mapLoadFailed'), result: null }));
-  }, [form.date, form.timeFrom, mapId, t, draftMode]);
+  }, [form.date, form.timeFrom, mapId, t, draftMode, availabilityRevision]);
 
   useEffect(() => {
     if (!mapId || !form.date || !form.timeFrom) {
@@ -992,7 +993,7 @@ export default function UnifiedBookingPage() {
       });
 
     return () => { cancelled = true; };
-  }, [mapId, form.date, form.timeFrom, eventInfo?.id]);
+  }, [mapId, form.date, form.timeFrom, eventInfo?.id, availabilityRevision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1337,7 +1338,34 @@ export default function UnifiedBookingPage() {
       ))[0]?.table || null;
   }
 
+  function clearCompletedBookingResult() {
+    const isComplete = Boolean(successMessage && (!paymentUrl || embeddedPaymentStatus === 'PAID'));
+    if (!isComplete) return false;
+
+    setSuccessMessage('');
+    setPaymentUrl('');
+    setReservationAccess(null);
+    setPaymentFrameLoaded(false);
+    setEmbeddedPaymentStatus('');
+    setPaymentReceipt(null);
+    setErrorMessage('');
+    setHoldToken('');
+    setGroupHoldTokens([]);
+    setHoldExpiresAt('');
+    setHoldError('');
+    setScenarioSelected(false);
+
+    const next = new URLSearchParams(window.location.search);
+    next.delete('holdToken');
+    next.delete('holdExpiresAt');
+    next.delete('reservation');
+    next.delete('t');
+    setSearchParams(next, { replace: true });
+    return true;
+  }
+
   function selectTable(tableId) {
+    clearCompletedBookingResult();
     const requestedTable = tableById.get(tableId);
     const preferredTable = findBestSingleFitTable(requestedTable) || requestedTable;
     const preferredTableId = preferredTable?.id || tableId;
@@ -1363,6 +1391,7 @@ export default function UnifiedBookingPage() {
       return;
     }
 
+    clearCompletedBookingResult();
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
     const foundTable = object.tableId ? tableById.get(object.tableId) : null;
@@ -1395,6 +1424,7 @@ export default function UnifiedBookingPage() {
   }, [form.guests, enrichedTables, selectedObjectTable, selectedTable, tableObjectById]);
 
   function closePanel() {
+    clearCompletedBookingResult();
     setSelectedTableId(null);
     setSelectedObjectId(null);
     setScenarioSelected(false);
@@ -1737,6 +1767,7 @@ export default function UnifiedBookingPage() {
           ru: 'Заявка на бронирование создана. Оплата не требуется.',
           en: 'Booking request created. No payment is required.'
         }));
+      setAvailabilityRevision((current) => current + 1);
 
     } catch (error) {
       setErrorMessage(error.message || c({
@@ -2531,6 +2562,9 @@ export default function UnifiedBookingPage() {
                       {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
                     </a>
                   ) : null}
+                  <button type="button" className="btn btn-secondary" onClick={closePanel}>
+                    {c({ ua: 'Забронювати ще', ru: 'Забронировать ещё', en: 'Make another booking' })}
+                  </button>
                 </div>
               )}
             </div>
