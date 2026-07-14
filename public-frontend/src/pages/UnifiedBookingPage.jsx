@@ -771,6 +771,9 @@ export default function UnifiedBookingPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [paymentUrl, setPaymentUrl] = useState('');
   const [reservationAccess, setReservationAccess] = useState(null);
+  const [paymentFrameLoaded, setPaymentFrameLoaded] = useState(false);
+  const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
+  const [paymentReceipt, setPaymentReceipt] = useState(null);
 
   const [positionTypes, setPositionTypes] = useState([]);
   const [eventInfo, setEventInfo] = useState(null);
@@ -856,6 +859,46 @@ export default function UnifiedBookingPage() {
       });
     return () => { cancelled = true; };
   }, [activeEventSlug]);
+
+  useEffect(() => {
+    if (!paymentUrl || !reservationAccess?.ticketCode || !reservationAccess?.token) return undefined;
+
+    let cancelled = false;
+    let timerId = null;
+    let pollAttempts = 0;
+
+    async function checkPaymentStatus() {
+      pollAttempts += 1;
+      try {
+        const result = await bookingsApi.status(reservationAccess.ticketCode, reservationAccess.token);
+        if (cancelled) return;
+        const nextStatus = result?.reservation?.paymentStatus || '';
+        setEmbeddedPaymentStatus(nextStatus);
+        setPaymentReceipt(result || null);
+
+        if (nextStatus === 'PAID') {
+          setSuccessMessage(c({
+            ua: 'Оплату підтверджено. Бронювання та квитки надіслані на Email.',
+            ru: 'Оплата подтверждена. Бронирование и билеты отправлены на Email.',
+            en: 'Payment confirmed. Your booking and tickets have been sent by email.'
+          }));
+          return;
+        }
+      } catch {
+        if (!cancelled) setEmbeddedPaymentStatus((current) => current || 'PENDING');
+      }
+
+      if (!cancelled && pollAttempts < 76) {
+        timerId = window.setTimeout(checkPaymentStatus, pollAttempts < 24 ? 5000 : 15000);
+      }
+    }
+
+    timerId = window.setTimeout(checkPaymentStatus, 2500);
+    return () => {
+      cancelled = true;
+      if (timerId) window.clearTimeout(timerId);
+    };
+  }, [paymentUrl, reservationAccess?.ticketCode, reservationAccess?.token, c]);
 
   useEffect(() => {
     if (!activeEventSlug || !eventDateOptions.length) return;
@@ -1638,6 +1681,9 @@ export default function UnifiedBookingPage() {
     setSuccessMessage('');
     setPaymentUrl('');
     setReservationAccess(null);
+    setPaymentFrameLoaded(false);
+    setEmbeddedPaymentStatus('');
+    setPaymentReceipt(null);
 
     try {
       const hold = await holdsApi.create({
@@ -1679,6 +1725,7 @@ export default function UnifiedBookingPage() {
 
       setPaymentUrl(result.paymentUrl || '');
       setReservationAccess(result.access || null);
+      setEmbeddedPaymentStatus(result.paymentUrl ? 'PENDING' : '');
       setSuccessMessage(result.paymentUrl
         ? c({
           ua: 'Бронювання створено. Завершіть оплату, щоб закріпити позицію.',
@@ -1691,10 +1738,6 @@ export default function UnifiedBookingPage() {
           en: 'Booking request created. No payment is required.'
         }));
 
-      if (result.paymentUrl) {
-        window.location.assign(result.paymentUrl);
-        return;
-      }
     } catch (error) {
       setErrorMessage(error.message || c({
         ua: 'Не вдалося створити бронювання.',
@@ -2413,7 +2456,7 @@ export default function UnifiedBookingPage() {
               </p>
             </div>
           ) : successMessage ? (
-            <div style={{ padding: '8px 0' }}>
+            <div className={`booking-payment-stage ${paymentUrl && embeddedPaymentStatus !== 'PAID' ? 'is-active' : 'is-complete'}`}>
               <button
                 type="button"
                 className="panel-close-btn"
@@ -2435,22 +2478,61 @@ export default function UnifiedBookingPage() {
               >
                 ×
               </button>
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-                <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', margin: '0 0 8px' }}>
-                  {successMessage}
-                </p>
-                {reservationAccess?.ticketCode ? (
-                  <p style={{ margin: '8px 0', fontSize: '0.9rem' }}>
-                    {c({ ua: 'Код бронювання', ru: 'Код бронирования', en: 'Booking code' })}: <strong>{reservationAccess.ticketCode}</strong>
-                  </p>
-                ) : null}
-                {paymentUrl ? (
-                  <a className="btn btn-primary" href={paymentUrl} style={{ marginTop: 12, display: 'inline-block' }}>
-                    {c({ ua: 'Перейти до оплати', ru: 'Перейти к оплате', en: 'Continue to payment' })}
-                  </a>
-                ) : null}
-              </div>
+              {paymentUrl && embeddedPaymentStatus !== 'PAID' ? (
+                <>
+                  <header className="booking-payment-header">
+                    <span className="booking-payment-security-mark" aria-hidden="true">✓</span>
+                    <div>
+                      <span>{c({ ua: 'Захищена оплата HUTKO', ru: 'Защищённая оплата HUTKO', en: 'Secure HUTKO payment' })}</span>
+                      <strong>{c({ ua: 'Завершіть оплату тут', ru: 'Завершите оплату здесь', en: 'Complete payment here' })}</strong>
+                    </div>
+                  </header>
+                  <p className="booking-payment-intro">{successMessage}</p>
+                  <div className={`booking-payment-frame-shell ${paymentFrameLoaded ? 'is-loaded' : 'is-loading'}`}>
+                    {!paymentFrameLoaded ? (
+                      <div className="booking-payment-loader" role="status">
+                        <span aria-hidden="true" />
+                        {c({ ua: 'Завантажуємо платіжну форму...', ru: 'Загружаем платёжную форму...', en: 'Loading payment form...' })}
+                      </div>
+                    ) : null}
+                    <iframe
+                      className="booking-payment-frame"
+                      src={paymentUrl}
+                      title={c({ ua: 'Форма оплати HUTKO', ru: 'Форма оплаты HUTKO', en: 'HUTKO payment form' })}
+                      allow="payment"
+                      loading="eager"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      onLoad={() => setPaymentFrameLoaded(true)}
+                    />
+                  </div>
+                  <div className="booking-payment-footer">
+                    <span className={`booking-payment-live-status ${embeddedPaymentStatus === 'FAILED' ? 'is-warning' : ''}`}>
+                      <i aria-hidden="true" />
+                      {embeddedPaymentStatus === 'FAILED'
+                        ? c({ ua: 'Платіж не завершено. Спробуйте ще раз або відкрийте форму окремо.', ru: 'Платёж не завершён. Попробуйте ещё раз или откройте форму отдельно.', en: 'Payment was not completed. Try again or open the form separately.' })
+                        : c({ ua: 'Очікуємо підтвердження оплати', ru: 'Ожидаем подтверждение оплаты', en: 'Waiting for payment confirmation' })}
+                    </span>
+                    <a className="booking-payment-fallback" href={paymentUrl} target="_blank" rel="noopener noreferrer">
+                      {c({ ua: 'Відкрити оплату окремо', ru: 'Открыть оплату отдельно', en: 'Open payment separately' })} ↗
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="booking-payment-complete">
+                  <span className="booking-payment-complete-mark" aria-hidden="true">✓</span>
+                  <strong>{successMessage}</strong>
+                  {reservationAccess?.ticketCode ? (
+                    <p>
+                      {c({ ua: 'Код бронювання', ru: 'Код бронирования', en: 'Booking code' })}: <b>{reservationAccess.ticketCode}</b>
+                    </p>
+                  ) : null}
+                  {(paymentReceipt?.downloadUrl || reservationAccess?.downloadUrl) ? (
+                    <a className="btn btn-primary" href={paymentReceipt?.downloadUrl || reservationAccess.downloadUrl}>
+                      {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
+                    </a>
+                  ) : null}
+                </div>
+              )}
             </div>
           ) : activePanelTable && activePanelTable.status !== 'free' ? (
             <SidePanelBusy
@@ -2675,73 +2757,76 @@ export default function UnifiedBookingPage() {
                   ) : null}
 
                   {isFreeTable ? (
-                    <form onSubmit={handleBookingSubmit} style={{ marginTop: 16 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}>
+                    <form className="booking-contact-form" onSubmit={handleBookingSubmit}>
+                      <div className="booking-contact-fields">
+                        <div className="booking-contact-field">
+                          <label>
                             {c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}
-                      </label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        value={form.customerName}
-                        required
-                        minLength="2"
-                        onChange={(e) => setForm((current) => ({ ...current, customerName: e.target.value }))}
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}>
-                        {c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}
-                      </label>
-                      <input
-                        type="tel"
-                        className="form-input"
-                        value={form.customerPhone}
-                        placeholder="+38 (0XX) XXX-XX-XX"
-                        required
-                        minLength="7"
-                        onChange={(e) => setForm((current) => ({ ...current, customerPhone: formatPhone(e.target.value) }))}
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}>
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        className="form-input"
-                        value={form.customerEmail}
-                        required={paymentPreview.totalAmount > 0}
-                        onChange={(e) => setForm((current) => ({ ...current, customerEmail: e.target.value }))}
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: 4, color: 'var(--text)' }}>
-                        {c({ ua: 'Коментар', ru: 'Комментарий', en: 'Comment' })}
-                      </label>
-                      <textarea
-                        className="form-input"
-                        rows="3"
-                        value={form.commentCustomer}
-                        onChange={(e) => setForm((current) => ({ ...current, commentCustomer: e.target.value }))}
-                        style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: '0.82rem', lineHeight: 1.4, color: 'var(--text)' }}>
-                        <input
-                          type="checkbox"
-                          checked={form.agreeAll}
-                          onChange={(e) => setForm((current) => ({ ...current, agreeAll: e.target.checked }))}
-                          style={{ marginTop: 2, flexShrink: 0 }}
-                        />
-                        <span>{c({ ua: 'Я погоджуюся з правилами перебування, умовами оплати/повернення та політикою конфіденційності', ru: 'Я соглашаюсь с правилами пребывания, условиями оплаты/возврата и политикой конфиденциальности', en: 'I agree to the venue rules, payment/return terms, and privacy policy' })}</span>
-                      </label>
-                    </div>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={form.customerName}
+                            required
+                            minLength="2"
+                            onChange={(e) => setForm((current) => ({ ...current, customerName: e.target.value }))}
+                          />
+                        </div>
+                        <div className="booking-contact-field">
+                          <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
+                          <input
+                            type="tel"
+                            className="form-input"
+                            value={form.customerPhone}
+                            placeholder="+38 (0XX) XXX-XX-XX"
+                            required
+                            minLength="7"
+                            onChange={(e) => setForm((current) => ({ ...current, customerPhone: formatPhone(e.target.value) }))}
+                          />
+                        </div>
+                        <div className="booking-contact-field">
+                          <label>Email</label>
+                          <input
+                            type="email"
+                            className="form-input"
+                            value={form.customerEmail}
+                            required
+                            aria-describedby="booking-email-purpose"
+                            onChange={(e) => setForm((current) => ({ ...current, customerEmail: e.target.value }))}
+                          />
+                          <p id="booking-email-purpose" className="booking-email-purpose">
+                            <span aria-hidden="true">i</span>
+                            {activeEventSlug
+                              ? c({ ua: 'Сюди надійдуть вхідні квитки, QR-коди та PDF-підтвердження.', ru: 'Сюда придут входные билеты, QR-коды и PDF-подтверждение.', en: 'Entry tickets, QR codes and the PDF confirmation will be sent here.' })
+                              : c({ ua: 'Сюди надійдуть QR-код і PDF-підтвердження бронювання.', ru: 'Сюда придут QR-код и PDF-подтверждение бронирования.', en: 'The booking QR code and PDF confirmation will be sent here.' })}
+                          </p>
+                        </div>
+                        <div className="booking-contact-field">
+                          <label>{c({ ua: 'Коментар', ru: 'Комментарий', en: 'Comment' })}</label>
+                          <textarea
+                            className="form-input booking-contact-comment"
+                            rows="2"
+                            value={form.commentCustomer}
+                            onChange={(e) => setForm((current) => ({ ...current, commentCustomer: e.target.value }))}
+                          />
+                        </div>
+                        <div className="booking-consent-row">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={form.agreeAll}
+                              onChange={(e) => setForm((current) => ({ ...current, agreeAll: e.target.checked }))}
+                            />
+                            <span>
+                              {c({ ua: 'Я погоджуюся з ', ru: 'Я соглашаюсь с ', en: 'I agree to the ' })}
+                              <Link to="/rules" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>{c({ ua: 'правилами перебування', ru: 'правилами пребывания', en: 'venue rules' })}</Link>
+                              {c({ ua: ', ', ru: ', ', en: ', ' })}
+                              <Link to="/payment-returns" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>{c({ ua: 'умовами оплати й повернення', ru: 'условиями оплаты и возврата', en: 'payment and refund terms' })}</Link>
+                              {c({ ua: ' та ', ru: ' и ', en: ' and ' })}
+                              <Link to="/privacy" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>{c({ ua: 'політикою конфіденційності', ru: 'политикой конфиденциальности', en: 'privacy policy' })}</Link>.
+                            </span>
+                          </label>
+                        </div>
 
                     {errorMessage ? (
                       <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--danger)' }}>{errorMessage}</p>
@@ -2750,7 +2835,7 @@ export default function UnifiedBookingPage() {
                     <button
                       type="submit"
                       className="btn btn-primary"
-                      disabled={submitting || !activeTimeSlots.length || !form.customerName || !form.customerPhone || !form.agreeAll || (paymentPreview.totalAmount > 0 && !form.customerEmail)}
+                      disabled={submitting || !activeTimeSlots.length || !form.customerName || !form.customerPhone || !form.customerEmail || !form.agreeAll}
                       style={{ width: '100%', boxSizing: 'border-box' }}
                     >
                       {submitting
