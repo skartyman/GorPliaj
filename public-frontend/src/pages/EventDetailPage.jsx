@@ -50,7 +50,7 @@ export default function EventDetailPage() {
   });
   const [orderResult, setOrderResult] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
-  const [justCreatedOrder, setJustCreatedOrder] = useState(false);
+  const [paymentFrameLoaded, setPaymentFrameLoaded] = useState(false);
   const [ticketFormOpen, setTicketFormOpen] = useState(false);
   const c = (values) => localizedCopy(values, locale);
   const metaTitle = localizeField(state.event?.title, locale);
@@ -166,7 +166,6 @@ export default function EventDetailPage() {
     const downloadToken = searchParams.get('token');
     if (!orderNumber || !downloadToken) return;
 
-    setJustCreatedOrder(false);
     setOrderResult((current) => current || {
       orderNumber,
       downloadToken,
@@ -215,6 +214,7 @@ export default function EventDetailPage() {
     setSales((current) => ({ ...current, loading: true, error: '' }));
     setOrderResult(null);
     setOrderStatus(null);
+    setPaymentFrameLoaded(false);
 
     try {
       const result = await eventsApi.createTicketOrder(slug, {
@@ -227,13 +227,8 @@ export default function EventDetailPage() {
           quantity: Number(orderForm.quantity)
         }]
       });
-      setJustCreatedOrder(true);
       setOrderResult(result.order);
       setSales((current) => ({ ...current, loading: false }));
-      if (result.order?.paymentUrl) {
-        window.location.assign(result.order.paymentUrl);
-        return;
-      }
     } catch (error) {
       setSales((current) => ({ ...current, loading: false, error: error.message }));
     }
@@ -447,11 +442,41 @@ export default function EventDetailPage() {
                         </p>
                       </div>
                     ) : null}
-                    {orderStatus?.status !== 'PAID' && paymentUrl && !justCreatedOrder ? (
-                      <div className="guest-modal-actions" style={{ marginBottom: 16 }}>
-                        <a className="btn btn-primary" href={paymentUrl} target="_blank" rel="noreferrer">
-                          {c({ ua: 'Оплатити квитки', ru: 'Оплатить билеты', en: 'Pay for tickets' })}
-                        </a>
+                    {orderStatus?.status !== 'PAID' && paymentUrl ? (
+                      <div className="ticket-payment-stage">
+                        <header className="booking-payment-header">
+                          <span className="booking-payment-security-mark" aria-hidden="true">✓</span>
+                          <div>
+                            <span>{c({ ua: 'Захищена оплата HUTKO', ru: 'Защищённая оплата HUTKO', en: 'Secure HUTKO payment' })}</span>
+                            <strong>{c({ ua: 'Оплатіть квитки тут', ru: 'Оплатите билеты здесь', en: 'Pay for tickets here' })}</strong>
+                          </div>
+                        </header>
+                        <div className={`booking-payment-frame-shell ticket-payment-frame-shell ${paymentFrameLoaded ? 'is-loaded' : 'is-loading'}`}>
+                          {!paymentFrameLoaded ? (
+                            <div className="booking-payment-loader" role="status">
+                              <span aria-hidden="true" />
+                              {c({ ua: 'Завантажуємо платіжну форму...', ru: 'Загружаем платёжную форму...', en: 'Loading payment form...' })}
+                            </div>
+                          ) : null}
+                          <iframe
+                            className="booking-payment-frame"
+                            src={paymentUrl}
+                            title={c({ ua: 'Форма оплати квитків HUTKO', ru: 'Форма оплаты билетов HUTKO', en: 'HUTKO ticket payment form' })}
+                            allow="payment"
+                            loading="eager"
+                            referrerPolicy="strict-origin-when-cross-origin"
+                            onLoad={() => setPaymentFrameLoaded(true)}
+                          />
+                        </div>
+                        <div className="booking-payment-footer">
+                          <span className="booking-payment-live-status">
+                            <i aria-hidden="true" />
+                            {c({ ua: 'Очікуємо підтвердження оплати', ru: 'Ожидаем подтверждение оплаты', en: 'Waiting for payment confirmation' })}
+                          </span>
+                          <a className="booking-payment-fallback" href={paymentUrl} target="_blank" rel="noopener noreferrer">
+                            {c({ ua: 'Відкрити оплату окремо', ru: 'Открыть оплату отдельно', en: 'Open payment separately' })} ↗
+                          </a>
+                        </div>
                       </div>
                     ) : null}
                     {orderStatus?.status === 'PAID' ? (

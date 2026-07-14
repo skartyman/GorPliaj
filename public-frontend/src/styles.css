@@ -3245,10 +3245,37 @@ h3 {
   margin-top: 4px;
 }
 
+.ticket-payment-stage {
+  display: grid;
+  gap: 10px;
+}
+
+.ticket-payment-stage .booking-payment-header {
+  padding-right: 44px;
+}
+
+.ticket-payment-frame-shell {
+  height: min(680px, 68dvh);
+  min-height: 520px;
+}
+
 @media (max-width: 520px) {
   .booking-payment-frame-shell {
     height: min(660px, 70dvh);
     min-height: 520px;
+  }
+
+  .ticket-payment-stage {
+    margin: -4px 0 0;
+  }
+
+  .ticket-payment-stage .booking-payment-header {
+    padding-top: 0;
+  }
+
+  .ticket-payment-frame-shell {
+    height: min(620px, 66dvh);
+    min-height: 500px;
   }
 }
 
