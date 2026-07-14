@@ -782,7 +782,7 @@ export default function UnifiedBookingPage() {
   const [eveningCandidateTime, setEveningCandidateTime] = useState(
     searchParams.get('timeFrom') >= EVENING_TABLE_START ? searchParams.get('timeFrom') : EVENING_TABLE_START
   );
-  const [bookableUnitsState, setBookableUnitsState] = useState({ loading: false, error: '', units: [] });
+  const [bookableUnitsState, setBookableUnitsState] = useState({ loading: false, error: '', units: [], bookingPolicy: null });
   const [eveningUnitsState, setEveningUnitsState] = useState({ loading: false, error: '', units: [] });
   const [scenarioSelected, setScenarioSelected] = useState(false);
 
@@ -923,7 +923,7 @@ export default function UnifiedBookingPage() {
 
   useEffect(() => {
     if (!mapId || !form.date || !form.timeFrom) {
-      setBookableUnitsState({ loading: false, error: '', units: [] });
+      setBookableUnitsState({ loading: false, error: '', units: [], bookingPolicy: null });
       return undefined;
     }
 
@@ -939,12 +939,13 @@ export default function UnifiedBookingPage() {
         setBookableUnitsState({
           loading: false,
           error: '',
-          units: Array.isArray(payload?.units) ? payload.units : []
+          units: Array.isArray(payload?.units) ? payload.units : [],
+          bookingPolicy: payload?.bookingPolicy || null
         });
       })
       .catch((error) => {
         if (cancelled) return;
-        setBookableUnitsState({ loading: false, error: error?.message || 'Failed to load booking prices.', units: [] });
+        setBookableUnitsState({ loading: false, error: error?.message || 'Failed to load booking prices.', units: [], bookingPolicy: null });
       });
 
     return () => { cancelled = true; };
@@ -1586,6 +1587,15 @@ export default function UnifiedBookingPage() {
       return;
     }
 
+    if (!activeEventSlug && eventDayCutoff && submitBookingKind === 'TABLE' && form.timeFrom >= eventDayCutoff) {
+      setErrorMessage(c({
+        ua: `З ${eventDayCutoff} столики бронюються лише разом із квитками на подію.`,
+        ru: `С ${eventDayCutoff} столы бронируются только вместе с билетами на мероприятие.`,
+        en: `From ${eventDayCutoff}, tables can only be booked together with event tickets.`
+      }));
+      return;
+    }
+
     if (submitBookingKind === 'BEACH') {
       if (form.timeFrom > '13:00') {
         setErrorMessage(c({
@@ -1708,13 +1718,22 @@ export default function UnifiedBookingPage() {
     && activePanelTable.status === 'free'
     && (tableFitsGuests(activePanelTable) || (bookingGroupSuggestion.required && bookingGroupSuggestion.complete));
   const activeBookingKind = activePanelTable?.bookingKind || resolvedBookingKind;
+  const eventDayPolicy = activeEventSlug ? null : bookableUnitsState.bookingPolicy;
+  const eventDayCutoff = eventDayPolicy?.cutoffTime || '';
+  const eventDayLeftBeachZoneIds = eventDayPolicy?.leftBeachZoneIds || [];
+  const selectedPositionKeepsNormalBeachHours = activePanelTable?.bookingKind === 'BEACH'
+    && eventDayLeftBeachZoneIds.includes(Number(activePanelTable?.zoneId));
+  const selectedPositionServiceUntil = eventDayPolicy
+    ? (selectedPositionKeepsNormalBeachHours ? eventDayPolicy.standardBeachUntil : eventDayCutoff)
+    : '';
   const activeTimeSlots = useMemo(() => {
     if (activeEventSlug) return eventArrivalSlots;
     if (activeBookingKind === 'BEACH') {
       return generateTimeSlots(form.date, today, currentTime, 'BEACH');
     }
-    return generateTableTimeSlots(form.date, today, currentTime, '09:00', '22:00');
-  }, [activeEventSlug, eventArrivalSlots, activeBookingKind, form.date, today, currentTime]);
+    const slots = generateTableTimeSlots(form.date, today, currentTime, '09:00', '22:00');
+    return eventDayCutoff ? slots.filter((slot) => slot < eventDayCutoff) : slots;
+  }, [activeEventSlug, eventArrivalSlots, activeBookingKind, eventDayCutoff, form.date, today, currentTime]);
   const isPierBeachPosition = activePanelTable?.bookingKind === 'BEACH' && isPierCode(activePanelTable.code);
 
   const pairedEveningUnit = useMemo(() => {
@@ -1724,8 +1743,11 @@ export default function UnifiedBookingPage() {
   }, [activePanelTable, eveningUnitsState.units]);
 
   const tableScenarioSlots = useMemo(
-    () => generateTableTimeSlots(form.date, today, currentTime, '09:00', '20:00'),
-    [form.date, today, currentTime]
+    () => {
+      const slots = generateTableTimeSlots(form.date, today, currentTime, '09:00', '20:00');
+      return eventDayCutoff ? slots.filter((slot) => slot < eventDayCutoff) : slots;
+    },
+    [eventDayCutoff, form.date, today, currentTime]
   );
   const eveningScenarioSlots = useMemo(
     () => generateTableTimeSlots(form.date, today, currentTime, EVENING_TABLE_START, '22:00'),
@@ -1824,7 +1846,11 @@ export default function UnifiedBookingPage() {
             <div>
               <span className="booking-scenario-kicker">{locale === 'ua' ? 'Денний сценарій' : locale === 'ru' ? 'Дневной сценарий' : 'Day scenario'}</span>
               <strong>{locale === 'ua' ? 'Пляжна позиція на день' : locale === 'ru' ? 'Пляжная позиция на день' : 'Beach place for the day'}</strong>
-              <p>{locale === 'ua' ? 'Бронь діє на день, явка обовʼязкова з 09:00 до 13:00.' : locale === 'ru' ? 'Бронь действует на день, явка обязательна с 09:00 до 13:00.' : 'The booking is valid for the day, arrival is required from 09:00 to 13:00.'}</p>
+              <p>{eventDayPolicy
+                ? selectedPositionKeepsNormalBeachHours
+                  ? (locale === 'ua' ? 'Явка обовʼязкова з 09:00 до 13:00. Лівий пляж працює до 20:00.' : locale === 'ru' ? 'Явка обязательна с 09:00 до 13:00. Левый пляж работает до 20:00.' : 'Arrival is required from 09:00 to 13:00. Left beach operates until 20:00.')
+                  : (locale === 'ua' ? `Явка обовʼязкова з 09:00 до 13:00. У день події позиція працює до ${eventDayCutoff}.` : locale === 'ru' ? `Явка обязательна с 09:00 до 13:00. В день мероприятия позиция работает до ${eventDayCutoff}.` : `Arrival is required from 09:00 to 13:00. On the event day this place operates until ${eventDayCutoff}.`)
+                : (locale === 'ua' ? 'Бронь діє на день, явка обовʼязкова з 09:00 до 13:00.' : locale === 'ru' ? 'Бронь действует на день, явка обязательна с 09:00 до 13:00.' : 'The booking is valid for the day, arrival is required from 09:00 to 13:00.')}</p>
             </div>
             {beachArrivalSlots.length ? (
               <label className="booking-scenario-field">
@@ -1847,7 +1873,9 @@ export default function UnifiedBookingPage() {
             <div>
               <span className="booking-scenario-kicker">{locale === 'ua' ? 'Ресторан' : locale === 'ru' ? 'Ресторан' : 'Restaurant'}</span>
               <strong>{locale === 'ua' ? 'Бронь столу' : locale === 'ru' ? 'Бронь стола' : 'Table booking'}</strong>
-              <p>{locale === 'ua' ? 'Оберіть час приходу, місце буде закріплено до закриття закладу.' : locale === 'ru' ? 'Выберите время прихода, место будет закреплено до закрытия заведения.' : 'Choose arrival time, the place is kept until venue closing.'}</p>
+              <p>{eventDayPolicy
+                ? (locale === 'ua' ? `Оберіть час приходу. У день події звичайна посадка працює до ${eventDayCutoff}.` : locale === 'ru' ? `Выберите время прихода. В день мероприятия обычная посадка работает до ${eventDayCutoff}.` : `Choose an arrival time. On the event day regular seating operates until ${eventDayCutoff}.`)
+                : (locale === 'ua' ? 'Оберіть час приходу, місце буде закріплено до закриття закладу.' : locale === 'ru' ? 'Выберите время прихода, место будет закреплено до закрытия заведения.' : 'Choose arrival time, the place is kept until venue closing.')}</p>
             </div>
             <label className="booking-scenario-field">
               <span>{locale === 'ua' ? 'Час приходу' : locale === 'ru' ? 'Время прихода' : 'Arrival time'}</span>
@@ -2079,6 +2107,35 @@ export default function UnifiedBookingPage() {
           <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {activeEventSlug ? (locale === 'ua' ? 'квит.' : locale === 'ru' ? 'бил.' : 'tickets') : (locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.')}</strong></span>
         </div>
       </div>
+
+      {eventDayPolicy ? (
+        <aside className="booking-event-day-notice" role="note">
+          <div>
+            <span className="booking-event-day-notice__label">
+              {locale === 'ua' ? 'Подія цього дня' : locale === 'ru' ? 'Мероприятие в этот день' : 'Event on this date'}
+            </span>
+            <strong>
+              {localizeField(eventDayPolicy.sessionName, locale)
+                || localizeField(eventDayPolicy.eventTitle, locale)
+                || (locale === 'ua' ? 'Вечірня подія' : locale === 'ru' ? 'Вечернее мероприятие' : 'Evening event')}
+            </strong>
+            <p>
+              {locale === 'ua'
+                ? `З ${eventDayCutoff} столики доступні лише з квитками на подію. Усі пляжні зони, крім «Лівого пляжу», працюють до ${eventDayCutoff}.`
+                : locale === 'ru'
+                  ? `С ${eventDayCutoff} столы доступны только с билетами на мероприятие. Все пляжные зоны, кроме «Левого пляжа», работают до ${eventDayCutoff}.`
+                  : `From ${eventDayCutoff}, tables are available only with event tickets. All beach zones except Left beach operate until ${eventDayCutoff}.`}
+            </p>
+          </div>
+          <Link
+            className="booking-event-day-notice__link"
+            to={`/booking?event=${encodeURIComponent(eventDayPolicy.eventSlug)}&date=${encodeURIComponent(form.date)}&guests=${form.guests}&kind=TABLE&usageMode=EVENING`}
+          >
+            {locale === 'ua' ? 'Бронювати на подію' : locale === 'ru' ? 'Бронировать на мероприятие' : 'Book for the event'}
+            <span aria-hidden="true">→</span>
+          </Link>
+        </aside>
+      ) : null}
 
       <div className="booking-flow-guide unified-booking-guide">
         <strong>{activeEventSlug ? (locale === 'ua' ? 'Оберіть столик на вечірній мапі.' : locale === 'ru' ? 'Выберите стол на вечерней карте.' : 'Choose a table on the evening map.') : (locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u043c\u0456\u0441\u0446\u0435 \u043d\u0430 \u043c\u0430\u043f\u0456.' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043c\u0435\u0441\u0442\u043e \u043d\u0430 \u043a\u0430\u0440\u0442\u0435.' : 'Choose a place on the map.')}</strong>
@@ -2568,9 +2625,14 @@ export default function UnifiedBookingPage() {
                       {activeEventSlug
                         ? (locale === 'ua' ? 'Столик гарантовано 30 хвилин від часу приходу' : locale === 'ru' ? 'Стол гарантирован 30 минут от времени прихода' : 'Table guaranteed for 30 minutes from arrival time')
                         : activeBookingKind === 'BEACH'
-                        ? (locale === 'ua' ? '\u0414\u0456\u0454 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : locale === 'ru' ? '\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : 'Valid for the day, arrival 09:00-13:00')
+                        ? selectedPositionServiceUntil
+                          ? (locale === 'ua' ? `Явка 09:00-13:00, позиція працює до ${selectedPositionServiceUntil}` : locale === 'ru' ? `Явка 09:00-13:00, позиция работает до ${selectedPositionServiceUntil}` : `Arrival 09:00-13:00, place operates until ${selectedPositionServiceUntil}`)
+                          : (locale === 'ua' ? '\u0414\u0456\u0454 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : locale === 'ru' ? '\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043d\u0430 \u0434\u0435\u043d\u044c, \u044f\u0432\u043a\u0430 09:00-13:00' : 'Valid for the day, arrival 09:00-13:00')
                         : (locale === 'ua' ? '\u041e\u0431\u0435\u0440\u0456\u0442\u044c \u0447\u0430\u0441 \u043f\u0440\u0438\u0445\u043e\u0434\u0443' : locale === 'ru' ? '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0440\u0435\u043c\u044f \u043f\u0440\u0438\u0445\u043e\u0434\u0430' : 'Choose arrival time')}
                     </strong>
+                    {!activeEventSlug && eventDayPolicy && activeBookingKind === 'TABLE' ? (
+                      <p>{locale === 'ua' ? `Звичайна бронь столу діє до ${eventDayCutoff}. Далі доступна лише посадка за квитками на подію.` : locale === 'ru' ? `Обычная бронь стола действует до ${eventDayCutoff}. Далее доступна только посадка по билетам на мероприятие.` : `Regular table booking is valid until ${eventDayCutoff}. After that, seating is available only with event tickets.`}</p>
+                    ) : null}
                     {isPierBeachPosition ? (
                       <p>{locale === 'ua' ? '\u0412\u0432\u0435\u0447\u0435\u0440\u0456 \u0446\u044f \u043f\u043e\u0437\u0438\u0446\u0456\u044f \u0437\u043c\u043e\u0436\u0435 \u043f\u0440\u0430\u0446\u044e\u0432\u0430\u0442\u0438 \u044f\u043a \u0441\u0442\u0456\u043b \u043d\u0430 \u043f\u0456\u0440\u0441\u0456.' : locale === 'ru' ? '\u0412\u0435\u0447\u0435\u0440\u043e\u043c \u044d\u0442\u0430 \u043f\u043e\u0437\u0438\u0446\u0438\u044f \u0441\u043c\u043e\u0436\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u043a\u0430\u043a \u0441\u0442\u043e\u043b \u043d\u0430 \u043f\u0438\u0440\u0441\u0435.' : 'In the evening this place can work as a pier table.'}</p>
                     ) : null}

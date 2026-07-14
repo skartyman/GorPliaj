@@ -112,7 +112,9 @@ async function getReservationTable({ tableId, mapId, zoneId, reservationDate = n
       seatsMin: true,
       seatsMax: true,
       isActive: true,
-      isBookable: true
+      isBookable: true,
+      zone: { select: { id: true, name: true } },
+      map: { select: { id: true, usageMode: true } }
     }
   });
 
@@ -231,6 +233,97 @@ function getDateKeyRange(dateKey) {
   return { start, end };
 }
 
+function localizedText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return String(value);
+  return value.ua || value.uk || value.ru || value.en || '';
+}
+
+function isLeftBeachZone(zone) {
+  const haystack = [
+    localizedText(zone?.name),
+    zone?.name?.ua,
+    zone?.name?.uk,
+    zone?.name?.ru,
+    zone?.name?.en
+  ].filter(Boolean).join(' ').toLowerCase();
+  return haystack.includes('лівий пляж')
+    || haystack.includes('левый пляж')
+    || haystack.includes('left beach');
+}
+
+async function getEventDayBookingPolicy(reservationDate) {
+  const { start, end } = getDateRange(reservationDate);
+  const session = await prisma.eventSession.findFirst({
+    where: {
+      isActive: true,
+      startsAt: { gte: start, lt: end },
+      event: {
+        status: 'PUBLISHED',
+        ctaType: { in: ['TICKETS', 'BOTH'] }
+      }
+    },
+    orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+    select: {
+      id: true,
+      name: true,
+      startsAt: true,
+      endsAt: true,
+      event: {
+        select: { id: true, slug: true, title: true }
+      }
+    }
+  });
+
+  if (!session) return null;
+
+  const cutoffAt = new Date(session.startsAt.getTime() - 60 * 60 * 1000);
+  return {
+    eventId: session.event.id,
+    eventSlug: session.event.slug,
+    eventTitle: session.event.title,
+    sessionId: session.id,
+    sessionName: session.name,
+    startsAt: session.startsAt,
+    endsAt: session.endsAt,
+    cutoffAt,
+    cutoffTime: getVenueClockParts(cutoffAt).timeKey
+  };
+}
+
+async function getRegularBookingRestriction({ reservationDate, timeFrom, table }) {
+  if (String(table?.map?.usageMode || '').toUpperCase() !== 'DAY') return null;
+
+  const policy = await getEventDayBookingPolicy(reservationDate);
+  if (!policy) return null;
+
+  const keepsNormalBeachHours = String(table?.bookingKind || '').toUpperCase() === 'BEACH'
+    && isLeftBeachZone(table?.zone);
+  return {
+    ...policy,
+    keepsNormalBeachHours,
+    serviceUntil: keepsNormalBeachHours ? null : policy.cutoffAt,
+    blocked: !keepsNormalBeachHours && timeFrom >= policy.cutoffAt
+  };
+}
+
+function getEventDayRestrictionMessage(locale, cutoffTime) {
+  if (locale === 'ru') {
+    return `На эту дату запланировано мероприятие. С ${cutoffTime} столы бронируются только вместе с билетами на мероприятие.`;
+  }
+  if (locale === 'en') {
+    return `An event is scheduled for this date. From ${cutoffTime}, tables can only be booked together with event tickets.`;
+  }
+  return `На цю дату заплановано подію. З ${cutoffTime} столики бронюються лише разом із квитками на подію.`;
+}
+
+function clampBookingEnd(timeTo, restriction) {
+  return restriction?.serviceUntil && restriction.serviceUntil < timeTo
+    ? restriction.serviceUntil
+    : timeTo;
+}
+
 function timeToMinutes(value) {
   const [hours, minutes] = String(value || '').split(':').map(Number);
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
@@ -298,14 +391,31 @@ async function findTableHoldConflict({ tableId, reservationDate, timeFrom, timeT
 }
 
 async function createTableHold({ tableId, reservationDate, timeFrom, timeTo, locale }) {
-  const existingReservation = await findReservationConflict({ tableId, reservationDate, timeFrom, timeTo });
+  const table = await prisma.venueTable.findUnique({
+    where: { id: tableId },
+    select: {
+      id: true,
+      bookingKind: true,
+      zone: { select: { id: true, name: true } },
+      map: { select: { id: true, usageMode: true } }
+    }
+  });
+  const restriction = await getRegularBookingRestriction({ reservationDate, timeFrom, table });
+  if (restriction?.blocked) {
+    const error = new Error(getEventDayRestrictionMessage(locale, restriction.cutoffTime));
+    error.statusCode = 409;
+    throw error;
+  }
+  const effectiveTimeTo = clampBookingEnd(timeTo, restriction);
+
+  const existingReservation = await findReservationConflict({ tableId, reservationDate, timeFrom, timeTo: effectiveTimeTo });
   if (existingReservation) {
     const error = new Error(localizeMessage('hold.conflict.reservation', locale));
     error.statusCode = 409;
     throw error;
   }
 
-  const existingHold = await findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo });
+  const existingHold = await findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo: effectiveTimeTo });
   if (existingHold) {
     const error = new Error(localizeMessage('hold.conflict.hold', locale));
     error.statusCode = 409;
@@ -320,7 +430,7 @@ async function createTableHold({ tableId, reservationDate, timeFrom, timeTo, loc
       tableId,
       reservationDate,
       timeFrom,
-      timeTo,
+      timeTo: effectiveTimeTo,
       holdToken,
       expiresAt,
       status: 'ACTIVE'
@@ -340,6 +450,25 @@ async function createTableHolds({ tableIds, reservationDate, timeFrom, timeTo, l
 
   const { start, end } = getDateRange(reservationDate);
   const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
+  const tables = await prisma.venueTable.findMany({
+    where: { id: { in: uniqueTableIds } },
+    select: {
+      id: true,
+      bookingKind: true,
+      zone: { select: { id: true, name: true } },
+      map: { select: { id: true, usageMode: true } }
+    }
+  });
+  const restrictions = await Promise.all(tables.map((table) => (
+    getRegularBookingRestriction({ reservationDate, timeFrom, table })
+  )));
+  const blockedRestriction = restrictions.find((restriction) => restriction?.blocked);
+  if (blockedRestriction) {
+    const error = new Error(getEventDayRestrictionMessage(locale, blockedRestriction.cutoffTime));
+    error.statusCode = 409;
+    throw error;
+  }
+  const effectiveTimeTo = restrictions.reduce(clampBookingEnd, timeTo);
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -348,7 +477,7 @@ async function createTableHolds({ tableIds, reservationDate, timeFrom, timeTo, l
           tableId: { in: uniqueTableIds },
           reservationDate: { gte: start, lt: end },
           status: { in: ACTIVE_RESERVATION_STATUSES },
-          timeFrom: { lt: timeTo },
+          timeFrom: { lt: effectiveTimeTo },
           timeTo: { gt: timeFrom }
         },
         select: { tableId: true }
@@ -365,7 +494,7 @@ async function createTableHolds({ tableIds, reservationDate, timeFrom, timeTo, l
           reservationDate: { gte: start, lt: end },
           status: 'ACTIVE',
           expiresAt: { gt: new Date() },
-          timeFrom: { lt: timeTo },
+          timeFrom: { lt: effectiveTimeTo },
           timeTo: { gt: timeFrom }
         },
         select: { tableId: true }
@@ -380,7 +509,7 @@ async function createTableHolds({ tableIds, reservationDate, timeFrom, timeTo, l
       for (const tableId of uniqueTableIds) {
         const holdToken = crypto.randomUUID();
         await tx.tableHold.create({
-          data: { tableId, reservationDate, timeFrom, timeTo, holdToken, expiresAt, status: 'ACTIVE' }
+          data: { tableId, reservationDate, timeFrom, timeTo: effectiveTimeTo, holdToken, expiresAt, status: 'ACTIVE' }
         });
         holds.push({ tableId, holdToken });
       }
@@ -585,7 +714,8 @@ async function completeClosedDayReservations(now = new Date()) {
     const venueNow = getVenueClockParts(now);
     const todayRange = getDateKeyRange(venueNow.dateKey);
     const dateFilters = [
-      { reservationDate: { lt: todayRange.start } }
+      { reservationDate: { lt: todayRange.start } },
+      { timeTo: { lte: now } }
     ];
 
     if (venueNow.minutes >= BEACH_CLOSING_MINUTES) {
@@ -610,7 +740,8 @@ async function completeClosedDayReservations(now = new Date()) {
       select: {
         id: true,
         status: true,
-        bookingKind: true
+        bookingKind: true,
+        timeTo: true
       }
     });
 
@@ -627,11 +758,16 @@ async function completeClosedDayReservations(now = new Date()) {
       if (result.count > 0) {
         completedCount += result.count;
         const isBeach = reservation.bookingKind === 'BEACH';
-        const automaticClosingTime = isBeach ? '20:00' : closingTime;
+        const endedByOwnTime = Boolean(reservation.timeTo && reservation.timeTo <= now);
+        const automaticClosingTime = endedByOwnTime
+          ? getVenueClockParts(reservation.timeTo).timeKey
+          : (isBeach ? '20:00' : closingTime);
         await prisma.reservationLog.create({
           data: {
             reservationId: reservation.id,
-            action: isBeach ? 'AUTO_COMPLETE_BEACH_AT_20' : 'AUTO_COMPLETE_AT_CLOSING',
+            action: endedByOwnTime
+              ? 'AUTO_COMPLETE_AT_BOOKING_END'
+              : (isBeach ? 'AUTO_COMPLETE_BEACH_AT_20' : 'AUTO_COMPLETE_AT_CLOSING'),
             oldStatus: reservation.status,
             newStatus: 'COMPLETED',
             comment: `Automatically completed at ${automaticClosingTime} (${VENUE_TIME_ZONE}).`
@@ -659,6 +795,11 @@ module.exports = {
   getReservationObject,
   getPublicEventWithEntryTicket,
   getPublicReservationByTicketCode,
+  getEventDayBookingPolicy,
+  getRegularBookingRestriction,
+  getEventDayRestrictionMessage,
+  isLeftBeachZone,
+  clampBookingEnd,
   matchesGuestCapacity,
   findReservationConflict,
   findTableHoldConflict,

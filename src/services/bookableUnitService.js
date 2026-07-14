@@ -367,6 +367,17 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
     ...map,
     tables: effectiveTables
   };
+  const mapUsageMode = inferMapUsageMode(map);
+  const eventDayPolicy = mapUsageMode === 'DAY'
+    ? await reservationService.getEventDayBookingPolicy(reservationDate)
+    : null;
+  const leftBeachZoneIds = eventDayPolicy
+    ? map.zones.filter(reservationService.isLeftBeachZone).map((zone) => zone.id)
+    : [];
+  const selectedTime = timeFrom instanceof Date ? timeFrom : new Date(timeFrom);
+  const isAtOrAfterEventCutoff = eventDayPolicy
+    && !Number.isNaN(selectedTime.getTime())
+    && selectedTime >= eventDayPolicy.cutoffAt;
 
   const positionTypes = await prisma.positionType.findMany({ where: { isActive: true } });
   const positionTypeMap = Object.fromEntries(
@@ -376,16 +387,21 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
   const busy = new Set(availability.busyTableIds || []);
   const held = new Set(availability.heldTableIds || []);
   const units = buildUnitsFromMap(effectiveMap, positionTypeMap, reservationDate)
-    .map((unit) => ({
-      ...unit,
-      status: !unit.isActive || !unit.isBookable
-        ? 'unavailable'
-        : busy.has(unit.tableId)
-          ? 'busy'
-          : held.has(unit.tableId)
-            ? 'held'
-            : 'free'
-    }))
+    .map((unit) => {
+      const keepsNormalBeachHours = unit.bookingKind === 'BEACH' && leftBeachZoneIds.includes(unit.zoneId);
+      const eventCutoffApplies = Boolean(eventDayPolicy && !keepsNormalBeachHours);
+      return {
+        ...unit,
+        serviceUntil: eventCutoffApplies ? eventDayPolicy.cutoffTime : (keepsNormalBeachHours ? '20:00' : null),
+        status: !unit.isActive || !unit.isBookable || (eventCutoffApplies && isAtOrAfterEventCutoff)
+          ? 'unavailable'
+          : busy.has(unit.tableId)
+            ? 'busy'
+            : held.has(unit.tableId)
+              ? 'held'
+              : 'free'
+      };
+    })
     .filter((unit) => {
       if (bookingKind && unit.bookingKind !== bookingKind) return false;
       if (zoneId && unit.zoneId !== Number(zoneId)) return false;
@@ -398,7 +414,7 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
       slug: map.slug,
       name: normalizeLocalizedValue(map.name),
       description: map.description,
-      usageMode: inferMapUsageMode(map),
+      usageMode: mapUsageMode,
       width: map.width,
       height: map.height,
       backgroundColor: map.backgroundColor,
@@ -412,7 +428,20 @@ async function getMapBookableUnits({ mapId, reservationDate, timeFrom, timeTo, g
       availableCount: units.filter((unit) => unit.zoneId === zone.id && unit.status === 'free').length,
       totalCount: units.filter((unit) => unit.zoneId === zone.id).length
     })),
-    units
+    units,
+    bookingPolicy: eventDayPolicy ? {
+      eventId: eventDayPolicy.eventId,
+      eventSlug: eventDayPolicy.eventSlug,
+      eventTitle: eventDayPolicy.eventTitle,
+      sessionId: eventDayPolicy.sessionId,
+      sessionName: eventDayPolicy.sessionName,
+      startsAt: eventDayPolicy.startsAt,
+      endsAt: eventDayPolicy.endsAt,
+      cutoffAt: eventDayPolicy.cutoffAt,
+      cutoffTime: eventDayPolicy.cutoffTime,
+      leftBeachZoneIds,
+      standardBeachUntil: '20:00'
+    } : null
   };
 }
 

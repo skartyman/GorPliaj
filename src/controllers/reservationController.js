@@ -231,6 +231,7 @@ function allocateGuestsAcrossTables(tables, totalGuests) {
 
 async function createGroupReservation(req, res, context) {
   const { guests, reservationDate, timeFrom, timeTo, event, eventSlug, customerEmail, locale } = context;
+  let effectiveTimeTo = timeTo;
   const requestedIds = [...new Set(req.body.bookableUnitIds.map((value) => normalizeText(value)).filter(Boolean))];
   if (requestedIds.length < 2) return null;
 
@@ -266,6 +267,19 @@ async function createGroupReservation(req, res, context) {
     return res.status(400).json({ message: 'Grouped positions must belong to the same map and booking scenario.' });
   }
 
+  if (!event) {
+    const restrictions = await Promise.all(tables.map((table) => (
+      reservationService.getRegularBookingRestriction({ reservationDate, timeFrom, table })
+    )));
+    const blockedRestriction = restrictions.find((restriction) => restriction?.blocked);
+    if (blockedRestriction) {
+      return res.status(409).json({
+        message: reservationService.getEventDayRestrictionMessage(locale, blockedRestriction.cutoffTime)
+      });
+    }
+    effectiveTimeTo = restrictions.reduce(reservationService.clampBookingEnd, effectiveTimeTo);
+  }
+
   const totalCapacity = tables.reduce((sum, table) => sum + Math.max(1, Number(table.seatsMax || 1)), 0);
   if (totalCapacity < guests) {
     return res.status(400).json({ message: 'The selected positions do not have enough capacity for all guests.' });
@@ -275,11 +289,11 @@ async function createGroupReservation(req, res, context) {
     .map((hold) => [Number(hold?.tableId), normalizeText(hold?.holdToken)]));
 
   for (const table of tables) {
-    const holdConflict = await reservationService.findTableHoldConflict({ tableId: table.id, reservationDate, timeFrom, timeTo });
+    const holdConflict = await reservationService.findTableHoldConflict({ tableId: table.id, reservationDate, timeFrom, timeTo: effectiveTimeTo });
     if (holdConflict && holdConflict.holdToken !== holdTokens.get(table.id)) {
       return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
     }
-    const reservationConflict = await reservationService.findReservationConflict({ tableId: table.id, reservationDate, timeFrom, timeTo });
+    const reservationConflict = await reservationService.findReservationConflict({ tableId: table.id, reservationDate, timeFrom, timeTo: effectiveTimeTo });
     if (reservationConflict) {
       return res.status(409).json({ message: localizeMessage('reservation.conflict', locale) });
     }
@@ -325,7 +339,7 @@ async function createGroupReservation(req, res, context) {
     guests: allocations[index],
     reservationDate,
     timeFrom,
-    timeTo,
+    timeTo: effectiveTimeTo,
     commentCustomer: customerComment,
     commentAdmin: paymentComment,
     depositRequired: positionAmounts[index].deposit > 0,
@@ -445,7 +459,7 @@ async function createReservation(req, res) {
 
     const reservationDate = new Date(`${req.body.reservationDate}T00:00:00${VENUE_UTC_OFFSET}`);
     const timeFrom = toDateTime(req.body.reservationDate, req.body.timeFrom);
-    const timeTo = getClosingDateTime(req.body.reservationDate);
+    let timeTo = getClosingDateTime(req.body.reservationDate);
 
     if (Number.isNaN(reservationDate.getTime()) || Number.isNaN(timeFrom.getTime()) || Number.isNaN(timeTo.getTime())) {
       return res.status(400).json({ message: 'Invalid booking date or time.' });
@@ -505,11 +519,21 @@ async function createReservation(req, res) {
       return res.status(400).json({ message: 'Selected booking position is not available.' });
     }
 
+    const locale = req.body?.locale || 'ua';
+    if (!event) {
+      const restriction = await reservationService.getRegularBookingRestriction({ reservationDate, timeFrom, table });
+      if (restriction?.blocked) {
+        return res.status(409).json({
+          message: reservationService.getEventDayRestrictionMessage(locale, restriction.cutoffTime)
+        });
+      }
+      timeTo = reservationService.clampBookingEnd(timeTo, restriction);
+    }
+
     if (!reservationService.matchesGuestCapacity(table, guests)) {
       return res.status(400).json({ message: 'Guest count does not match the selected position capacity.' });
     }
 
-    const locale = req.body?.locale || 'ua';
     const holdToken = normalizeText(req.body.holdToken);
     if (holdToken) {
       const holdConflict = await reservationService.findTableHoldConflict({ tableId, reservationDate, timeFrom, timeTo });
