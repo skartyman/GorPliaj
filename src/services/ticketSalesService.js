@@ -377,6 +377,10 @@ async function createOrder(input) {
     });
     const normalizedOrder = toOrder(order);
     const delivery = await deliverOrderIfPaid(normalizedOrder);
+    if (normalizedOrder.status === 'PAID') {
+      const { sendTicketSaleMessage } = require('./waiterTelegramService');
+      await sendTicketSaleMessage(normalizedOrder);
+    }
     return { type: 'SUCCESS', order: normalizedOrder, delivery };
   } catch (error) {
     if (error.message === 'INVALID_TICKET_TYPES') return { type: 'INVALID', message: 'One or more ticket types are unavailable.' };
@@ -607,6 +611,10 @@ async function updateOrderStatus(id, status) {
   });
   const normalizedOrder = toOrder(order);
   const delivery = await deliverOrderIfPaid(normalizedOrder);
+  if (normalizedStatus === 'PAID' && !normalizedOrder.payment?.reservationId) {
+    const { sendTicketSaleMessage } = require('./waiterTelegramService');
+    await sendTicketSaleMessage(normalizedOrder);
+  }
   return { type: 'SUCCESS', order: normalizedOrder, delivery };
 }
 

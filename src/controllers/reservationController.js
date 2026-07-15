@@ -422,6 +422,18 @@ async function createGroupReservation(req, res, context) {
     } catch (emailError) {
       console.error(`[reservationController] Failed to send grouped booking email #${reservation.id}:`, emailError.message);
     }
+    try {
+      await waiterTelegramService.sendNewReservationMessage(reservation, {
+        positions: positionNames,
+        zones: tables.map((table) => localizeJson(table.zone?.name)).filter(Boolean),
+        guests,
+        totalAmount: 0,
+        isPaid: false,
+        eventTitle: entryBreakdown?.eventTitle || ''
+      });
+    } catch (telegramError) {
+      console.error(`[reservationController] Failed to send telegram notification for grouped reservation #${reservation.id}:`, telegramError.message);
+    }
   }
 
   return res.status(201).json({

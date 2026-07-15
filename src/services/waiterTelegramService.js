@@ -15,6 +15,39 @@ function getBot() {
   return bot;
 }
 
+function localizedValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value.ua || value.ru || value.en || '';
+}
+
+function formatVenueDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || '');
+  return new Intl.DateTimeFormat('uk-UA', {
+    timeZone: 'Europe/Kyiv',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
+
+function formatVenueTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || '');
+  return new Intl.DateTimeFormat('uk-UA', {
+    timeZone: 'Europe/Kyiv',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
+}
+
+function money(value, currency = 'UAH') {
+  const amount = Number(value || 0);
+  return `${Number.isInteger(amount) ? amount : amount.toFixed(2)} ${currency}`;
+}
+
 async function sendTelegramMessage(chatId, text, options = {}, logLabel = 'Telegram notify') {
   if (!bot || !chatId) return;
   try {
@@ -93,6 +126,76 @@ async function notifyWaiterNewCall(waiter, tableId, customerName) {
   ]);
 }
 
+async function sendNewReservationMessage(reservation, options = {}) {
+  if (!bot || !WAITER_ADMIN_CHAT_ID || !reservation) return;
+
+  const bookingKind = String(reservation.bookingKind || reservation.table?.bookingKind || 'TABLE').toUpperCase();
+  const isBeach = bookingKind === 'BEACH';
+  const eventTitle = localizedValue(reservation.event?.title) || options.eventTitle || '';
+  const positions = Array.isArray(options.positions) && options.positions.length
+    ? options.positions
+    : [localizedValue(reservation.table?.serviceName) || localizedValue(reservation.table?.name) || reservation.table?.code]
+      .filter(Boolean);
+  const zones = Array.isArray(options.zones) && options.zones.length
+    ? options.zones
+    : [localizedValue(reservation.zone?.name)].filter(Boolean);
+  const guests = Number(options.guests || reservation.groupGuestCount || reservation.guests || 0);
+  const totalAmount = Number(options.totalAmount ?? reservation.payment?.amount ?? 0);
+  const currency = options.currency || reservation.payment?.currency || 'UAH';
+  const isPaid = options.isPaid ?? reservation.payment?.status === 'PAID';
+  const title = eventTitle
+    ? '🎟 Нова бронь на подію'
+    : isBeach
+      ? '🏖 Продано пляжну послугу'
+      : '📅 Нове бронювання столу';
+
+  const text = [
+    title,
+    `#${reservation.id}${reservation.ticketCode ? ` · ${reservation.ticketCode}` : ''}`,
+    eventTitle ? `🎉 ${eventTitle}` : '',
+    positions.length ? `📍 ${positions.join(', ')}` : '',
+    zones.length ? `🧭 ${[...new Set(zones)].join(', ')}` : '',
+    `🗓 ${formatVenueDate(reservation.reservationDate)} · ${formatVenueTime(reservation.timeFrom)}`,
+    guests ? `👥 Гостей: ${guests}` : '',
+    reservation.customerName ? `👤 ${reservation.customerName}` : '',
+    reservation.customerPhone ? `📞 ${reservation.customerPhone}` : '',
+    reservation.customerEmail ? `✉️ ${reservation.customerEmail}` : '',
+    totalAmount > 0
+      ? `${isPaid ? '✅ Оплачено' : '💳 До сплати'}: ${money(totalAmount, currency)}`
+      : '🟢 Без онлайн-оплати'
+  ].filter(Boolean).join('\n');
+
+  await sendTelegramMessage(WAITER_ADMIN_CHAT_ID, text, {}, 'Admin Telegram reservation notify');
+}
+
+async function sendTicketSaleMessage(order) {
+  if (!bot || !WAITER_ADMIN_CHAT_ID || !order) return;
+
+  const eventTitle = localizedValue(order.event?.title);
+  const sessionName = localizedValue(order.eventSession?.name);
+  const tickets = Array.isArray(order.tickets) ? order.tickets : [];
+  const typeCounts = new Map();
+  for (const ticket of tickets) {
+    const name = localizedValue(ticket.ticketType?.name) || 'Вхідний квиток';
+    typeCounts.set(name, (typeCounts.get(name) || 0) + 1);
+  }
+  const ticketSummary = [...typeCounts.entries()].map(([name, count]) => `${name} × ${count}`).join(', ');
+
+  const text = [
+    '🎫 Продано квитки',
+    order.orderNumber ? `#${order.orderNumber}` : '',
+    eventTitle ? `🎉 ${eventTitle}` : '',
+    sessionName ? `🗓 ${sessionName}` : '',
+    ticketSummary ? `🎟 ${ticketSummary}` : `🎟 Квитків: ${tickets.length}`,
+    order.customerName ? `👤 ${order.customerName}` : '',
+    order.customerPhone ? `📞 ${order.customerPhone}` : '',
+    order.customerEmail ? `✉️ ${order.customerEmail}` : '',
+    `✅ Оплачено: ${money(order.amount, order.currency || 'UAH')}`
+  ].filter(Boolean).join('\n');
+
+  await sendTelegramMessage(WAITER_ADMIN_CHAT_ID, text, {}, 'Admin Telegram ticket sale notify');
+}
+
 function setupWaiterBotWebhook(app) {
   if (!bot) return;
 
@@ -163,5 +266,7 @@ module.exports = {
   getWaiterBotLink,
   notifyWaiterNewOrder,
   notifyWaiterNewCall,
+  sendNewReservationMessage,
+  sendTicketSaleMessage,
   setupWaiterBotWebhook
 };

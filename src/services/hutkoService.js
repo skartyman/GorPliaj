@@ -2,12 +2,49 @@ const https = require('https');
 const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
 const { sendTicketEmail } = require('./emailService');
+const { sendNewReservationMessage } = require('./waiterTelegramService');
 const { buildVerifyUrl, buildReservationStatusUrl, buildReservationPdfUrl, buildDepositVerifyUrl } = require('../utils/ticketSignature');
 
 function localizedValue(value) {
   if (!value) return '';
   if (typeof value === 'string') return value;
   return value.ua || value.ru || value.en || '';
+}
+
+async function notifyPaidReservation(reservationId) {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      table: { select: { code: true, name: true, serviceName: true, bookingKind: true } },
+      zone: { select: { name: true } },
+      event: { select: { title: true } },
+      payment: true
+    }
+  });
+  if (!reservation) return;
+
+  const groupReservations = reservation.bookingGroupId
+    ? await prisma.reservation.findMany({
+      where: { bookingGroupId: reservation.bookingGroupId },
+      orderBy: [{ isGroupLead: 'desc' }, { id: 'asc' }],
+      include: {
+        table: { select: { code: true, name: true, serviceName: true } },
+        zone: { select: { name: true } }
+      }
+    })
+    : [reservation];
+
+  await sendNewReservationMessage(reservation, {
+    positions: groupReservations
+      .map((item) => localizedValue(item.table?.serviceName) || localizedValue(item.table?.name) || item.table?.code)
+      .filter(Boolean),
+    zones: groupReservations.map((item) => localizedValue(item.zone?.name)).filter(Boolean),
+    guests: Number(reservation.groupGuestCount || reservation.guests || 0),
+    totalAmount: Number(reservation.payment?.amount || 0),
+    currency: reservation.payment?.currency || 'UAH',
+    isPaid: true,
+    eventTitle: localizedValue(reservation.event?.title)
+  });
 }
 
 function postToHutko(path, data) {
@@ -366,7 +403,7 @@ async function processCallback(payload) {
         where: { id: reservationId },
         select: { bookingGroupId: true }
       });
-      await prisma.reservation.updateMany({
+      const confirmation = await prisma.reservation.updateMany({
         where: {
           ...(groupLead?.bookingGroupId ? { bookingGroupId: groupLead.bookingGroupId } : { id: reservationId }),
           status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
@@ -397,6 +434,10 @@ async function processCallback(payload) {
       if (reservation?.payment?.ticketOrderId) {
         const ticketSalesService = require('./ticketSalesService');
         await ticketSalesService.updateOrderStatus(reservation.payment.ticketOrderId, 'PAID');
+      }
+
+      if (confirmation.count > 0) {
+        await notifyPaidReservation(reservationId);
       }
 
       if (reservation && reservation.customerEmail) {
@@ -538,13 +579,16 @@ async function syncReservationPaymentStatus(reservationId) {
       where: { id: reservationId },
       select: { bookingGroupId: true }
     });
-    await prisma.reservation.updateMany({
+    const confirmation = await prisma.reservation.updateMany({
       where: {
         ...(reservation?.bookingGroupId ? { bookingGroupId: reservation.bookingGroupId } : { id: reservationId }),
         status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
       },
       data: { status: 'CONFIRMED' }
     });
+    if (confirmation.count > 0) {
+      await notifyPaidReservation(reservationId);
+    }
   }
 
   return { type: 'SUCCESS', status: data };

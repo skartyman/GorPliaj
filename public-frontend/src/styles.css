@@ -3021,18 +3021,21 @@ h3 {
 }
 
 .booking-email-purpose > span {
-  display: grid;
+  display: inline-flex;
   width: 15px;
   height: 15px;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   margin-top: 1px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-family: Georgia, serif;
-  font-size: 0.64rem;
-  font-style: italic;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  font-style: normal;
   font-weight: 700;
-  line-height: 1;
+  line-height: 15px;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .booking-consent-row {

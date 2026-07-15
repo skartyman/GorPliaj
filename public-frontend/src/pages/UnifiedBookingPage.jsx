@@ -789,6 +789,7 @@ export default function UnifiedBookingPage() {
   const [bookableUnitsState, setBookableUnitsState] = useState({ loading: false, error: '', units: [], bookingPolicy: null });
   const [eveningUnitsState, setEveningUnitsState] = useState({ loading: false, error: '', units: [] });
   const [scenarioSelected, setScenarioSelected] = useState(false);
+  const [eveningTableOverride, setEveningTableOverride] = useState(null);
 
   useMeta(`${t('mapTitle')} · GorPliaj`, 'Interactive venue map with live table statuses.');
 
@@ -1009,7 +1010,15 @@ export default function UnifiedBookingPage() {
               bookingKind: 'TABLE'
             }).then((payload) => (
               Array.isArray(payload?.units)
-                ? payload.units.map((unit) => ({ ...unit, eveningMapId: map.id }))
+                ? payload.units.map((unit) => {
+                  const tableId = Number(unit.tableId || String(unit.id || '').replace(/^table:/, ''));
+                  return {
+                    ...unit,
+                    id: tableId,
+                    tableId,
+                    eveningMapId: map.id
+                  };
+                })
                 : []
             )).catch(() => [])
           )
@@ -1017,7 +1026,13 @@ export default function UnifiedBookingPage() {
       })
       .then((groups) => {
         if (cancelled) return;
-        setEveningUnitsState({ loading: false, error: '', units: groups.flat() });
+        const units = groups.flat();
+        setEveningUnitsState({ loading: false, error: '', units });
+        setEveningTableOverride((current) => {
+          if (!current?.code) return current;
+          const code = String(current.code).trim().toUpperCase();
+          return units.find((unit) => String(unit.code || '').trim().toUpperCase() === code) || current;
+        });
       })
       .catch((error) => {
         if (cancelled) return;
@@ -1354,6 +1369,7 @@ export default function UnifiedBookingPage() {
     setHoldExpiresAt('');
     setHoldError('');
     setScenarioSelected(false);
+    setEveningTableOverride(null);
 
     const next = new URLSearchParams(window.location.search);
     next.delete('holdToken');
@@ -1366,6 +1382,8 @@ export default function UnifiedBookingPage() {
 
   function selectTable(tableId) {
     clearCompletedBookingResult();
+    setScenarioSelected(false);
+    setEveningTableOverride(null);
     const requestedTable = tableById.get(tableId);
     const preferredTable = findBestSingleFitTable(requestedTable) || requestedTable;
     const preferredTableId = preferredTable?.id || tableId;
@@ -1392,6 +1410,8 @@ export default function UnifiedBookingPage() {
     }
 
     clearCompletedBookingResult();
+    setScenarioSelected(false);
+    setEveningTableOverride(null);
     setSelectedObjectId(object.id);
     setSelectedTableId(null);
     const foundTable = object.tableId ? tableById.get(object.tableId) : null;
@@ -1428,6 +1448,7 @@ export default function UnifiedBookingPage() {
     setSelectedTableId(null);
     setSelectedObjectId(null);
     setScenarioSelected(false);
+    setEveningTableOverride(null);
 
     if (isMobileViewport) {
       window.setTimeout(() => {
@@ -1622,9 +1643,47 @@ export default function UnifiedBookingPage() {
       || null;
   }, [eventInfo, activeEventSession, ticketTypes]);
 
+  const eveningBookingGroupSuggestion = useMemo(() => {
+    const primary = eveningTableOverride;
+    if (!primary) return { required: false, complete: false, tables: [], totalCapacity: 0 };
+
+    const primaryCapacity = Math.max(1, Number(primary.seatsMax || 1));
+    if (form.guests <= primaryCapacity) {
+      return { required: false, complete: true, tables: [primary], totalCapacity: primaryCapacity };
+    }
+
+    const candidates = eveningUnitsState.units
+      .filter((table) => (
+        Number(table.id) !== Number(primary.id)
+        && table.status === 'free'
+        && table.bookingKind === 'TABLE'
+      ))
+      .map((table) => ({
+        table,
+        sameZone: Number(table.zoneId) === Number(primary.zoneId) ? 0 : 1,
+        sameType: table.positionType === primary.positionType ? 0 : 1,
+        distance: Math.hypot(Number(table.mapX || 0) - Number(primary.mapX || 0), Number(table.mapY || 0) - Number(primary.mapY || 0))
+      }))
+      .sort((left, right) => left.sameZone - right.sameZone || left.sameType - right.sameType || left.distance - right.distance);
+
+    const tables = [primary];
+    let totalCapacity = primaryCapacity;
+    for (const candidate of candidates) {
+      if (totalCapacity >= form.guests) break;
+      tables.push(candidate.table);
+      totalCapacity += Math.max(1, Number(candidate.table.seatsMax || 1));
+    }
+
+    return { required: true, complete: totalCapacity >= form.guests, tables, totalCapacity };
+  }, [eveningTableOverride, eveningUnitsState.units, form.guests]);
+
+  const effectiveBookingGroupSuggestion = eveningTableOverride
+    ? eveningBookingGroupSuggestion
+    : bookingGroupSuggestion;
+
   const paymentPreview = useMemo(() => {
-    const activeUnit = selectedObjectTable || selectedTable;
-    const bookingTables = bookingGroupSuggestion.tables.length ? bookingGroupSuggestion.tables : (activeUnit ? [activeUnit] : []);
+    const activeUnit = eveningTableOverride || selectedObjectTable || selectedTable;
+    const bookingTables = effectiveBookingGroupSuggestion.tables.length ? effectiveBookingGroupSuggestion.tables : (activeUnit ? [activeUnit] : []);
     const rentalAmount = activeEventSlug ? 0 : bookingTables.reduce((sum, table) => sum + Number(table?.rentalAmount || 0), 0);
     const depositAmount = bookingTables.reduce((sum, table) => sum + Number(table?.depositAmount || 0), 0);
     const entryTicketPrice = Number(entryTicketType?.price || 0);
@@ -1637,21 +1696,21 @@ export default function UnifiedBookingPage() {
       totalAmount: rentalAmount + depositAmount + entryTicketsAmount,
       currency: entryTicketType?.currency || 'UAH'
     };
-  }, [activeEventSlug, bookingGroupSuggestion.tables, selectedObjectTable, selectedTable, entryTicketType, form.guests]);
+  }, [activeEventSlug, effectiveBookingGroupSuggestion.tables, eveningTableOverride, selectedObjectTable, selectedTable, entryTicketType, form.guests]);
 
   async function handleBookingSubmit(event) {
     event.preventDefault();
 
-    const activeTable = selectedObjectTable || selectedTable;
+    const activeTable = eveningTableOverride || selectedObjectTable || selectedTable;
     if (!activeTable) {
       setErrorMessage(c({ ua: 'Спочатку оберіть місце.', ru: 'Сначала выберите место.', en: 'Please select a place first.' }));
       return;
     }
 
-    const submitBookingKind = activeTable.bookingKind || resolvedBookingKind;
-    const bookingTables = bookingGroupSuggestion.tables.length ? bookingGroupSuggestion.tables : [activeTable];
+    const submitBookingKind = eveningTableOverride ? 'TABLE' : (activeTable.bookingKind || resolvedBookingKind);
+    const bookingTables = effectiveBookingGroupSuggestion.tables.length ? effectiveBookingGroupSuggestion.tables : [activeTable];
 
-    if (bookingGroupSuggestion.required && !bookingGroupSuggestion.complete) {
+    if (effectiveBookingGroupSuggestion.required && !effectiveBookingGroupSuggestion.complete) {
       setErrorMessage(c({
         ua: 'На обрану кількість гостей зараз недостатньо вільних позицій поруч. Оберіть іншу зону або зверніться до адміністратора.',
         ru: 'На выбранное количество гостей сейчас недостаточно свободных позиций рядом. Выберите другую зону или обратитесь к администратору.',
@@ -1736,7 +1795,7 @@ export default function UnifiedBookingPage() {
       setSearchParams(next, { replace: true });
 
       const result = await bookingsApi.create({
-        mapId: state.result?.map?.id,
+        mapId: eveningTableOverride?.eveningMapId || state.result?.map?.id,
         bookableUnitId: `table:${activeTable.id}`,
         bookableUnitIds: bookingTables.length > 1 ? bookingTables.map((table) => `table:${table.id}`) : undefined,
         bookingKind: submitBookingKind,
@@ -1785,13 +1844,20 @@ export default function UnifiedBookingPage() {
   const activePanelObject = selectedObject;
   const activePanelObjectTable = selectedObjectTable;
   const activePanelObjectMeta = selectedObjectMeta;
-  const activePanelLabel = selectedObject
-    ? selectedObjectLabel
-    : (selectedTable ? (localizeField(selectedTable.name, locale) || selectedTable.code) : '');
-  const isFreeTable = activePanelTable
-    && activePanelTable.status === 'free'
-    && (tableFitsGuests(activePanelTable) || (bookingGroupSuggestion.required && bookingGroupSuggestion.complete));
-  const activeBookingKind = activePanelTable?.bookingKind || resolvedBookingKind;
+  const activePanelLabel = eveningTableOverride
+    ? c({
+      ua: `Вечірній стіл ${eveningTableOverride.code}`,
+      ru: `Вечерний стол ${eveningTableOverride.code}`,
+      en: `Evening table ${eveningTableOverride.code}`
+    })
+    : selectedObject
+      ? selectedObjectLabel
+      : (selectedTable ? (localizeField(selectedTable.name, locale) || selectedTable.code) : '');
+  const effectivePanelTable = eveningTableOverride || activePanelTable;
+  const isFreeTable = effectivePanelTable
+    && effectivePanelTable.status === 'free'
+    && (tableFitsGuests(effectivePanelTable) || (effectiveBookingGroupSuggestion.required && effectiveBookingGroupSuggestion.complete));
+  const activeBookingKind = eveningTableOverride ? 'TABLE' : (activePanelTable?.bookingKind || resolvedBookingKind);
   const eventDayPolicy = activeEventSlug ? null : bookableUnitsState.bookingPolicy;
   const eventDayCutoff = eventDayPolicy?.cutoffTime || '';
   const eventDayLeftBeachZoneIds = eventDayPolicy?.leftBeachZoneIds || [];
@@ -1802,13 +1868,16 @@ export default function UnifiedBookingPage() {
     : '';
   const activeTimeSlots = useMemo(() => {
     if (activeEventSlug) return eventArrivalSlots;
+    if (eveningTableOverride) {
+      return generateTableTimeSlots(form.date, today, currentTime, EVENING_TABLE_START, '22:00');
+    }
     if (activeBookingKind === 'BEACH') {
       return generateTimeSlots(form.date, today, currentTime, 'BEACH');
     }
     const slots = generateTableTimeSlots(form.date, today, currentTime, '09:00', '22:00');
     return eventDayCutoff ? slots.filter((slot) => slot < eventDayCutoff) : slots;
-  }, [activeEventSlug, eventArrivalSlots, activeBookingKind, eventDayCutoff, form.date, today, currentTime]);
-  const isPierBeachPosition = activePanelTable?.bookingKind === 'BEACH' && isPierCode(activePanelTable.code);
+  }, [activeEventSlug, eventArrivalSlots, activeBookingKind, eveningTableOverride, eventDayCutoff, form.date, today, currentTime]);
+  const isPierBeachPosition = !eveningTableOverride && activePanelTable?.bookingKind === 'BEACH' && isPierCode(activePanelTable.code);
 
   const pairedEveningUnit = useMemo(() => {
     if (!activePanelTable?.code || !isPierCode(activePanelTable.code)) return null;
@@ -1839,7 +1908,7 @@ export default function UnifiedBookingPage() {
     if (!unit) return null;
     if (activeEventSlug) {
       const selectedTime = eventArrivalSlots.includes(form.timeFrom) ? form.timeFrom : (eventArrivalSlots[0] || '');
-      const positionCount = bookingGroupSuggestion.required ? bookingGroupSuggestion.tables.length : 1;
+      const positionCount = effectiveBookingGroupSuggestion.required ? effectiveBookingGroupSuggestion.tables.length : 1;
       const sessionName = localizeField(activeEventSession?.name, locale)
         || localizeField(eventInfo?.title, locale)
         || (locale === 'ua' ? 'Вечірня подія' : locale === 'ru' ? 'Вечернее событие' : 'Evening event');
@@ -1907,9 +1976,10 @@ export default function UnifiedBookingPage() {
       : (eveningScenarioSlots[0] || EVENING_TABLE_START);
     const eveningCanBook = Boolean(pairedEveningUnit && pairedEveningUnit.status === 'free');
 
-    function selectScenario(kind, time) {
+    function selectScenario(kind, time, tableOverride = null) {
       setBookingKind(kind);
       setForm((current) => ({ ...current, timeFrom: time }));
+      setEveningTableOverride(tableOverride);
       setScenarioSelected(true);
     }
 
@@ -1983,7 +2053,7 @@ export default function UnifiedBookingPage() {
             ) : pairedEveningUnit.status !== 'free' ? (
               <p className="booking-scenario-alert">{locale === 'ua' ? 'На цей час вечірній стіл зайнятий.' : locale === 'ru' ? 'На это время вечерний стол занят.' : 'The evening table is busy at this time.'}</p>
             ) : null}
-            <button className="btn btn-primary" type="button" disabled={!eveningCanBook || !eveningTime} onClick={() => selectScenario('TABLE', eveningTime)}>
+            <button className="btn btn-primary" type="button" disabled={!eveningCanBook || !eveningTime} onClick={() => selectScenario('TABLE', eveningTime, pairedEveningUnit)}>
               {locale === 'ua' ? 'Обрати вечірній стіл' : locale === 'ru' ? 'Выбрать вечерний стол' : 'Choose evening table'}
             </button>
           </div>
@@ -2609,9 +2679,9 @@ export default function UnifiedBookingPage() {
 
               <p style={{ fontWeight: 600 }}>{activePanelLabel}</p>
 
-              {(activePanelTable?.positionType || activePanelObjectTable?.positionType) ? (
+              {(effectivePanelTable?.positionType || activePanelObjectTable?.positionType) ? (
                 <p className="muted" style={{ margin: '4px 0' }}>
-                  {positionTypeLabel(activePanelTable?.positionType || activePanelObjectTable?.positionType, positionTypes, locale, localizedCopy)}
+                  {positionTypeLabel(effectivePanelTable?.positionType || activePanelObjectTable?.positionType, positionTypes, locale, localizedCopy)}
                 </p>
               ) : null}
 
@@ -2627,9 +2697,9 @@ export default function UnifiedBookingPage() {
                 </p>
               ) : null}
 
-              {(activePanelTable?.seatsMin != null || activePanelObjectTable?.seatsMin != null) ? (
+              {(effectivePanelTable?.seatsMin != null || activePanelObjectTable?.seatsMin != null) ? (
                 <p className="muted" style={{ margin: '4px 0' }}>
-                  {t('mapSeats')}: {activePanelTable?.seatsMin ?? activePanelObjectTable?.seatsMin}-{activePanelTable?.seatsMax ?? activePanelObjectTable?.seatsMax}
+                  {t('mapSeats')}: {effectivePanelTable?.seatsMin ?? activePanelObjectTable?.seatsMin}-{effectivePanelTable?.seatsMax ?? activePanelObjectTable?.seatsMax}
                 </p>
               ) : null}
 
@@ -2667,17 +2737,17 @@ export default function UnifiedBookingPage() {
                 </p>
               ) : null}
 
-              {bookingGroupSuggestion.required ? (
-                <div className={`booking-group-suggestion ${bookingGroupSuggestion.complete ? 'is-complete' : 'is-incomplete'}`} role="note">
+              {effectiveBookingGroupSuggestion.required ? (
+                <div className={`booking-group-suggestion ${effectiveBookingGroupSuggestion.complete ? 'is-complete' : 'is-incomplete'}`} role="note">
                   <div className="booking-group-suggestion-head">
                     <span className="booking-group-suggestion-icon" aria-hidden="true">ⓘ</span>
                     <div>
                       <strong>
-                        {bookingGroupSuggestion.complete
+                        {effectiveBookingGroupSuggestion.complete
                           ? c({
-                            ua: `Для ${form.guests} гостей пропонуємо ${bookingGroupSuggestion.tables.length} позиції`,
-                            ru: `Для ${form.guests} гостей предлагаем ${bookingGroupSuggestion.tables.length} позиции`,
-                            en: `${bookingGroupSuggestion.tables.length} positions suggested for ${form.guests} guests`
+                            ua: `Для ${form.guests} гостей пропонуємо ${effectiveBookingGroupSuggestion.tables.length} позиції`,
+                            ru: `Для ${form.guests} гостей предлагаем ${effectiveBookingGroupSuggestion.tables.length} позиции`,
+                            en: `${effectiveBookingGroupSuggestion.tables.length} positions suggested for ${form.guests} guests`
                           })
                           : c({
                             ua: 'Потрібно більше вільних позицій',
@@ -2686,11 +2756,11 @@ export default function UnifiedBookingPage() {
                           })}
                       </strong>
                       <span>
-                        {bookingGroupSuggestion.complete
+                        {effectiveBookingGroupSuggestion.complete
                           ? c({
-                            ua: `Загальна місткість — до ${bookingGroupSuggestion.totalCapacity} гостей. Усі позиції оформлюються однією оплатою.`,
-                            ru: `Общая вместимость — до ${bookingGroupSuggestion.totalCapacity} гостей. Все позиции оформляются одной оплатой.`,
-                            en: `Combined capacity is up to ${bookingGroupSuggestion.totalCapacity}. All positions use one checkout.`
+                            ua: `Загальна місткість — до ${effectiveBookingGroupSuggestion.totalCapacity} гостей. Усі позиції оформлюються однією оплатою.`,
+                            ru: `Общая вместимость — до ${effectiveBookingGroupSuggestion.totalCapacity} гостей. Все позиции оформляются одной оплатой.`,
+                            en: `Combined capacity is up to ${effectiveBookingGroupSuggestion.totalCapacity}. All positions use one checkout.`
                           })
                           : c({
                             ua: 'Поруч немає достатньої кількості вільних місць. Спробуйте іншу зону.',
@@ -2701,7 +2771,7 @@ export default function UnifiedBookingPage() {
                     </div>
                   </div>
                   <div className="booking-group-position-list" aria-label={c({ ua: 'Запропоновані позиції', ru: 'Предложенные позиции', en: 'Suggested positions' })}>
-                    {bookingGroupSuggestion.tables.map((table) => (
+                    {effectiveBookingGroupSuggestion.tables.map((table) => (
                       <span key={table.id}>{table.code || localizeField(table.name, locale)}</span>
                     ))}
                   </div>
@@ -2723,7 +2793,7 @@ export default function UnifiedBookingPage() {
                   <button
                     type="button"
                     className="text-link"
-                    onClick={() => setScenarioSelected(false)}
+                    onClick={() => { setScenarioSelected(false); setEveningTableOverride(null); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 12, fontSize: '0.85rem' }}
                   >
                     ← {locale === 'ua' ? 'Назад до вибору' : locale === 'ru' ? 'Назад к выбору' : 'Back to options'}
@@ -2733,6 +2803,8 @@ export default function UnifiedBookingPage() {
                     <span className="booking-scenario-kicker">
                       {activeEventSlug
                         ? (localizeField(activeEventSession?.name, locale) || localizeField(eventInfo?.title, locale))
+                        : eveningTableOverride
+                        ? (locale === 'ua' ? 'Вечірній пірс' : locale === 'ru' ? 'Вечерний пирс' : 'Evening pier')
                         : activeBookingKind === 'BEACH'
                         ? (locale === 'ua' ? '\u041f\u043b\u044f\u0436\u043d\u0430 \u0431\u0440\u043e\u043d\u044c' : locale === 'ru' ? '\u041f\u043b\u044f\u0436\u043d\u0430\u044f \u0431\u0440\u043e\u043d\u044c' : 'Beach booking')
                         : (locale === 'ua' ? '\u0411\u0440\u043e\u043d\u044c \u0441\u0442\u043e\u043b\u0443' : locale === 'ru' ? '\u0411\u0440\u043e\u043d\u044c \u0441\u0442\u043e\u043b\u0430' : 'Table booking')}
@@ -2740,6 +2812,8 @@ export default function UnifiedBookingPage() {
                     <strong>
                       {activeEventSlug
                         ? (locale === 'ua' ? 'Столик гарантовано 30 хвилин від часу приходу' : locale === 'ru' ? 'Стол гарантирован 30 минут от времени прихода' : 'Table guaranteed for 30 minutes from arrival time')
+                        : eveningTableOverride
+                        ? (locale === 'ua' ? `Столик ${eveningTableOverride.code} після 20:00` : locale === 'ru' ? `Стол ${eveningTableOverride.code} после 20:00` : `Table ${eveningTableOverride.code} after 8:00 PM`)
                         : activeBookingKind === 'BEACH'
                         ? selectedPositionServiceUntil
                           ? (locale === 'ua' ? `Явка 09:00-13:00, позиція працює до ${selectedPositionServiceUntil}` : locale === 'ru' ? `Явка 09:00-13:00, позиция работает до ${selectedPositionServiceUntil}` : `Arrival 09:00-13:00, place operates until ${selectedPositionServiceUntil}`)
@@ -2774,7 +2848,10 @@ export default function UnifiedBookingPage() {
                         <select
                           className="form-input"
                           value={activeTimeSlots.includes(form.timeFrom) ? form.timeFrom : activeTimeSlots[0]}
-                          onChange={(event) => setForm((current) => ({ ...current, timeFrom: event.target.value }))}
+                          onChange={(event) => {
+                            setForm((current) => ({ ...current, timeFrom: event.target.value }));
+                            if (eveningTableOverride) setEveningCandidateTime(event.target.value);
+                          }}
                         >
                           {activeTimeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
                         </select>
