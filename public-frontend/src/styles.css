@@ -2107,7 +2107,7 @@ h3 {
   z-index: 2;
   width: 100%;
   max-width: 560px;
-  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   background: var(--bg-secondary);
   border-radius: var(--radius) var(--radius) 0 0;
@@ -2129,7 +2129,7 @@ h3 {
 }
 
 .modal-sheet-body {
-  padding: 20px 24px 32px;
+  padding: 20px 24px calc(32px + env(safe-area-inset-bottom, 0px));
 }
 
 .modal-sheet-header {
@@ -2194,6 +2194,17 @@ h3 {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+@media (max-width: 767px) {
+  .modal-overlay.modal-item {
+    bottom: calc(var(--bottom-nav-height) + 24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .modal-sheet {
+    max-height: calc(100dvh - var(--bottom-nav-height) - 36px - env(safe-area-inset-bottom, 0px));
+    border-radius: var(--radius);
+  }
 }
 
 /* Desktop: center the modal */

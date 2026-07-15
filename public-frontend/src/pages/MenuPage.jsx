@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { menuApi, tableOrderApi, waiterCallApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
@@ -486,7 +487,7 @@ export default function MenuPage() {
         </div>
       )}
 
-      {selectedItem && (
+      {selectedItem && createPortal((
         <div className="modal-overlay modal-item" role="dialog" aria-modal="true">
           <button className="modal-backdrop" onClick={() => setSelectedItem(null)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })} />
           <div className="modal-sheet">
@@ -516,7 +517,7 @@ export default function MenuPage() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
       {noTableWarning && (
         <div className="cart-overlay" role="dialog" aria-modal="true" style={{ zIndex: 1200 }}>
           <button className="cart-backdrop" onClick={() => { setNoTableWarning(false); setScannerOpen(false); setManualCode(''); setScanError(''); }} aria-label="Close" />
