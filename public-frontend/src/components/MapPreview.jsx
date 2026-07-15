@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getInitialViewTransform } from '../lib/map';
 import { localizeField } from '../lib/i18n';
+import { useLocale } from '../state/locale';
 import {
   parseMetaJson,
   pointsToSvg,
@@ -354,14 +355,20 @@ function ObjectStatusMarker({ object, unit, scale, onActivate }) {
 }
 
 export default function MapPreview({ mapData, mapObjects = [], zones = [], units, selectedTableId, onOpenFullMap, onSelectUnit, height = 220, isPreview = false }) {
+  const { locale } = useLocale();
   const rootRef = useRef(null);
   const viewportRef = useRef(null);
   const pointersRef = useRef(new Map());
   const gestureRef = useRef(null);
   const gestureMovedRef = useRef(false);
+  const gestureHintTimerRef = useRef(null);
   const [view, setView] = useState(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [activeZoneId, setActiveZoneId] = useState('all');
+  const [showTwoFingerHint, setShowTwoFingerHint] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  ));
   const previewAspectHeight = containerWidth > 0 && mapData
     ? Math.round(containerWidth * ((mapData.height || 760) / (mapData.width || 1200)) + 24)
     : height;
@@ -426,6 +433,38 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
   }, [mapData]);
 
   useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const sync = () => setIsMobileViewport(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return undefined;
+
+    function showHint() {
+      setShowTwoFingerHint(true);
+      window.clearTimeout(gestureHintTimerRef.current);
+      gestureHintTimerRef.current = window.setTimeout(() => setShowTwoFingerHint(false), 900);
+    }
+
+    function handleTouchMove(event) {
+      if (event.touches.length >= 2) {
+        event.preventDefault();
+      } else if (event.touches.length === 1 && isMobileViewport) {
+        showHint();
+      }
+    }
+
+    viewport.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => viewport.removeEventListener('touchmove', handleTouchMove);
+  }, [isMobileViewport, mapData]);
+
+  useEffect(() => () => window.clearTimeout(gestureHintTimerRef.current), []);
+
+  useEffect(() => {
     if (!containerRef) return;
     const { transform, viewWidth, viewHeight, mapWidth, mapHeight } = containerRef;
     const scale = Math.min(transform.scale * (isPreview ? 1 : 1.55), 1);
@@ -451,32 +490,53 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
 
   function handlePointerDown(event) {
     gestureMovedRef.current = false;
-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY, pointerType: event.pointerType });
     const points = [...pointersRef.current.values()];
     if (points.length === 1) {
-      gestureRef.current = { type: 'pan', x: points[0].x, y: points[0].y, view: { scale, x: translateX, y: translateY } };
+      const mobileTouch = isMobileViewport && event.pointerType === 'touch';
+      if (!mobileTouch) event.currentTarget.setPointerCapture?.(event.pointerId);
+      gestureRef.current = { type: mobileTouch ? 'scroll' : 'pan', x: points[0].x, y: points[0].y, view: { scale, x: translateX, y: translateY } };
     } else if (points.length === 2) {
+      setShowTwoFingerHint(false);
+      window.clearTimeout(gestureHintTimerRef.current);
+      pointersRef.current.forEach((_point, pointerId) => event.currentTarget.setPointerCapture?.(pointerId));
+      const rect = viewportRef.current?.getBoundingClientRect();
+      const midpointX = rect ? (points[0].x + points[1].x) / 2 - rect.left : 0;
+      const midpointY = rect ? (points[0].y + points[1].y) / 2 - rect.top : 0;
       gestureRef.current = {
         type: 'pinch',
         distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y),
-        view: { scale, x: translateX, y: translateY }
+        view: { scale, x: translateX, y: translateY },
+        worldX: (midpointX - translateX) / scale,
+        worldY: (midpointY - translateY) / scale
       };
     }
   }
 
   function handlePointerMove(event) {
     if (!pointersRef.current.has(event.pointerId) || !gestureRef.current) return;
-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY, pointerType: event.pointerType });
     const points = [...pointersRef.current.values()];
     const gesture = gestureRef.current;
+    if (points.length === 1 && gesture.type === 'scroll') {
+      if (Math.hypot(points[0].x - gesture.x, points[0].y - gesture.y) > 8) gestureMovedRef.current = true;
+      return;
+    }
     if (points.length === 1 && gesture.type === 'pan') {
       if (Math.hypot(points[0].x - gesture.x, points[0].y - gesture.y) > 5) gestureMovedRef.current = true;
       setView({ ...gesture.view, x: gesture.view.x + points[0].x - gesture.x, y: gesture.view.y + points[0].y - gesture.y });
     } else if (points.length === 2) {
+      event.preventDefault();
       const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
       const nextScale = Math.max(transform.scale, Math.min(2.5, gesture.view.scale * distance / Math.max(1, gesture.distance)));
-      setView({ scale: nextScale, x: gesture.view.x, y: gesture.view.y });
+      const rect = viewportRef.current?.getBoundingClientRect();
+      const midpointX = rect ? (points[0].x + points[1].x) / 2 - rect.left : 0;
+      const midpointY = rect ? (points[0].y + points[1].y) / 2 - rect.top : 0;
+      setView({
+        scale: nextScale,
+        x: midpointX - gesture.worldX * nextScale,
+        y: midpointY - gesture.worldY * nextScale
+      });
     }
   }
 
@@ -545,7 +605,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
           border: '1px solid #e2e8f0',
           background: mapData.backgroundColor || '#f8fafc',
           position: 'relative',
-          touchAction: 'none',
+          touchAction: isMobileViewport ? 'pan-y' : 'none',
           cursor: 'grab'
         }}
       >
@@ -601,6 +661,14 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
               />
             ))}
           </div>
+        </div>
+        <div className={`map-gesture-guidance ${showTwoFingerHint ? 'is-visible' : ''}`} aria-hidden={!showTwoFingerHint}>
+          <span className="map-two-finger-mark" aria-hidden="true" />
+          <strong>{locale === 'ua'
+            ? 'Переміщуйте мапу двома пальцями'
+            : locale === 'ru'
+              ? 'Перемещайте карту двумя пальцами'
+              : 'Use two fingers to move the map'}</strong>
         </div>
       </div>
 

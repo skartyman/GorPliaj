@@ -697,6 +697,7 @@ export default function UnifiedBookingPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isAutoFocusing, setIsAutoFocusing] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [showTwoFingerHint, setShowTwoFingerHint] = useState(false);
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null });
   const safeTransform = transform || { scale: 1, translateX: 0, translateY: 0, minScale: 0.45, maxScale: 3.5, initial: null };
   const viewportRef = useRef(null);
@@ -706,11 +707,12 @@ export default function UnifiedBookingPage() {
   const focusedFromQueryRef = useRef('');
   const pointersRef = useRef(new Map());
   const dragStartRef = useRef({ x: 0, y: 0, translateX: 0, translateY: 0 });
-  const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0 });
+  const pinchStartRef = useRef({ distance: 0, scale: 1, translateX: 0, translateY: 0, worldX: 0, worldY: 0 });
   const gestureMovedRef = useRef(false);
   const transformRef = useRef(safeTransform);
   const autoFocusTimerRef = useRef(null);
   const autoFocusScaleRef = useRef(null);
+  const twoFingerHintTimerRef = useRef(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   const today = useMemo(() => {
@@ -1247,7 +1249,16 @@ export default function UnifiedBookingPage() {
     transformRef.current = safeTransform;
   }, [safeTransform]);
 
-  useEffect(() => () => window.clearTimeout(autoFocusTimerRef.current), []);
+  useEffect(() => () => {
+    window.clearTimeout(autoFocusTimerRef.current);
+    window.clearTimeout(twoFingerHintTimerRef.current);
+  }, []);
+
+  function showMapGestureHint() {
+    setShowTwoFingerHint(true);
+    window.clearTimeout(twoFingerHintTimerRef.current);
+    twoFingerHintTimerRef.current = window.setTimeout(() => setShowTwoFingerHint(false), 900);
+  }
 
   function applyTransform(nextScale, nextX, nextY) {
     if (!state.result || !viewportRef.current) return;
@@ -1497,8 +1508,10 @@ export default function UnifiedBookingPage() {
     if (!viewport) return;
 
     function handleTouchMove(event) {
-      if (event.touches.length > 0) {
+      if (event.touches.length >= 2) {
         event.preventDefault();
+      } else if (event.touches.length === 1 && isMobileViewport) {
+        showMapGestureHint();
       }
     }
 
@@ -1506,18 +1519,20 @@ export default function UnifiedBookingPage() {
     return () => {
       viewport.removeEventListener('touchmove', handleTouchMove);
     };
-  }, [state.loading, state.result]);
+  }, [state.loading, state.result, isMobileViewport]);
 
   function handlePointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
     window.clearTimeout(autoFocusTimerRef.current);
     setIsAutoFocusing(false);
-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY, pointerType: event.pointerType });
     if (pointersRef.current.size === 1) {
       gestureMovedRef.current = false;
       dragStartRef.current = { x: event.clientX, y: event.clientY, translateX: safeTransform.translateX, translateY: safeTransform.translateY };
     }
     if (pointersRef.current.size === 2) {
+      setShowTwoFingerHint(false);
+      window.clearTimeout(twoFingerHintTimerRef.current);
       gestureMovedRef.current = true;
       pointersRef.current.forEach((_point, pointerId) => {
         try {
@@ -1528,11 +1543,17 @@ export default function UnifiedBookingPage() {
       });
       const [a, b] = Array.from(pointersRef.current.values());
       if (a && b && Number.isFinite(a.x) && Number.isFinite(b.x)) {
+        const rect = viewportRef.current?.getBoundingClientRect();
+        const midpointX = rect ? (a.x + b.x) / 2 - rect.left : 0;
+        const midpointY = rect ? (a.y + b.y) / 2 - rect.top : 0;
+        const startScale = safeTransform.scale || 1;
         pinchStartRef.current = {
           distance: Math.hypot(a.x - b.x, a.y - b.y),
-          scale: safeTransform.scale || 1,
+          scale: startScale,
           translateX: safeTransform.translateX || 0,
-          translateY: safeTransform.translateY || 0
+          translateY: safeTransform.translateY || 0,
+          worldX: (midpointX - (safeTransform.translateX || 0)) / startScale,
+          worldY: (midpointY - (safeTransform.translateY || 0)) / startScale
         };
       }
     }
@@ -1540,11 +1561,15 @@ export default function UnifiedBookingPage() {
 
   function handlePointerMove(event) {
     if (!pointersRef.current.has(event.pointerId)) return;
-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY, pointerType: event.pointerType });
 
     if (pointersRef.current.size === 1) {
       const dx = event.clientX - dragStartRef.current.x;
       const dy = event.clientY - dragStartRef.current.y;
+      if (isMobileViewport && event.pointerType === 'touch') {
+        if (Math.hypot(dx, dy) > 8) showMapGestureHint();
+        return;
+      }
       if (!gestureMovedRef.current && Math.hypot(dx, dy) <= 5) return;
       if (!gestureMovedRef.current) {
         setIsDragging(true);
@@ -1560,6 +1585,7 @@ export default function UnifiedBookingPage() {
     }
 
     if (pointersRef.current.size === 2 && viewportRef.current) {
+      event.preventDefault();
       const [a, b] = Array.from(pointersRef.current.values());
       if (!a || !b || !Number.isFinite(a.x) || !Number.isFinite(a.y) || !Number.isFinite(b.x) || !Number.isFinite(b.y)) return;
 
@@ -1577,16 +1603,10 @@ export default function UnifiedBookingPage() {
       if (!Number.isFinite(nextScale)) return;
       autoFocusScaleRef.current = nextScale;
 
-      const anchored = zoomAroundViewportPoint(
-        midpointX,
-        midpointY,
-        nextScale,
-        pinchStartRef.current.scale || 1,
-        pinchStartRef.current.translateX || 0,
-        pinchStartRef.current.translateY || 0
-      );
-      if (Number.isFinite(anchored.translateX) && Number.isFinite(anchored.translateY)) {
-        applyTransform(nextScale, anchored.translateX, anchored.translateY);
+      const nextX = midpointX - pinchStartRef.current.worldX * nextScale;
+      const nextY = midpointY - pinchStartRef.current.worldY * nextScale;
+      if (Number.isFinite(nextX) && Number.isFinite(nextY)) {
+        applyTransform(nextScale, nextX, nextY);
       }
     }
   }
@@ -2490,6 +2510,14 @@ export default function UnifiedBookingPage() {
                     );
                   })}
                 </div>
+              </div>
+              <div className={`map-gesture-guidance ${showTwoFingerHint ? 'is-visible' : ''}`} aria-hidden={!showTwoFingerHint}>
+                <span className="map-two-finger-mark" aria-hidden="true" />
+                <strong>{c({
+                  ua: 'Переміщуйте мапу двома пальцями',
+                  ru: 'Перемещайте карту двумя пальцами',
+                  en: 'Use two fingers to move the map'
+                })}</strong>
               </div>
             </div>
             {isMobileViewport && (selectedTable || selectedObject) && (
