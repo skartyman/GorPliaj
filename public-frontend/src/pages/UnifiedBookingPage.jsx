@@ -4,6 +4,7 @@ import { holdsApi, mapApi, bookingsApi, eventsApi } from '../lib/api';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
+import PaymentChoice from '../components/PaymentChoice';
 import { useMeta } from '../hooks/useMeta';
 import { generateTimeSlots, getDefaultTime } from '../utils/timeSlots';
 import {
@@ -773,7 +774,7 @@ export default function UnifiedBookingPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [paymentUrl, setPaymentUrl] = useState('');
   const [reservationAccess, setReservationAccess] = useState(null);
-  const [paymentFrameLoaded, setPaymentFrameLoaded] = useState(false);
+  const [paymentBreakdown, setPaymentBreakdown] = useState(null);
   const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [availabilityRevision, setAvailabilityRevision] = useState(0);
@@ -1371,7 +1372,7 @@ export default function UnifiedBookingPage() {
     setSuccessMessage('');
     setPaymentUrl('');
     setReservationAccess(null);
-    setPaymentFrameLoaded(false);
+    setPaymentBreakdown(null);
     setEmbeddedPaymentStatus('');
     setPaymentReceipt(null);
     setErrorMessage('');
@@ -1790,7 +1791,7 @@ export default function UnifiedBookingPage() {
     setSuccessMessage('');
     setPaymentUrl('');
     setReservationAccess(null);
-    setPaymentFrameLoaded(false);
+    setPaymentBreakdown(null);
     setEmbeddedPaymentStatus('');
     setPaymentReceipt(null);
 
@@ -1833,6 +1834,7 @@ export default function UnifiedBookingPage() {
       });
 
       setPaymentUrl(result.paymentUrl || '');
+      setPaymentBreakdown(result.paymentBreakdown || null);
       setReservationAccess(result.access || null);
       setEmbeddedPaymentStatus(result.paymentUrl ? 'PENDING' : '');
       setSuccessMessage(result.paymentUrl
@@ -2609,42 +2611,13 @@ export default function UnifiedBookingPage() {
               </button>
               {paymentUrl && embeddedPaymentStatus !== 'PAID' ? (
                 <>
-                  <header className="booking-payment-header">
-                    <span className="booking-payment-security-mark" aria-hidden="true">✓</span>
-                    <div>
-                      <span>{c({ ua: 'Захищена оплата HUTKO', ru: 'Защищённая оплата HUTKO', en: 'Secure HUTKO payment' })}</span>
-                      <strong>{c({ ua: 'Завершіть оплату тут', ru: 'Завершите оплату здесь', en: 'Complete payment here' })}</strong>
-                    </div>
-                  </header>
-                  <p className="booking-payment-intro">{successMessage}</p>
-                  <div className={`booking-payment-frame-shell ${paymentFrameLoaded ? 'is-loaded' : 'is-loading'}`}>
-                    {!paymentFrameLoaded ? (
-                      <div className="booking-payment-loader" role="status">
-                        <span aria-hidden="true" />
-                        {c({ ua: 'Завантажуємо платіжну форму...', ru: 'Загружаем платёжную форму...', en: 'Loading payment form...' })}
-                      </div>
-                    ) : null}
-                    <iframe
-                      className="booking-payment-frame"
-                      src={paymentUrl}
-                      title={c({ ua: 'Форма оплати HUTKO', ru: 'Форма оплаты HUTKO', en: 'HUTKO payment form' })}
-                      allow="payment"
-                      loading="eager"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      onLoad={() => setPaymentFrameLoaded(true)}
-                    />
-                  </div>
-                  <div className="booking-payment-footer">
-                    <span className={`booking-payment-live-status ${embeddedPaymentStatus === 'FAILED' ? 'is-warning' : ''}`}>
-                      <i aria-hidden="true" />
-                      {embeddedPaymentStatus === 'FAILED'
-                        ? c({ ua: 'Платіж не завершено. Спробуйте ще раз або відкрийте форму окремо.', ru: 'Платёж не завершён. Попробуйте ещё раз или откройте форму отдельно.', en: 'Payment was not completed. Try again or open the form separately.' })
-                        : c({ ua: 'Очікуємо підтвердження оплати', ru: 'Ожидаем подтверждение оплаты', en: 'Waiting for payment confirmation' })}
-                    </span>
-                    <a className="booking-payment-fallback" href={paymentUrl} target="_blank" rel="noopener noreferrer">
-                      {c({ ua: 'Відкрити оплату окремо', ru: 'Открыть оплату отдельно', en: 'Open payment separately' })} ↗
-                    </a>
-                  </div>
+                  <PaymentChoice
+                    paymentUrl={paymentUrl}
+                    amount={paymentBreakdown?.totalAmount ?? paymentPreview.totalAmount}
+                    currency={paymentBreakdown?.currency || paymentPreview.currency}
+                    locale={locale}
+                    description={successMessage}
+                  />
                 </>
               ) : (
                 <div className="booking-payment-complete">

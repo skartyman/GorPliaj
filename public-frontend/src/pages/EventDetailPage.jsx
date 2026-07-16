@@ -1,11 +1,13 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { eventsApi } from '../lib/api';
 import { formatEventDateRange } from '../lib/events';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { sanitizeRichText } from '../lib/richText';
+import PaymentChoice from '../components/PaymentChoice';
 
 function formatPhone(value) {
   const digits = value.replace(/\D/g, '').slice(0, 12);
@@ -50,7 +52,6 @@ export default function EventDetailPage() {
   });
   const [orderResult, setOrderResult] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
-  const [paymentFrameLoaded, setPaymentFrameLoaded] = useState(false);
   const [ticketFormOpen, setTicketFormOpen] = useState(false);
   const c = (values) => localizedCopy(values, locale);
   const metaTitle = localizeField(state.event?.title, locale);
@@ -189,6 +190,16 @@ export default function EventDetailPage() {
     setTicketFormOpen(true);
   }, [searchParams, state.event]);
 
+  useEffect(() => {
+    if (!ticketFormOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [ticketFormOpen]);
+
   const visibleTicketTypes = useMemo(() => {
     if (!sales.sessions.length) return sales.ticketTypes;
     return sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(orderForm.eventSessionId || ''));
@@ -214,7 +225,6 @@ export default function EventDetailPage() {
     setSales((current) => ({ ...current, loading: true, error: '' }));
     setOrderResult(null);
     setOrderStatus(null);
-    setPaymentFrameLoaded(false);
 
     try {
       const result = await eventsApi.createTicketOrder(slug, {
@@ -296,7 +306,7 @@ export default function EventDetailPage() {
             ) : null}
           </div>
 
-          {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && ticketFormOpen ? (
+          {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && ticketFormOpen ? createPortal(
             <div className="guest-modal-backdrop" role="presentation" onClick={() => setTicketFormOpen(false)}>
               <div className="guest-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
                 <button type="button" className="guest-modal-close" onClick={() => setTicketFormOpen(false)} aria-label={c({ ua: 'Закрити', ru: 'Закрыть', en: 'Close' })}>
@@ -399,15 +409,24 @@ export default function EventDetailPage() {
                             onChange={(eventValue) => setOrderForm({ ...orderForm, customerName: eventValue.target.value })}
                           />
                         </div>
-                        <div className="form-group">
+                        <div className="form-group ticket-email-field">
                           <label>Email</label>
                           <input
                             className="form-input"
                             type="email"
                             required
+                            aria-describedby="ticket-email-note"
                             value={orderForm.customerEmail}
                             onChange={(eventValue) => setOrderForm({ ...orderForm, customerEmail: eventValue.target.value })}
                           />
+                          <p className="ticket-email-note" id="ticket-email-note">
+                            <span aria-hidden="true">i</span>
+                            {c({
+                              ua: 'Вкажіть правильний email — на нього надійдуть лист і квитки.',
+                              ru: 'Укажите правильный email — на него придут письмо и билеты.',
+                              en: 'Use a valid email address — your confirmation and tickets will be sent there.'
+                            })}
+                          </p>
                         </div>
                         <div className="form-group">
                           <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
@@ -444,39 +463,17 @@ export default function EventDetailPage() {
                     ) : null}
                     {orderStatus?.status !== 'PAID' && paymentUrl ? (
                       <div className="ticket-payment-stage">
-                        <header className="booking-payment-header">
-                          <span className="booking-payment-security-mark" aria-hidden="true">✓</span>
-                          <div>
-                            <span>{c({ ua: 'Захищена оплата HUTKO', ru: 'Защищённая оплата HUTKO', en: 'Secure HUTKO payment' })}</span>
-                            <strong>{c({ ua: 'Оплатіть квитки тут', ru: 'Оплатите билеты здесь', en: 'Pay for tickets here' })}</strong>
-                          </div>
-                        </header>
-                        <div className={`booking-payment-frame-shell ticket-payment-frame-shell ${paymentFrameLoaded ? 'is-loaded' : 'is-loading'}`}>
-                          {!paymentFrameLoaded ? (
-                            <div className="booking-payment-loader" role="status">
-                              <span aria-hidden="true" />
-                              {c({ ua: 'Завантажуємо платіжну форму...', ru: 'Загружаем платёжную форму...', en: 'Loading payment form...' })}
-                            </div>
-                          ) : null}
-                          <iframe
-                            className="booking-payment-frame"
-                            src={paymentUrl}
-                            title={c({ ua: 'Форма оплати квитків HUTKO', ru: 'Форма оплаты билетов HUTKO', en: 'HUTKO ticket payment form' })}
-                            allow="payment"
-                            loading="eager"
-                            referrerPolicy="strict-origin-when-cross-origin"
-                            onLoad={() => setPaymentFrameLoaded(true)}
-                          />
-                        </div>
-                        <div className="booking-payment-footer">
-                          <span className="booking-payment-live-status">
-                            <i aria-hidden="true" />
-                            {c({ ua: 'Очікуємо підтвердження оплати', ru: 'Ожидаем подтверждение оплаты', en: 'Waiting for payment confirmation' })}
-                          </span>
-                          <a className="booking-payment-fallback" href={paymentUrl} target="_blank" rel="noopener noreferrer">
-                            {c({ ua: 'Відкрити оплату окремо', ru: 'Открыть оплату отдельно', en: 'Open payment separately' })} ↗
-                          </a>
-                        </div>
+                        <PaymentChoice
+                          paymentUrl={paymentUrl}
+                          amount={orderStatus?.amount ?? orderResult?.amount}
+                          currency={orderStatus?.currency || orderResult?.currency || 'UAH'}
+                          locale={locale}
+                          description={c({
+                            ua: 'Замовлення створено. Завершіть оплату, щоб отримати квитки.',
+                            ru: 'Заказ создан. Завершите оплату, чтобы получить билеты.',
+                            en: 'Your order is ready. Complete payment to receive the tickets.'
+                          })}
+                        />
                       </div>
                     ) : null}
                     {orderStatus?.status === 'PAID' ? (
@@ -504,7 +501,8 @@ export default function EventDetailPage() {
                   </>
                 )}
               </div>
-            </div>
+            </div>,
+            document.body
           ) : null}
         </div>
       </div>

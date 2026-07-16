@@ -2292,7 +2292,7 @@ h3 {
 
 .ticket-order-form {
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 13px;
   padding: 0;
   border: none;
   border-radius: 0;
@@ -2305,6 +2305,7 @@ h3 {
 
 .ticket-order-form .form-group {
   grid-column: 1 / -1;
+  gap: 6px;
 }
 
 .ticket-form-head h2 {
@@ -2329,6 +2330,108 @@ h3 {
   color: var(--text-secondary);
 }
 
+.ticket-order-form .form-group label {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.guest-modal .ticket-order-form .form-input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: #121419;
+  color: #f7f7f5;
+  color-scheme: dark;
+  font: inherit;
+  font-size: 0.9rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.guest-modal .ticket-order-form .form-input:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.guest-modal .ticket-order-form .form-input:focus {
+  border-color: rgba(210, 177, 106, 0.86);
+  outline: 2px solid rgba(210, 177, 106, 0.15);
+  outline-offset: 1px;
+}
+
+.guest-modal .ticket-order-form .form-input::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.guest-modal .ticket-order-form select.form-input option {
+  background: #121419;
+  color: #f7f7f5;
+}
+
+.guest-modal .ticket-type-summary {
+  gap: 4px;
+  padding: 12px 14px;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  color: #f7f7f5;
+}
+
+.guest-modal .ticket-type-summary span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.82rem;
+}
+
+.guest-modal .guest-stepper {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: #121419;
+  color: #f7f7f5;
+}
+
+.guest-modal .guest-stepper-btn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.guest-modal .guest-stepper-btn:hover {
+  background: rgba(210, 177, 106, 0.13);
+  color: #e1c17c;
+}
+
+.guest-modal .guest-stepper-value {
+  color: #f7f7f5;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket-email-note {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  margin: 1px 0 0 !important;
+  color: rgba(255, 255, 255, 0.56) !important;
+  font-size: 0.7rem;
+  line-height: 1.4 !important;
+}
+
+.ticket-email-note > span {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1px solid rgba(210, 177, 106, 0.62);
+  border-radius: 50%;
+  color: #d2b16a;
+  font-size: 0.62rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .event-inline-state {
   margin-top: 16px;
 }
@@ -2342,11 +2445,11 @@ h3 {
 .guest-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: 1400;
   display: grid;
   place-items: start center;
-  padding: 30px 20px;
-  overflow-y: auto;
+  padding: 24px 20px;
+  overflow: hidden;
   background: rgba(10, 9, 11, 0.72);
   backdrop-filter: blur(8px);
 }
@@ -2354,13 +2457,35 @@ h3 {
 .guest-modal {
   position: relative;
   width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   padding: 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(201, 168, 108, 0.2);
   border-radius: var(--radius);
   background:
     radial-gradient(circle at top right, rgba(201, 168, 108, 0.16), transparent 38%),
     linear-gradient(180deg, rgba(29, 29, 33, 0.98), rgba(20, 20, 24, 0.98));
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(210, 177, 106, 0.52) rgba(255, 255, 255, 0.05);
+}
+
+.guest-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.guest-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.guest-modal::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: rgba(210, 177, 106, 0.52);
+  background-clip: padding-box;
 }
 
 .guest-modal-close {
@@ -2376,6 +2501,7 @@ h3 {
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
+  z-index: 4;
 }
 
 .guest-modal-kicker {
@@ -3088,6 +3214,204 @@ h3 {
   padding: 4px 0 8px;
 }
 
+.payment-choice {
+  display: grid;
+  gap: 14px;
+}
+
+.payment-choice-header {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding-right: 42px;
+}
+
+.payment-choice-lock {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(94, 178, 160, 0.36);
+  border-radius: 50%;
+  background: rgba(94, 178, 160, 0.12);
+  color: #55bda2;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.payment-choice-header span:not(.payment-choice-lock) {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.payment-choice-header h3 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.payment-choice-description {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.payment-choice-body {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.72fr) minmax(210px, 1.28fr);
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 94%, var(--brand) 6%);
+  box-shadow: 0 16px 38px rgba(8, 22, 30, 0.08);
+}
+
+.payment-choice-total {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.payment-choice-total span,
+.payment-choice-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.payment-choice-total strong {
+  color: var(--text);
+  font-size: clamp(1.55rem, 5vw, 2.15rem);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.payment-choice-methods {
+  display: grid;
+  gap: 8px;
+}
+
+.payment-choice-label {
+  margin-bottom: 1px;
+}
+
+.payment-method {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #0b0d10;
+  color: #fff;
+  text-decoration: none;
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1), border-color 140ms ease, background-color 140ms ease;
+}
+
+.payment-method:hover {
+  border-color: rgba(210, 177, 106, 0.62);
+  background: #15171a;
+}
+
+.payment-method:active {
+  transform: scale(0.985);
+}
+
+.payment-method:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.payment-method-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.payment-method-copy strong {
+  color: inherit;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.payment-method-copy small {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.63);
+  font-size: 0.64rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
+.payment-card-brands {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-card-brands b {
+  color: #fff;
+  font-size: 0.72rem;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.payment-method-wallet {
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+}
+
+.payment-wallet-mark {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: #4285f4;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.payment-method-arrow {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.payment-choice-note {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.payment-choice-note > span {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.66rem;
+  font-style: italic;
+  font-weight: 800;
+}
+
 .booking-payment-header {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
@@ -3274,6 +3598,41 @@ h3 {
 }
 
 @media (max-width: 520px) {
+  .payment-choice-body {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .payment-choice-total {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 6px;
+    padding: 2px 0 13px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .payment-choice-total strong {
+    font-size: 1.65rem;
+  }
+
+  .payment-method {
+    min-height: 56px;
+  }
+
+  .payment-method-card {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-card-brands {
+    display: none;
+  }
+
+  .payment-method-wallet .payment-method-copy small {
+    display: none;
+  }
+
   .booking-payment-frame-shell {
     height: min(660px, 70dvh);
     min-height: 520px;
@@ -5503,9 +5862,15 @@ h3 {
     min-height: 46px;
   }
 
+  .guest-modal-backdrop {
+    padding: 12px;
+  }
+
   .guest-modal {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
     padding: 22px 18px 18px;
-    border-radius: 22px;
+    border-radius: 12px;
   }
 
   .guest-modal h2 {
