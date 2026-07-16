@@ -4,7 +4,6 @@ import { holdsApi, mapApi, bookingsApi, eventsApi } from '../lib/api';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
-import PaymentChoice from '../components/PaymentChoice';
 import { useMeta } from '../hooks/useMeta';
 import { generateTimeSlots, getDefaultTime } from '../utils/timeSlots';
 import {
@@ -774,7 +773,6 @@ export default function UnifiedBookingPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [paymentUrl, setPaymentUrl] = useState('');
   const [reservationAccess, setReservationAccess] = useState(null);
-  const [paymentBreakdown, setPaymentBreakdown] = useState(null);
   const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [availabilityRevision, setAvailabilityRevision] = useState(0);
@@ -866,22 +864,27 @@ export default function UnifiedBookingPage() {
   }, [activeEventSlug]);
 
   useEffect(() => {
-    if (!paymentUrl || !reservationAccess?.ticketCode || !reservationAccess?.token) return undefined;
+    const ticketCode = searchParams.get('reservation') || '';
+    const token = searchParams.get('t') || '';
+    if (!ticketCode || !token) return undefined;
 
     let cancelled = false;
     let timerId = null;
-    let pollAttempts = 0;
+    let attempts = 0;
 
-    async function checkPaymentStatus() {
-      pollAttempts += 1;
+    async function restorePaymentResult() {
+      attempts += 1;
       try {
-        const result = await bookingsApi.status(reservationAccess.ticketCode, reservationAccess.token);
+        const result = await bookingsApi.status(ticketCode, token);
         if (cancelled) return;
-        const nextStatus = result?.reservation?.paymentStatus || '';
-        setEmbeddedPaymentStatus(nextStatus);
-        setPaymentReceipt(result || null);
 
-        if (nextStatus === 'PAID') {
+        const paymentStatus = result?.reservation?.paymentStatus || '';
+        setReservationAccess({ ticketCode, token, downloadUrl: result?.downloadUrl || null });
+        setPaymentReceipt(result || null);
+        setEmbeddedPaymentStatus(paymentStatus);
+        setPaymentUrl('');
+
+        if (paymentStatus === 'PAID') {
           setSuccessMessage(c({
             ua: 'Оплату підтверджено. Бронювання та квитки надіслані на Email.',
             ru: 'Оплата подтверждена. Бронирование и билеты отправлены на Email.',
@@ -889,21 +892,30 @@ export default function UnifiedBookingPage() {
           }));
           return;
         }
-      } catch {
-        if (!cancelled) setEmbeddedPaymentStatus((current) => current || 'PENDING');
-      }
 
-      if (!cancelled && pollAttempts < 76) {
-        timerId = window.setTimeout(checkPaymentStatus, pollAttempts < 24 ? 5000 : 15000);
+        if (attempts < 5 && !['FAILED', 'CANCELLED', 'REFUNDED'].includes(paymentStatus)) {
+          timerId = window.setTimeout(restorePaymentResult, 1800);
+          return;
+        }
+
+        setSuccessMessage(c({
+          ua: 'Платіж ще не підтверджено. Перевірте статус трохи пізніше або зверніться до адміністратора.',
+          ru: 'Платёж пока не подтверждён. Проверьте статус немного позже или обратитесь к администратору.',
+          en: 'Payment has not been confirmed yet. Please check again shortly or contact the venue.'
+        }));
+      } catch {
+        if (!cancelled && attempts < 5) {
+          timerId = window.setTimeout(restorePaymentResult, 1800);
+        }
       }
     }
 
-    timerId = window.setTimeout(checkPaymentStatus, 2500);
+    restorePaymentResult();
     return () => {
       cancelled = true;
       if (timerId) window.clearTimeout(timerId);
     };
-  }, [paymentUrl, reservationAccess?.ticketCode, reservationAccess?.token, c]);
+  }, [searchParams, locale]);
 
   useEffect(() => {
     if (!activeEventSlug || !eventDateOptions.length) return;
@@ -1372,7 +1384,6 @@ export default function UnifiedBookingPage() {
     setSuccessMessage('');
     setPaymentUrl('');
     setReservationAccess(null);
-    setPaymentBreakdown(null);
     setEmbeddedPaymentStatus('');
     setPaymentReceipt(null);
     setErrorMessage('');
@@ -1791,7 +1802,6 @@ export default function UnifiedBookingPage() {
     setSuccessMessage('');
     setPaymentUrl('');
     setReservationAccess(null);
-    setPaymentBreakdown(null);
     setEmbeddedPaymentStatus('');
     setPaymentReceipt(null);
 
@@ -1833,17 +1843,15 @@ export default function UnifiedBookingPage() {
         locale
       });
 
-      setPaymentUrl(result.paymentUrl || '');
-      setPaymentBreakdown(result.paymentBreakdown || null);
+      if (result.paymentUrl) {
+        window.location.assign(result.paymentUrl);
+        return;
+      }
+
+      setPaymentUrl('');
       setReservationAccess(result.access || null);
-      setEmbeddedPaymentStatus(result.paymentUrl ? 'PENDING' : '');
-      setSuccessMessage(result.paymentUrl
-        ? c({
-          ua: 'Бронювання створено. Завершіть оплату, щоб закріпити позицію.',
-          ru: 'Бронирование создано. Завершите оплату, чтобы закрепить позицию.',
-          en: 'Booking created. Complete the payment to secure the position.'
-        })
-        : c({
+      setEmbeddedPaymentStatus('');
+      setSuccessMessage(c({
           ua: 'Заявку на бронювання створено. Оплата не потрібна.',
           ru: 'Заявка на бронирование создана. Оплата не требуется.',
           en: 'Booking request created. No payment is required.'
@@ -2084,7 +2092,7 @@ export default function UnifiedBookingPage() {
     );
   };
 
-  const sidePanelOpen = Boolean(activePanelTable || activePanelObject);
+  const sidePanelOpen = Boolean(activePanelTable || activePanelObject || successMessage || submitting);
 
   useEffect(() => {
     if (!isMobileViewport || sidePanelOpen || !zoneTabsRef.current) {
@@ -2610,15 +2618,9 @@ export default function UnifiedBookingPage() {
                 ×
               </button>
               {paymentUrl && embeddedPaymentStatus !== 'PAID' ? (
-                <>
-                  <PaymentChoice
-                    paymentUrl={paymentUrl}
-                    amount={paymentBreakdown?.totalAmount ?? paymentPreview.totalAmount}
-                    currency={paymentBreakdown?.currency || paymentPreview.currency}
-                    locale={locale}
-                    description={successMessage}
-                  />
-                </>
+                <a className="btn btn-primary" href={paymentUrl}>
+                  {c({ ua: 'Перейти до оплати', ru: 'Перейти к оплате', en: 'Continue to payment' })}
+                </a>
               ) : (
                 <div className="booking-payment-complete">
                   <span className="booking-payment-complete-mark" aria-hidden="true">✓</span>
@@ -2633,6 +2635,9 @@ export default function UnifiedBookingPage() {
                       {c({ ua: 'Завантажити PDF', ru: 'Скачать PDF', en: 'Download PDF' })}
                     </a>
                   ) : null}
+                  <Link className="btn btn-secondary" to="/menu">
+                    {c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}
+                  </Link>
                   <button type="button" className="btn btn-secondary" onClick={closePanel}>
                     {c({ ua: 'Забронювати ще', ru: 'Забронировать ещё', en: 'Make another booking' })}
                   </button>

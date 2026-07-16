@@ -7,7 +7,6 @@ import { localizedCopy, localizeField } from '../lib/i18n';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { sanitizeRichText } from '../lib/richText';
-import PaymentChoice from '../components/PaymentChoice';
 
 function formatPhone(value) {
   const digits = value.replace(/\D/g, '').slice(0, 12);
@@ -239,6 +238,9 @@ export default function EventDetailPage() {
       });
       setOrderResult(result.order);
       setSales((current) => ({ ...current, loading: false }));
+      if (result.order?.paymentUrl) {
+        window.location.assign(result.order.paymentUrl);
+      }
     } catch (error) {
       setSales((current) => ({ ...current, loading: false, error: error.message }));
     }
@@ -462,19 +464,9 @@ export default function EventDetailPage() {
                       </div>
                     ) : null}
                     {orderStatus?.status !== 'PAID' && paymentUrl ? (
-                      <div className="ticket-payment-stage">
-                        <PaymentChoice
-                          paymentUrl={paymentUrl}
-                          amount={orderStatus?.amount ?? orderResult?.amount}
-                          currency={orderStatus?.currency || orderResult?.currency || 'UAH'}
-                          locale={locale}
-                          description={c({
-                            ua: 'Замовлення створено. Завершіть оплату, щоб отримати квитки.',
-                            ru: 'Заказ создан. Завершите оплату, чтобы получить билеты.',
-                            en: 'Your order is ready. Complete payment to receive the tickets.'
-                          })}
-                        />
-                      </div>
+                      <a className="btn btn-primary" href={paymentUrl}>
+                        {c({ ua: 'Перейти до оплати', ru: 'Перейти к оплате', en: 'Continue to payment' })}
+                      </a>
                     ) : null}
                     {orderStatus?.status === 'PAID' ? (
                       <>
