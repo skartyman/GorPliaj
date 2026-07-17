@@ -12,6 +12,7 @@ const {
   upsertAdminReservationPositionOverride,
   deleteAdminReservationPositionOverride,
   updateAdminReservationStatus,
+  updateAdminReservationComments,
   deleteAdminReservation,
   createAdminReservation,
   verifyAdminReservation,
@@ -168,6 +169,7 @@ router.get('/reservations/verify/:ticketCode', (req, res, next) => {
 router.get('/reservations/:id', requireAdminAuth, requirePermission('reservations:view'), getAdminReservationById);
 router.post('/reservations', requireAdminAuth, createAdminReservation);
 router.patch('/reservations/:id/status', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationStatus);
+router.patch('/reservations/:id/comments', requireAdminAuth, requirePermission('reservations:update'), updateAdminReservationComments);
 router.post('/reservations/arrive-by-ticket/:ticketCode', requireAdminAuth, requirePermission('reservations:arrive'), arriveByTicketCodeAdminReservation);
 router.post('/reservations/:id/arrive', requireAdminAuth, requirePermission('reservations:arrive'), arriveAdminReservation);
 router.delete('/reservations/:id', requireAdminAuth, requirePermission('reservations:delete'), deleteAdminReservation);

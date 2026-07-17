@@ -3211,20 +3211,42 @@ textarea { resize: vertical; min-height: 96px; }
   color: var(--text-muted);
 }
 
-.timeline-comment {
-  font-style: italic;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  border-left: 2px solid var(--accent-gold);
-  padding-left: 8px;
-  margin-top: 4px;
-}
-
 .timeline-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+/* ── Source badge ── */
+.source-badge {
+  white-space: nowrap;
+}
+
+.timeline-comments {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.timeline-comment {
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  border-left: 3px solid var(--accent-gold);
+  padding: 6px 10px;
+  background: rgba(200, 146, 65, 0.06);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.5;
+}
+
+.timeline-comment-admin {
+  border-left-color: var(--accent-rust);
+  background: rgba(139, 37, 0, 0.05);
+}
+
+.timeline-comment > div {
+  margin-top: 2px;
 }
 
 /* ── Reports page ── */

@@ -88,6 +88,51 @@ function buildBookingForm(position, reservationDate, eventId) {
   };
 }
 
+function getSourceLabel(source, language) {
+  const labels = {
+    ua: { WEB: 'Веб', ADMIN: 'Адмін', PHONE: 'Телефон', WALK_IN: 'Walk-in', EVENT: 'Подія', INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook' },
+    ru: { WEB: 'Веб', ADMIN: 'Админ', PHONE: 'Телефон', WALK_IN: 'Walk-in', EVENT: 'Событие', INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook' },
+    en: { WEB: 'Web', ADMIN: 'Admin', PHONE: 'Phone', WALK_IN: 'Walk-in', EVENT: 'Event', INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook' }
+  };
+  return labels[language]?.[source] || source || '—';
+}
+
+function getSourceIcon(source) {
+  const icons = {
+    WEB: '🌐',
+    ADMIN: '👤',
+    PHONE: '📞',
+    WALK_IN: '🚶',
+    EVENT: '🎫',
+    INSTAGRAM: '📷',
+    FACEBOOK: '👍'
+  };
+  return icons[source] || '📋';
+}
+
+function SourceBadge({ source, language, compact = false }) {
+  if (!source) return null;
+  return (
+    <span 
+      className="source-badge" 
+      title={getSourceLabel(source, language)}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: compact ? '1px 6px' : '2px 8px',
+        fontSize: compact ? '0.7rem' : '0.75rem',
+        borderRadius: '4px',
+        background: 'var(--color-surface-secondary, #e8e8e8)',
+        color: 'var(--color-text-secondary, #666)'
+      }}
+    >
+      <span>{getSourceIcon(source)}</span>
+      {!compact && <span>{getSourceLabel(source, language)}</span>}
+    </span>
+  );
+}
+
 function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language }) {
   const actions = {
     PENDING: [
@@ -128,6 +173,10 @@ function KanbanCard({ reservation, onQuickAction, actionLoadingId, t, language }
         <div className="kanban-card-row">
           <span className="muted">{t('reservations.columns.modePlace')}:</span>
           <span>{getReservationModePlace(reservation, t)}</span>
+        </div>
+        <div className="kanban-card-row">
+          <span className="muted">Джерело:</span>
+          <SourceBadge source={reservation.source} language={language} compact />
         </div>
       </div>
       {actions.length > 0 ? (
@@ -198,6 +247,7 @@ export default function ReservationsPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [sourceFilter, setSourceFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState(today);
   const [actionLoadingId, setActionLoadingId] = useState('');
 
@@ -311,11 +361,12 @@ export default function ReservationsPage() {
 
     return state.rows.filter((reservation) => {
       const matchesStatus = statusFilter === 'ALL' || reservation.status === statusFilter;
+      const matchesSource = sourceFilter === 'ALL' || reservation.source === sourceFilter;
       const reservationDate = toDateInput(reservation.reservationDate);
       const matchesDate = !dateFilter || reservationDate === dateFilter;
 
       if (!query) {
-        return matchesStatus && matchesDate;
+        return matchesStatus && matchesSource && matchesDate;
       }
 
       const searchable = [
@@ -337,9 +388,9 @@ export default function ReservationsPage() {
         .join(' ')
         .toLowerCase();
 
-      return matchesStatus && matchesDate && searchable.includes(query);
+      return matchesStatus && matchesSource && matchesDate && searchable.includes(query);
     });
-  }, [search, state.rows, statusFilter, dateFilter, language]);
+  }, [search, state.rows, statusFilter, sourceFilter, dateFilter, language]);
 
   const timelineRows = useMemo(() => {
     return [...filteredRows].sort((a, b) => {
@@ -571,6 +622,7 @@ export default function ReservationsPage() {
       )
     },
     { key: 'customerPhone', label: t('reservations.columns.phone') },
+    { key: 'source', label: language === 'ua' ? 'Джерело' : language === 'ru' ? 'Источник' : 'Source', render: (r) => <SourceBadge source={r.source} language={language} compact /> },
     {
       key: 'table',
       label: t('reservations.columns.tableZone'),
@@ -618,6 +670,7 @@ export default function ReservationsPage() {
   function onResetFilters() {
     setSearch('');
     setStatusFilter('ALL');
+    setSourceFilter('ALL');
     setDateFilter(today);
     setManagementSearch('');
     setManagementMapId('');
@@ -673,7 +726,7 @@ export default function ReservationsPage() {
             className={`menu-admin-section-switch-btn ${activeTab === 'availability' ? 'active' : ''}`}
             onClick={() => setActiveTab('availability')}
           >
-            ⚙️ {language === 'ua' ? 'Керування наявністю' : language === 'ru' ? 'Управление доступностью' : 'Availability & Overrides'}
+            🪑 {language === 'ua' ? 'Столи та місця' : language === 'ru' ? 'Столы и места' : 'Tables & Places'}
           </button>
         </div>
 
@@ -730,11 +783,29 @@ export default function ReservationsPage() {
                               <div className="timeline-meta-item">
                                 🏷️ {getReservationModePlace(reservation, t)}
                               </div>
+                              <div className="timeline-meta-item">
+                                📥 <SourceBadge source={reservation.source} language={language} />
+                              </div>
                             </div>
-                            
-                            {reservation.commentCustomer && (
-                              <div className="timeline-comment">
-                                &ldquo;{reservation.commentCustomer}&rdquo;
+
+                            {(reservation.commentCustomer || reservation.commentAdmin) && (
+                              <div className="timeline-comments">
+                                {reservation.commentCustomer && (
+                                  <div className="timeline-comment">
+                                    <strong style={{ color: 'var(--accent-gold)', fontSize: '0.75rem' }}>
+                                      {language === 'ua' ? '👤 Гість' : language === 'ru' ? '👤 Гость' : '👤 Guest'}
+                                    </strong>
+                                    <div>&ldquo;{reservation.commentCustomer}&rdquo;</div>
+                                  </div>
+                                )}
+                                {reservation.commentAdmin && (
+                                  <div className="timeline-comment timeline-comment-admin">
+                                    <strong style={{ color: 'var(--accent-rust)', fontSize: '0.75rem' }}>
+                                      {language === 'ua' ? '🔒 Адмін' : language === 'ru' ? '🔒 Админ' : '🔒 Admin'}
+                                    </strong>
+                                    <div>&ldquo;{reservation.commentAdmin}&rdquo;</div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -806,6 +877,19 @@ export default function ReservationsPage() {
                   ))}
                 </select>
               </label>
+              <label>
+                {language === 'ua' ? 'Джерело' : language === 'ru' ? 'Источник' : 'Source'}
+                <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+                  <option value="ALL">{language === 'ua' ? 'Усі' : language === 'ru' ? 'Все' : 'All'}</option>
+                  <option value="WEB">🌐 {getSourceLabel('WEB', language)}</option>
+                  <option value="ADMIN">👤 {getSourceLabel('ADMIN', language)}</option>
+                  <option value="PHONE">📞 {getSourceLabel('PHONE', language)}</option>
+                  <option value="WALK_IN">🚶 {getSourceLabel('WALK_IN', language)}</option>
+                  <option value="EVENT">🎫 {getSourceLabel('EVENT', language)}</option>
+                  <option value="INSTAGRAM">📷 {getSourceLabel('INSTAGRAM', language)}</option>
+                  <option value="FACEBOOK">👍 {getSourceLabel('FACEBOOK', language)}</option>
+                </select>
+              </label>
             </FilterBar>
 
             <p className="muted table-meta">{t('reservations.showing', { visible: filteredRows.length, total: state.rows.length })}</p>
@@ -832,8 +916,16 @@ export default function ReservationsPage() {
           <section id="manual-booking" className="panel-card">
             <div className="panel-card-head">
               <div>
-                <span className="eyebrow">{t('reservations.management.title')}</span>
-                <h3 className="panel-section-title">{t('reservations.management.description')}</h3>
+                <span className="eyebrow">
+                  {language === 'ua' ? 'Столи та місця' : language === 'ru' ? 'Столы и места' : 'Tables & Places'}
+                </span>
+                <h3 className="panel-section-title">
+                  {language === 'ua' 
+                    ? 'Керування столами: депозити, доступність, фото та ручне бронювання для обраної дати' 
+                    : language === 'ru' 
+                      ? 'Управление столами: депозиты, доступность, фото и ручное бронирование для выбранной даты'
+                      : 'Manage tables: deposits, availability, photos & manual bookings for selected date'}
+                </h3>
               </div>
               <Link className="btn btn-secondary btn-small" to="/admin/map">{t('reservations.management.openMap')}</Link>
             </div>
@@ -894,58 +986,104 @@ export default function ReservationsPage() {
             {bookingFormState.success ? <p className="success-message">{bookingFormState.success}</p> : null}
 
             {!managementState.loading && !managementState.error && (
-              <div className="position-flat-table-wrap">
-                <table className="position-flat-table">
-                  <thead>
-                    <tr>
-                      <th>{t('reservations.management.flat.code')}</th>
-                      <th>{t('reservations.management.flat.type')}</th>
-                      <th>{t('reservations.management.flat.zone')}</th>
-                      <th>{t('reservations.management.flat.capacity')}</th>
-                      <th>{t('reservations.management.flat.deposit')}</th>
-                      <th>{t('reservations.management.flat.status')}</th>
-                      <th>{t('reservations.management.flat.bookings')}</th>
-                      <th>{t('reservations.management.flat.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {managementState.positions.length === 0 ? (
-                      <tr><td colSpan="8" className="muted" style={{ textAlign: 'center', padding: '24px' }}>{t('reservations.management.empty')}</td></tr>
-                    ) : managementState.positions.map((pos) => {
-                      const isActive = Boolean(pos.effective?.isActive);
-                      const isBookable = Boolean(pos.effective?.isBookable);
-                      return (
-                        <tr key={pos.id} className={!isActive ? 'position-row-inactive' : ''}>
-                          <td><strong>{pos.code || `#${pos.id}`}</strong></td>
-                          <td>{getBookingKindLabel(pos.bookingKind, t)} · {getPositionTypeLabel(pos.positionType, t)}</td>
-                          <td>{localizeField(pos.map?.name, language) || '—'} / {localizeField(pos.zone?.name, language) || '—'}</td>
-                          <td>{pos.seatsMin}-{pos.seatsMax}</td>
-                          <td>
-                            <button type="button" className="btn-link" onClick={() => { setPositionModal({ type: 'deposit', position: pos }); setDepositEdit({ saving: false, value: Number(pos.effective?.deposit || 0) }); }}>
-                              {Number(pos.effective?.deposit || 0)}
-                            </button>
-                          </td>
-                          <td>
-                            <StatusPill status={isActive && isBookable ? 'CONFIRMED' : isActive ? 'HELD' : 'CANCELLED'} />
-                          </td>
-                          <td>{pos.reservationStats?.activeCount || 0}</td>
-                          <td className="position-flat-actions">
-                            <button type="button" className="btn btn-small btn-secondary" title={t('reservations.management.flat.toggleAvailability')} onClick={() => togglePositionAvailability(pos)} disabled={positionActionState.savingBase}>
-                              {isActive ? '⏸' : '▶️'}
-                            </button>
-                            <button type="button" className="btn btn-small btn-secondary" title={t('reservations.management.flat.photo')} onClick={() => { setPositionModal({ type: 'photo', position: pos }); setPhotoEdit({ saving: false, url: pos.effective?.photoUrl || pos.base?.photoUrl || '' }); }}>
-                              📷
-                            </button>
-                            <button type="button" className="btn btn-small" title={t('reservations.management.flat.createBooking')} onClick={() => { setPositionModal({ type: 'booking', position: pos }); setBookingFormState((c) => ({ ...c, open: true, error: '', success: '', form: buildBookingForm(pos, managementState.scope.reservationDate || today, managementState.scope.eventId || managementEventId) })) }}>
-                              📅
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="positions-summary" style={{
+                  display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '12px 16px',
+                  background: 'var(--bg-card, #fff)', borderRadius: 'var(--radius-card, 10px)',
+                  marginBottom: '14px', border: '1px solid var(--border-light, #eee)',
+                  fontSize: '0.85rem'
+                }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline' }}>
+                    <strong style={{ fontSize: '1.3rem', color: 'var(--text-primary)' }}>
+                      {managementState.positions.length}
+                    </strong>
+                    <span className="muted">{language === 'ua' ? 'всього позицій' : language === 'ru' ? 'всего позиций' : 'total positions'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline' }}>
+                    <strong style={{ fontSize: '1.3rem', color: 'var(--accent-olive, #5B7B3A)' }}>
+                      {managementState.positions.filter(p => p.effective?.isActive && p.effective?.isBookable).length}
+                    </strong>
+                    <span className="muted">{language === 'ua' ? 'вільних' : language === 'ru' ? 'свободных' : 'available'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline' }}>
+                    <strong style={{ fontSize: '1.3rem', color: 'var(--accent-rust, #8B2500)' }}>
+                      {managementState.positions.filter(p => !p.effective?.isActive).length}
+                    </strong>
+                    <span className="muted">{language === 'ua' ? 'неактивних' : language === 'ru' ? 'неактивных' : 'disabled'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'baseline' }}>
+                    <strong style={{ fontSize: '1.3rem', color: 'var(--accent-gold, #C89241)' }}>
+                      {managementState.positions.reduce((s, p) => s + (p.reservationStats?.activeCount || 0), 0)}
+                    </strong>
+                    <span className="muted">{language === 'ua' ? 'поточних броней' : language === 'ru' ? 'текущих броней' : 'current bookings'}</span>
+                  </div>
+                </div>
+
+                <div className="position-flat-table-wrap">
+                  <table className="position-flat-table">
+                    <thead>
+                      <tr>
+                        <th>{language === 'ua' ? 'Назва' : language === 'ru' ? 'Название' : 'Name'}</th>
+                        <th>{language === 'ua' ? 'Тип' : language === 'ru' ? 'Тип' : 'Type'}</th>
+                        <th>{language === 'ua' ? 'Зона / Мапа' : language === 'ru' ? 'Зона / Карта' : 'Zone / Map'}</th>
+                        <th>{language === 'ua' ? 'Місць' : language === 'ru' ? 'Мест' : 'Seats'}</th>
+                        <th>{language === 'ua' ? 'Депозит, ₴' : language === 'ru' ? 'Депозит, ₴' : 'Deposit, ₴'}</th>
+                        <th>{language === 'ua' ? 'Статус' : language === 'ru' ? 'Статус' : 'Status'}</th>
+                        <th>{language === 'ua' ? 'Броней' : language === 'ru' ? 'Броней' : 'Bookings'}</th>
+                        <th>{language === 'ua' ? 'Дії' : language === 'ru' ? 'Действия' : 'Actions'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {managementState.positions.length === 0 ? (
+                        <tr><td colSpan="8" className="muted" style={{ textAlign: 'center', padding: '24px' }}>{t('reservations.management.empty')}</td></tr>
+                      ) : managementState.positions.map((pos) => {
+                        const isActive = Boolean(pos.effective?.isActive);
+                        const isBookable = Boolean(pos.effective?.isBookable);
+                        const photoUrl = pos.effective?.photoUrl || pos.base?.photoUrl;
+                        return (
+                          <tr key={pos.id} className={!isActive ? 'position-row-inactive' : ''}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {photoUrl ? (
+                                  <img src={photoUrl} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #eee' }} />
+                                ) : (
+                                  <div style={{ width: '36px', height: '36px', background: 'var(--bg-input, #f5f5f5)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', color: '#999' }}>
+                                    {getBookingKindLabel(pos.bookingKind, t) === t('reservationMeta.bookingKind.BEACH') ? '🏖️' : '🪑'}
+                                  </div>
+                                )}
+                                <strong>{pos.code || localizeField(pos.name, language) || `#${pos.id}`}</strong>
+                              </div>
+                            </td>
+                            <td>{getBookingKindLabel(pos.bookingKind, t)} · {getPositionTypeLabel(pos.positionType, t)}</td>
+                            <td>{localizeField(pos.zone?.name, language) || '—'} / {localizeField(pos.map?.name, language) || '—'}</td>
+                            <td>{pos.seatsMin}-{pos.seatsMax}</td>
+                            <td>
+                              <button type="button" className="btn-link" onClick={() => { setPositionModal({ type: 'deposit', position: pos }); setDepositEdit({ saving: false, value: Number(pos.effective?.deposit || 0) }); }}>
+                                {Number(pos.effective?.deposit || 0)}
+                              </button>
+                            </td>
+                            <td>
+                              <StatusPill status={isActive && isBookable ? 'CONFIRMED' : isActive ? 'HELD' : 'CANCELLED'} />
+                            </td>
+                            <td>{pos.reservationStats?.activeCount || 0}</td>
+                            <td className="position-flat-actions">
+                              <button type="button" className="btn btn-small btn-secondary" title={language === 'ua' ? (isActive ? 'Вимкнути позицію' : 'Увімкнути позицію') : (isActive ? 'Отключить позицию' : 'Включить позицию')} onClick={() => togglePositionAvailability(pos)} disabled={positionActionState.savingBase}>
+                                {isActive ? '⏸' : '▶️'}
+                              </button>
+                              <button type="button" className="btn btn-small btn-secondary" title={language === 'ua' ? 'Змінити фото' : language === 'ru' ? 'Изменить фото' : 'Change photo'} onClick={() => { setPositionModal({ type: 'photo', position: pos }); setPhotoEdit({ saving: false, url: photoUrl || '' }); }}>
+                                📷
+                              </button>
+                              <button type="button" className="btn btn-small" title={language === 'ua' ? 'Створити бронь' : language === 'ru' ? 'Создать бронь' : 'Create booking'} onClick={() => { setPositionModal({ type: 'booking', position: pos }); setBookingFormState((c) => ({ ...c, open: true, error: '', success: '', form: buildBookingForm(pos, managementState.scope.reservationDate || today, managementState.scope.eventId || managementEventId) })) }}>
+                                📅
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {positionModal.type === 'deposit' && positionModal.position && (

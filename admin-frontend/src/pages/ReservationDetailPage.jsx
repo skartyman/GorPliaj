@@ -47,9 +47,23 @@ function getActionTone(status) {
   return 'btn';
 }
 
+function getSourceLabel(source) {
+  const labels = { WEB: 'Веб', ADMIN: 'Адмін', PHONE: 'Телефон', WALK_IN: 'Walk-in', EVENT: 'Подія', INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook' };
+  return labels[source] || source || '—';
+}
+
+function getSourceIcon(source) {
+  const icons = { WEB: '🌐', ADMIN: '👤', PHONE: '📞', WALK_IN: '🚶', EVENT: '🎫', INSTAGRAM: '📷', FACEBOOK: '👍' };
+  return icons[source] || '📋';
+}
+
 export default function ReservationDetailPage() {
   const { id } = useParams();
   const [state, setState] = useState({ loading: true, error: '', data: null, updating: false });
+  const [editComments, setEditComments] = useState(false);
+  const [customerComment, setCustomerComment] = useState('');
+  const [adminComment, setAdminComment] = useState('');
+  const [savingComments, setSavingComments] = useState(false);
   const { t, language } = useAdminI18n();
 
   async function loadReservation() {
@@ -62,6 +76,8 @@ export default function ReservationDetailPage() {
     }
 
     setState({ loading: false, error: '', data: body, updating: false });
+    setCustomerComment(body?.reservation?.commentCustomer || '');
+    setAdminComment(body?.reservation?.commentAdmin || '');
   }
 
   useEffect(() => {
@@ -69,6 +85,24 @@ export default function ReservationDetailPage() {
       setState({ loading: false, error: t('reservationDetail.errors.load'), data: null, updating: false });
     });
   }, [id, t]);
+
+  async function saveComments() {
+    setSavingComments(true);
+    try {
+      const { response, body } = await apiRequest(`/api/admin/reservations/${id}/comments`, {
+        method: 'PATCH',
+        body: JSON.stringify({ commentCustomer: customerComment, commentAdmin: adminComment })
+      });
+      if (response.ok) {
+        await loadReservation();
+        setEditComments(false);
+      } else {
+        alert(body?.message || 'Не вдалося зберегти коментарі');
+      }
+    } finally {
+      setSavingComments(false);
+    }
+  }
 
   async function onChangeStatus(status) {
     setState((prev) => ({ ...prev, updating: true, error: '' }));
@@ -124,11 +158,99 @@ export default function ReservationDetailPage() {
               <div className="details-grid compact">
                 <DetailRow label={t('reservationDetail.fields.guest')} value={reservation.customerName} />
                 <DetailRow label={t('reservationDetail.fields.phone')} value={reservation.customerPhone} />
+                {reservation.customerEmail && <DetailRow label="Email" value={reservation.customerEmail} />}
                 <DetailRow label={t('reservationDetail.fields.guests')} value={reservation.guests} />
+                <DetailRow 
+                  label={language === 'ua' ? 'Джерело' : language === 'ru' ? 'Источник' : 'Source'} 
+                  value={
+                    <span className="source-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '2px 8px', background: 'var(--bg-card, #f5f5f5)', borderRadius: '6px', fontSize: '0.9rem' }}>
+                      <span style={{ fontSize: '1.1rem' }}>{getSourceIcon(reservation.source)}</span>
+                      <span>{getSourceLabel(reservation.source)}</span>
+                    </span>
+                  } 
+                />
                 <DetailRow label={t('reservationDetail.fields.mode')} value={modeLabel} />
                 <DetailRow label={t('reservationDetail.fields.placeType')} value={placeTypeLabel} />
-                <DetailRow label={t('reservationDetail.fields.comments')} value={commentLabel} />
               </div>
+            </PanelCard>
+
+            <PanelCard 
+              title={language === 'ua' ? 'Коментарі' : language === 'ru' ? 'Комментарии' : 'Comments'} 
+              className="surface-muted full-height"
+            >
+              {editComments ? (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', fontWeight: 700, marginBottom: '4px', display: 'block' }}>
+                      👤 {language === 'ua' ? 'Коментар гостя' : language === 'ru' ? 'Комментарий гостя' : 'Guest comment'}
+                    </label>
+                    <textarea
+                      value={customerComment}
+                      onChange={(e) => setCustomerComment(e.target.value)}
+                      rows="3"
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-warm, #ddd)', fontFamily: 'inherit', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--accent-rust)', fontWeight: 700, marginBottom: '4px', display: 'block' }}>
+                      🔒 {language === 'ua' ? 'Коментар адміна' : language === 'ru' ? 'Комментарий админа' : 'Admin comment'}
+                    </label>
+                    <textarea
+                      value={adminComment}
+                      onChange={(e) => setAdminComment(e.target.value)}
+                      rows="3"
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-warm, #ddd)', fontFamily: 'inherit', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={saveComments}
+                      disabled={savingComments}
+                    >
+                      {savingComments ? '...' : language === 'ua' ? 'Зберегти' : language === 'ru' ? 'Сохранить' : 'Save'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={() => { setEditComments(false); setCustomerComment(reservation.commentCustomer || ''); setAdminComment(reservation.commentAdmin || ''); }}
+                    >
+                      {language === 'ua' ? 'Скасувати' : language === 'ru' ? 'Отмена' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {reservation.commentCustomer && (
+                    <div style={{ borderLeft: '3px solid var(--accent-gold)', padding: '8px 12px', background: 'rgba(200,146,65,0.06)', borderRadius: '0 6px 6px 0' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', fontWeight: 700, marginBottom: '4px' }}>
+                        👤 {language === 'ua' ? 'Гість' : language === 'ru' ? 'Гость' : 'Guest'}
+                      </div>
+                      <div style={{ fontStyle: 'italic', fontSize: '0.9rem' }}>{reservation.commentCustomer}</div>
+                    </div>
+                  )}
+                  {reservation.commentAdmin && (
+                    <div style={{ borderLeft: '3px solid var(--accent-rust)', padding: '8px 12px', background: 'rgba(139,37,0,0.05)', borderRadius: '0 6px 6px 0' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-rust)', fontWeight: 700, marginBottom: '4px' }}>
+                        🔒 {language === 'ua' ? 'Адмін' : language === 'ru' ? 'Админ' : 'Admin'}
+                      </div>
+                      <div style={{ fontStyle: 'italic', fontSize: '0.9rem' }}>{reservation.commentAdmin}</div>
+                    </div>
+                  )}
+                  {!reservation.commentCustomer && !reservation.commentAdmin && (
+                    <p className="muted" style={{ fontSize: '0.85rem' }}>{language === 'ua' ? 'Немає коментарів' : language === 'ru' ? 'Нет комментариев' : 'No comments'}</p>
+                  )}
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => setEditComments(true)}
+                    style={{ justifySelf: 'start' }}
+                  >
+                    ✏️ {language === 'ua' ? 'Редагувати' : language === 'ru' ? 'Редактировать' : 'Edit'}
+                  </button>
+                </div>
+              )}
             </PanelCard>
 
             <PanelCard title={t('reservationDetail.slotInfo')} className="surface-muted full-height">

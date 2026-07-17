@@ -336,6 +336,37 @@ async function deleteAdminReservation(req, res) {
   }
 }
 
+async function updateAdminReservationComments(req, res) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'Invalid reservation id.' });
+    }
+
+    const { commentCustomer, commentAdmin } = req.body;
+    const reservation = await prisma.reservation.findUnique({ where: { id } });
+    if (!reservation) return res.status(404).json({ message: 'Reservation not found.' });
+
+    const updated = await prisma.reservation.update({
+      where: { id },
+      data: {
+        commentCustomer: commentCustomer || null,
+        commentAdmin: commentAdmin || null
+      },
+      include: {
+        table: { select: { id: true, name: true, code: true } },
+        zone: { select: { id: true, name: true } },
+        map: { select: { id: true, name: true, usageMode: true } }
+      }
+    });
+
+    return res.json({ reservation: updated });
+  } catch (error) {
+    console.error('[adminController.updateAdminReservationComments] Failed.', error);
+    return res.status(500).json({ message: 'Unable to update comments.' });
+  }
+}
+
 async function getAdminMapEditor(req, res) {
   try {
     const id = Number(req.params.id);
@@ -894,6 +925,7 @@ module.exports = {
   upsertAdminReservationPositionOverride,
   deleteAdminReservationPositionOverride,
   updateAdminReservationStatus,
+  updateAdminReservationComments,
   deleteAdminReservation,
   createAdminReservation,
   verifyAdminReservation,
