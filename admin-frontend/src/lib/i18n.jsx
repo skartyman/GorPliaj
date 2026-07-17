@@ -989,6 +989,12 @@ const translations = {
         FAILED: 'Невдало',
         REFUNDED: 'Повернено',
         CANCELLED: 'Скасовано'
+      },
+      actions: {
+        MARK_AS_PAID: 'Підтвердити оплату',
+        MARK_AS_CANCELLED: 'Скасувати',
+        MARK_AS_FAILED: 'Позначити невдалим',
+        REFUND: 'Повернути кошти'
       }
     },
     settings: {

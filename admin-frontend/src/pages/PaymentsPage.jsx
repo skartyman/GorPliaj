@@ -12,15 +12,15 @@ export default function PaymentsPage() {
 
   const STATUS_ACTIONS = useMemo(() => ({
     PENDING: [
-      { label: t('payments.statuses.PAID'), status: 'PAID', className: 'btn btn-small btn-success' },
-      { label: t('payments.statuses.CANCELLED'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
+      { label: t('payments.actions.MARK_AS_PAID'), status: 'PAID', className: 'btn btn-small btn-success' },
+      { label: t('payments.actions.MARK_AS_CANCELLED'), status: 'CANCELLED', className: 'btn btn-small btn-danger' }
     ],
     REQUIRES_ACTION: [
-      { label: t('payments.statuses.PAID'), status: 'PAID', className: 'btn btn-small btn-success' },
-      { label: t('payments.statuses.FAILED'), status: 'FAILED', className: 'btn btn-small btn-danger' }
+      { label: t('payments.actions.MARK_AS_PAID'), status: 'PAID', className: 'btn btn-small btn-success' },
+      { label: t('payments.actions.MARK_AS_FAILED'), status: 'FAILED', className: 'btn btn-small btn-danger' }
     ],
     PAID: [
-      { label: t('payments.statuses.REFUNDED'), status: 'REFUNDED', className: 'btn btn-small btn-warning' }
+      { label: t('payments.actions.REFUND'), status: 'REFUNDED', className: 'btn btn-small btn-warning' }
     ]
   }), [t]);
 
