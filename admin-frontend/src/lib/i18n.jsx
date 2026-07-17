@@ -969,12 +969,18 @@ const translations = {
       },
       columns: {
         id: '№',
+        type: 'Тип',
+        target: 'За що',
         reservation: 'Бронювання',
         amount: 'Сума',
         status: 'Статус',
         provider: 'Провайдер',
         date: 'Дата',
         actions: 'Дії'
+      },
+      type: {
+        reservation: 'Бронювання',
+        ticket: 'Квиток'
       },
       statuses: {
         PENDING: 'Очікує',

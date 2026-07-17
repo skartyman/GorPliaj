@@ -3233,6 +3233,34 @@ textarea { resize: vertical; min-height: 96px; }
   white-space: nowrap;
 }
 
+.payment-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.payment-type-badge.reservation {
+  background: rgba(200, 146, 65, 0.12);
+  color: #a26b25;
+  border: 1px solid rgba(200, 146, 65, 0.3);
+}
+
+.payment-type-badge.ticket {
+  background: rgba(91, 123, 58, 0.12);
+  color: #456d27;
+  border: 1px solid rgba(91, 123, 58, 0.3);
+}
+
+.muted.small {
+  font-size: 0.75rem;
+}
+
 .timeline-comments {
   display: grid;
   gap: 6px;

@@ -4,6 +4,7 @@ function toAdminPayment(payment) {
   return {
     id: payment.id,
     reservationId: payment.reservationId,
+    ticketOrderId: payment.ticketOrderId,
     provider: payment.provider,
     providerPaymentId: payment.providerPaymentId,
     providerOrderId: payment.providerOrderId,
@@ -23,6 +24,21 @@ function toAdminPayment(payment) {
       timeFrom: payment.reservation.timeFrom,
       status: payment.reservation.status,
       guests: payment.reservation.guests
+    } : null,
+    ticketOrder: payment.ticketOrder ? {
+      id: payment.ticketOrder.id,
+      orderNumber: payment.ticketOrder.orderNumber,
+      customerName: payment.ticketOrder.customerName,
+      customerEmail: payment.ticketOrder.customerEmail,
+      customerPhone: payment.ticketOrder.customerPhone,
+      amount: Number(payment.ticketOrder.amount),
+      status: payment.ticketOrder.status,
+      event: payment.ticketOrder.event ? {
+        id: payment.ticketOrder.event.id,
+        title: payment.ticketOrder.event.title,
+        slug: payment.ticketOrder.event.slug,
+        startAt: payment.ticketOrder.event.startAt
+      } : null
     } : null
   };
 }
@@ -40,6 +56,25 @@ async function listAdminPayments() {
           timeFrom: true,
           status: true,
           guests: true
+        }
+      },
+      ticketOrder: {
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          amount: true,
+          status: true,
+          event: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              startAt: true
+            }
+          }
         }
       }
     }
@@ -60,6 +95,25 @@ async function getAdminPaymentById(id) {
           timeFrom: true,
           status: true,
           guests: true
+        }
+      },
+      ticketOrder: {
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          amount: true,
+          status: true,
+          event: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              startAt: true
+            }
+          }
         }
       }
     }
@@ -94,6 +148,25 @@ async function updatePaymentStatus(id, status) {
           timeFrom: true,
           status: true,
           guests: true
+        }
+      },
+      ticketOrder: {
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          amount: true,
+          status: true,
+          event: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              startAt: true
+            }
+          }
         }
       }
     }

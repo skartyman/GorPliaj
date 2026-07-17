@@ -4,7 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import PageContainer from '../components/PageContainer';
 import DataTable from '../components/DataTable';
 import StatusPill from '../components/StatusPill';
-import { apiRequest, formatDateTime } from '../lib/api';
+import { apiRequest, formatDateTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 
 export default function PaymentsPage() {
@@ -93,13 +93,51 @@ export default function PaymentsPage() {
       render: (row) => <strong>#{row.id}</strong>
     },
     {
-      key: 'reservation',
-      label: t('payments.columns.reservation'),
-      render: (row) => row.reservation ? (
-        <Link to={`/admin/reservations/${row.reservation.id}`}>
-          #{row.reservation.id} {row.reservation.customerName || ''}
-        </Link>
-      ) : '—'
+      key: 'type',
+      label: t('payments.columns.type'),
+      render: (row) => {
+        if (row.reservation) {
+          return <span className="payment-type-badge reservation">🪑 {t('payments.type.reservation')}</span>;
+        }
+        if (row.ticketOrder) {
+          return <span className="payment-type-badge ticket">🎫 {t('payments.type.ticket')}</span>;
+        }
+        return <span className="muted">—</span>;
+      }
+    },
+    {
+      key: 'target',
+      label: t('payments.columns.target'),
+      render: (row) => {
+        if (row.reservation) {
+          return (
+            <div>
+              <Link to={`/admin/reservations/${row.reservation.id}`}>
+                #{row.reservation.id} {row.reservation.customerName || ''}
+              </Link>
+              <div className="muted small">
+                {formatDateTime(row.reservation.reservationDate, dateLocale)}
+              </div>
+            </div>
+          );
+        }
+        if (row.ticketOrder) {
+          const eventTitle = row.ticketOrder.event?.title
+            ? localizeField(row.ticketOrder.event.title, language)
+            : '';
+          return (
+            <div>
+              <div>{row.ticketOrder.customerName || row.ticketOrder.customerEmail}</div>
+              {row.ticketOrder.event && (
+                <div className="muted small">
+                  🎪 {eventTitle}
+                </div>
+              )}
+            </div>
+          );
+        }
+        return <span className="muted">—</span>;
+      }
     },
     {
       key: 'amount',
