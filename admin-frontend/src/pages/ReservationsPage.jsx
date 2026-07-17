@@ -311,7 +311,7 @@ export default function ReservationsPage() {
 
     return state.rows.filter((reservation) => {
       const matchesStatus = statusFilter === 'ALL' || reservation.status === statusFilter;
-      const reservationDate = String(reservation.reservationDate || '').slice(0, 10);
+      const reservationDate = toDateInput(reservation.reservationDate);
       const matchesDate = !dateFilter || reservationDate === dateFilter;
 
       if (!query) {
