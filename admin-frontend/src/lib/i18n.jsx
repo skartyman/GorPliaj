@@ -57,7 +57,9 @@ const translations = {
       waiters: 'Офіціанти',
       settings: 'Налаштування',
       positions: 'Позиції',
-      positionTypes: 'Типи та ціни'
+      positionTypes: 'Типи та ціни',
+      reports: 'Звіти',
+      reportsSchedule: 'Розклад звітів'
     },
     login: {
       eyebrow: 'Доступ до адмінки',

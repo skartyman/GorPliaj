@@ -726,3 +726,37 @@ model WaiterCall {
   @@index([waiterId])
   @@index([status])
 }
+
+model ReportSchedule {
+  id             Int               @id @default(autoincrement())
+  name           String
+  reportType     ReportType
+  frequency      ReportFrequency   @default(WEEKLY)
+  recipientEmail String
+  isActive       Boolean           @default(true)
+  dayOfWeek      Int?
+  hour           Int               @default(9)
+  lastSentAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([reportType])
+  @@index([frequency])
+  @@index([isActive])
+}
+
+enum ReportType {
+  FINANCIAL
+  RESERVATIONS
+  TICKETS
+  MENU
+  EVENTS
+  STAFF
+  SUMMARY
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}

@@ -57,7 +57,10 @@ const PERMISSIONS = {
   'users:view': ['admin', 'manager', 'owner'],
   'users:create': ['admin', 'manager', 'owner'],
   'users:update': ['admin', 'manager', 'owner'],
-  'users:delete': ['admin', 'manager', 'owner']
+  'users:delete': ['admin', 'manager', 'owner'],
+
+  'reports:view': ['admin', 'manager', 'owner'],
+  'reports:manage': ['admin', 'manager', 'owner']
 };
 
 function hasPermission(role, permission) {

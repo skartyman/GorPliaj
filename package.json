@@ -35,6 +35,7 @@
     "hutko-node-js-sdk": "github:hutko-service/node-js-sdk",
     "jsqr": "^1.4.0",
     "multer": "^2.1.1",
+    "node-cron": "^4.6.0",
     "nodemailer": "^8.0.10",
     "pdfkit": "^0.18.0",
     "prisma": "^6.19.2",

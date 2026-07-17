@@ -216,4 +216,13 @@ setInterval(() => {
   });
 }, 60 * 1000);
 
+const { scheduleReportJobs } = require('./services/reportScheduler');
+setTimeout(() => {
+  try {
+    scheduleReportJobs();
+  } catch (error) {
+    console.error('[reportScheduler] Failed to initialize.', error);
+  }
+}, 8000);
+
 module.exports = app;

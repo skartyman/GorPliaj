@@ -23,6 +23,8 @@ function IconChevronLeft() { return <svg viewBox="0 0 24 24" fill="none" stroke=
 function IconChevronRight() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>; }
 function IconLogout() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
 function IconKey() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="14.5" r="5.5"/><path d="M12 10l8-8"/><path d="M16 6l2 2"/><path d="M18 4l2 2"/></svg>; }
+function IconReports() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 12l3-3 4 4 5-5"/></svg>; }
+function IconSchedule() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>; }
 
 const ALL_NAV_ITEMS = [
   { to: '/admin/dashboard', labelKey: 'nav.dashboard', icon: IconDashboard, roles: ['*'] },
@@ -38,6 +40,8 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/verify-ticket', labelKey: 'nav.verifyTicket', icon: IconTicket, roles: ['hostess', 'admin', 'manager', 'owner'] },
   { to: '/admin/users', labelKey: 'nav.users', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/waiters', labelKey: 'nav.waiters', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/reports', labelKey: 'nav.reports', icon: IconReports, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/reports-schedule', labelKey: 'nav.reportsSchedule', icon: IconSchedule, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/settings', labelKey: 'nav.settings', icon: IconSettings, roles: ['seo_smm', 'admin', 'manager', 'owner'] }
 ];
 

@@ -3226,3 +3226,437 @@ textarea { resize: vertical; min-height: 96px; }
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* ── Reports page ── */
+.reports-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reports-tabs .btn {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border-warm);
+  color: var(--text-muted);
+  transition: all 0.18s ease;
+}
+.reports-tabs .btn:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+.reports-tabs .btn-primary {
+  background: var(--accent-gold);
+  color: #fff;
+  border-color: var(--accent-gold);
+}
+.reports-tabs .btn-primary:hover {
+  background: var(--accent-amber);
+  border-color: var(--accent-amber);
+}
+
+.report-range-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.report-range-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.report-range-presets .btn {
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  border-radius: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+}
+.report-range-presets .btn-primary {
+  background: var(--accent-gold);
+  color: #fff;
+  border-color: var(--accent-gold);
+}
+
+.report.range-custom {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.report.range-custom input[type="date"] {
+  padding: 4px 8px;
+  font-size: 0.82rem;
+  border: 1px solid var(--border-warm);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+.report.range-custom span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.report-send-panel {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+.report-send-panel input[type="email"] {
+  padding: 6px 10px;
+  font-size: 0.86rem;
+  border: 1px solid var(--border-warm);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  min-width: 220px;
+}
+.report-send-result {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.report-send-result.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.report-send-result.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+/* stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stats-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px var(--shadow-warm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stats-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-strong);
+}
+
+.stats-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.stats-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.stats-sub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* charts row */
+.report-charts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.report-chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  box-shadow: 0 1px 3px var(--shadow-warm);
+}
+.report-chart-card h3 {
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.report-empty {
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  padding: 32px 0;
+}
+
+/* report tables row */
+.report-tables-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.report-table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  box-shadow: 0 1px 3px var(--shadow-warm);
+  overflow-x: auto;
+}
+.report-table-card h3 {
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.report-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.report-data-table thead th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-warm);
+  background: var(--bg-input);
+}
+.report-data-table tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+.report-data-table tbody tr:hover {
+  background: rgba(200, 146, 65, 0.05);
+}
+.report-data-table .empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 0;
+  font-style: italic;
+}
+
+.report-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-warm);
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Schedule page */
+.schedule-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.schedule-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-row .form-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-field > span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.form-field input,
+.form-field select {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-input);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.schedules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px var(--shadow-warm);
+  transition: opacity 0.18s;
+}
+.schedule-card.inactive {
+  opacity: 0.6;
+}
+
+.schedule-card-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.schedule-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.schedule-meta .schedule-type {
+  background: var(--accent-gold);
+  color: #fff;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.schedule-email {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.schedule-last {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  font-style: italic;
+}
+
+.schedule-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.schedule-trigger-msg {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.schedule-trigger-msg.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.schedule-trigger-msg.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-warm);
+  border-radius: var(--radius-card);
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .stats-value {
+    font-size: 1.3rem;
+  }
+  .report-charts-row {
+    grid-template-columns: 1fr;
+  }
+  .report-tables-row {
+    grid-template-columns: 1fr;
+  }
+  .schedule-card-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -120,6 +120,21 @@ const {
   verifyTicket,
   useTicket
 } = require('../../controllers/adminTicketSalesController');
+const {
+  getFinancialReportController,
+  getReservationsReportController,
+  getTicketSalesReportController,
+  getMenuReportController,
+  getEventsReportController,
+  getStaffReportController,
+  getSummaryReportController,
+  sendManualReportController,
+  listSchedulesController,
+  createScheduleController,
+  updateScheduleController,
+  deleteScheduleController,
+  triggerScheduleController
+} = require('../../controllers/adminReportController');
 
 const router = express.Router();
 
@@ -294,5 +309,19 @@ router.get('/waiters/qr-pdf', requireAdminAuth, requirePermission('users:view'),
     res.send(pdf);
   } catch (err) { console.error('QR PDF error:', err); res.status(500).json({ message: 'Internal server error.' }); }
 });
+
+router.get('/reports/financial', requireAdminAuth, requirePermission('reports:view'), getFinancialReportController);
+router.get('/reports/reservations', requireAdminAuth, requirePermission('reports:view'), getReservationsReportController);
+router.get('/reports/tickets', requireAdminAuth, requirePermission('reports:view'), getTicketSalesReportController);
+router.get('/reports/menu', requireAdminAuth, requirePermission('reports:view'), getMenuReportController);
+router.get('/reports/events', requireAdminAuth, requirePermission('reports:view'), getEventsReportController);
+router.get('/reports/staff', requireAdminAuth, requirePermission('reports:view'), getStaffReportController);
+router.get('/reports/summary', requireAdminAuth, requirePermission('reports:view'), getSummaryReportController);
+router.post('/reports/send', requireAdminAuth, requirePermission('reports:manage'), sendManualReportController);
+router.get('/report-schedules', requireAdminAuth, requirePermission('reports:manage'), listSchedulesController);
+router.post('/report-schedules', requireAdminAuth, requirePermission('reports:manage'), createScheduleController);
+router.patch('/report-schedules/:id', requireAdminAuth, requirePermission('reports:manage'), updateScheduleController);
+router.delete('/report-schedules/:id', requireAdminAuth, requirePermission('reports:manage'), deleteScheduleController);
+router.post('/report-schedules/:id/trigger', requireAdminAuth, requirePermission('reports:manage'), triggerScheduleController);
 
 module.exports = router;
