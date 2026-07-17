@@ -470,9 +470,9 @@ export default function EventDetailPage() {
                     ) : null}
                     {orderStatus?.status === 'PAID' ? (
                       <>
-                        <span className="guest-modal-kicker">{c({ ua: 'Квитки готові', ru: 'Билеты готовы', en: 'Tickets are ready' })}</span>
-                        <h2>{c({ ua: 'Хочете одразу забронювати стіл на цей вечір?', ru: 'Хотите сразу забронировать стол на этот вечер?', en: 'Would you like to book a table for the evening?' })}</h2>
-                        <p>{c({ ua: 'Можна одразу перейти до бронювання або спочатку переглянути меню.', ru: 'Можно сразу перейти к бронированию или сначала посмотреть меню.', en: 'You can jump straight to event booking or browse the menu first.' })}</p>
+                        <span className="guest-modal-kicker">{c({ ua: 'Оплата успішна', ru: 'Оплата прошла', en: 'Payment successful' })}</span>
+                        <h2>{c({ ua: 'Дякуємо! Ваші квитки готові.', ru: 'Спасибо! Ваши билеты готовы.', en: 'Thank you! Your tickets are ready.' })}</h2>
+                        <p>{c({ ua: 'Завантажте квитки у PDF, перегляньте меню або забронюйте стіл на вечір.', ru: 'Скачайте билеты в PDF, посмотрите меню или забронируйте стол на вечер.', en: 'Download your PDF tickets, browse the menu, or book a table for the evening.' })}</p>
                         <div className="guest-modal-actions">
                           {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
                             <Link className="btn btn-primary" to={bookingUrl} onClick={() => setTicketFormOpen(false)}>

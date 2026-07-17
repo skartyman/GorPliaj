@@ -3,7 +3,13 @@ const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
 const { sendTicketEmail } = require('./emailService');
 const { sendNewReservationMessage } = require('./waiterTelegramService');
-const { buildVerifyUrl, buildReservationStatusUrl, buildReservationPdfUrl, buildDepositVerifyUrl } = require('../utils/ticketSignature');
+const {
+  generateTicketSignature,
+  buildVerifyUrl,
+  buildReservationStatusUrl,
+  buildReservationPdfUrl,
+  buildDepositVerifyUrl
+} = require('../utils/ticketSignature');
 
 function localizedValue(value) {
   if (!value) return '';
@@ -44,6 +50,72 @@ async function notifyPaidReservation(reservationId) {
     currency: reservation.payment?.currency || 'UAH',
     isPaid: true,
     eventTitle: localizedValue(reservation.event?.title)
+  });
+}
+
+async function deliverPaidReservation(reservationId, fallbackPaymentAmount = 0) {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      table: { select: { name: true, serviceName: true, code: true } },
+      zone: { select: { name: true } },
+      event: { select: { title: true } },
+      payment: true
+    }
+  });
+  if (!reservation) return;
+
+  const groupReservations = reservation.bookingGroupId
+    ? await prisma.reservation.findMany({
+      where: { bookingGroupId: reservation.bookingGroupId },
+      orderBy: [{ isGroupLead: 'desc' }, { id: 'asc' }],
+      include: {
+        table: { select: { name: true, serviceName: true, code: true } },
+        zone: { select: { name: true } }
+      }
+    })
+    : [reservation];
+
+  if (reservation.payment?.ticketOrderId) {
+    const ticketSalesService = require('./ticketSalesService');
+    await ticketSalesService.updateOrderStatus(reservation.payment.ticketOrderId, 'PAID');
+  }
+  if (!reservation.customerEmail) return;
+
+  const totalGuests = Number(reservation.groupGuestCount || reservation.guests || 0);
+  const tableName = groupReservations
+    .map((item) => localizedValue(item.table?.serviceName) || localizedValue(item.table?.name) || item.table?.code || '')
+    .filter(Boolean)
+    .join(', ');
+  const zoneName = [...new Set(groupReservations.map((item) => localizedValue(item.zone?.name)).filter(Boolean))].join(', ');
+  const rentalAmt = groupReservations.reduce((sum, item) => sum + Number(item.rentalAmount || 0), 0);
+  const depositAmt = groupReservations.reduce((sum, item) => sum + Number(item.depositAmount || 0), 0);
+  const payAmt = Number(reservation.payment?.amount || fallbackPaymentAmount || 0);
+
+  await sendTicketEmail({
+    to: reservation.customerEmail,
+    ticketCode: reservation.ticketCode,
+    customerName: reservation.customerName,
+    customerPhone: reservation.customerPhone || '',
+    reservationDate: reservation.reservationDate,
+    timeFrom: reservation.timeFrom,
+    timeTo: reservation.timeTo,
+    guests: totalGuests,
+    tableName,
+    zoneName,
+    eventTitle: reservation.event?.title || null,
+    depositAmount: depositAmt,
+    rentalAmount: rentalAmt,
+    totalPaid: payAmt,
+    entryTicketsAmount: Math.max(payAmt - rentalAmt - depositAmt, 0),
+    verifyUrl: buildVerifyUrl(reservation.ticketCode, reservation.reservationDate),
+    statusUrl: buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate),
+    downloadUrl: buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate),
+    depositQrUrl: depositAmt > 0
+      ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate)
+      : null,
+    status: 'PAID',
+    paymentStatus: 'PAID'
   });
 }
 
@@ -185,7 +257,7 @@ async function createCheckoutSession({ reservationId, ticketOrderId = null, amou
 
   const appBaseUrl = process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev';
   const responseUrl = returnTo && String(returnTo).startsWith('/')
-    ? `${appBaseUrl}/api/paygate/hutko/return?kind=reservation&return_to=${encodeURIComponent(returnTo)}`
+    ? `${appBaseUrl}/api/paygate/hutko/return/public?kind=reservation&return_to=${encodeURIComponent(returnTo)}`
     : `${appBaseUrl}/api/paygate/hutko/return`;
 
   const requestData = hutkoUtils.prepareRequest({
@@ -273,7 +345,7 @@ async function createTicketCheckoutSession({ ticketOrderId }) {
     order_desc: `Tickets ${ticketOrder.orderNumber}`,
     currency: ticketOrder.currency,
     amount: String(amountCents),
-    response_url: `${appBaseUrl}/api/paygate/hutko/return?kind=ticket&return_to=${encodeURIComponent(returnPath)}`,
+    response_url: `${appBaseUrl}/api/paygate/hutko/return/public?kind=ticket&return_to=${encodeURIComponent(returnPath)}`,
     server_callback_url: `${appBaseUrl}/api/paygate/hutko/callback`,
     sender_email: ticketOrder.customerEmail,
     ...(ticketOrder.customerPhone ? { sender_phone: ticketOrder.customerPhone } : {}),
@@ -411,75 +483,9 @@ async function processCallback(payload) {
         data: { status: 'CONFIRMED' }
       });
 
-      const reservation = await prisma.reservation.findUnique({
-        where: { id: reservationId },
-        include: {
-          table: { select: { name: true } },
-          zone: { select: { name: true } },
-          event: { select: { title: true } },
-          payment: true
-        }
-      });
-      const groupReservations = reservation?.bookingGroupId
-        ? await prisma.reservation.findMany({
-          where: { bookingGroupId: reservation.bookingGroupId },
-          orderBy: [{ isGroupLead: 'desc' }, { id: 'asc' }],
-          include: {
-            table: { select: { name: true, serviceName: true, code: true } },
-            zone: { select: { name: true } }
-          }
-        })
-        : (reservation ? [reservation] : []);
-
-      if (reservation?.payment?.ticketOrderId) {
-        const ticketSalesService = require('./ticketSalesService');
-        await ticketSalesService.updateOrderStatus(reservation.payment.ticketOrderId, 'PAID');
-      }
-
       if (confirmation.count > 0) {
         await notifyPaidReservation(reservationId);
-      }
-
-      if (reservation && reservation.customerEmail) {
-        const totalGuests = Number(reservation.groupGuestCount || reservation.guests || 0);
-        const tableName = groupReservations
-          .map((item) => localizedValue(item.table?.serviceName) || localizedValue(item.table?.name) || item.table?.code || '')
-          .filter(Boolean)
-          .join(', ');
-        const zoneName = [...new Set(groupReservations.map((item) => localizedValue(item.zone?.name)).filter(Boolean))].join(', ');
-        const rentalAmt = groupReservations.reduce((sum, item) => sum + Number(item.rentalAmount || 0), 0);
-        const depositAmt = groupReservations.reduce((sum, item) => sum + Number(item.depositAmount || 0), 0);
-        const verifyUrl = buildVerifyUrl(reservation.ticketCode, reservation.reservationDate);
-        const statusUrl = buildReservationStatusUrl(reservation.ticketCode, reservation.reservationDate);
-        const downloadUrl = buildReservationPdfUrl(reservation.ticketCode, reservation.reservationDate);
-        const depositQrUrl = depositAmt > 0
-          ? buildDepositVerifyUrl(reservation.ticketCode, reservation.reservationDate)
-          : null;
-        const payAmt = Number(reservation.payment?.amount || payment.amount || 0);
-
-        await sendTicketEmail({
-          to: reservation.customerEmail,
-          ticketCode: reservation.ticketCode,
-          customerName: reservation.customerName,
-          customerPhone: reservation.customerPhone || '',
-          reservationDate: reservation.reservationDate,
-          timeFrom: reservation.timeFrom,
-          timeTo: reservation.timeTo,
-          guests: totalGuests,
-          tableName,
-          zoneName,
-          eventTitle: reservation.event?.title || null,
-          depositAmount: depositAmt,
-          rentalAmount: rentalAmt,
-          totalPaid: payAmt,
-          entryTicketsAmount: Math.max(payAmt - rentalAmt - depositAmt, 0),
-          verifyUrl,
-          statusUrl,
-          downloadUrl,
-          depositQrUrl,
-          status: 'PAID',
-          paymentStatus: 'PAID'
-        });
+        await deliverPaidReservation(reservationId, payment.amount);
       }
     } catch (emailError) {
       console.error(`[hutko] Failed to send ticket email for reservation #${reservationId}:`, emailError.message);
@@ -588,10 +594,50 @@ async function syncReservationPaymentStatus(reservationId) {
     });
     if (confirmation.count > 0) {
       await notifyPaidReservation(reservationId);
+      await deliverPaidReservation(reservationId, updateData.amount || 0);
     }
   }
 
   return { type: 'SUCCESS', status: data };
+}
+
+async function resolvePublicReturnPath(providerOrderId) {
+  const ticketOrderId = parseTicketPaymentOrderId(providerOrderId);
+  if (ticketOrderId) {
+    const order = await prisma.ticketOrder.findUnique({
+      where: { id: ticketOrderId },
+      select: {
+        orderNumber: true,
+        downloadToken: true,
+        event: { select: { slug: true } }
+      }
+    });
+    if (!order) return null;
+
+    const eventPath = order.event?.slug
+      ? `/events/${encodeURIComponent(order.event.slug)}`
+      : '/events';
+    return `${eventPath}?ticket_order=${encodeURIComponent(order.orderNumber)}&token=${encodeURIComponent(order.downloadToken)}`;
+  }
+
+  const reservationId = parseOrderId(providerOrderId);
+  if (!reservationId) return null;
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      ticketCode: true,
+      reservationDate: true,
+      event: { select: { slug: true } }
+    }
+  });
+  if (!reservation?.ticketCode || !reservation.reservationDate) return null;
+
+  const token = generateTicketSignature(reservation.ticketCode, reservation.reservationDate);
+  const eventQuery = reservation.event?.slug
+    ? `&event=${encodeURIComponent(reservation.event.slug)}`
+    : '';
+  return `/booking?reservation=${encodeURIComponent(reservation.ticketCode)}&t=${encodeURIComponent(token)}${eventQuery}`;
 }
 
 module.exports = {
@@ -605,5 +651,6 @@ module.exports = {
   generateTicketPaymentOrderId,
   parseOrderId,
   parseTicketPaymentOrderId,
-  mapHutkoStatus
+  mapHutkoStatus,
+  resolvePublicReturnPath
 };

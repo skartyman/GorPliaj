@@ -210,7 +210,7 @@ async function getTicketOrderStatus(req, res) {
       downloadUrl: isPaid
         ? `/api/ticket-orders/${encodeURIComponent(order.orderNumber)}/pdf?token=${encodeURIComponent(order.downloadToken)}`
         : null,
-      pdfReady: isPaid ? cachedPdfExists(order.orderNumber) : false
+      pdfReady: isPaid
     });
   } catch (error) {
     console.error('[publicTicketSales.getTicketOrderStatus] Failed.', error);

@@ -559,6 +559,16 @@ async function updateOrderStatus(id, status) {
   const shouldRelease = cancelling && wasAllocated;
 
   const order = await prisma.$transaction(async (tx) => {
+    const claimed = await tx.ticketOrder.updateMany({
+      where: { id, status: existing.status },
+      data: {
+        status: normalizedStatus,
+        ...(normalizedStatus === 'PAID' ? { paidAt: existing.paidAt || new Date() } : {}),
+        ...(cancelling ? { cancelledAt: new Date() } : {})
+      }
+    });
+    if (claimed.count !== 1) return null;
+
     if (shouldRelease) {
       const counts = new Map();
       for (const ticket of existing.tickets) counts.set(ticket.ticketTypeId, (counts.get(ticket.ticketTypeId) || 0) + 1);
@@ -589,13 +599,8 @@ async function updateOrderStatus(id, status) {
       }
     });
 
-    return tx.ticketOrder.update({
+    return tx.ticketOrder.findUnique({
       where: { id },
-      data: {
-        status: normalizedStatus,
-        ...(normalizedStatus === 'PAID' ? { paidAt: existing.paidAt || new Date() } : {}),
-        ...(cancelling ? { cancelledAt: new Date() } : {})
-      },
       include: {
         event: true,
         eventSession: true,
@@ -609,6 +614,9 @@ async function updateOrderStatus(id, status) {
       }
     });
   });
+  if (!order) {
+    return { type: 'SUCCESS', order: await getOrder(id) };
+  }
   const normalizedOrder = toOrder(order);
   const delivery = await deliverOrderIfPaid(normalizedOrder);
   if (normalizedStatus === 'PAID' && !normalizedOrder.payment?.reservationId) {

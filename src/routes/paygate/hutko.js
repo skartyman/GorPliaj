@@ -58,21 +58,26 @@ router.post('/callback', async (req, res) => {
   }
 });
 
-function handleReturn(req, res) {
-  const orderId = req.query.order_id || '';
-  const status = req.query.order_status || '';
-  const kind = req.query.kind || '';
-  const returnTo = typeof req.query.return_to === 'string' && req.query.return_to.startsWith('/')
-    ? req.query.return_to
+async function handleReturn(req, res, { publicCheckout = false } = {}) {
+  const params = { ...(req.query || {}), ...(req.body || {}) };
+  const orderId = params.order_id || '';
+  const status = params.order_status || '';
+  const kind = params.kind || '';
+  const returnTo = typeof params.return_to === 'string'
+    && params.return_to.startsWith('/')
+    && !params.return_to.startsWith('//')
+    ? params.return_to
     : '/events';
 
-  if (kind === 'ticket' || kind === 'reservation') {
+  if (publicCheckout || kind === 'ticket' || kind === 'reservation') {
+    const resolvedReturnTo = await hutkoService.resolvePublicReturnPath(String(orderId || ''));
+    const destination = resolvedReturnTo || returnTo;
     const query = new URLSearchParams({
       payment_status: String(status || ''),
       order_id: String(orderId || '')
     });
-    const separator = returnTo.includes('?') ? '&' : '?';
-    return res.redirect(`${returnTo}${separator}${query.toString()}`);
+    const separator = destination.includes('?') ? '&' : '?';
+    return res.redirect(`${destination}${separator}${query.toString()}`);
   }
 
   if (status === 'approved') {
@@ -82,7 +87,21 @@ function handleReturn(req, res) {
   return res.redirect(`/admin/payments?status=${encodeURIComponent(status)}&order_id=${encodeURIComponent(orderId)}`);
 }
 
-router.get('/return', handleReturn);
-router.post('/return', handleReturn);
+router.get('/return', (req, res) => handleReturn(req, res).catch((error) => {
+  console.error('[hutko.return] Failed to resolve payment return.', error);
+  res.redirect('/events?payment_status=unknown');
+}));
+router.post('/return', (req, res) => handleReturn(req, res).catch((error) => {
+  console.error('[hutko.return] Failed to resolve payment return.', error);
+  res.redirect('/events?payment_status=unknown');
+}));
+router.get('/return/public', (req, res) => handleReturn(req, res, { publicCheckout: true }).catch((error) => {
+  console.error('[hutko.return.public] Failed to resolve payment return.', error);
+  res.redirect('/events?payment_status=unknown');
+}));
+router.post('/return/public', (req, res) => handleReturn(req, res, { publicCheckout: true }).catch((error) => {
+  console.error('[hutko.return.public] Failed to resolve payment return.', error);
+  res.redirect('/events?payment_status=unknown');
+}));
 
 module.exports = router;
