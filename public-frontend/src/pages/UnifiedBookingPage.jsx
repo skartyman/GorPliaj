@@ -2209,8 +2209,8 @@ export default function UnifiedBookingPage() {
       } else if (dateStr === defaultDate) {
         label = c({ ua: 'Завтра', ru: 'Завтра', en: 'Tomorrow' });
       } else {
-        const weekday = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'short' });
-        const dayMonth = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'short' });
+        const weekday = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', weekday: 'short' });
+        const dayMonth = d.toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'short' });
         const formattedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
         label = `${formattedWeekday}, ${dayMonth}`;
       }
@@ -2764,8 +2764,8 @@ export default function UnifiedBookingPage() {
                 <div>
                   <dt>{c({ ua: 'Дата бронювання', ru: 'Дата бронирования', en: 'Booking date' })}</dt>
                   <dd>{locale === 'ua'
-                    ? formatUkrainianDate(`${form.date}T12:00:00`)
-                    : new Date(`${form.date}T12:00:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</dd>
+                    ? formatUkrainianDate(`${form.date}T12:00:00+03:00`)
+                    : new Date(`${form.date}T12:00:00+03:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long', year: 'numeric' })}</dd>
                 </div>
                 <div>
                   <dt>{activeEventSlug ? c({ ua: 'Квитки', ru: 'Билеты', en: 'Tickets' }) : c({ ua: 'Гості', ru: 'Гости', en: 'Guests' })}</dt>

@@ -158,12 +158,22 @@ h1, h2, h3, p { margin: 0; }
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-right: -4px;
 }
+
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
 .sidebar-footer {
   padding-top: 16px;
   border-top: 1px solid rgba(255,255,255,0.08);
   margin-top: auto;
+  flex-shrink: 0;
 }
 
 .nav-link {

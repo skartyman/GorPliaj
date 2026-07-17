@@ -44,6 +44,7 @@ export function formatUkrainianDate(value, { weekday = false } = {}) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('uk-UA', {
+    timeZone: 'Europe/Kyiv',
     weekday: weekday ? 'long' : undefined,
     day: 'numeric',
     month: 'long',

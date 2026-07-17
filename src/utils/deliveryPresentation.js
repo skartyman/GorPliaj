@@ -23,6 +23,7 @@ function escapeHtml(value) {
 function formatDate(value, locale = 'uk-UA') {
   if (!value) return '';
   return new Date(value).toLocaleDateString(locale, {
+    timeZone: 'Europe/Kyiv',
     day: '2-digit',
     month: 'long',
     year: 'numeric'
@@ -32,6 +33,7 @@ function formatDate(value, locale = 'uk-UA') {
 function formatTime(value, locale = 'uk-UA') {
   if (!value) return '';
   return new Date(value).toLocaleTimeString(locale, {
+    timeZone: 'Europe/Kyiv',
     hour: '2-digit',
     minute: '2-digit'
   });
@@ -40,6 +42,7 @@ function formatTime(value, locale = 'uk-UA') {
 function formatDateTime(value, locale = 'uk-UA') {
   if (!value) return '';
   return new Date(value).toLocaleString(locale, {
+    timeZone: 'Europe/Kyiv',
     day: '2-digit',
     month: 'long',
     year: 'numeric',

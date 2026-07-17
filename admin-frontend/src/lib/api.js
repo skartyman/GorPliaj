@@ -30,12 +30,16 @@ export async function apiRequest(path, options = {}) {
 
 export function formatDate(value, locale = 'ru-RU') {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(locale);
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleDateString(locale, { timeZone: 'Europe/Kyiv' });
 }
 
 export function formatDateTime(value, locale = 'ru-RU') {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString(locale);
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleString(locale, { timeZone: 'Europe/Kyiv' });
 }
 
 export function formatTime(value, locale = 'ru-RU') {

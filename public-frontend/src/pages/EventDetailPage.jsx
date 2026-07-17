@@ -26,6 +26,7 @@ function formatSessionRange(session, locale) {
   const start = new Date(session.startsAt);
   const end = new Date(session.endsAt);
   const datePart = start.toLocaleDateString(formatLocale, {
+    timeZone: 'Europe/Kyiv',
     day: '2-digit',
     month: 'long',
     year: 'numeric'
