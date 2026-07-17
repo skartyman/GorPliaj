@@ -5,6 +5,7 @@ export function formatEventDateRange(startAt, endAt, locale = 'uk-UA') {
   }
 
   const startText = start.toLocaleString(locale, {
+    timeZone: 'Europe/Kyiv',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -22,6 +23,7 @@ export function formatEventDateRange(startAt, endAt, locale = 'uk-UA') {
   }
 
   return `${startText} - ${end.toLocaleString(locale, {
+    timeZone: 'Europe/Kyiv',
     year: 'numeric',
     month: 'long',
     day: 'numeric',

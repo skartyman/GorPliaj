@@ -1,9 +1,13 @@
 export function toDateKeyFromLocalDate(date) {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${obj.year}-${obj.month}-${obj.day}`;
 }
 
 export function toLocalDateKey(value) {
@@ -183,5 +187,14 @@ export function buildEventDateOptions(event) {
 
 function toTimeOnly(value) {
   if (!value) return '';
-  return new Date(value).toISOString().slice(11, 16);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${obj.hour}:${obj.minute}`;
 }

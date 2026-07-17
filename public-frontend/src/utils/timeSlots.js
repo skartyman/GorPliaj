@@ -23,8 +23,21 @@ export function generateTimeSlots(date, today, currentTime, bookingKind) {
 
 export function getDefaultTime(formDate, bookingKind, today) {
   if (bookingKind !== 'TABLE' || formDate !== today) return '12:00';
-  const now = new Date();
-  const rounded = new Date(Math.ceil(now.getTime() / 900000) * 900000);
-  rounded.setMinutes(rounded.getMinutes() + 15);
-  return `${String(rounded.getHours()).padStart(2, '0')}:${String(rounded.getMinutes()).padStart(2, '0')}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date());
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  const hours = Number(obj.hour);
+  const minutes = Number(obj.minute);
+
+  let totalMinutes = hours * 60 + minutes;
+  totalMinutes = Math.ceil(totalMinutes / 15) * 15 + 15;
+
+  const roundedHour = Math.floor(totalMinutes / 60) % 24;
+  const roundedMinute = totalMinutes % 60;
+
+  return `${String(roundedHour).padStart(2, '0')}:${String(roundedMinute).padStart(2, '0')}`;
 }

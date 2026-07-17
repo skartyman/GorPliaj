@@ -34,17 +34,29 @@ const PINCH_SENSITIVITY = 0.006;
 const EVENING_TABLE_START = '20:00';
 
 function toLocalDateKey(value) {
-  const date = new Date(value);
+  const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${obj.year}-${obj.month}-${obj.day}`;
 }
 
 function toLocalMinutes(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.getHours() * 60 + date.getMinutes();
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return Number(obj.hour) * 60 + Number(obj.minute);
 }
 
 function minutesToTime(value) {
