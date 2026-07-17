@@ -35,6 +35,18 @@ function formatSessionRange(session, locale) {
   return `${datePart}, ${startTime} - ${endTime}`;
 }
 
+function getSessionDateKey(session) {
+  if (!session?.startsAt) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date(session.startsAt));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 export default function EventDetailPage() {
   const { locale } = useLocale();
   const { slug } = useParams();
@@ -135,8 +147,12 @@ export default function EventDetailPage() {
         setSales({ loading: false, error: '', ticketTypes, sessions });
         setOrderForm((current) => ({
           ...current,
-          eventSessionId: current.eventSessionId || defaultSessionId,
-          ticketTypeId: current.ticketTypeId || String(defaultTypes[0]?.id || ticketTypes[0]?.id || '')
+          eventSessionId: sessions.some((session) => String(session.id) === String(current.eventSessionId))
+            ? current.eventSessionId
+            : defaultSessionId,
+          ticketTypeId: defaultTypes.some((type) => String(type.id) === String(current.ticketTypeId))
+            ? current.ticketTypeId
+            : String(defaultTypes[0]?.id || ticketTypes[0]?.id || '')
         }));
       })
       .catch((error) => setSales({ loading: false, error: error.message, ticketTypes: [], sessions: [] }));
@@ -209,6 +225,14 @@ export default function EventDetailPage() {
     return visibleTicketTypes.find((type) => String(type.id) === String(orderForm.ticketTypeId)) || visibleTicketTypes[0];
   }, [visibleTicketTypes, orderForm.ticketTypeId]);
 
+  const selectedEventSession = useMemo(
+    () => sales.sessions.find((session) => String(session.id) === String(orderForm.eventSessionId)) || null,
+    [sales.sessions, orderForm.eventSessionId]
+  );
+  const selectedSessionIsFree = selectedEventSession?.admissionMode === 'FREE';
+  const hasFreeSession = sales.sessions.some((session) => session.admissionMode === 'FREE')
+    || state.event?.sessions?.some((session) => session.admissionMode === 'FREE');
+
   const hasTicketTypeChoice = visibleTicketTypes.length > 1;
 
   useEffect(() => {
@@ -261,6 +285,7 @@ export default function EventDetailPage() {
   const fullDescriptionHtml = sanitizeRichText(fullDescription);
   const paymentUrl = orderStatus?.paymentUrl || orderResult?.paymentUrl;
   const bookingUrl = `/booking?event=${encodeURIComponent(event.slug)}`;
+  const selectedSessionBookingUrl = `${bookingUrl}${selectedEventSession ? `&date=${encodeURIComponent(getSessionDateKey(selectedEventSession))}` : ''}`;
 
   return (
     <>
@@ -296,14 +321,16 @@ export default function EventDetailPage() {
                 {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
               </Link>
             ) : null}
-            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl ? (
+            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl && !hasFreeSession ? (
               <a className="btn btn-secondary" href={event.ticketUrl} target="_blank" rel="noreferrer">
                 {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
               </a>
             ) : null}
-            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && !event.ticketUrl ? (
+            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && (!event.ticketUrl || hasFreeSession) ? (
               <button type="button" className="btn btn-secondary" onClick={() => setTicketFormOpen(true)}>
-                {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
+                {hasFreeSession
+                  ? c({ ua: 'Обрати дату', ru: 'Выбрать дату', en: 'Choose a date' })
+                  : c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
               </button>
             ) : null}
           </div>
@@ -321,7 +348,7 @@ export default function EventDetailPage() {
                         {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
                       </div>
                     ) : null}
-                    {!sales.loading && !sales.ticketTypes.length && !sales.error ? (
+                    {!sales.loading && !sales.ticketTypes.length && !hasFreeSession && !sales.error ? (
                       <div className="state-msg">
                         {c({
                           ua: 'Продаж квитків для цієї події ще не відкритий.',
@@ -330,7 +357,54 @@ export default function EventDetailPage() {
                         })}
                       </div>
                     ) : null}
-                    {!sales.loading && sales.sessions.length > 0 && orderForm.eventSessionId && !visibleTicketTypes.length && !sales.error ? (
+                    {sales.sessions.length ? (
+                      <div className="form-grid ticket-order-form">
+                        <div className="form-group ticket-form-head">
+                          <h2>{c({ ua: 'Оберіть дату події', ru: 'Выберите дату события', en: 'Choose an event date' })}</h2>
+                        </div>
+                        <div className="form-group">
+                          <label>{c({ ua: 'Дата події', ru: 'Дата события', en: 'Event date' })}</label>
+                          <select
+                            className="form-input"
+                            value={orderForm.eventSessionId}
+                            onChange={(eventValue) => {
+                              const nextSessionId = eventValue.target.value;
+                              const nextTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(nextSessionId || ''));
+                              setOrderForm((current) => ({
+                                ...current,
+                                eventSessionId: nextSessionId,
+                                ticketTypeId: String(nextTypes[0]?.id || '')
+                              }));
+                            }}
+                            required
+                          >
+                            {sales.sessions.map((session) => (
+                              <option key={session.id} value={session.id}>
+                                {localizeField(session.name, locale) || formatSessionRange(session, locale)} · {session.admissionMode === 'FREE'
+                                  ? c({ ua: 'вхід вільний', ru: 'вход свободный', en: 'free entry' })
+                                  : c({ ua: 'за квитком', ru: 'по билету', en: 'ticket required' })}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {selectedSessionIsFree ? (
+                          <div className="ticket-type-summary">
+                            <div>
+                              <strong>{c({ ua: 'Вхід вільний', ru: 'Вход свободный', en: 'Free entry' })}</strong>
+                              <p className="muted">{c({
+                                ua: 'Купувати вхідний квиток не потрібно. Оберіть столик на мапі та оформіть бронювання.',
+                                ru: 'Покупать входной билет не нужно. Выберите стол на карте и оформите бронирование.',
+                                en: 'No entry ticket is needed. Choose a table on the map and complete your booking.'
+                              })}</p>
+                            </div>
+                            <Link className="btn btn-primary" to={selectedSessionBookingUrl} onClick={() => setTicketFormOpen(false)}>
+                              {c({ ua: 'Обрати столик', ru: 'Выбрать стол', en: 'Choose a table' })}
+                            </Link>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {!sales.loading && sales.sessions.length > 0 && orderForm.eventSessionId && !visibleTicketTypes.length && !selectedSessionIsFree && !sales.error ? (
                       <div className="state-msg">
                         {c({
                           ua: 'Для обраної дати квитки ще не налаштовані. Оберіть іншу дату або зверніться до адміністратора.',
@@ -339,7 +413,7 @@ export default function EventDetailPage() {
                         })}
                       </div>
                     ) : null}
-                    {sales.ticketTypes.length ? (
+                    {!selectedSessionIsFree && sales.ticketTypes.length ? (
                       <form onSubmit={submitTicketOrder} className="form-grid ticket-order-form">
                         <div className="form-group ticket-form-head">
                           <h2>{c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy a ticket' })}</h2>
@@ -367,31 +441,6 @@ export default function EventDetailPage() {
                               <strong>{localizeField(selectedTicketType.name, locale)}</strong>
                               <span>{selectedTicketType.price} {selectedTicketType.currency}</span>
                             </div>
-                          </div>
-                        ) : null}
-                        {sales.sessions.length ? (
-                          <div className="form-group">
-                            <label>{c({ ua: 'Дата події', ru: 'Дата события', en: 'Event date' })}</label>
-                            <select
-                              className="form-input"
-                              value={orderForm.eventSessionId}
-                              onChange={(eventValue) => {
-                                const nextSessionId = eventValue.target.value;
-                                const nextTypes = sales.ticketTypes.filter((type) => String(type.eventSessionId || '') === String(nextSessionId || ''));
-                                setOrderForm({
-                                  ...orderForm,
-                                  eventSessionId: nextSessionId,
-                                  ticketTypeId: String(nextTypes[0]?.id || '')
-                                });
-                              }}
-                              required
-                            >
-                              {sales.sessions.map((session) => (
-                                <option key={session.id} value={session.id}>
-                                  {localizeField(session.name, locale) || formatSessionRange(session, locale)}
-                                </option>
-                              ))}
-                            </select>
                           </div>
                         ) : null}
                         <div className="form-group">

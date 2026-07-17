@@ -107,6 +107,7 @@ function toEventSession(session) {
     endsAt: session.endsAt,
     sortOrder: session.sortOrder,
     isActive: session.isActive,
+    admissionMode: session.admissionMode || 'TICKETED',
     createdAt: session.createdAt,
     updatedAt: session.updatedAt
   };
@@ -208,7 +209,8 @@ async function createAdminEvent(input) {
       startsAt: normalizeDate(s.startsAt),
       endsAt: normalizeDate(s.endsAt),
       sortOrder: normalizeSortOrder(s.sortOrder),
-      isActive: normalizeBoolean(s.isActive, true)
+      isActive: normalizeBoolean(s.isActive, true),
+      admissionMode: s.admissionMode === 'FREE' ? 'FREE' : 'TICKETED'
     }))
   );
 
@@ -354,7 +356,8 @@ async function createEventSession(eventId, input) {
       startsAt,
       endsAt,
       sortOrder: normalizeSortOrder(input.sortOrder),
-      isActive: normalizeBoolean(input.isActive, true)
+      isActive: normalizeBoolean(input.isActive, true),
+      admissionMode: input.admissionMode === 'FREE' ? 'FREE' : 'TICKETED'
     }
   });
 
@@ -387,6 +390,9 @@ async function updateEventSession(id, input) {
   }
   if (Object.prototype.hasOwnProperty.call(input, 'isActive')) {
     data.isActive = normalizeBoolean(input.isActive, existing.isActive);
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'admissionMode')) {
+    data.admissionMode = input.admissionMode === 'FREE' ? 'FREE' : 'TICKETED';
   }
 
   const row = await prisma.eventSession.update({

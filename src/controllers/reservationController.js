@@ -103,6 +103,28 @@ function getDepositFromObject(object) {
 function getEventEntryBreakdown(event, reservationDate, guests) {
   if (!event) return null;
 
+  const matchingSession = event.sessions?.find((session) =>
+    session.isActive && isSameBookingDay(session.startsAt, reservationDate)
+  );
+  if (matchingSession?.admissionMode === 'FREE') {
+    return {
+      eventId: event.id,
+      eventSlug: event.slug,
+      eventTitle: localizeJson(event.title),
+      ticketTypeId: null,
+      eventSessionId: matchingSession.id,
+      eventSession: matchingSession,
+      eventStartsAt: event.startAt,
+      eventEndsAt: event.endAt,
+      ticketTypeName: '',
+      ticketPrice: 0,
+      ticketCount: 0,
+      amount: 0,
+      currency: 'UAH',
+      isFreeEntry: true
+    };
+  }
+
   const matchingSessionTicket = event.ticketTypes?.find((ticketType) =>
     ticketType.eventSession?.isActive && isSameBookingDay(ticketType.eventSession.startsAt, reservationDate)
   );
@@ -162,7 +184,7 @@ function buildPaymentComment({ rentalAmount, depositAmount, entryBreakdown, tota
 
   lines.push(`Total online payment: ${totalAmount} UAH.`);
 
-  if (entryBreakdown) {
+  if (entryBreakdown?.ticketTypeId) {
     lines.push(`Event entry included: ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency} = ${entryBreakdown.amount} ${entryBreakdown.currency}.`);
   }
 
@@ -353,7 +375,7 @@ async function createGroupReservation(req, res, context) {
 
   const reservation = await reservationService.createReservationGroup(payloads);
   let linkedTicketOrder = null;
-  if (entryBreakdown) {
+  if (entryBreakdown?.ticketTypeId) {
     const ticketOrderResult = await ticketSalesService.createOrder({
       eventId: entryBreakdown.eventId,
       eventSessionId: entryBreakdown.eventSessionId,
@@ -384,7 +406,7 @@ async function createGroupReservation(req, res, context) {
       reservationId: reservation.id,
       ticketOrderId: linkedTicketOrder?.id || null,
       amount: totalAmount,
-      description: `GorPliaj group booking: ${positionNames.join(', ')}; rental ${rentalAmount} UAH, deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${guests} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
+      description: `GorPliaj group booking: ${positionNames.join(', ')}; rental ${rentalAmount} UAH, deposit ${depositAmount} UAH${entryBreakdown?.ticketTypeId ? ` + entry ${guests} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
       currency: entryBreakdown?.currency || 'UAH',
       customerEmail,
       customerPhone: req.body.customerPhone,
@@ -637,7 +659,7 @@ async function createReservation(req, res) {
     });
 
     let linkedTicketOrder = null;
-    if (entryBreakdown) {
+    if (entryBreakdown?.ticketTypeId) {
       const ticketOrderResult = await ticketSalesService.createOrder({
         eventId: entryBreakdown.eventId,
         eventSessionId: entryBreakdown.eventSessionId,
@@ -669,7 +691,7 @@ async function createReservation(req, res) {
         reservationId: reservation.id,
         ticketOrderId: linkedTicketOrder?.id || null,
         amount: totalAmount,
-        description: `GorPliaj ${bookingLabel} ${positionName}: rental ${rental} UAH, deposit ${depositAmount} UAH${entryBreakdown ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
+        description: `GorPliaj ${bookingLabel} ${positionName}: rental ${rental} UAH, deposit ${depositAmount} UAH${entryBreakdown?.ticketTypeId ? ` + entry ${entryBreakdown.ticketCount} x ${entryBreakdown.ticketPrice} ${entryBreakdown.currency}` : ''}`,
         currency: entryBreakdown?.currency || 'UAH',
         customerEmail,
         customerPhone: req.body.customerPhone,

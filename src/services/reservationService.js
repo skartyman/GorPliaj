@@ -164,6 +164,16 @@ function getPublicEventWithEntryTicket(slug) {
       title: true,
       startAt: true,
       endAt: true,
+      sessions: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          startsAt: true,
+          endsAt: true,
+          isActive: true,
+          admissionMode: true
+        }
+      },
       ticketTypes: {
         where: {
           isActive: true
@@ -184,7 +194,8 @@ function getPublicEventWithEntryTicket(slug) {
               id: true,
               startsAt: true,
               endsAt: true,
-              isActive: true
+              isActive: true,
+              admissionMode: true
             }
           }
         }

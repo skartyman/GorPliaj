@@ -27,7 +27,8 @@ function toSession(session) {
     startsAt: session.startsAt,
     endsAt: session.endsAt,
     sortOrder: session.sortOrder,
-    isActive: session.isActive
+    isActive: session.isActive,
+    admissionMode: session.admissionMode || 'TICKETED'
   };
 }
 
@@ -68,6 +69,7 @@ async function getEventTicketTypes(req, res) {
     const now = new Date();
     const ticketTypes = event.ticketTypes
       .filter((type) => isSalesOpen(type, now))
+      .filter((type) => type.eventSession?.admissionMode !== 'FREE')
       .map((type) => ({
         id: type.id,
         eventSessionId: type.eventSessionId || null,

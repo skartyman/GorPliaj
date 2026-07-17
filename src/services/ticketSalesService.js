@@ -49,7 +49,8 @@ function toEventSession(row) {
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     sortOrder: row.sortOrder,
-    isActive: row.isActive
+    isActive: row.isActive,
+    admissionMode: row.admissionMode || 'TICKETED'
   };
 }
 
@@ -171,6 +172,7 @@ async function createTicketType(eventId, input) {
   if (eventSessionId) {
     const session = await ensureEventSessionBelongsToEvent(eventId, eventSessionId);
     if (!session) return { type: 'INVALID', message: 'Event session is invalid.' };
+    if (session.admissionMode === 'FREE') return { type: 'INVALID', message: 'A free-entry event date does not need a ticket tariff.' };
   }
 
   const row = await prisma.ticketType.create({
@@ -230,6 +232,7 @@ async function updateTicketType(id, input) {
     if (eventSessionId) {
       const session = await ensureEventSessionBelongsToEvent(existing.eventId, eventSessionId);
       if (!session) return { type: 'INVALID', message: 'Event session is invalid.' };
+      if (session.admissionMode === 'FREE') return { type: 'INVALID', message: 'A free-entry event date does not need a ticket tariff.' };
     }
     data.eventSessionId = eventSessionId;
   }
@@ -303,6 +306,7 @@ async function createOrder(input) {
       if (sessionIds.length > 1) throw new Error('MIXED_SESSIONS');
       const eventSessionId = sessionIds[0] || null;
       if (requestedSessionId && requestedSessionId !== eventSessionId) throw new Error('SESSION_MISMATCH');
+      if (types.some((type) => type.eventSession?.admissionMode === 'FREE')) throw new Error('SESSION_FREE_ENTRY');
 
       if (input.enforceSalesWindow) {
         const now = new Date();
@@ -388,6 +392,7 @@ async function createOrder(input) {
     if (error.message === 'MIXED_CURRENCIES') return { type: 'INVALID', message: 'All ticket types in an order must use the same currency.' };
     if (error.message === 'MIXED_SESSIONS') return { type: 'INVALID', message: 'Tickets from different event dates cannot be mixed in one order.' };
     if (error.message === 'SESSION_MISMATCH') return { type: 'INVALID', message: 'Selected event date does not match the ticket type.' };
+    if (error.message === 'SESSION_FREE_ENTRY') return { type: 'CONFLICT', message: 'Entry is free for the selected event date; a ticket purchase is not required.' };
     if (error.message === 'SESSION_INACTIVE') return { type: 'CONFLICT', message: 'Ticket sales for the selected event date are not active.' };
     if (error.message.startsWith('SOLD_OUT:')) return { type: 'CONFLICT', message: 'Not enough tickets are available.' };
     throw error;

@@ -13,6 +13,7 @@ const EMPTY_SESSION = {
   startsAt: '',
   endsAt: '',
   isActive: true,
+  admissionMode: 'TICKETED',
   sortOrder: 0
 };
 
@@ -462,6 +463,12 @@ export default function TicketSalesPage() {
               <label>{t('ticketSales.sessionForm.start')}<input type="datetime-local" required value={sessionForm.startsAt} onChange={(event) => setSessionForm({ ...sessionForm, startsAt: event.target.value })} /></label>
               <label>{t('ticketSales.sessionForm.end')}<input type="datetime-local" required value={sessionForm.endsAt} onChange={(event) => setSessionForm({ ...sessionForm, endsAt: event.target.value })} /></label>
             </div>
+            <label>{t('ticketSales.sessionForm.admissionMode')}
+              <select value={sessionForm.admissionMode} onChange={(event) => setSessionForm({ ...sessionForm, admissionMode: event.target.value })}>
+                <option value="TICKETED">{t('ticketSales.sessionForm.ticketed')}</option>
+                <option value="FREE">{t('ticketSales.sessionForm.free')}</option>
+              </select>
+            </label>
             <label className="menu-admin-checkbox">
               <input type="checkbox" checked={sessionForm.isActive} onChange={(event) => setSessionForm({ ...sessionForm, isActive: event.target.checked })} />
               <span>{t('ticketSales.sessionForm.active')}</span>
@@ -486,16 +493,21 @@ export default function TicketSalesPage() {
                     <strong>{localizeField(session.name, language) || formatSessionLabel(session, t)}</strong>
                     <div className="muted">{formatSessionLabel(session, t)}</div>
                     <div className="muted small">{session.isActive ? t('ticketSales.sessions.active') : t('ticketSales.sessions.hidden')}</div>
+                    <span className={`status-pill ${session.admissionMode === 'FREE' ? 'success' : 'warning'}`}>
+                      {session.admissionMode === 'FREE' ? t('ticketSales.sessions.freeEntry') : t('ticketSales.sessions.ticketedEntry')}
+                    </span>
                   </div>
                   <div className="actions compact">
-                    <button
-                      type="button"
-                      className="btn btn-small"
-                      disabled={state.saving}
-                      onClick={() => beginTicketTypeForSession(session.id)}
-                    >
-                      {t('ticketSales.sessions.tariffForDate')}
-                    </button>
+                    {session.admissionMode !== 'FREE' ? (
+                      <button
+                        type="button"
+                        className="btn btn-small"
+                        disabled={state.saving}
+                        onClick={() => beginTicketTypeForSession(session.id)}
+                      >
+                        {t('ticketSales.sessions.tariffForDate')}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="btn btn-small btn-secondary"
@@ -510,6 +522,7 @@ export default function TicketSalesPage() {
                           startsAt: toDateTimeLocal(session.startsAt),
                           endsAt: toDateTimeLocal(session.endsAt),
                           isActive: Boolean(session.isActive),
+                          admissionMode: session.admissionMode || 'TICKETED',
                           sortOrder: session.sortOrder || 0
                         });
                         setEditingSessionId(session.id);
@@ -531,7 +544,7 @@ export default function TicketSalesPage() {
                 <div className="ticket-rate-list">
                   {(ticketTypesBySessionId.get(String(session.id)) || []).map(renderTicketTypeCard)}
                   {!(ticketTypesBySessionId.get(String(session.id)) || []).length ? (
-                    <p className="muted small">{t('ticketSales.sessions.noTariff')}</p>
+                    <p className="muted small">{session.admissionMode === 'FREE' ? t('ticketSales.sessions.freeNoTariff') : t('ticketSales.sessions.noTariff')}</p>
                   ) : null}
                 </div>
               </section>
