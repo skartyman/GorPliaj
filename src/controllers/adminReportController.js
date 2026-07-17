@@ -117,7 +117,7 @@ async function listSchedulesController(req, res) {
 
 async function createScheduleController(req, res) {
   try {
-    const { name, reportType, frequency, recipientEmail, dayOfWeek, hour } = req.body;
+    const { name, reportType, frequency, recipientEmail, recipientName, dayOfWeek, hour } = req.body;
     if (!name || !reportType || !recipientEmail) {
       return res.status(400).json({ message: 'name, reportType, recipientEmail are required.' });
     }
@@ -128,6 +128,7 @@ async function createScheduleController(req, res) {
         reportType: String(reportType).toUpperCase(),
         frequency: String(frequency || 'WEEKLY').toUpperCase(),
         recipientEmail,
+        recipientName: recipientName || null,
         dayOfWeek: dayOfWeek != null ? Number(dayOfWeek) : 1,
         hour: hour != null ? Number(hour) : 9,
         isActive: true
@@ -138,6 +139,38 @@ async function createScheduleController(req, res) {
   } catch (error) {
     console.error('[adminReportController.createSchedule] Failed.', error);
     return res.status(500).json({ message: 'Unable to create report schedule.' });
+  }
+}
+
+async function batchCreateScheduleController(req, res) {
+  try {
+    const { name, reportType, frequency, dayOfWeek, hour, recipients } = req.body;
+    if (!name || !reportType || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({ message: 'name, reportType and recipients[] are required.' });
+    }
+
+    const created = [];
+    for (const r of recipients) {
+      if (!r.email) continue;
+      const schedule = await prisma.reportSchedule.create({
+        data: {
+          name: `${name}${recipients.length > 1 ? ` — ${r.name || r.email}` : ''}`,
+          reportType: String(reportType).toUpperCase(),
+          frequency: String(frequency || 'WEEKLY').toUpperCase(),
+          recipientEmail: r.email,
+          recipientName: r.name || null,
+          dayOfWeek: dayOfWeek != null ? Number(dayOfWeek) : 1,
+          hour: hour != null ? Number(hour) : 9,
+          isActive: true
+        }
+      });
+      created.push(schedule);
+    }
+
+    return res.status(201).json({ schedules: created });
+  } catch (error) {
+    console.error('[adminReportController.batchCreateSchedule] Failed.', error);
+    return res.status(500).json({ message: 'Unable to create schedules.' });
   }
 }
 
@@ -199,6 +232,7 @@ module.exports = {
   sendManualReportController,
   listSchedulesController,
   createScheduleController,
+  batchCreateScheduleController,
   updateScheduleController,
   deleteScheduleController,
   triggerScheduleController

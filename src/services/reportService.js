@@ -4,10 +4,11 @@ async function getFinancialReport({ from, to }) {
   const reservations = await prisma.reservation.findMany({
     where: {
       createdAt: { gte: from, lte: to },
-      status: { notIn: ['CANCELLED'] }
+      payment: { status: { equals: 'PAID' } },
+      paidInCash: { not: true }
     },
     include: {
-      payment: { select: { amount: true, status: true, paidAt: true } },
+      payment: { select: { id: true, amount: true, status: true, paidAt: true, provider: true } },
       table: { select: { name: true, deposit: true, price: true } },
       zone: { select: { name: true } }
     }
@@ -15,27 +16,40 @@ async function getFinancialReport({ from, to }) {
 
   const ticketOrders = await prisma.ticketOrder.findMany({
     where: {
-      createdAt: { gte: from, lte: to }
+      createdAt: { gte: from, lte: to },
+      payment: { status: { equals: 'PAID' } }
     },
     include: {
-      payment: { select: { amount: true, status: true, paidAt: true } }
+      payment: { select: { id: true, amount: true, status: true, paidAt: true, provider: true } }
+    }
+  });
+
+  const refundedReservations = await prisma.reservation.findMany({
+    where: {
+      createdAt: { gte: from, lte: to },
+      payment: { status: { in: ['REFUNDED', 'FAILED', 'CANCELLED'] } }
+    },
+    include: {
+      payment: { select: { amount: true, status: true } }
+    }
+  });
+  const refundedTicketOrders = await prisma.ticketOrder.findMany({
+    where: {
+      createdAt: { gte: from, lte: to },
+      payment: { status: { in: ['REFUNDED', 'FAILED', 'CANCELLED'] } }
+    },
+    include: {
+      payment: { select: { amount: true, status: true } }
     }
   });
 
   const paidReservations = reservations.filter(r => r.payment?.status === 'PAID');
   const paidTicketOrders = ticketOrders.filter(o => o.payment?.status === 'PAID');
-  const refundedReservations = reservations.filter(r => r.payment?.status === 'REFUNDED');
-  const refundedTicketOrders = ticketOrders.filter(o => o.payment?.status === 'REFUNDED');
-  const paidCashReservations = reservations.filter(r => r.paidInCash);
 
-  const totalFromReservations = paidReservations.reduce((sum, r) => sum + Number(r.payment.amount || 0), 0);
-  const totalFromTickets = paidTicketOrders.reduce((sum, o) => sum + Number(o.payment.amount || 0), 0);
-  const totalRefunds = refundedReservations.reduce((sum, r) => sum + Number(r.payment.amount || 0), 0) +
-    refundedTicketOrders.reduce((sum, o) => sum + Number(o.payment.amount || 0), 0);
-  const totalCash = paidCashReservations.reduce((sum, r) => sum + Number(r.depositAmount || 0), 0);
-  const totalOnline = paidReservations
-    .filter(r => !r.paidInCash && r.payment?.status === 'PAID')
-    .reduce((sum, r) => sum + Number(r.payment.amount || 0), 0);
+  const fromReservations = paidReservations.reduce((sum, r) => sum + Number(r.payment.amount || 0), 0);
+  const fromTickets = paidTicketOrders.reduce((sum, o) => sum + Number(o.payment.amount || 0), 0);
+  const totalRefunds = refundedReservations.reduce((sum, r) => sum + Number(r.payment?.amount || 0), 0)
+    + refundedTicketOrders.reduce((sum, o) => sum + Number(o.payment?.amount || 0), 0);
 
   const depositTotal = paidReservations.reduce((s, r) => s + Number(r.depositAmount || 0), 0);
   const rentalTotal = paidReservations.reduce((s, r) => s + Number(r.rentalAmount || 0), 0);
@@ -43,19 +57,18 @@ async function getFinancialReport({ from, to }) {
   return {
     period: { from, to },
     revenue: {
-      total: totalFromReservations + totalFromTickets,
-      fromReservations: totalFromReservations,
-      fromTickets: totalFromTickets,
+      total: fromReservations + fromTickets,
+      fromReservations,
+      fromTickets,
       refunds: totalRefunds,
-      cash: totalCash,
-      online: totalOnline,
       deposits: depositTotal,
-      rentals: rentalTotal
+      rentals: rentalTotal,
+      note: 'Учтены только подтверждённые онлайн-оплаты через эквайринг'
     },
     counts: {
       paidReservations: paidReservations.length,
       paidTicketOrders: paidTicketOrders.length,
-      refunded: refundedReservations.length + refundedTicketOrders.length + paidTicketOrders.filter(o => o.payment?.status === 'REFUNDED').length
+      refunds: refundedReservations.length + refundedTicketOrders.length
     },
     reservations: paidReservations.map(r => ({
       id: r.id, customerName: r.customerName, date: r.reservationDate,
@@ -149,29 +162,30 @@ async function getTicketSalesReport({ from, to }) {
     include: {
       event: { select: { title: true, id: true } },
       tickets: { select: { status: true, ticketType: { select: { name: true } } } },
-      payment: { select: { amount: true, status: true, paidAt: true } }
+      payment: { select: { amount: true, status: true, paidAt: true, provider: true } }
     }
   });
 
   const byEvent = {};
   const byTicketType = {};
+  const byStatus = { PAID: 0, PENDING: 0, CANCELLED: 0, EXPIRED: 0, REFUNDED: 0, AWAITING_PAYMENT: 0 };
   let totalRevenue = 0;
   let totalOrders = orders.length;
   let paidOrders = 0;
   let totalTickets = 0;
   let usedTickets = 0;
-  let expiredOrders = 0;
 
   for (const order of orders) {
+    byStatus[order.status] = (byStatus[order.status] || 0) + 1;
     const eventTitle = order.event?.title?.ua || order.event?.title?.ru || order.event?.title?.en || `Event #${order.eventId}`;
     if (!byEvent[eventTitle]) byEvent[eventTitle] = { count: 0, revenue: 0 };
     byEvent[eventTitle].count += 1;
+
     if (order.payment?.status === 'PAID') {
       byEvent[eventTitle].revenue += Number(order.payment.amount || 0);
       totalRevenue += Number(order.payment.amount || 0);
       paidOrders += 1;
     }
-    if (order.status === 'EXPIRED' || order.status === 'CANCELLED') expiredOrders += 1;
 
     for (const t of order.tickets) {
       totalTickets += 1;
@@ -186,13 +200,14 @@ async function getTicketSalesReport({ from, to }) {
     summary: {
       totalOrders,
       paidOrders,
-      expiredOrCancelled: expiredOrders,
       totalRevenue,
       conversionRate: totalOrders > 0 ? parseFloat((paidOrders / totalOrders * 100).toFixed(1)) : 0,
       totalTickets,
       usedTickets,
-      usageRate: totalTickets > 0 ? parseFloat((usedTickets / totalTickets * 100).toFixed(1)) : 0
+      usageRate: totalTickets > 0 ? parseFloat((usedTickets / totalTickets * 100).toFixed(1)) : 0,
+      revenueNote: 'Только подтверждённые онлайн-оплаты'
     },
+    byStatus,
     byEvent,
     byTicketType
   };

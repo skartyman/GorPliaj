@@ -98,9 +98,9 @@ function FinancialTab({ data, loading }) {
   const rev = data.revenue;
   const c = data.counts;
 
-  const paymentMethods = [
-    { name: 'Онлайн', value: Number(rev.online || 0) },
-    { name: 'Готівка', value: Number(rev.cash || 0) }
+  const paymentSources = [
+    { name: 'Бронювання', value: Number(rev.fromReservations || 0) },
+    { name: 'Квитки', value: Number(rev.fromTickets || 0) }
   ].filter(x => x.value > 0);
 
   const dailyRevenue = data.reservations.map(r => ({
@@ -110,25 +110,28 @@ function FinancialTab({ data, loading }) {
 
   return (
     <div className="report-content">
+      <div className="report-note-warning">
+        ⚠ Учитываются только подтверждённые оплаты через интернет-эквайринг. Наложные платежи и возвраты исключены из расчёта выручки.
+      </div>
       <div className="stats-grid">
-        <StatCard label="Загальна виручка" value={formatMoney(rev.total)} color="#C89241" />
+        <StatCard label="Підтверджена виручка" value={formatMoney(rev.total)} sub="Тільки онлайн-оплати" color="#C89241" />
         <StatCard label="Від бронювань" value={formatMoney(rev.fromReservations)} sub={`${fmt(c.paidReservations)} оплат`} color="#8B6914" />
         <StatCard label="Від квитків" value={formatMoney(rev.fromTickets)} sub={`${fmt(c.paidTicketOrders)} оплат`} color="#5B7B3A" />
         <StatCard label="Депозити" value={formatMoney(rev.deposits)} color="#DAA520" />
         <StatCard label="Оренда" value={formatMoney(rev.rentals)} color="#4A2C1A" />
-        <StatCard label="Повернення" value={formatMoney(rev.refunds)} sub={`${fmt(c.refunded)} оп.`} color="#8B2500" />
+        <StatCard label="Повернення" value={formatMoney(rev.refunds)} sub={`${fmt(c.refunds)} оп.`} color="#8B2500" />
       </div>
 
       <div className="report-charts-row">
         <div className="report-chart-card">
-          <h3>Способи оплати</h3>
-          {paymentMethods.length > 0 ? (
+          <h3>Джерела виручки</h3>
+          {paymentSources.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={paymentMethods} dataKey="value" nameKey="name" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {paymentMethods.map((entry, idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
+                <Pie data={paymentSources} dataKey="value" nameKey="name" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {paymentSources.map((entry, idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(v) => formatMoney(v)} />
               </PieChart>
             </ResponsiveContainer>
           ) : <div className="report-empty">Немає даних</div>}
@@ -411,9 +414,12 @@ function SummaryTab({ data, loading }) {
 
   return (
     <div className="report-content">
+      <div className="report-note-warning">
+        ⚠ Виручка враховує тільки підтверджені оплати онлайн-еквайрингу (PAID-статус). Повернення, скасування та готівкові платежі виключені.
+      </div>
       <div className="report-section-title">Ключові показники (KPI)</div>
       <div className="stats-grid">
-        <StatCard label="Загальна виручка" value={formatMoney(kpi.revenue.value)} sub={kpi.revenue.change != null ? `${kpi.revenue.change > 0 ? '▲' : '▼'} ${Math.abs(kpi.revenue.change)}% пр. період` : null} color="#C89241" />
+        <StatCard label="Підтверджена виручка" value={formatMoney(kpi.revenue.value)} sub={kpi.revenue.change != null ? `${kpi.revenue.change > 0 ? '▲' : '▼'} ${Math.abs(kpi.revenue.change)}% пр. період` : 'тільки онлайн-оплати'} color="#C89241" />
         <StatCard label="Бронювань" value={fmt(kpi.reservations.value)} color="#8B6914" />
         <StatCard label="Скасування" value={pct(kpi.cancelledRate.value)} color="#8B2500" />
         <StatCard label="Не прийшли" value={pct(kpi.noShowRate.value)} color="#DAA520" />

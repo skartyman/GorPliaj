@@ -67,8 +67,9 @@ function buildFinancialHtml(report) {
   const r = report.revenue;
   const c = report.counts;
   const content = `
-    <p style="margin:8px 0 18px;color:#365d62;font-size:14px;"><strong>${money(r.total)}</strong> загальна виручка за період. Онлайн: ${money(r.online)} · Готівка: ${money(r.cash)}.</p>
-    <div>${kpiCard('Загальна виручка', money(r.total))}${kpiCard('Бронювання', money(r.fromReservations), `${fmt(c.paidReservations)} оплат`)}${kpiCard('Квитки', money(r.fromTickets), `${fmt(c.paidTicketOrders)} оплат`)}${kpiCard('Поворотів', money(r.refunds), `${fmt(c.refunded)} операцій`)}</div>
+    <p style="margin:8px 0 10px;color:#365d62;font-size:14px;"><strong>${money(r.total)}</strong> підтверджена онлайн-виручка за період.</p>
+    <p style="margin:0 0 18px;color:#55777b;font-size:12px;background:#fff5dc;padding:8px 12px;border-radius:8px;">⚠ Враховані тільки підтверджені оплати через інтернет-еквайринг. Наложні платежі, готівка і повернення виключені.</p>
+    <div>${kpiCard('Онлайн-виручка', money(r.total), 'PAID-статус')}${kpiCard('Від бронювань', money(r.fromReservations), `${fmt(c.paidReservations)} оплат`)}${kpiCard('Від квитків', money(r.fromTickets), `${fmt(c.paidTicketOrders)} оплат`)}${kpiCard('Повернення', money(r.refunds), `${fmt(c.refunds)} оп.`)}</div>
     <div style="margin-top:14px;">${kpiCard('Депозити', money(r.deposits))}${kpiCard('Оренда', money(r.rentals))}</div>
   `;
   return buildEmailLayout({ title: 'Фінансовий звіт', subtitle: `${fmt(report.period.from)} — ${fmt(report.period.to)}`, content });
@@ -155,8 +156,9 @@ function buildStaffHtml(report) {
 function buildSummaryHtml(report) {
   const kpi = report.kpis;
   const content = `
-    <p style="margin:8px 0 18px;color:#365d62;font-size:14px;">Зведений звіт за період із KPI та трендами. ${kpi.revenue.change != null ? `Зміна виручки: <strong>${kpi.revenue.change > 0 ? '+' : ''}${kpi.revenue.change}%</strong> у порівнянні з попереднім періодом.` : ''}</p>
-    <div>${kpiCard('Виручка', money(kpi.revenue.value), kpi.revenue.change != null ? `${kpi.revenue.change > 0 ? '▲' : '▼'} ${Math.abs(kpi.revenue.change)}%` : '')}${kpiCard('Бронювань', fmt(kpi.reservations.value))}${kpiCard('Скасування', pct(kpi.cancelledRate.value))}${kpiCard('Не прийшли', pct(kpi.noShowRate.value))}${kpiCard('Виручка від квитків', money(kpi.ticketRevenue.value))}${kpiCard('Виручка від меню', money(kpi.menuRevenue.value))}${kpiCard('Середній чек', money(kpi.menuAvgCheck.value))}${kpiCard('Активних подій', fmt(kpi.activeEvents.value))}</div>
+    <p style="margin:8px 0 6px;color:#365d62;font-size:14px;">Зведений звіт за період із KPI та трендами. ${kpi.revenue.change != null ? `Зміна підтвердженої виручки: <strong>${kpi.revenue.change > 0 ? '+' : ''}${kpi.revenue.change}%</strong> у порівнянні з попереднім періодом.` : ''}</p>
+    <p style="margin:0 0 18px;color:#55777b;font-size:12px;background:#fff5dc;padding:8px 12px;border-radius:8px;">⚠ Виручка враховує тільки онлайн-еквайринг (статус PAID). Наложні платежі і повернення виключені.</p>
+    <div>${kpiCard('Підтверджена виручка', money(kpi.revenue.value), kpi.revenue.change != null ? `${kpi.revenue.change > 0 ? '▲' : '▼'} ${Math.abs(kpi.revenue.change)}%` : 'тільки онлайн')}${kpiCard('Бронювань', fmt(kpi.reservations.value))}${kpiCard('Скасування', pct(kpi.cancelledRate.value))}${kpiCard('Не прийшли', pct(kpi.noShowRate.value))}${kpiCard('Виручка від квитків', money(kpi.ticketRevenue.value))}${kpiCard('Виручка від меню', money(kpi.menuRevenue.value))}${kpiCard('Середній чек', money(kpi.menuAvgCheck.value))}${kpiCard('Активних подій', fmt(kpi.activeEvents.value))}</div>
     <p style="margin-top:22px;font-size:13px;color:#365d62;line-height:1.6;">Розгорнуті дані доступні в панелі адміністрування у розділі «Звіти».</p>
   `;
   return buildEmailLayout({ title: 'Зведений звіт', subtitle: `${fmt(report.period.from)} — ${fmt(report.period.to)}`, content });

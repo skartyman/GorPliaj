@@ -50,6 +50,8 @@ export default function SettingsPage() {
       if (!data.aboutText) data.aboutText = { ua: '', ru: '', en: '' };
       if (!data.address) data.address = { ua: '', ru: '', en: '' };
       
+      if (!data.socialMedia) data.socialMedia = [];
+      if (!data.reportRecipients) data.reportRecipients = [];
       setForm(data);
       setLoading(false);
     });
@@ -352,6 +354,30 @@ export default function SettingsPage() {
             <button className="btn btn-secondary btn-small" onClick={() => setForm({...form, socialMedia: [...(form.socialMedia || []), {platform: 'instagram', url: ''}]})}>+ Додати посилання</button>
             <button className="btn btn-primary" onClick={() => updateField('social', { socialMedia: form.socialMedia })} style={{ marginTop: 12 }}>
               {savingStatus.social ? 'Зберігаємо...' : 'Зберегти соцмережі'}
+            </button>
+          </div>
+        </PageCard>
+
+        {/* Report Recipients */}
+        <PageCard title="Одержувачі звітів">
+          <div style={{ display: 'grid', gap: 12 }}>
+            <p className="muted" style={{ fontSize: '0.85rem' }}>
+              Список email-адрес, на які надсилатимуться автоматичні звіти. Додайте email керуючого, власників та інших зацікавлених осіб. Доступні також у налаштуваннях розкладу звітів.
+            </p>
+            {(form.reportRecipients || []).map((r, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '150px 1fr auto', gap: 8 }}>
+                <input value={r.name || ''} onChange={e => {
+                  const arr = [...(form.reportRecipients || [])]; arr[i].name = e.target.value; setForm({...form, reportRecipients: arr});
+                }} placeholder="Ім'я / Посада" />
+                <input type="email" value={r.email || ''} onChange={e => {
+                  const arr = [...(form.reportRecipients || [])]; arr[i].email = e.target.value; setForm({...form, reportRecipients: arr});
+                }} placeholder="email@example.com" />
+                <button className="btn btn-danger btn-small" onClick={() => setForm({...form, reportRecipients: (form.reportRecipients || []).filter((_, idx) => idx !== i)})}>&times;</button>
+              </div>
+            ))}
+            <button className="btn btn-secondary btn-small" onClick={() => setForm({...form, reportRecipients: [...(form.reportRecipients || []), { name: '', email: '' }]})}>+ Додати email</button>
+            <button className="btn btn-primary" onClick={() => updateField('recipients', { reportRecipients: form.reportRecipients || [] })} style={{ marginTop: 12 }}>
+              {savingStatus.recipients ? 'Зберігаємо...' : 'Зберегти список'}
             </button>
           </div>
         </PageCard>

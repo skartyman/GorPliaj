@@ -3660,3 +3660,207 @@ textarea { resize: vertical; min-height: 96px; }
     align-items: flex-start;
   }
 }
+
+/* ── Report note / warning banners ── */
+.report-note-warning {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #FEF3C7;
+  border-left: 4px solid var(--accent-gold);
+  border-radius: var(--radius-btn);
+  font-size: 0.86rem;
+  color: var(--warning-text);
+  line-height: 1.5;
+}
+
+/* ── Recipient picker ── */
+.recipient-picker {
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recipient-section-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.recipient-count {
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+
+.recipient-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recipient-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  font-size: 0.82rem;
+  position: relative;
+}
+.recipient-chip:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-1px);
+}
+.recipient-chip.active {
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  color: #fff;
+}
+.chip-name {
+  font-weight: 600;
+  display: block;
+}
+.chip-email {
+  font-size: 0.74rem;
+  opacity: 0.8;
+}
+.recipient-chip.active .chip-email {
+  opacity: 0.9;
+}
+.chip-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-weight: 700;
+  font-size: 0.9em;
+}
+
+.recipient-empty {
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-warm);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.recipient-selected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.recipient-selected-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+.recipient-item-email {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.recipient-item-name {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.recipient-selected-item .btn {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.recipient-custom-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 8px;
+}
+.recipient-custom-input input {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-input);
+  background: var(--bg-card);
+}
+
+/* ── Schedule card group ── */
+.schedule-card-group {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 3px var(--shadow-warm);
+  overflow: hidden;
+}
+
+.schedule-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.schedule-group-recipient {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.schedule-group-email {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.schedule-group-name {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.schedule-group-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 2px 10px;
+  background: var(--bg-card);
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+}
+
+.schedule-card-group .schedule-card {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: none;
+  margin: 0;
+}
+.schedule-card-group .schedule-card:last-child {
+  border-bottom: 0;
+}
+
+.schedule-notice-warning {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #FEF3C7;
+  border-left: 3px solid var(--accent-gold);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--warning-text);
+}

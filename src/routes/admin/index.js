@@ -131,6 +131,7 @@ const {
   sendManualReportController,
   listSchedulesController,
   createScheduleController,
+  batchCreateScheduleController,
   updateScheduleController,
   deleteScheduleController,
   triggerScheduleController
@@ -320,6 +321,7 @@ router.get('/reports/summary', requireAdminAuth, requirePermission('reports:view
 router.post('/reports/send', requireAdminAuth, requirePermission('reports:manage'), sendManualReportController);
 router.get('/report-schedules', requireAdminAuth, requirePermission('reports:manage'), listSchedulesController);
 router.post('/report-schedules', requireAdminAuth, requirePermission('reports:manage'), createScheduleController);
+router.post('/report-schedules/batch', requireAdminAuth, requirePermission('reports:manage'), batchCreateScheduleController);
 router.patch('/report-schedules/:id', requireAdminAuth, requirePermission('reports:manage'), updateScheduleController);
 router.delete('/report-schedules/:id', requireAdminAuth, requirePermission('reports:manage'), deleteScheduleController);
 router.post('/report-schedules/:id/trigger', requireAdminAuth, requirePermission('reports:manage'), triggerScheduleController);
