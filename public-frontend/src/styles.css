@@ -6988,3 +6988,35 @@ select.booking-compact-control {
     font-weight: 500;
   }
 }
+
+/* Guest cabinet */
+.cabinet-page { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+.cabinet-login { max-width: 420px; margin: 40px auto; }
+.cabinet-login h1, .cabinet-header h1 { font-size: 26px; margin-bottom: 8px; }
+.cabinet-sub { color: var(--muted, #888); margin-bottom: 24px; }
+.cabinet-form { display: flex; flex-direction: column; gap: 14px; }
+.cabinet-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.cabinet-form input { padding: 12px 14px; border: 1px solid var(--border, #ddd); border-radius: 10px; font-size: 15px; background: var(--input-bg, #fff); color: var(--text, #111); }
+.cabinet-form button { margin-top: 8px; padding: 13px 16px; border: none; border-radius: 10px; background: var(--accent, #1a1a1a); color: #fff; font-size: 15px; cursor: pointer; }
+.cabinet-form button:disabled { opacity: .6; cursor: default; }
+.cabinet-success { margin-top: 16px; color: #1a7f37; font-size: 14px; }
+.cabinet-error { margin-top: 16px; color: #c0392b; font-size: 14px; }
+.cabinet-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.cabinet-email { color: var(--muted, #888); font-size: 14px; }
+.cabinet-logout { background: none; border: 1px solid var(--border, #ddd); border-radius: 8px; padding: 8px 14px; cursor: pointer; color: var(--text, #111); }
+.cabinet-tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--border, #eee); }
+.cabinet-tabs button { background: none; border: none; padding: 10px 14px; cursor: pointer; font-size: 15px; color: var(--muted, #888); border-bottom: 2px solid transparent; }
+.cabinet-tabs button.active { color: var(--text, #111); border-bottom-color: var(--accent, #1a1a1a); }
+.cabinet-list { display: flex; flex-direction: column; gap: 12px; }
+.cabinet-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--border, #eee); border-radius: 12px; }
+.cabinet-card-main { display: flex; flex-direction: column; gap: 4px; }
+.cabinet-meta { color: var(--muted, #888); font-size: 13px; }
+.cabinet-event { font-size: 13px; color: var(--accent, #1a1a1a); }
+.cabinet-card-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.cabinet-status { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #f0f0f0; }
+.cabinet-status.status-CONFIRMED, .cabinet-status.status-COMPLETED { background: #e3f5e8; color: #1a7f37; }
+.cabinet-status.status-CANCELLED, .cabinet-status.status-NO_SHOW, .cabinet-status.status-EXPIRED { background: #fbe6e6; color: #c0392b; }
+.cabinet-status.status-AWAITING_PAYMENT { background: #fff4e0; color: #b9770e; }
+.cabinet-paid { font-size: 13px; color: var(--muted, #888); }
+.cabinet-cancel { background: none; border: 1px solid var(--border, #ddd); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: #c0392b; }
+.cabinet-empty { color: var(--muted, #888); text-align: center; padding: 32px 0; }

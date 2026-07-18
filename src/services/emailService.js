@@ -351,4 +351,35 @@ async function sendTicketEmail({
   }
 }
 
-module.exports = { isMailConfigured, sendTicketEmail, buildTicketHtml };
+async function sendGuestMagicLinkEmail({ to, loginUrl }) {
+  if (!isMailConfigured()) {
+    console.warn('[mail] Mail not configured, skipping guest magic link email to', to);
+    return { sent: false, reason: 'mail_not_configured' };
+  }
+  const transport = createTransport();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+      <h2 style="color: #1a1a1a;">Вхід до кабінету Горпляж</h2>
+      <p>Натисніть кнопку нижче, щоб увійти до свого кабінету бронювань. Посилання дійсне 15 хвилин.</p>
+      <p style="margin: 24px 0;">
+        <a href="${escapeHtml(loginUrl)}" style="background: #1a1a1a; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; display: inline-block;">Увійти до кабінету</a>
+      </p>
+      <p style="color: #888; font-size: 13px;">Якщо ви не запитували вхід — просто проігноруйте цей лист.</p>
+    </div>
+  `;
+  try {
+    await transport.sendMail({
+      from: process.env.MAIL_FROM || process.env.MAIL_USER,
+      to,
+      subject: 'Горпляж - вхід до кабінету',
+      html
+    });
+    console.log(`[mail] Guest magic link sent to ${to}`);
+    return { sent: true };
+  } catch (error) {
+    console.error(`[mail] Failed to send guest magic link to ${to}:`, error.message);
+    return { sent: false, reason: error.message };
+  }
+}
+
+module.exports = { isMailConfigured, sendTicketEmail, buildTicketHtml, sendGuestMagicLinkEmail };

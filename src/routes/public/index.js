@@ -5,6 +5,8 @@ const mapController = require('../../controllers/mapController');
 const holdController = require('../../controllers/holdController');
 const publicTicketSalesController = require('../../controllers/publicTicketSalesController');
 const tableOrderController = require('../../controllers/tableOrderController');
+const guestController = require('../../controllers/guestController');
+const { requireGuestAuth } = require('../../middleware/guestAuth');
 
 const router = express.Router();
 
@@ -40,5 +42,14 @@ router.get('/table-waiter', tableOrderController.getTableWaiter);
 router.get('/table-orders/:id/status', tableOrderController.getOrderStatus);
 router.get('/table-orders/:id/sse', tableOrderController.orderSse);
 router.post('/waiter-calls', tableOrderController.createCall);
+
+router.post('/guest/auth/request-link', guestController.requestMagicLink);
+router.post('/guest/auth/verify-link', guestController.verifyMagicLink);
+router.get('/guest/me', requireGuestAuth, guestController.getMe);
+router.get('/guest/reservations', requireGuestAuth, guestController.listReservations);
+router.get('/guest/favorites', requireGuestAuth, guestController.listFavorites);
+router.post('/guest/favorites', requireGuestAuth, guestController.addFavorite);
+router.delete('/guest/favorites/:tableId', requireGuestAuth, guestController.removeFavorite);
+router.post('/guest/reservations/:id/cancel', requireGuestAuth, guestController.cancelReservation);
 
 module.exports = router;

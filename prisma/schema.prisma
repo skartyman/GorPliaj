@@ -94,6 +94,7 @@ model VenueTable {
   overrides    VenueTableOverride[]
   orders       TableOrder[]
   calls        WaiterCall[]
+  favorites    GuestFavoriteUnit[]
 
   @@index([mapId])
   @@index([zoneId])
@@ -220,6 +221,8 @@ model Reservation {
   payment         Payment?
   logs            ReservationLog[]
   tableHolds      TableHold[]
+  guest           Guest?          @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  guestId         Int?
 
   @@index([tableId])
   @@index([bookingGroupId])
@@ -230,6 +233,46 @@ model Reservation {
   @@index([tableId, reservationDate])
   @@index([status])
   @@index([bookingKind])
+  @@index([guestId])
+}
+
+model Guest {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  phone        String?
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+  reservations Reservation[]
+  favorites    GuestFavoriteUnit[]
+  magicLinks   GuestMagicLink[]
+
+  @@index([phone])
+}
+
+model GuestMagicLink {
+  id        Int      @id @default(autoincrement())
+  guestId   Int
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([guestId])
+}
+
+model GuestFavoriteUnit {
+  id        Int      @id @default(autoincrement())
+  guestId   Int
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  tableId   Int
+  table     VenueTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([guestId, tableId])
+  @@index([guestId])
 }
 
 model TableHold {

@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { captureException } from '../lib/analytics';
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,6 +13,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('[ErrorBoundary] Uncaught error:', error, errorInfo);
+    captureException(error, { componentStack: errorInfo.componentStack });
   }
 
   render() {

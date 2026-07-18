@@ -10,7 +10,8 @@ function getClient() {
     return null;
   }
   try {
-    const PostHog = require('posthog-node');
+    const mod = require('posthog-node');
+    const PostHog = mod.PostHog || (mod.default && mod.default.PostHog) || mod;
     client = new PostHog(key, {
       host: env.POSTHOG_HOST || 'https://eu.i.posthog.com',
       flushAt: 20,

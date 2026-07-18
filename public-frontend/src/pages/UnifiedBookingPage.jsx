@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { holdsApi, mapApi, bookingsApi, eventsApi } from '../lib/api';
-import { captureAnalytics, getDistinctId } from '../lib/analytics';
+import { holdsApi, mapApi, bookingsApi, eventsApi, guestApi } from '../lib/api';
+import { captureAnalytics, captureException, getDistinctId } from '../lib/analytics';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
@@ -789,6 +789,10 @@ export default function UnifiedBookingPage() {
   const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [availabilityRevision, setAvailabilityRevision] = useState(0);
+  const [guestLoggedIn, setGuestLoggedIn] = useState(() => {
+    try { return Boolean(localStorage.getItem('guest_token')); } catch { return false; }
+  });
+  const [favoriteAdded, setFavoriteAdded] = useState(false);
 
   const [positionTypes, setPositionTypes] = useState([]);
   const [eventInfo, setEventInfo] = useState(null);
@@ -899,6 +903,7 @@ export default function UnifiedBookingPage() {
         setPaymentUrl('');
 
         if (paymentStatus === 'PAID') {
+          captureAnalytics('booking_payment_completed', { ticket_code: ticketCode });
           setSuccessMessage(eventEntryIsFree
             ? c({
                 ua: 'Оплату підтверджено. Підтвердження бронювання надіслано на Email.',
@@ -1886,6 +1891,12 @@ export default function UnifiedBookingPage() {
           ru: 'Заявка на бронирование создана. Оплата не требуется.',
           en: 'Booking request created. No payment is required.'
         }));
+      captureAnalytics('booking_confirmed', {
+        booking_kind: submitBookingKind,
+        guests: form.guests,
+        table_count: bookingTables.length,
+        event_slug: activeEventSlug || undefined
+      });
       setAvailabilityRevision((current) => current + 1);
 
     } catch (error) {
@@ -1898,6 +1909,23 @@ export default function UnifiedBookingPage() {
       setSubmitting(false);
     }
   }
+
+  const handleAddFavoriteFromBooking = async () => {
+    try {
+      const token = localStorage.getItem('guest_token');
+      if (!token) {
+        setGuestLoggedIn(false);
+        return;
+      }
+      const tableId = eveningTableOverride?.id || selectedObjectTable?.id || selectedTable?.id;
+      if (!tableId) return;
+      await guestApi.addFavorite(tableId);
+      captureAnalytics('favorite_unit_set', { tableId, action: 'add', context: 'booking_success' });
+      setFavoriteAdded(true);
+    } catch (err) {
+      console.error('[UnifiedBookingPage] add favorite failed', err.message);
+    }
+  };
 
   const activePanelTable = selectedObjectTable || selectedTable;
   const activePanelTablePhoto = selectedObjectTablePhoto || selectedTablePhoto;
@@ -2687,6 +2715,21 @@ export default function UnifiedBookingPage() {
                   <button type="button" className="btn btn-secondary" onClick={closePanel}>
                     {c({ ua: 'Забронювати ще', ru: 'Забронировать ещё', en: 'Make another booking' })}
                   </button>
+                  {guestLoggedIn && !favoriteAdded ? (
+                    <button type="button" className="btn btn-secondary" onClick={handleAddFavoriteFromBooking}>
+                      {c({ ua: 'Додати столик в улюблене', ru: 'Добавить столик в избранное', en: 'Add table to favorites' })}
+                    </button>
+                  ) : null}
+                  {guestLoggedIn && favoriteAdded ? (
+                    <span className="btn btn-secondary" style={{ opacity: 0.7, cursor: 'default' }}>
+                      {c({ ua: 'Додано в улюблене', ru: 'Добавлено в избранное', en: 'Added to favorites' })}
+                    </span>
+                  ) : null}
+                  {!guestLoggedIn ? (
+                    <Link className="btn btn-secondary" to="/cabinet">
+                      {c({ ua: 'Увійти в кабінет', ru: 'Войти в кабинет', en: 'Open guest cabinet' })}
+                    </Link>
+                  ) : null}
                 </div>
               )}
             </div>

@@ -8,12 +8,22 @@ function getWaiterToken() {
   }
 }
 
+function getGuestToken() {
+  try {
+    return localStorage.getItem('guest_token');
+  } catch {
+    return null;
+  }
+}
+
 async function request(path, init) {
   const waiterToken = getWaiterToken();
+  const guestToken = getGuestToken();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(waiterToken ? { Authorization: `Bearer ${waiterToken}` } : {}),
+      ...(guestToken ? { Authorization: `Bearer ${guestToken}` } : {}),
       ...(init?.headers || {})
     },
     ...init
@@ -150,4 +160,17 @@ export const waiterApi = {
     const waiterToken = getWaiterToken();
     return waiterToken ? `/api/waiter/sse?token=${encodeURIComponent(waiterToken)}` : '/api/waiter/sse';
   }
+};
+
+export const guestApi = {
+  requestLink: (email, phone, name) =>
+    request('/guest/auth/request-link', { method: 'POST', body: JSON.stringify({ email, phone, name }) }),
+  verifyLink: (token) =>
+    request('/guest/auth/verify-link', { method: 'POST', body: JSON.stringify({ token }) }),
+  me: () => request('/guest/me'),
+  reservations: () => request('/guest/reservations'),
+  favorites: () => request('/guest/favorites'),
+  addFavorite: (tableId) => request('/guest/favorites', { method: 'POST', body: JSON.stringify({ tableId }) }),
+  removeFavorite: (tableId) => request(`/guest/favorites/${tableId}`, { method: 'DELETE' }),
+  cancelReservation: (id) => request(`/guest/reservations/${id}/cancel`, { method: 'POST' })
 };

@@ -7,6 +7,7 @@ import { localizedCopy, localizeField } from '../lib/i18n';
 import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { sanitizeRichText } from '../lib/richText';
+import { captureAnalytics, captureException } from '../lib/analytics';
 
 function formatPhone(value) {
   const digits = value.replace(/\D/g, '').slice(0, 12);
@@ -123,16 +124,22 @@ export default function EventDetailPage() {
     if (!slug) return;
     eventsApi
       .bySlug(slug)
-      .then((event) => setState({ loading: false, error: '', event }))
-      .catch(() => setState({
-        loading: false,
-        error: c({
-          ua: 'Не вдалося завантажити подію.',
-          ru: 'Не удалось загрузить событие.',
-          en: 'Failed to load event.'
-        }),
-        event: null
-      }));
+      .then((event) => {
+        setState({ loading: false, error: '', event });
+        captureAnalytics('event_viewed', { event_slug: slug, cta_type: event.ctaType });
+      })
+      .catch((err) => {
+        setState({
+          loading: false,
+          error: c({
+            ua: 'Не вдалося завантажити подію.',
+            ru: 'Не удалось загрузить событие.',
+            en: 'Failed to load event.'
+          }),
+          event: null
+        });
+        captureException(err, { event_slug: slug });
+      });
   }, [slug, locale]);
 
   useEffect(() => {
@@ -158,6 +165,12 @@ export default function EventDetailPage() {
       })
       .catch((error) => setSales({ loading: false, error: error.message, ticketTypes: [], sessions: [] }));
   }, [slug, state.event]);
+
+  useEffect(() => {
+    if (orderStatus?.status === 'PAID') {
+      captureAnalytics('ticket_payment_completed', { event_slug: slug, order_number: orderResult?.orderNumber });
+    }
+  }, [orderStatus?.status]);
 
   useEffect(() => {
     if (!orderResult?.orderNumber || !orderResult?.downloadToken) return undefined;
@@ -250,6 +263,13 @@ export default function EventDetailPage() {
     setOrderResult(null);
     setOrderStatus(null);
 
+    captureAnalytics('ticket_order_submitted', {
+      event_slug: slug,
+      ticket_type_id: selectedTicketType.id,
+      quantity: orderForm.quantity,
+      session_id: orderForm.eventSessionId || undefined
+    });
+
     try {
       const result = await eventsApi.createTicketOrder(slug, {
         eventSessionId: orderForm.eventSessionId ? Number(orderForm.eventSessionId) : null,
@@ -267,6 +287,7 @@ export default function EventDetailPage() {
         window.location.assign(result.order.paymentUrl);
       }
     } catch (error) {
+      captureException(error, { event_slug: slug });
       setSales((current) => ({ ...current, loading: false, error: error.message }));
     }
   }
@@ -328,7 +349,7 @@ export default function EventDetailPage() {
               </a>
             ) : null}
             {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && (!event.ticketUrl || hasFreeSession) ? (
-              <button type="button" className="btn btn-secondary" onClick={() => setTicketFormOpen(true)}>
+              <button type="button" className="btn btn-secondary" onClick={() => { setTicketFormOpen(true); captureAnalytics('ticket_form_opened', { event_slug: slug }); }}>
                 {hasFreeSession
                   ? c({ ua: 'Обрати дату', ru: 'Выбрать дату', en: 'Choose a date' })
                   : c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}

@@ -1,5 +1,6 @@
 const reservationService = require('../services/reservationService');
 const bookableUnitService = require('../services/bookableUnitService');
+const prisma = require('../lib/prisma');
 const hutkoService = require('../services/hutkoService');
 const ticketSalesService = require('../services/ticketSalesService');
 const { sendTicketEmail } = require('../services/emailService');
@@ -658,6 +659,25 @@ async function createReservation(req, res) {
       ticketCode,
       analyticsDistinctId: req.body.analyticsDistinctId || null
     });
+
+    try {
+      const guestAuthService = require('../services/guestAuthService');
+      const normalizedEmail = String(customerEmail).trim().toLowerCase();
+      const guest = await guestAuthService.findOrCreateGuest({
+        email: normalizedEmail,
+        phone: req.body.customerPhone || null,
+        name: req.body.customerName || null
+      });
+      if (guest && guest.id !== reservation.guestId) {
+        await prisma.reservation.update({
+          where: { id: reservation.id },
+          data: { guestId: guest.id }
+        });
+        reservation.guestId = guest.id;
+      }
+    } catch (guestErr) {
+      console.error('[reservationController] Failed to link guest:', guestErr.message);
+    }
 
     let linkedTicketOrder = null;
     if (entryBreakdown?.ticketTypeId) {
