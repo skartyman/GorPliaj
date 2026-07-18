@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const prisma = require('../lib/prisma');
 const { sendReportEmail } = require('./reportEmailService');
+const { getOccupancyLive } = require('./reportService');
 
 let scheduledJobs = [];
 
@@ -19,7 +20,17 @@ function scheduleReportJobs() {
   }, { timezone: 'Europe/Kyiv' });
 
   scheduledJobs.push(job);
-  console.log('[report-scheduler] Scheduled report jobs started.');
+
+  const snapshotJob = cron.schedule('59 23 * * *', async () => {
+    try {
+      await runDailyOccupancySnapshot();
+    } catch (error) {
+      console.error('[report-scheduler] Error running daily occupancy snapshot:', error.message);
+    }
+  }, { timezone: 'Europe/Kyiv' });
+
+  scheduledJobs.push(snapshotJob);
+  console.log('[report-scheduler] Scheduled report jobs + occupancy snapshot started.');
 }
 
 async function runScheduledReports() {
@@ -84,4 +95,48 @@ function stopScheduledJobs() {
   console.log('[report-scheduler] Stopped all scheduled jobs.');
 }
 
-module.exports = { scheduleReportJobs, runScheduledReports, stopScheduledJobs };
+async function runDailyOccupancySnapshot() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const live = await getOccupancyLive({ date: today });
+
+  await prisma.occupancySnapshot.upsert({
+    where: { date: today },
+    create: {
+      date: today,
+      beachOccupied: live.byKind.beach.occupied,
+      beachCapacity: live.byKind.beach.capacity,
+      beachPct: live.byKind.beach.pct,
+      beachGuests: live.byKind.beach.guests,
+      tableOccupied: live.byKind.table.occupied,
+      tableCapacity: live.byKind.table.capacity,
+      tablePct: live.byKind.table.pct,
+      tableGuests: live.byKind.table.guests,
+      eveningEvents: live.byKind.table.eveningEvents,
+      totalGuests: live.total.guests,
+      onPremises: live.onPremises,
+      arrived: live.total.occupied,
+      totalReservations: live.busyTableIds.length
+    },
+    update: {
+      beachOccupied: live.byKind.beach.occupied,
+      beachCapacity: live.byKind.beach.capacity,
+      beachPct: live.byKind.beach.pct,
+      beachGuests: live.byKind.beach.guests,
+      tableOccupied: live.byKind.table.occupied,
+      tableCapacity: live.byKind.table.capacity,
+      tablePct: live.byKind.table.pct,
+      tableGuests: live.byKind.table.guests,
+      eveningEvents: live.byKind.table.eveningEvents,
+      totalGuests: live.total.guests,
+      onPremises: live.onPremises,
+      arrived: live.total.occupied,
+      totalReservations: live.busyTableIds.length
+    }
+  });
+
+  console.log(`[report-scheduler] Daily occupancy snapshot saved for ${today.toISOString().slice(0, 10)}.`);
+}
+
+module.exports = { scheduleReportJobs, runScheduledReports, runDailyOccupancySnapshot, stopScheduledJobs };

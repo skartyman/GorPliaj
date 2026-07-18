@@ -600,11 +600,100 @@ async function getOccupancyReport({ from, to }) {
       occupancyPct: totalCapacity > 0 ? parseFloat((arrived.length / tables.length * 100).toFixed(1)) : 0
     },
     byKind: {
-      beach: { units: beach.length, guests: beachGuests, capacity: beachCapacity },
-      table: { units: tableEvening.length, guests: tableGuests, capacity: tableCapacity, eveningEvents: hasEvent.length }
+      beach: { units: beach.length, guests: beachGuests, capacity: beachCapacity, occupancyPct: beachCapacity > 0 ? parseFloat((beach.length / beachCapacity * 100).toFixed(1)) : 0 },
+      table: { units: tableEvening.length, guests: tableGuests, capacity: tableCapacity, eveningEvents: hasEvent.length, occupancyPct: tableCapacity > 0 ? parseFloat((tableEvening.length / tableCapacity * 100).toFixed(1)) : 0 }
     },
     byZone,
     hourly
+  };
+}
+
+const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
+
+async function getOccupancyLive({ date }) {
+  const targetDate = date || new Date();
+  const dayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const dayEnd = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+  const now = new Date();
+
+  const allTables = await prisma.venueTable.findMany({
+    where: { isActive: true, isBookable: true },
+    select: { id: true, seatsMax: true, bookingKind: true, zoneId: true, mapId: true }
+  });
+
+  const beachTables = allTables.filter(t => t.bookingKind === 'BEACH');
+  const tableTables = allTables.filter(t => t.bookingKind === 'TABLE');
+
+  const [busyReservations, heldTables] = await Promise.all([
+    prisma.reservation.findMany({
+      where: {
+        reservationDate: { gte: dayStart, lt: dayEnd },
+        status: { in: ACTIVE_RESERVATION_STATUSES },
+        timeFrom: { lt: now },
+        timeTo: { gt: now }
+      },
+      select: { tableId: true, bookingKind: true, guests: true, arrivedGuests: true, onPremises: true, eventId: true, timeFrom: true, timeTo: true }
+    }),
+    prisma.tableHold.findMany({
+      where: {
+        reservationDate: { gte: dayStart, lt: dayEnd },
+        status: 'ACTIVE',
+        expiresAt: { gt: now },
+        timeFrom: { lt: now },
+        timeTo: { gt: now }
+      },
+      select: { tableId: true }
+    })
+  ]);
+
+  const busyTableIds = new Set(busyReservations.map(r => r.tableId));
+  heldTables.forEach(h => busyTableIds.add(h.tableId));
+
+  const busyBeach = busyReservations.filter(r => r.bookingKind === 'BEACH');
+  const busyTable = busyReservations.filter(r => r.bookingKind === 'TABLE');
+
+  const beachOccupied = beachTables.filter(t => busyTableIds.has(t.id)).length;
+  const tableOccupied = tableTables.filter(t => busyTableIds.has(t.id)).length;
+
+  const beachCapacity = beachTables.length;
+  const tableCapacity = tableTables.length;
+
+  const beachGuests = busyBeach.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+  const tableGuests = busyTable.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+  const totalGuests = beachGuests + tableGuests;
+
+  const onPremises = busyReservations.filter(r => r.onPremises).length;
+  const eveningEvents = new Set(busyTable.filter(r => r.eventId).map(r => r.eventId)).size;
+
+  const totalCapacity = allTables.length;
+  const totalOccupied = busyTableIds.size;
+
+  return {
+    date: dayStart,
+    asOf: now,
+    byKind: {
+      beach: {
+        occupied: beachOccupied,
+        capacity: beachCapacity,
+        pct: beachCapacity > 0 ? parseFloat((beachOccupied / beachCapacity * 100).toFixed(1)) : 0,
+        guests: beachGuests
+      },
+      table: {
+        occupied: tableOccupied,
+        capacity: tableCapacity,
+        pct: tableCapacity > 0 ? parseFloat((tableOccupied / tableCapacity * 100).toFixed(1)) : 0,
+        guests: tableGuests,
+        eveningEvents
+      }
+    },
+    total: {
+      occupied: totalOccupied,
+      capacity: totalCapacity,
+      pct: totalCapacity > 0 ? parseFloat((totalOccupied / totalCapacity * 100).toFixed(1)) : 0,
+      guests: totalGuests
+    },
+    onPremises,
+    busyTableIds: [...busyTableIds]
   };
 }
 
@@ -617,5 +706,6 @@ module.exports = {
   getStaffReport,
   getSummaryReport,
   getOccupancyReport,
+  getOccupancyLive,
   resolveRange
 };

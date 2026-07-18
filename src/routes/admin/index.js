@@ -130,6 +130,8 @@ const {
   getStaffReportController,
   getSummaryReportController,
   getOccupancyReportController,
+  getOccupancyLiveController,
+  getOccupancySnapshotsController,
   sendManualReportController,
   listSchedulesController,
   createScheduleController,
@@ -322,6 +324,8 @@ router.get('/reports/events', requireAdminAuth, requirePermission('reports:view'
 router.get('/reports/staff', requireAdminAuth, requirePermission('reports:view'), getStaffReportController);
 router.get('/reports/summary', requireAdminAuth, requirePermission('reports:view'), getSummaryReportController);
 router.get('/reports/occupancy', requireAdminAuth, requirePermission('reports:view'), getOccupancyReportController);
+router.get('/reports/occupancy/live', requireAdminAuth, requirePermission('reports:view'), getOccupancyLiveController);
+router.get('/reports/occupancy/snapshots', requireAdminAuth, requirePermission('reports:view'), getOccupancySnapshotsController);
 router.post('/reports/send', requireAdminAuth, requirePermission('reports:manage'), sendManualReportController);
 router.get('/report-schedules', requireAdminAuth, requirePermission('reports:manage'), listSchedulesController);
 router.post('/report-schedules', requireAdminAuth, requirePermission('reports:manage'), createScheduleController);

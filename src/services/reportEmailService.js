@@ -166,14 +166,18 @@ function buildSummaryHtml(report) {
 
 function buildOccupancyHtml(report) {
   const s = report.summary;
+  const b = report.byKind.beach;
+  const t = report.byKind.table;
   const content = `
     <p style="margin:8px 0 14px;color:#365d62;font-size:14px;">Звіт по наповнюваності за період. Всього днів: <strong>${fmt(s.totalReservations)}</strong> бронювань, прийшли: <strong>${fmt(s.arrived)}</strong>, не прийшли: <strong>${fmt(s.noShows)}</strong>.</p>
     <div>${kpiCard('Всього бронювань', fmt(s.totalReservations))}${kpiCard('Прийшли', fmt(s.arrived))}${kpiCard('Не прийшли', fmt(s.noShows))}${kpiCard('Від закладу', fmt(s.onPremises))}${kpiCard('Гостей', fmt(s.totalGuests))}${kpiCard('Ср. тривалість', s.avgDurationMinutes != null ? `${fmt(s.avgDurationMinutes)} хв` : '—')}${kpiCard('Наповнюваність', pct(s.occupancyPct))}</div>
+    <h3 style="margin:22px 0 8px;font-size:14px;color:#173d43;">По типу послуг</h3>
+    <div>${kpiCard(`Пляжні послуги: ${fmt(b.units)}/${fmt(b.capacity)}`, pct(b.occupancyPct), `Гостей: ${fmt(b.guests)}`)}${kpiCard(`Столи / Вечір: ${fmt(t.units)}/${fmt(t.capacity)}`, pct(t.occupancyPct), `Гостей: ${fmt(t.guests)} · Вечірніх: ${fmt(t.eveningEvents)}`)}</div>
     ${report.byZone.length ? `
     <h3 style="margin:22px 0 8px;font-size:14px;color:#173d43;">По зонах:</h3>
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-      ${tableRow(['Зона', 'Місць', 'Зайнято', 'Гостей', 'Від закладу'], true)}
-      ${report.byZone.map(z => tableRow([escapeHtml(z.name), fmt(z.capacity), fmt(z.occupied), fmt(z.guests), fmt(z.onPremises)])).join('')}
+      ${tableRow(['Зона', 'Місць', 'Зайнято', '%', 'Гостей', 'Від закладу'], true)}
+      ${report.byZone.map(z => tableRow([escapeHtml(z.name), fmt(z.capacity), fmt(z.occupied), pct(z.occupancyPct), fmt(z.guests), fmt(z.onPremises)])).join('')}
     </table>` : ''}
     <p style="margin-top:22px;font-size:13px;color:#365d62;line-height:1.6;">Розгорнуті дані з графіками доступні в панелі адміністрування у розділі «Звіти» → «Наповнюваність».</p>
   `;

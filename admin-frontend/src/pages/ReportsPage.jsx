@@ -432,8 +432,105 @@ function SummaryTab({ data, loading }) {
   );
 }
 
-function OccupancyTab({ data, loading }) {
-  if (loading) return <div className="loading-state">Завантаження...</div>;
+function OccupancyTab({ data, loading: periodLoading }) {
+  const [mode, setMode] = useState('live');
+  const [liveData, setLiveData] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(true);
+  const [liveError, setLiveError] = useState('');
+
+  useEffect(() => {
+    if (mode !== 'live') return;
+    let cancelled = false;
+
+    async function fetchLive() {
+      try {
+        const { response, body } = await apiRequest('/api/admin/reports/occupancy/live');
+        if (!cancelled && response.ok) {
+          setLiveData(body);
+          setLiveError('');
+        } else if (!cancelled) {
+          setLiveError(body.message || 'Помилка завантаження');
+        }
+      } catch {
+        if (!cancelled) setLiveError('Помилка з\'єднання');
+      }
+      if (!cancelled) setLiveLoading(false);
+    }
+
+    setLiveLoading(true);
+    fetchLive();
+    const interval = setInterval(fetchLive, 30000);
+
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [mode]);
+
+  if (mode === 'live') {
+    if (liveLoading) return <div className="loading-state">Завантаження...</div>;
+    if (liveError) return <div className="loading-state">{liveError}</div>;
+    if (!liveData) return null;
+
+    const b = liveData.byKind.beach;
+    const t = liveData.byKind.table;
+    const tot = liveData.total;
+    const now = new Date(liveData.asOf);
+    const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+
+    return (
+      <div className="report-content">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+          <div className="btn-group">
+            <button type="button" className="btn btn-primary" onClick={() => setMode('live')}>Сьогодні</button>
+            <button type="button" className="btn" onClick={() => setMode('period')}>Період</button>
+          </div>
+          <span style={{ fontSize: 12, color: '#55777b' }}>Оновлено: {timeStr} · автооновлення 30с</span>
+        </div>
+
+        <div className="report-section-title">Наповнюваність зараз</div>
+        <div className="stats-grid">
+          <StatCard label="Зайнято місць" value={`${fmt(tot.occupied)} / ${fmt(tot.capacity)}`} sub={pct(tot.pct)} color="#C89241" />
+          <StatCard label="Гостей" value={fmt(tot.guests)} color="#5B7B3A" />
+          <StatCard label="Від закладу" value={fmt(liveData.onPremises)} color="#9333EA" />
+        </div>
+
+        <div className="report-section-title" style={{ marginTop: 22 }}>По типу послуг</div>
+        <div className="stats-grid">
+          <StatCard
+            label="Пляжні послуги"
+            value={`${fmt(b.occupied)} / ${fmt(b.capacity)} місць`}
+            sub={`${pct(b.pct)} · Гостей: ${fmt(b.guests)}`}
+            color="#DAA520"
+          />
+          <StatCard
+            label="Столи / Вечірні події"
+            value={`${fmt(t.occupied)} / ${fmt(t.capacity)} місць`}
+            sub={`${pct(t.pct)} · Гостей: ${fmt(t.guests)} · Вечірніх: ${fmt(t.eveningEvents)}`}
+            color="#C89241"
+          />
+        </div>
+
+        <div style={{ marginTop: 22 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#365d62', marginBottom: 6 }}>Пляжні послуги</div>
+              <div style={{ background: '#e2e8f0', borderRadius: 8, height: 18, overflow: 'hidden' }}>
+                <div style={{ background: '#DAA520', height: '100%', width: `${b.pct}%`, borderRadius: 8, transition: 'width 0.5s ease' }} />
+              </div>
+              <div style={{ fontSize: 12, color: '#55777b', marginTop: 4 }}>{pct(b.pct)} зайнято</div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#365d62', marginBottom: 6 }}>Столи / Вечір</div>
+              <div style={{ background: '#e2e8f0', borderRadius: 8, height: 18, overflow: 'hidden' }}>
+                <div style={{ background: '#C89241', height: '100%', width: `${t.pct}%`, borderRadius: 8, transition: 'width 0.5s ease' }} />
+              </div>
+              <div style={{ fontSize: 12, color: '#55777b', marginTop: 4 }}>{pct(t.pct)} зайнято</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (periodLoading) return <div className="loading-state">Завантаження...</div>;
   if (!data) return null;
 
   const s = data.summary;
@@ -441,7 +538,14 @@ function OccupancyTab({ data, loading }) {
 
   return (
     <div className="report-content">
-      <div className="report-section-title">Наповнюваність закладу</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <div className="btn-group">
+          <button type="button" className="btn" onClick={() => setMode('live')}>Сьогодні</button>
+          <button type="button" className="btn btn-primary" onClick={() => setMode('period')}>Період</button>
+        </div>
+      </div>
+
+      <div className="report-section-title">Наповнюваність за період</div>
       <div className="stats-grid">
         <StatCard label="Всього бронювань" value={fmt(s.totalReservations)} color="#8B6914" />
         <StatCard label="Прийшли" value={fmt(s.arrived)} color="#5B7B3A" />
@@ -454,8 +558,8 @@ function OccupancyTab({ data, loading }) {
 
       <div className="report-section-title" style={{ marginTop: 22 }}>По типу послуг</div>
       <div className="stats-grid">
-        <StatCard label="Пляжні послуги (місць)" value={`${fmt(data.byKind.beach.units)} / ${fmt(data.byKind.beach.capacity)}`} sub={`Гостей: ${fmt(data.byKind.beach.guests)}`} color="#DAA520" />
-        <StatCard label="Столи / Вечірні події" value={`${fmt(data.byKind.table.units)} / ${fmt(data.byKind.table.capacity)}`} sub={`Гостей: ${fmt(data.byKind.table.guests)} · Вечірніх: ${fmt(data.byKind.table.eveningEvents)}`} color="#C89241" />
+        <StatCard label="Пляжні послуги" value={`${fmt(data.byKind.beach.units)} / ${fmt(data.byKind.beach.capacity)} місць`} sub={`${pct(data.byKind.beach.occupancyPct)} · Гостей: ${fmt(data.byKind.beach.guests)}`} color="#DAA520" />
+        <StatCard label="Столи / Вечірні події" value={`${fmt(data.byKind.table.units)} / ${fmt(data.byKind.table.capacity)} місць`} sub={`${pct(data.byKind.table.occupancyPct)} · Гостей: ${fmt(data.byKind.table.guests)} · Вечірніх: ${fmt(data.byKind.table.eveningEvents)}`} color="#C89241" />
       </div>
 
       {zoneRows.length > 0 && (

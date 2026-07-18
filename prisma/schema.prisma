@@ -765,3 +765,24 @@ enum ReportFrequency {
   WEEKLY
   MONTHLY
 }
+
+model OccupancySnapshot {
+  id               Int      @id @default(autoincrement())
+  date             DateTime @unique
+  beachOccupied    Int      @default(0)
+  beachCapacity    Int      @default(0)
+  beachPct         Float    @default(0)
+  beachGuests      Int      @default(0)
+  tableOccupied    Int      @default(0)
+  tableCapacity    Int      @default(0)
+  tablePct         Float    @default(0)
+  tableGuests      Int      @default(0)
+  eveningEvents    Int      @default(0)
+  totalGuests      Int      @default(0)
+  onPremises       Int      @default(0)
+  arrived          Int      @default(0)
+  totalReservations Int    @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([date])
+}

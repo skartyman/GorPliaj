@@ -1,5 +1,5 @@
 const reportService = require('../services/reportService');
-const { getFinancialReport, getReservationsReport, getTicketSalesReport, getMenuReport, getEventsReport, getStaffReport, getSummaryReport, getOccupancyReport } = require('../services/reportService');
+const { getFinancialReport, getReservationsReport, getTicketSalesReport, getMenuReport, getEventsReport, getStaffReport, getSummaryReport, getOccupancyReport, getOccupancyLive } = require('../services/reportService');
 const prisma = require('../lib/prisma');
 const { sendReportEmail } = require('../services/reportEmailService');
 
@@ -232,6 +232,30 @@ async function getOccupancyReportController(req, res) {
   }
 }
 
+async function getOccupancyLiveController(req, res) {
+  try {
+    const date = req.query.date ? new Date(req.query.date) : new Date();
+    const report = await getOccupancyLive({ date });
+    return res.json(report);
+  } catch (error) {
+    console.error('[adminReportController.occupancyLive] Failed.', error);
+    return res.status(500).json({ message: 'Unable to load live occupancy.' });
+  }
+}
+
+async function getOccupancySnapshotsController(req, res) {
+  try {
+    const snapshots = await prisma.occupancySnapshot.findMany({
+      orderBy: { date: 'desc' },
+      take: 30
+    });
+    return res.json({ snapshots });
+  } catch (error) {
+    console.error('[adminReportController.occupancySnapshots] Failed.', error);
+    return res.status(500).json({ message: 'Unable to load occupancy snapshots.' });
+  }
+}
+
 module.exports = {
   getFinancialReportController,
   getReservationsReportController,
@@ -241,6 +265,8 @@ module.exports = {
   getStaffReportController,
   getSummaryReportController,
   getOccupancyReportController,
+  getOccupancyLiveController,
+  getOccupancySnapshotsController,
   sendManualReportController,
   listSchedulesController,
   createScheduleController,

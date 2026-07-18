@@ -150,6 +150,15 @@ const translations = {
       errors: {
         loadReservations: 'Не вдалося завантажити броні.',
         loadDashboard: 'Не вдалося завантажити дашборд.'
+      },
+      occupancy: {
+        title: 'Наповнюваність зараз',
+        description: 'Поточний стан закладу на момент завантаження.',
+        total: 'Зайнято',
+        guests: 'Гостей',
+        onPremises: 'Від закладу',
+        beach: 'Пляжні послуги',
+        tables: 'Столи / Вечір'
       }
     },
     reservations: {
@@ -1480,6 +1489,15 @@ const translations = {
       errors: {
         loadReservations: 'Не удалось загрузить брони.',
         loadDashboard: 'Не удалось загрузить дашборд.'
+      },
+      occupancy: {
+        title: 'Заполненность сейчас',
+        description: 'Текущее состояние заведения на момент загрузки.',
+        total: 'Занято',
+        guests: 'Гостей',
+        onPremises: 'От заведения',
+        beach: 'Пляжные услуги',
+        tables: 'Столы / Вечер'
       }
     },
     reservations: {
@@ -2027,6 +2045,15 @@ const translations = {
       errors: {
         loadReservations: 'Failed to load reservations.',
         loadDashboard: 'Failed to load dashboard.'
+      },
+      occupancy: {
+        title: 'Current occupancy',
+        description: 'Live venue status at the time of page load.',
+        total: 'Occupied',
+        guests: 'Guests',
+        onPremises: 'From venue',
+        beach: 'Beach services',
+        tables: 'Tables / Evening'
       }
     },
     ticketSales: {

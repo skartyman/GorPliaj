@@ -6,6 +6,7 @@ import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'HELD', 'SEATED'];
 const ATTENTION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
@@ -124,6 +125,7 @@ export default function DashboardPage() {
       topLikedItems: []
     }
   });
+  const [occupancyData, setOccupancyData] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +173,9 @@ export default function DashboardPage() {
         }));
         tasks.push(apiRequest('/api/admin/ticket-orders').then(({ response, body }) => {
           if (response.ok) next.ticketOrders = Array.isArray(body) ? body : [];
+        }));
+        tasks.push(apiRequest('/api/admin/reports/occupancy/live').then(({ response, body }) => {
+          if (response.ok) setOccupancyData(body);
         }));
       }
 
@@ -359,6 +364,57 @@ export default function DashboardPage() {
               <strong>{state.loading ? '—' : (state.insights.summary.activeItemsCount || 0)}</strong>
             </article>
           </section>
+
+          {occupancyData ? (
+            <section className="dashboard-occupancy-strip">
+              <PageCard title={t('dashboard.occupancy.title')} description={t('dashboard.occupancy.description')}>
+                <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', marginBottom: 14 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: 12, color: '#55777b' }}>{t('dashboard.occupancy.total')}</span>
+                    <strong style={{ fontSize: 20, color: '#C89241' }}>{occupancyData.total.occupied}/{occupancyData.total.capacity}</strong>
+                    <span style={{ fontSize: 12, color: '#DAA520' }}>{occupancyData.total.pct}%</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: 12, color: '#55777b' }}>{t('dashboard.occupancy.guests')}</span>
+                    <strong style={{ fontSize: 20, color: '#5B7B3A' }}>{occupancyData.total.guests}</strong>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: 12, color: '#55777b' }}>{t('dashboard.occupancy.onPremises')}</span>
+                    <strong style={{ fontSize: 20, color: '#9333EA' }}>{occupancyData.onPremises}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#365d62', marginBottom: 4 }}>🏖 {t('dashboard.occupancy.beach')}</div>
+                    <div style={{ background: '#e2e8f0', borderRadius: 6, height: 14, overflow: 'hidden' }}>
+                      <div style={{ background: '#DAA520', height: '100%', width: `${occupancyData.byKind.beach.pct}%`, borderRadius: 6, transition: 'width 0.5s ease' }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#55777b', marginTop: 2 }}>{occupancyData.byKind.beach.occupied}/{occupancyData.byKind.beach.capacity} · {occupancyData.byKind.beach.pct}% · 👤 {occupancyData.byKind.beach.guests}</div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#365d62', marginBottom: 4 }}>🪑 {t('dashboard.occupancy.tables')}</div>
+                    <div style={{ background: '#e2e8f0', borderRadius: 6, height: 14, overflow: 'hidden' }}>
+                      <div style={{ background: '#C89241', height: '100%', width: `${occupancyData.byKind.table.pct}%`, borderRadius: 6, transition: 'width 0.5s ease' }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#55777b', marginTop: 2 }}>{occupancyData.byKind.table.occupied}/{occupancyData.byKind.table.capacity} · {occupancyData.byKind.table.pct}% · 👤 {occupancyData.byKind.table.guests}</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <ResponsiveContainer width="100%" height={60}>
+                    <BarChart data={[
+                      { name: '🏖 Пляж', pct: occupancyData.byKind.beach.pct },
+                      { name: '🪑 Столи', pct: occupancyData.byKind.table.pct }
+                    ]} layout="vertical">
+                      <XAxis type="number" domain={[0, 100]} hide />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(v) => `${v}%`} />
+                      <Bar dataKey="pct" fill="#C89241" radius={[0, 4, 4, 0]} barSize={16} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </PageCard>
+            </section>
+          ) : null}
 
           <section className="dashboard-chart-grid">
             <PageCard title={t('dashboard.charts.reservations7days')} description={t('dashboard.charts.reservations7daysDesc')}>
