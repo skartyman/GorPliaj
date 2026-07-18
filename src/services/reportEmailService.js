@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const { escapeHtml } = require('../utils/deliveryPresentation');
 const { isMailConfigured } = require('./emailService');
-const { getFinancialReport, getReservationsReport, getTicketSalesReport, getMenuReport, getEventsReport, getStaffReport, getSummaryReport } = require('./reportService');
+const { getFinancialReport, getReservationsReport, getTicketSalesReport, getMenuReport, getEventsReport, getStaffReport, getSummaryReport, getOccupancyReport } = require('./reportService');
 
 function createTransport() {
   if (!isMailConfigured()) return null;
@@ -164,6 +164,22 @@ function buildSummaryHtml(report) {
   return buildEmailLayout({ title: 'Зведений звіт', subtitle: `${fmt(report.period.from)} — ${fmt(report.period.to)}`, content });
 }
 
+function buildOccupancyHtml(report) {
+  const s = report.summary;
+  const content = `
+    <p style="margin:8px 0 14px;color:#365d62;font-size:14px;">Звіт по наповнюваності за період. Всього днів: <strong>${fmt(s.totalReservations)}</strong> бронювань, прийшли: <strong>${fmt(s.arrived)}</strong>, не прийшли: <strong>${fmt(s.noShows)}</strong>.</p>
+    <div>${kpiCard('Всього бронювань', fmt(s.totalReservations))}${kpiCard('Прийшли', fmt(s.arrived))}${kpiCard('Не прийшли', fmt(s.noShows))}${kpiCard('Від закладу', fmt(s.onPremises))}${kpiCard('Гостей', fmt(s.totalGuests))}${kpiCard('Ср. тривалість', s.avgDurationMinutes != null ? `${fmt(s.avgDurationMinutes)} хв` : '—')}${kpiCard('Наповнюваність', pct(s.occupancyPct))}</div>
+    ${report.byZone.length ? `
+    <h3 style="margin:22px 0 8px;font-size:14px;color:#173d43;">По зонах:</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      ${tableRow(['Зона', 'Місць', 'Зайнято', 'Гостей', 'Від закладу'], true)}
+      ${report.byZone.map(z => tableRow([escapeHtml(z.name), fmt(z.capacity), fmt(z.occupied), fmt(z.guests), fmt(z.onPremises)])).join('')}
+    </table>` : ''}
+    <p style="margin-top:22px;font-size:13px;color:#365d62;line-height:1.6;">Розгорнуті дані з графіками доступні в панелі адміністрування у розділі «Звіти» → «Наповнюваність».</p>
+  `;
+  return buildEmailLayout({ title: 'Звіт по наповнюваності', subtitle: `${fmt(report.period.from)} — ${fmt(report.period.to)}`, content });
+}
+
 const REPORT_TYPE_CONFIG = {
   FINANCIAL: { subject: 'Фінансовий звіт — GorPliaj', generator: getFinancialReport, builder: buildFinancialHtml },
   RESERVATIONS: { subject: 'Звіт по бронюванням — GorPliaj', generator: getReservationsReport, builder: buildReservationsHtml },
@@ -171,7 +187,8 @@ const REPORT_TYPE_CONFIG = {
   MENU: { subject: 'Звіт по меню — GorPliaj', generator: getMenuReport, builder: buildMenuHtml },
   EVENTS: { subject: 'Звіт по подіях — GorPliaj', generator: getEventsReport, builder: buildEventsHtml },
   STAFF: { subject: 'Звіт по персоналу — GorPliaj', generator: getStaffReport, builder: buildStaffHtml },
-  SUMMARY: { subject: 'Зведений звіт — GorPliaj', generator: getSummaryReport, builder: buildSummaryHtml }
+  SUMMARY: { subject: 'Зведений звіт — GorPliaj', generator: getSummaryReport, builder: buildSummaryHtml },
+  OCCUPANCY: { subject: 'Звіт по наповнюваності — GorPliaj', generator: getOccupancyReport, builder: buildOccupancyHtml }
 };
 
 async function sendReportEmail({ reportType, email, from, to }) {

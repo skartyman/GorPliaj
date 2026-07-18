@@ -1,5 +1,5 @@
 const reportService = require('../services/reportService');
-const { getFinancialReport, getReservationsReport, getTicketSalesReport, getMenuReport, getEventsReport, getStaffReport, getSummaryReport } = require('../services/reportService');
+const { getFinancialReport, getReservationsReport, getTicketSalesReport, getMenuReport, getEventsReport, getStaffReport, getSummaryReport, getOccupancyReport } = require('../services/reportService');
 const prisma = require('../lib/prisma');
 const { sendReportEmail } = require('../services/reportEmailService');
 
@@ -221,6 +221,17 @@ async function triggerScheduleController(req, res) {
   }
 }
 
+async function getOccupancyReportController(req, res) {
+  try {
+    const { from, to } = parseRange(req);
+    const report = await getOccupancyReport({ from, to });
+    return res.json(report);
+  } catch (error) {
+    console.error('[adminReportController.occupancy] Failed.', error);
+    return res.status(500).json({ message: 'Unable to load occupancy report.' });
+  }
+}
+
 module.exports = {
   getFinancialReportController,
   getReservationsReportController,
@@ -229,6 +240,7 @@ module.exports = {
   getEventsReportController,
   getStaffReportController,
   getSummaryReportController,
+  getOccupancyReportController,
   sendManualReportController,
   listSchedulesController,
   createScheduleController,

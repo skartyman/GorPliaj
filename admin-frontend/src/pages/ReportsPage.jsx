@@ -432,6 +432,103 @@ function SummaryTab({ data, loading }) {
   );
 }
 
+function OccupancyTab({ data, loading }) {
+  if (loading) return <div className="loading-state">Завантаження...</div>;
+  if (!data) return null;
+
+  const s = data.summary;
+  const zoneRows = data.byZone || [];
+
+  return (
+    <div className="report-content">
+      <div className="report-section-title">Наповнюваність закладу</div>
+      <div className="stats-grid">
+        <StatCard label="Всього бронювань" value={fmt(s.totalReservations)} color="#8B6914" />
+        <StatCard label="Прийшли" value={fmt(s.arrived)} color="#5B7B3A" />
+        <StatCard label="Не прийшли" value={fmt(s.noShows)} color="#8B2500" />
+        <StatCard label="Від закладу" value={fmt(s.onPremises)} color="#9333EA" />
+        <StatCard label="Гостей" value={fmt(s.totalGuests)} color="#4A2C1A" />
+        <StatCard label="Ср. тривалість" value={s.avgDurationMinutes != null ? `${fmt(s.avgDurationMinutes)} хв` : '—'} color="#C89241" />
+        <StatCard label="Наповнюваність" value={pct(s.occupancyPct)} color="#DAA520" />
+      </div>
+
+      <div className="report-section-title" style={{ marginTop: 22 }}>По типу послуг</div>
+      <div className="stats-grid">
+        <StatCard label="Пляжні послуги (місць)" value={`${fmt(data.byKind.beach.units)} / ${fmt(data.byKind.beach.capacity)}`} sub={`Гостей: ${fmt(data.byKind.beach.guests)}`} color="#DAA520" />
+        <StatCard label="Столи / Вечірні події" value={`${fmt(data.byKind.table.units)} / ${fmt(data.byKind.table.capacity)}`} sub={`Гостей: ${fmt(data.byKind.table.guests)} · Вечірніх: ${fmt(data.byKind.table.eveningEvents)}`} color="#C89241" />
+      </div>
+
+      {zoneRows.length > 0 && (
+        <>
+          <div className="report-section-title" style={{ marginTop: 22 }}>По зонах</div>
+          <div className="report-table-wrapper">
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th>Зона</th>
+                  <th>Місць</th>
+                  <th>Зайнято</th>
+                  <th>%</th>
+                  <th>Гостей</th>
+                  <th>Пляж</th>
+                  <th>Від закладу</th>
+                </tr>
+              </thead>
+              <tbody>
+                {zoneRows.map((z) => (
+                  <tr key={z.zoneId}>
+                    <td><strong>{z.name}</strong></td>
+                    <td>{fmt(z.capacity)}</td>
+                    <td>{fmt(z.occupied)}</td>
+                    <td>{pct(z.occupancyPct)}</td>
+                    <td>{fmt(z.guests)}</td>
+                    <td>{fmt(z.beachUnits)} / {fmt(z.beachGuests)} гіст.</td>
+                    <td>{fmt(z.onPremises)} / {fmt(z.onPremisesGuests)} гіст.</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {data.hourly && data.hourly.length > 0 && (
+        <>
+          <div className="report-section-title" style={{ marginTop: 22 }}>Наповнюваність по часу</div>
+          <div style={{ display: 'grid', gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#365d62', marginBottom: 6 }}>Зайняті позиції по годинах</div>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={data.hourly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} fontSize={11} />
+                  <YAxis fontSize={11} />
+                  <Tooltip formatter={(value, name) => [fmt(value), name === 'occupied' ? 'Зайнято' : name === 'arrivals' ? 'Прийшли' : 'Гостей']} labelFormatter={(h) => `${h}:00`} />
+                  <Legend formatter={(value) => value === 'occupied' ? 'Зайнято' : value === 'arrivals' ? 'Прийшли' : 'Гостей'} />
+                  <Line type="monotone" dataKey="occupied" stroke="#9333EA" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="arrivals" stroke="#5B7B3A" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#365d62', marginBottom: 6 }}>Гостей за годину приходу</div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data.hourly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} fontSize={11} />
+                  <YAxis fontSize={11} />
+                  <Tooltip formatter={(value) => [fmt(value), 'Гостей']} labelFormatter={(h) => `${h}:00`} />
+                  <Bar dataKey="guests" fill="#DAA520" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const { t } = useAdminI18n();
   const [activeTab, setActiveTab] = useState('summary');
@@ -450,7 +547,8 @@ export default function ReportsPage() {
     { key: 'tickets', label: 'Квитки' },
     { key: 'menu', label: 'Меню' },
     { key: 'events', label: 'Події' },
-    { key: 'staff', label: 'Персонал' }
+    { key: 'staff', label: 'Персонал' },
+    { key: 'occupancy', label: 'Наповнюваність' }
   ];
 
   const typeMap = {
@@ -460,7 +558,8 @@ export default function ReportsPage() {
     tickets: 'tickets',
     menu: 'menu',
     events: 'events',
-    staff: 'staff'
+    staff: 'staff',
+    occupancy: 'occupancy'
   };
 
   const load = useCallback(async (tabKey) => {
@@ -518,6 +617,7 @@ export default function ReportsPage() {
         {activeTab === 'menu' && <MenuTab data={data.menu} loading={loading} />}
         {activeTab === 'events' && <EventsTab data={data.events} loading={loading} />}
         {activeTab === 'staff' && <StaffTab data={data.staff} loading={loading} />}
+        {activeTab === 'occupancy' && <OccupancyTab data={data.occupancy} loading={loading} />}
       </PageContainer>
     </AdminLayout>
   );

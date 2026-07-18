@@ -757,6 +757,7 @@ enum ReportType {
   EVENTS
   STAFF
   SUMMARY
+  OCCUPANCY
 }
 
 enum ReportFrequency {
