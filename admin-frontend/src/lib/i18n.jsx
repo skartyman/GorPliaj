@@ -626,8 +626,13 @@ const translations = {
         confirmed: 'Підтверджений',
         held: 'Утриманий',
         completed: 'Зайнято',
+        onPremises: 'На заведення',
         unavailable: 'Недоступний'
       },
+      onPremises: 'На заведення',
+      onPremisesNote: 'Прізвище гостя та від кого (напр. Петренко, від А.Ф.)',
+      onPremisesNotePlaceholder: 'Петренко, від А.Ф.',
+      onPremisesNoteRequired: 'Для «На заведення» обовʼязково вкажіть прізвище гостя та від кого.',
       fields: {
         table: 'Стіл',
         zone: 'Зона',
@@ -655,6 +660,7 @@ const translations = {
       NO_SHOW: 'Не прийшли',
       UNAVAILABLE: 'Недоступно',
       FREE: 'Вільно',
+      ON_PREMISES: 'На заведення',
       UNKNOWN: 'Невідомо'
     },
     eventsAdmin: {
@@ -1286,6 +1292,35 @@ const translations = {
         MARK_AS_FAILED: 'Отметить неудачным'
       }
     },
+    map: {
+      legend: {
+        free: 'Свободно',
+        pending: 'Ожидает',
+        confirmed: 'Подтверждено',
+        held: 'Удержано',
+        completed: 'Занято',
+        onPremises: 'На заведении',
+        unavailable: 'Недоступно'
+      },
+      onPremises: 'На заведении',
+      onPremisesNote: 'Фамилия гостя и от кого (напр. Петренко, от А.Ф.)',
+      onPremisesNotePlaceholder: 'Петренко, от А.Ф.',
+      onPremisesNoteRequired: 'Для «На заведении» обязательно укажите фамилию гостя и от кого.'
+    },
+    status: {
+      PENDING: 'Ожидает',
+      CONFIRMED: 'Подтверждено',
+      AWAITING_PAYMENT: 'Ждёт оплату',
+      HELD: 'Удержано',
+      SEATED: 'Гости на месте',
+      COMPLETED: 'Завершено',
+      CANCELLED: 'Отменено',
+      NO_SHOW: 'Не пришли',
+      UNAVAILABLE: 'Недоступно',
+      FREE: 'Свободно',
+      ON_PREMISES: 'На заведении',
+      UNKNOWN: 'Неизвестно'
+    },
     common: {
       admin: 'Админка',
       loading: 'Загрузка...',
@@ -1723,6 +1758,35 @@ const translations = {
         MARK_AS_FAILED: 'Mark as failed'
       }
     },
+    map: {
+      legend: {
+        free: 'Free',
+        pending: 'Pending',
+        confirmed: 'Confirmed',
+        held: 'Held',
+        completed: 'Occupied',
+        onPremises: 'On premises',
+        unavailable: 'Unavailable'
+      },
+      onPremises: 'On premises',
+      onPremisesNote: 'Guest surname and source (e.g. Petrenko, from A.F.)',
+      onPremisesNotePlaceholder: 'Petrenko, from A.F.',
+      onPremisesNoteRequired: 'For "On premises" you must provide the guest surname and source.'
+    },
+    status: {
+      PENDING: 'Pending',
+      CONFIRMED: 'Confirmed',
+      AWAITING_PAYMENT: 'Awaiting payment',
+      HELD: 'Held',
+      SEATED: 'Guests seated',
+      COMPLETED: 'Completed',
+      CANCELLED: 'Cancelled',
+      NO_SHOW: 'No show',
+      UNAVAILABLE: 'Unavailable',
+      FREE: 'Free',
+      ON_PREMISES: 'On premises',
+      UNKNOWN: 'Unknown'
+    },
     common: {
       admin: 'Admin',
       loading: 'Loading...',
@@ -2157,3 +2221,4 @@ export function useAdminI18n() {
 
   return context;
 }
+

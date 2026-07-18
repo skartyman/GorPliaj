@@ -55,6 +55,10 @@ function getTableDisplayStatus(table, reservationsByTable, heldTableIds, busyTab
     return 'PENDING';
   }
 
+  if (reservations.some((reservation) => reservation.onPremises)) {
+    return 'ON_PREMISES';
+  }
+
   if (reservations.some((reservation) => ['CONFIRMED', 'AWAITING_PAYMENT'].includes(reservation.status))) {
     return 'CONFIRMED';
   }
@@ -839,6 +843,25 @@ export default function MapPage() {
     }
   }
 
+  async function handleFreeTableArriveOnPremises(table) {
+    if (!table) return;
+    const note = window.prompt(t('map.onPremisesNote'), '');
+    if (note === null) return;
+    if (!note.trim()) {
+      alert(t('map.onPremisesNoteRequired'));
+      return;
+    }
+    const result = await apiRequest(`/api/admin/tables/${table.id}/arrive`, {
+      method: 'POST',
+      body: JSON.stringify({ onPremises: true, onPremisesNote: note.trim() })
+    });
+    if (result.response.ok) {
+      loadMapData(true);
+    } else {
+      alert(result.body?.message || 'Помилка');
+    }
+  }
+
   async function handleQRArrive() {
     const code = qrTicketCode.trim();
     if (!code) return;
@@ -1113,7 +1136,9 @@ export default function MapPage() {
       commentAdmin: '',
       depositRequired: Number(table.deposit || 0) > 0,
       depositAmount: Number(table.deposit || 0) > 0 ? Number(table.deposit || 0) : '',
-      paidInCash: false
+      paidInCash: false,
+      onPremises: false,
+      onPremisesNote: ''
     };
   }
 
@@ -1399,12 +1424,25 @@ export default function MapPage() {
       success: ''
     }));
 
+    const onPremises = Boolean(bookingFormState.form.onPremises);
+    const onPremisesNote = onPremises ? String(bookingFormState.form.onPremisesNote || '').trim() : '';
+    if (onPremises && !onPremisesNote) {
+      setBookingFormState((current) => ({
+        ...current,
+        saving: false,
+        error: t('map.onPremisesNoteRequired')
+      }));
+      return;
+    }
+
     const payload = {
       ...bookingFormState.form,
       guests: Number(bookingFormState.form.guests),
-      depositRequired: Boolean(bookingFormState.form.depositRequired),
-      depositAmount: bookingFormState.form.depositRequired ? Number(bookingFormState.form.depositAmount || 0) : 0,
-      paidInCash: Boolean(bookingFormState.form.paidInCash)
+      depositRequired: Boolean(bookingFormState.form.depositRequired) && !onPremises,
+      depositAmount: (bookingFormState.form.depositRequired && !onPremises) ? Number(bookingFormState.form.depositAmount || 0) : 0,
+      paidInCash: Boolean(bookingFormState.form.paidInCash),
+      onPremises,
+      onPremisesNote
     };
 
     const result = await apiRequest('/api/admin/reservations', {
@@ -1701,6 +1739,7 @@ export default function MapPage() {
                   <span><i className="dot confirmed" /> {t('map.legend.confirmed')}</span>
                   <span><i className="dot held" /> {t('map.legend.held')}</span>
                   <span><i className="dot completed" /> {t('map.legend.completed') || 'Зайнято'}</span>
+                  <span><i className="dot on-premises" /> {t('map.legend.onPremises')}</span>
                   <span><i className="dot unavailable" /> {t('map.legend.unavailable')}</span>
                 </div>
               </div>
@@ -1726,6 +1765,9 @@ export default function MapPage() {
                         {selectedDate <= getDateKey() && (
                           <button type="button" className="btn btn-success w-full" onClick={() => handleFreeTableArrive(selectedTable)}>Прийшли</button>
                         )}
+                        {selectedDate <= getDateKey() && (
+                          <button type="button" className="btn btn-small w-full" style={{ background: '#9333EA', borderColor: '#7E22CE', color: '#fff' }} onClick={() => handleFreeTableArriveOnPremises(selectedTable)}>{t('map.onPremises')}</button>
+                        )}
                         <button type="button" className="btn w-full" style={selectedDate > getDateKey() ? { gridColumn: 'span 2' } : {}} onClick={() => onBookTable(selectedTable)}>Забронювати</button>
                       </div>
                     ) : null}
@@ -1746,6 +1788,11 @@ export default function MapPage() {
                               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                                 {reservation.customerName || t('common.guest')} • {formatDate(reservation.reservationDate, dateLocale)} {getReservationTimeKey(reservation) || formatTime(reservation.timeFrom, dateLocale)}
                               </div>
+                              {reservation.onPremises ? (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 999, background: '#F3E8FF', border: '1px solid #9333EA', color: '#6B21A8', fontSize: '11px', fontWeight: 700 }}>
+                                  {t('map.onPremises')}{reservation.onPremisesNote ? `: ${reservation.onPremisesNote}` : ''}
+                                </div>
+                              ) : null}
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 9px', borderRadius: 8, background: 'rgba(30, 41, 59, 0.06)', border: '1px solid rgba(30, 41, 59, 0.08)' }}>
                                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 700 }}>Час броні</span>
                                 <strong style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1 }}>{getReservationTimeKey(reservation) || formatTime(reservation.timeFrom, dateLocale)}</strong>
@@ -1856,6 +1903,23 @@ export default function MapPage() {
                             <input type="checkbox" checked={Boolean(bookingFormState.form.paidInCash)} onChange={(event) => updateBookingForm('paidInCash', event.target.checked)} style={{ width: 'auto', margin: 0 }} />
                             Гість платить готівкою
                           </label>
+                          <label className="checkbox-label inline" style={{ margin: 0, fontSize: '13px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="checkbox" checked={Boolean(bookingFormState.form.onPremises)} onChange={(event) => updateBookingForm('onPremises', event.target.checked)} style={{ width: 'auto', margin: 0 }} />
+                            {t('map.onPremises')}
+                          </label>
+                          {bookingFormState.form.onPremises ? (
+                            <label className="object-admin-form-wide" style={{ margin: 0, fontSize: '13px' }}>
+                              {t('map.onPremisesNote')}
+                              <input
+                                type="text"
+                                required
+                                value={bookingFormState.form.onPremisesNote}
+                                onChange={(event) => updateBookingForm('onPremisesNote', event.target.value)}
+                                placeholder={t('map.onPremisesNotePlaceholder')}
+                                style={{ marginTop: 4, padding: '8px 10px' }}
+                              />
+                            </label>
+                          ) : null}
                         </div>
                         <label className="object-admin-form-wide" style={{ margin: 0, fontSize: '13px' }}>
                           Коментар гостя

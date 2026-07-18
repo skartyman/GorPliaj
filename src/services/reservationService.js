@@ -53,6 +53,8 @@ function reservationCreateData(payload) {
     depositAmount: payload.depositAmount === null || payload.depositAmount === undefined || payload.depositAmount === '' ? null : payload.depositAmount,
     rentalAmount: payload.rentalAmount === null || payload.rentalAmount === undefined || payload.rentalAmount === '' ? null : payload.rentalAmount,
     paidInCash: Boolean(payload.paidInCash),
+    onPremises: Boolean(payload.onPremises),
+    onPremisesNote: payload.onPremisesNote || null,
     status: payload.status || undefined,
     source: payload.source || undefined,
     ticketCode: payload.ticketCode || undefined,

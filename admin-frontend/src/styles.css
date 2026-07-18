@@ -1045,6 +1045,7 @@ textarea { resize: vertical; min-height: 96px; }
 .interactive-map-table.pending { background: var(--warning-bg); border-color: #EAB308; }
 .interactive-map-table.confirmed { background: var(--info-bg); border-color: var(--info-text); }
 .interactive-map-table.held { background: #FFEDD5; border-color: #F97316; }
+.interactive-map-table.on-premises { background: #F3E8FF; border-color: #9333EA; color: #6B21A8; }
 .interactive-map-table.unavailable { background: var(--border-light); border-color: var(--text-muted); color: var(--text-secondary); }
 .interactive-map-table.selected { box-shadow: 0 0 0 2px var(--accent-gold); }
 
@@ -1107,6 +1108,7 @@ textarea { resize: vertical; min-height: 96px; }
 .dot.pending { background: #EAB308; }
 .dot.confirmed { background: var(--info-text); }
 .dot.held { background: #F97316; }
+.dot.on-premises { background: #9333EA; }
 .dot.unavailable { background: var(--text-muted); }
 .dot.completed, .dot.busy { background: #EF4444; }
 .dot.neutral { background: var(--border-warm); }
@@ -2731,6 +2733,12 @@ textarea { resize: vertical; min-height: 96px; }
   color: var(--text-primary);
 }
 
+.object-status-badge.on-premises {
+  background: #F3E8FF;
+  border-color: #9333EA;
+  color: #6B21A8;
+}
+
 .object-status-badge.unavailable {
   background: var(--border-light);
   border-color: var(--text-muted);
@@ -2795,6 +2803,16 @@ textarea { resize: vertical; min-height: 96px; }
   color: #FFFFFF !important;
 }
 .interactive-map-table.held span, .object-status-badge.held .object-code-text {
+  color: #FFFFFF !important;
+}
+
+/* On premises (owner gift): Solid Purple */
+.interactive-map-table.on-premises, .object-status-badge.on-premises {
+  background: #9333EA !important;
+  border-color: #7E22CE !important;
+  color: #FFFFFF !important;
+}
+.interactive-map-table.on-premises span, .object-status-badge.on-premises .object-code-text {
   color: #FFFFFF !important;
 }
 

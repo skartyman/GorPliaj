@@ -574,6 +574,12 @@ async function createAdminTableArrive(req, res) {
 
     const ticketCode = generateTicketCode();
 
+    const onPremises = Boolean(req.body.onPremises);
+    const onPremisesNote = onPremises ? String(req.body.onPremisesNote || '').trim() : null;
+    if (onPremises && !onPremisesNote) {
+      return res.status(400).json({ message: 'On premises arrivals require a guest surname and source note.' });
+    }
+
     const reservation = await reservationService.createReservation({
       tableId: table.id,
       mapId: table.mapId,
@@ -590,7 +596,9 @@ async function createAdminTableArrive(req, res) {
       ticketCode,
       depositRequired: false,
       depositAmount: null,
-      paidInCash: false
+      paidInCash: false,
+      onPremises,
+      onPremisesNote
     });
 
     await prisma.reservation.update({
@@ -680,7 +688,13 @@ async function createAdminReservation(req, res) {
     const ticketCode = generateTicketCode();
     const requestedBookingKind = String(body.bookingKind || '').trim().toUpperCase();
     const bookingKind = requestedBookingKind || table.bookingKind || 'TABLE';
-    const depositAmount = body.depositRequired
+    const onPremises = Boolean(body.onPremises);
+    const onPremisesNote = onPremises ? String(body.onPremisesNote || '').trim() : null;
+    if (onPremises && !onPremisesNote) {
+      return res.status(400).json({ message: 'On premises reservations require a guest surname and source note.' });
+    }
+
+    const depositAmount = (body.depositRequired && !onPremises)
       ? Math.max(0, Number(body.depositAmount) || Number(table.deposit || 0))
       : 0;
 
@@ -702,7 +716,9 @@ async function createAdminReservation(req, res) {
       depositRequired: depositAmount > 0,
       depositAmount: depositAmount > 0 ? depositAmount : null,
       paidInCash: Boolean(body.paidInCash),
-      status: body.status || 'PENDING',
+      onPremises,
+      onPremisesNote,
+      status: onPremises ? 'SEATED' : (body.status || 'PENDING'),
       source: source || undefined,
       ticketCode
     });
