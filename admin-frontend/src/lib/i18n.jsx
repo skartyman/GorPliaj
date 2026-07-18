@@ -626,13 +626,13 @@ const translations = {
         confirmed: 'Підтверджений',
         held: 'Утриманий',
         completed: 'Зайнято',
-        onPremises: 'На заведення',
+        onPremises: 'Від закладу',
         unavailable: 'Недоступний'
       },
-      onPremises: 'На заведення',
+      onPremises: 'Від закладу',
       onPremisesNote: 'Прізвище гостя та від кого (напр. Петренко, від А.Ф.)',
       onPremisesNotePlaceholder: 'Петренко, від А.Ф.',
-      onPremisesNoteRequired: 'Для «На заведення» обовʼязково вкажіть прізвище гостя та від кого.',
+      onPremisesNoteRequired: 'Для «Від закладу» обовʼязково вкажіть прізвище гостя та від кого.',
       fields: {
         table: 'Стіл',
         zone: 'Зона',
@@ -660,7 +660,7 @@ const translations = {
       NO_SHOW: 'Не прийшли',
       UNAVAILABLE: 'Недоступно',
       FREE: 'Вільно',
-      ON_PREMISES: 'На заведення',
+      ON_PREMISES: 'Від закладу',
       UNKNOWN: 'Невідомо'
     },
     eventsAdmin: {
@@ -1299,13 +1299,13 @@ const translations = {
         confirmed: 'Подтверждено',
         held: 'Удержано',
         completed: 'Занято',
-        onPremises: 'На заведении',
+        onPremises: 'От заведения',
         unavailable: 'Недоступно'
       },
-      onPremises: 'На заведении',
+      onPremises: 'От заведения',
       onPremisesNote: 'Фамилия гостя и от кого (напр. Петренко, от А.Ф.)',
       onPremisesNotePlaceholder: 'Петренко, от А.Ф.',
-      onPremisesNoteRequired: 'Для «На заведении» обязательно укажите фамилию гостя и от кого.'
+      onPremisesNoteRequired: 'Для «От заведения» обязательно укажите фамилию гостя и от кого.'
     },
     status: {
       PENDING: 'Ожидает',
@@ -1318,7 +1318,7 @@ const translations = {
       NO_SHOW: 'Не пришли',
       UNAVAILABLE: 'Недоступно',
       FREE: 'Свободно',
-      ON_PREMISES: 'На заведении',
+      ON_PREMISES: 'От заведения',
       UNKNOWN: 'Неизвестно'
     },
     common: {
@@ -1765,13 +1765,13 @@ const translations = {
         confirmed: 'Confirmed',
         held: 'Held',
         completed: 'Occupied',
-        onPremises: 'On premises',
+        onPremises: 'From venue',
         unavailable: 'Unavailable'
       },
-      onPremises: 'On premises',
+      onPremises: 'From venue',
       onPremisesNote: 'Guest surname and source (e.g. Petrenko, from A.F.)',
       onPremisesNotePlaceholder: 'Petrenko, from A.F.',
-      onPremisesNoteRequired: 'For "On premises" you must provide the guest surname and source.'
+      onPremisesNoteRequired: 'For "From venue" you must provide the guest surname and source.'
     },
     status: {
       PENDING: 'Pending',
@@ -1784,7 +1784,7 @@ const translations = {
       NO_SHOW: 'No show',
       UNAVAILABLE: 'Unavailable',
       FREE: 'Free',
-      ON_PREMISES: 'On premises',
+      ON_PREMISES: 'From venue',
       UNKNOWN: 'Unknown'
     },
     common: {
