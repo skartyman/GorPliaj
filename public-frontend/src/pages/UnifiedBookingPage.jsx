@@ -775,6 +775,9 @@ export default function UnifiedBookingPage() {
     agreeAll: false
   });
 
+  const { guest, isLoggedIn } = useGuest();
+  const guestLoggedIn = isLoggedIn && Boolean(guest && guest.name && guest.phone);
+
   useEffect(() => {
     if (guest && (guest.name || guest.phone || guest.email)) {
       setForm((prev) => ({
@@ -801,8 +804,6 @@ export default function UnifiedBookingPage() {
   const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [availabilityRevision, setAvailabilityRevision] = useState(0);
-  const { guest, isLoggedIn } = useGuest();
-  const guestLoggedIn = isLoggedIn && Boolean(guest && guest.name && guest.phone);
   const [favoriteAdded, setFavoriteAdded] = useState(false);
   const [panelFav, setPanelFav] = useState(false);
 

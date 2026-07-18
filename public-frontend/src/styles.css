@@ -7030,4 +7030,4 @@ select.booking-compact-control {
 .booking-guest-autofill strong { color: var(--text); }
 
 .menu-fav-btn { background: none; border: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-muted, #64748b); padding: 4px 6px; }
-.menu-fav-btn.active { color: var(--accent); }
+.menu-fav-btn.active { color: #f5c518; }
