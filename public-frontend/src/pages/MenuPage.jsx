@@ -45,6 +45,7 @@ export default function MenuPage() {
   const { locale, t } = useLocale();
   const location = useLocation();
   const { items, updateQuantity, clear } = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
   const [menu, setMenu] = useState([]);
   const [likes, setLikes] = useState({});
   const [loading, setLoading] = useState(true);
