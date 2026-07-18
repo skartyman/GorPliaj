@@ -59,6 +59,8 @@ module.exports = {
   R2_CONFIG,
   isR2Configured,
   isLocalDevelopment,
+  POSTHOG_PROJECT_API_KEY: getOptionalEnv('POSTHOG_PROJECT_API_KEY', ''),
+  POSTHOG_HOST: getOptionalEnv('POSTHOG_HOST', 'https://eu.i.posthog.com'),
   getOptionalEnv,
   getRequiredEnv
 };

@@ -655,7 +655,8 @@ async function createReservation(req, res) {
       status: isAwaitingPayment ? 'AWAITING_PAYMENT' : 'CONFIRMED',
       expiresAt: isAwaitingPayment ? new Date(Date.now() + 15 * 60 * 1000) : null,
       source: event ? 'EVENT' : 'WEB',
-      ticketCode
+      ticketCode,
+      analyticsDistinctId: req.body.analyticsDistinctId || null
     });
 
     let linkedTicketOrder = null;

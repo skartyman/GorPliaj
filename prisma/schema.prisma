@@ -209,6 +209,7 @@ model Reservation {
   paidInCash      Boolean           @default(false)
   onPremises      Boolean           @default(false)
   onPremisesNote  String?
+  analyticsDistinctId String?
   expiresAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

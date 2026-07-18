@@ -3,6 +3,7 @@ const prisma = require('../lib/prisma');
 const hutkoUtils = require('../utils/hutko');
 const { sendTicketEmail } = require('./emailService');
 const { sendNewReservationMessage } = require('./waiterTelegramService');
+const analytics = require('./analyticsService');
 const {
   generateTicketSignature,
   buildVerifyUrl,
@@ -486,6 +487,26 @@ async function processCallback(payload) {
       if (confirmation.count > 0) {
         await notifyPaidReservation(reservationId);
         await deliverPaidReservation(reservationId, payment.amount);
+        const paidReservation = await prisma.reservation.findUnique({
+          where: { id: reservationId },
+          select: {
+            analyticsDistinctId: true,
+            zoneId: true,
+            table: { select: { bookingKind: true } }
+          }
+        });
+        const bookingKind = paidReservation?.table?.bookingKind || null;
+        const zoneId = paidReservation?.zoneId || null;
+        const distinctId = paidReservation?.analyticsDistinctId || 'server';
+        const revenue = Number(payment.amount) || 0;
+        analytics.capture('booking_paid', {
+          revenue,
+          currency,
+          bookingKind,
+          zoneId,
+          reservationId
+        }, distinctId);
+        analytics.capture('$revenue', { revenue, currency }, distinctId);
       }
     } catch (emailError) {
       console.error(`[hutko] Failed to send ticket email for reservation #${reservationId}:`, emailError.message);

@@ -8,6 +8,9 @@ import { CartProvider } from './state/cart';
 import { SettingsProvider } from './state/settings';
 import './styles.css';
 import './guest-modal-fix.css';
+import { initAnalytics } from './lib/analytics';
+
+initAnalytics();
 
 // Sync theme before React mounts
 const savedTheme = localStorage.getItem('theme');

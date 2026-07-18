@@ -3,6 +3,7 @@ const prisma = require('../lib/prisma');
 const venueTableOverrideService = require('./venueTableOverrideService');
 const { localizeMessage } = require('../utils/localization');
 const { getClosingTimeString, getVenueClockParts, VENUE_UTC_OFFSET, VENUE_TIME_ZONE } = require('../utils/venueTime');
+const analytics = require('./analyticsService');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 const HOLD_TTL_MS = 15 * 60 * 1000;
 const BEACH_CLOSING_MINUTES = 20 * 60;
@@ -55,6 +56,7 @@ function reservationCreateData(payload) {
     paidInCash: Boolean(payload.paidInCash),
     onPremises: Boolean(payload.onPremises),
     onPremisesNote: payload.onPremisesNote || null,
+    analyticsDistinctId: payload.analyticsDistinctId || null,
     status: payload.status || undefined,
     source: payload.source || undefined,
     ticketCode: payload.ticketCode || undefined,
@@ -73,6 +75,15 @@ function createReservation(payload) {
   return prisma.reservation.create({
     data: reservationCreateData(payload),
     include: reservationInclude
+  }).then((reservation) => {
+    analytics.capture('booking_created', {
+      bookingKind: reservation.table?.bookingKind || payload.bookingKind,
+      zoneId: reservation.zone?.id || null,
+      guests: reservation.guests,
+      source: reservation.source || 'public',
+      reservationId: reservation.id
+    }, reservation.analyticsDistinctId || 'server');
+    return reservation;
   });
 }
 
@@ -89,10 +100,21 @@ async function createReservationGroup(payloads) {
     }
   })));
 
-  return prisma.reservation.findUnique({
+  const lead = await prisma.reservation.findUnique({
     where: { id: created[0].id },
     include: reservationInclude
   });
+
+  analytics.capture('booking_created', {
+    bookingKind: lead.table?.bookingKind || payloads[0].bookingKind,
+    zoneId: lead.zone?.id || null,
+    guests: lead.guests,
+    source: lead.source || 'public',
+    reservationId: lead.id,
+    groupSize: created.length
+  }, lead.analyticsDistinctId || 'server');
+
+  return lead;
 }
 
 async function getReservationTable({ tableId, mapId, zoneId, reservationDate = null, eventId = null }) {
@@ -664,6 +686,7 @@ async function expireStaleReservations() {
     });
     if (expired.count > 0) {
       console.log(`[reservationService] Cancelled ${expired.count} stale reservations.`);
+      analytics.capture('booking_cancelled', { reason: 'expired', count: expired.count });
     }
   } catch (err) {
     console.error('[reservationService.expireStaleReservations] Failed.', err);
@@ -673,15 +696,23 @@ async function expireStaleReservations() {
 async function cancelReservationAfterTicketFailure(reservationId) {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
-    select: { bookingGroupId: true }
+    select: { bookingGroupId: true, analyticsDistinctId: true }
   });
-  return prisma.reservation.updateMany({
+  const result = await prisma.reservation.updateMany({
     where: {
       ...(reservation?.bookingGroupId ? { bookingGroupId: reservation.bookingGroupId } : { id: reservationId }),
       status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
     },
     data: { status: 'CANCELLED' }
   });
+  if (result.count > 0) {
+    analytics.capture('booking_cancelled', {
+      reason: 'ticket_failure',
+      reservationId,
+      groupSize: reservation?.bookingGroupId ? undefined : 1
+    }, reservation?.analyticsDistinctId || 'server');
+  }
+  return result;
 }
 
 async function releaseMissedEventTables(now = new Date()) {

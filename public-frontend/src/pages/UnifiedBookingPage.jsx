@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { holdsApi, mapApi, bookingsApi, eventsApi } from '../lib/api';
+import { captureAnalytics, getDistinctId } from '../lib/analytics';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
@@ -1845,6 +1846,14 @@ export default function UnifiedBookingPage() {
       next.set('holdExpiresAt', hold.expiresAt);
       setSearchParams(next, { replace: true });
 
+      const analyticsDistinctId = getDistinctId();
+      captureAnalytics('booking_submitted', {
+        bookingKind: submitBookingKind,
+        guests: form.guests,
+        tableCount: bookingTables.length,
+        eventSlug: activeEventSlug || undefined
+      });
+
       const result = await bookingsApi.create({
         mapId: eveningTableOverride?.eveningMapId || state.result?.map?.id,
         bookableUnitId: `table:${activeTable.id}`,
@@ -1860,6 +1869,7 @@ export default function UnifiedBookingPage() {
         eventSlug: activeEventSlug || undefined,
         holdToken: hold.holdToken,
         holdTokens: acquiredHolds,
+        analyticsDistinctId: analyticsDistinctId || undefined,
         locale
       });
 

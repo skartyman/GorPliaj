@@ -159,6 +159,17 @@ async function updateAdminReservationStatus({ id, status }) {
     }
   });
 
+  if (['CONFIRMED', 'SEATED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(status)) {
+    const analytics = require('./analyticsService');
+    analytics.capture('booking_status_changed', {
+      from: existing.status,
+      to: status,
+      bookingKind: reservation.table?.bookingKind || null,
+      zoneId: reservation.zone?.id || null,
+      reservationId: reservation.id
+    }, reservation.analyticsDistinctId || 'server');
+  }
+
   return { type: 'UPDATED', reservation };
 }
 

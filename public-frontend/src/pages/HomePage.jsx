@@ -10,6 +10,7 @@ import GalleryCarousel from '../components/GalleryCarousel';
 import WeatherBlock from '../components/WeatherBlock';
 import EventCard from '../components/EventCard';
 import MapPreview from '../components/MapPreview';
+import { captureAnalytics } from '../lib/analytics';
 
 export default function HomePage() {
   const { t, locale } = useLocale();
@@ -131,6 +132,15 @@ export default function HomePage() {
     return { total: units.length, free, held, busy, unavailable };
   })();
   const openBookingMap = (unit) => {
+    if (unit?.tableId) {
+      captureAnalytics('unit_selected', {
+        tableId: unit.tableId,
+        bookingKind: unit.bookingKind || null,
+        from: 'home_map'
+      });
+    } else {
+      captureAnalytics('booking_started', { from: 'home_map' });
+    }
     const params = new URLSearchParams({
       date: mapPreview.date,
       timeFrom: mapPreview.timeFrom,

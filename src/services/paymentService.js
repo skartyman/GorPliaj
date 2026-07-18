@@ -200,6 +200,28 @@ async function updatePaymentStatus(id, status) {
       const hutkoService = require('./hutkoService');
       await hutkoService.notifyPaidReservation(payment.reservationId);
       await hutkoService.deliverPaidReservation(payment.reservationId, payment.amount);
+      const paidReservation = await prisma.reservation.findUnique({
+        where: { id: payment.reservationId },
+        select: {
+          analyticsDistinctId: true,
+          zoneId: true,
+          table: { select: { bookingKind: true } }
+        }
+      });
+      const analytics = require('./analyticsService');
+      const bookingKind = paidReservation?.table?.bookingKind || null;
+      const zoneId = paidReservation?.zoneId || null;
+      const distinctId = paidReservation?.analyticsDistinctId || 'server';
+      const revenue = Number(payment.amount) || 0;
+      const currency = payment.currency || 'UAH';
+      analytics.capture('booking_paid', {
+        revenue,
+        currency,
+        bookingKind,
+        zoneId,
+        reservationId: payment.reservationId
+      }, distinctId);
+      analytics.capture('$revenue', { revenue, currency }, distinctId);
     }
   }
   else if ((payment.reservationId || payment.ticketOrderId) && (status === 'CANCELLED' || status === 'FAILED')) {
