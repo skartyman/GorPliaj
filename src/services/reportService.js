@@ -527,6 +527,7 @@ async function getOccupancyReport({ from, to }) {
   const confirmed = reservations.filter(r => ['CONFIRMED', 'SEATED', 'COMPLETED'].includes(r.status));
   const noShows = reservations.filter(r => r.status === 'NO_SHOW');
   const onPremises = arrived.filter(r => r.onPremises);
+  const busyReservations = reservations.filter(r => !['CANCELLED', 'NO_SHOW'].includes(r.status));
 
   const totalGuests = arrived.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
   const beachGuests = arrived.filter(r => r.bookingKind === 'BEACH').reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
@@ -557,7 +558,7 @@ async function getOccupancyReport({ from, to }) {
       const rDate = new Date(r.reservationDate);
       const rDay = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
       if (rDay.getTime() !== dayDate.getTime()) return false;
-      return ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'].includes(r.status);
+      return !['CANCELLED', 'NO_SHOW'].includes(r.status);
     });
 
     const dayBusyHolds = allHolds.filter(h => {
@@ -685,8 +686,8 @@ async function getOccupancyReport({ from, to }) {
       peakPctTable: peakTablePct
     },
     byKind: {
-      beach: { bookings: arrived.filter(r => r.bookingKind === 'BEACH').length, guests: beachGuests, capacity: beachCapacity, avgPct: avgBeachPct, peakPct: peakBeachPct },
-      table: { bookings: arrived.filter(r => r.bookingKind === 'TABLE').length, guests: tableGuests, capacity: tableCapacity, eveningEvents: arrived.filter(r => r.eventId).length, avgPct: avgTablePct, peakPct: peakTablePct }
+      beach: { bookings: busyReservations.filter(r => r.bookingKind === 'BEACH').length, guests: beachGuests, capacity: beachCapacity, avgPct: avgBeachPct, peakPct: peakBeachPct },
+      table: { bookings: busyReservations.filter(r => r.bookingKind === 'TABLE').length, guests: tableGuests, capacity: tableCapacity, eveningEvents: busyReservations.filter(r => r.eventId).length, avgPct: avgTablePct, peakPct: peakTablePct }
     },
     byZone,
     hourly
