@@ -10,6 +10,9 @@ ALTER TABLE "GuestFavoriteUnit" DROP CONSTRAINT IF EXISTS "GuestFavoriteUnit_gue
 CREATE UNIQUE INDEX "GuestFavoriteUnit_guestId_kind_tableId_key" ON "GuestFavoriteUnit"("guestId", "kind", "tableId");
 CREATE UNIQUE INDEX "GuestFavoriteUnit_guestId_kind_menuItemId_key" ON "GuestFavoriteUnit"("guestId", "kind", "menuItemId");
 
+-- Make the original tableId column nullable so menu favorites can leave it null
+ALTER TABLE "GuestFavoriteUnit" ALTER COLUMN "tableId" DROP NOT NULL;
+
 -- Keep the old tableId FK (now nullable)
 ALTER TABLE "GuestFavoriteUnit" DROP CONSTRAINT IF EXISTS "GuestFavoriteUnit_tableId_fkey";
 ALTER TABLE "GuestFavoriteUnit" ADD CONSTRAINT "GuestFavoriteUnit_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "VenueTable"("id") ON DELETE CASCADE ON UPDATE CASCADE;
