@@ -6,6 +6,8 @@ import { menuApi, tableOrderApi, waiterCallApi } from '../lib/api';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useCart } from '../state/cart';
+import { useGuest } from '../state/guest';
+import { guestApi } from '../lib/api';
 import { useMeta } from '../hooks/useMeta';
 
 const LIKES_STORAGE_KEY = 'gorpliaj-menu-likes';
@@ -47,7 +49,9 @@ export default function MenuPage() {
   const [likes, setLikes] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [cartOpen, setCartOpen] = useState(false);
+  const { isLoggedIn } = useGuest();
+  const [favMenuIds, setFavMenuIds] = useState({});
+  const [loadingFav, setLoadingFav] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [activeSection, setActiveSection] = useState('kitchen');
   const [activeCategory, setActiveCategory] = useState('');
@@ -86,6 +90,34 @@ export default function MenuPage() {
     } catch {}
     menuApi.list().then((p) => { setMenu(p); setLoading(false); }).catch((e) => { setError(e.message || t('menuError')); setLoading(false); });
   }, [t]);
+
+  useEffect(() => {
+    if (!isLoggedIn) { setFavMenuIds({}); return; }
+    let active = true;
+    setLoadingFav(true);
+    guestApi.favorites()
+      .then((data) => {
+        if (!active) return;
+        const map = {};
+        (data.favorites || []).forEach((f) => { if (f.kind === 'menu' && f.menuItemId) map[String(f.menuItemId)] = true; });
+        setFavMenuIds(map);
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoadingFav(false); });
+    return () => { active = false; };
+  }, [isLoggedIn]);
+
+  async function toggleMenuFavorite(itemId) {
+    const key = String(itemId);
+    const next = !favMenuIds[key];
+    setFavMenuIds((p) => ({ ...p, [key]: next }));
+    try {
+      if (next) await guestApi.addFavorite({ kind: 'menu', menuItemId: itemId });
+      else await guestApi.removeFavorite({ kind: 'menu', menuItemId: itemId });
+    } catch {
+      setFavMenuIds((p) => ({ ...p, [key]: !next }));
+    }
+  }
 
   useEffect(() => {
     if (!scannerOpen) return;
@@ -412,6 +444,9 @@ export default function MenuPage() {
                         <div className="menu-card-bottom">
                           <span className="menu-price">{formatPrice(Number(item.price || 0))} грн</span>
                           <div className="menu-card-actions">
+                            {isLoggedIn ? (
+                              <button type="button" className={`menu-fav-btn ${favMenuIds[String(item.id)] ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleMenuFavorite(item.id); }} aria-label="Favorite">★</button>
+                            ) : null}
                             <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }}>♥ {item.likesCount || 0}</button>
                             <div className="menu-qty" onClick={(e) => e.stopPropagation()}>
                               <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>

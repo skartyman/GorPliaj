@@ -170,7 +170,16 @@ export const guestApi = {
   me: () => request('/guest/me'),
   reservations: () => request('/guest/reservations'),
   favorites: () => request('/guest/favorites'),
-  addFavorite: (tableId) => request('/guest/favorites', { method: 'POST', body: JSON.stringify({ tableId }) }),
-  removeFavorite: (tableId) => request(`/guest/favorites/${tableId}`, { method: 'DELETE' }),
+  addFavorite: (payload) => request('/guest/favorites', { method: 'POST', body: JSON.stringify(payload) }),
+  removeFavorite: (params) => {
+    if (params && params.id) {
+      return request(`/guest/favorites/${params.id}`, { method: 'DELETE' });
+    }
+    const q = new URLSearchParams();
+    if (params?.kind) q.set('kind', params.kind);
+    if (params?.tableId) q.set('tableId', String(params.tableId));
+    if (params?.menuItemId) q.set('menuItemId', String(params.menuItemId));
+    return request(`/guest/favorites?${q.toString()}`, { method: 'DELETE' });
+  },
   cancelReservation: (id) => request(`/guest/reservations/${id}/cancel`, { method: 'POST' })
 };

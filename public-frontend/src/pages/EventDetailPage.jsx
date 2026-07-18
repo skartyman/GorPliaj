@@ -507,6 +507,8 @@ export default function EventDetailPage() {
                             type="tel"
                             className="form-input"
                             placeholder="+38 (0XX) XXX-XX-XX"
+                            required
+                            minLength="7"
                             value={orderForm.customerPhone}
                             onChange={(eventValue) => setOrderForm({ ...orderForm, customerPhone: formatPhone(eventValue.target.value) })}
                           />

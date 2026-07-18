@@ -5,6 +5,7 @@ import { captureAnalytics, captureException, getDistinctId } from '../lib/analyt
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
+import { useGuest } from '../state/guest';
 import { useMeta } from '../hooks/useMeta';
 import { generateTimeSlots, getDefaultTime } from '../utils/timeSlots';
 import {
@@ -774,6 +775,17 @@ export default function UnifiedBookingPage() {
     agreeAll: false
   });
 
+  useEffect(() => {
+    if (guest && (guest.name || guest.phone || guest.email)) {
+      setForm((prev) => ({
+        ...prev,
+        customerName: prev.customerName || guest.name || '',
+        customerPhone: prev.customerPhone || guest.phone || '',
+        customerEmail: prev.customerEmail || guest.email || ''
+      }));
+    }
+  }, [guest]);
+
   const [holdToken, setHoldToken] = useState(searchParams.get('holdToken') || '');
   const [groupHoldTokens, setGroupHoldTokens] = useState([]);
   const [holdExpiresAt, setHoldExpiresAt] = useState(searchParams.get('holdExpiresAt') || '');
@@ -789,10 +801,10 @@ export default function UnifiedBookingPage() {
   const [embeddedPaymentStatus, setEmbeddedPaymentStatus] = useState('');
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [availabilityRevision, setAvailabilityRevision] = useState(0);
-  const [guestLoggedIn, setGuestLoggedIn] = useState(() => {
-    try { return Boolean(localStorage.getItem('guest_token')); } catch { return false; }
-  });
+  const { guest, isLoggedIn } = useGuest();
+  const guestLoggedIn = isLoggedIn && Boolean(guest && guest.name && guest.phone);
   const [favoriteAdded, setFavoriteAdded] = useState(false);
+  const [panelFav, setPanelFav] = useState(false);
 
   const [positionTypes, setPositionTypes] = useState([]);
   const [eventInfo, setEventInfo] = useState(null);
@@ -1912,20 +1924,47 @@ export default function UnifiedBookingPage() {
 
   const handleAddFavoriteFromBooking = async () => {
     try {
-      const token = localStorage.getItem('guest_token');
-      if (!token) {
-        setGuestLoggedIn(false);
-        return;
-      }
+      if (!isLoggedIn) return;
       const tableId = eveningTableOverride?.id || selectedObjectTable?.id || selectedTable?.id;
       if (!tableId) return;
-      await guestApi.addFavorite(tableId);
+      await guestApi.addFavorite({ kind: 'table', tableId });
       captureAnalytics('favorite_unit_set', { tableId, action: 'add', context: 'booking_success' });
       setFavoriteAdded(true);
     } catch (err) {
       console.error('[UnifiedBookingPage] add favorite failed', err.message);
     }
   };
+
+  const handleTogglePanelFavorite = async () => {
+    try {
+      if (!isLoggedIn) return;
+      const tableId = eveningTableOverride?.id || selectedObjectTable?.id || selectedTable?.id;
+      if (!tableId) return;
+      if (panelFav) {
+        await guestApi.removeFavorite({ kind: 'table', tableId });
+        setPanelFav(false);
+      } else {
+        await guestApi.addFavorite({ kind: 'table', tableId });
+        setPanelFav(true);
+      }
+      captureAnalytics('favorite_unit_set', { tableId, action: panelFav ? 'remove' : 'add', context: 'map_panel' });
+    } catch (err) {
+      console.error('[UnifiedBookingPage] toggle favorite failed', err.message);
+    }
+  };
+
+  useEffect(() => {
+    const tableId = eveningTableOverride?.id || selectedObjectTable?.id || selectedTable?.id;
+    if (!isLoggedIn || !tableId) { setPanelFav(false); return; }
+    let active = true;
+    guestApi.favorites()
+      .then((data) => {
+        const favs = data.favorites || [];
+        if (active) setPanelFav(favs.some((f) => f.kind === 'table' && f.tableId === tableId));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [isLoggedIn, eveningTableOverride, selectedObjectTable, selectedTable]);
 
   const activePanelTable = selectedObjectTable || selectedTable;
   const activePanelTablePhoto = selectedObjectTablePhoto || selectedTablePhoto;
@@ -2766,6 +2805,30 @@ export default function UnifiedBookingPage() {
 
               <h3 style={{ margin: '0 0 12px' }}>{t('mapSelectedTitle')}</h3>
 
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleTogglePanelFavorite}
+                  aria-label={panelFav ? 'Remove from favorites' : 'Add to favorites'}
+                  title={panelFav ? c({ ua: 'Прибрати з улюбленого', ru: 'Убрать из избранного', en: 'Remove from favorites' }) : c({ ua: 'В улюблене', ru: 'В избранное', en: 'Add to favorites' })}
+                  style={{
+                    position: 'absolute',
+                    top: 14,
+                    right: 52,
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '22px',
+                    cursor: 'pointer',
+                    lineHeight: 1,
+                    color: panelFav ? 'var(--accent)' : 'var(--text-muted, #64748b)',
+                    padding: '4px 8px',
+                    zIndex: 10
+                  }}
+                >
+                  {panelFav ? '♥' : '♡'}
+                </button>
+              ) : null}
+
               {activePanelTablePhoto || activePanelObjectMeta?.photoUrl ? (
                 <div style={{ marginBottom: 14, borderRadius: 8, overflow: 'hidden' }}>
                   <img src={activePanelObjectMeta?.photoUrl || activePanelTablePhoto} alt={activePanelLabel} style={{ width: '100%', display: 'block' }} />
@@ -2966,6 +3029,12 @@ export default function UnifiedBookingPage() {
 
                   {isFreeTable ? (
                     <form className="booking-contact-form" onSubmit={handleBookingSubmit}>
+                      {guestLoggedIn ? (
+                        <div className="booking-guest-autofill">
+                          {c({ ua: 'Ваші дані підставлено з кабінету:', ru: 'Ваши данные подставлены из кабинета:', en: 'Your details are pre-filled from your cabinet:' })}{' '}
+                          <strong>{form.customerName}</strong>, {form.customerPhone}
+                        </div>
+                      ) : (
                       <div className="booking-contact-fields">
                         <div className="booking-contact-field">
                           <label>
@@ -3020,6 +3089,8 @@ export default function UnifiedBookingPage() {
                             onChange={(e) => setForm((current) => ({ ...current, commentCustomer: e.target.value }))}
                           />
                         </div>
+                      </div>
+                      )}
                         <div className="booking-consent-row">
                           <label>
                             <input
@@ -3052,7 +3123,6 @@ export default function UnifiedBookingPage() {
                         ? c({ ua: 'Створюємо...', ru: 'Создаем...', en: 'Creating...' })
                         : c({ ua: 'Забронювати', ru: 'Забронировать', en: 'Book' })}
                     </button>
-                  </div>
                 </form>
               ) : (
                 <p className="muted" style={{ marginTop: 8 }}>

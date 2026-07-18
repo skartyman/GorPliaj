@@ -87,7 +87,8 @@ async function listFavorites(req, res) {
     const favorites = await prisma.guestFavoriteUnit.findMany({
       where: { guestId: req.guestId },
       include: {
-        table: { select: { id: true, code: true, name: true, bookingKind: true, photoUrl: true, seatsMin: true, seatsMax: true } }
+        table: { select: { id: true, code: true, name: true, bookingKind: true, photoUrl: true, seatsMin: true, seatsMax: true, positionType: true } },
+        menuItem: { select: { id: true, name: true, price: true, imageUrl: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -100,13 +101,21 @@ async function listFavorites(req, res) {
 
 async function addFavorite(req, res) {
   try {
-    const tableId = Number(req.body.tableId);
-    if (!tableId) {
+    const kind = req.body.kind === 'menu' ? 'menu' : 'table';
+    const tableId = req.body.tableId ? Number(req.body.tableId) : null;
+    const menuItemId = req.body.menuItemId ? Number(req.body.menuItemId) : null;
+    if (kind === 'menu' && !menuItemId) {
+      return res.status(400).json({ message: 'menuItemId is required.' });
+    }
+    if (kind === 'table' && !tableId) {
       return res.status(400).json({ message: 'tableId is required.' });
     }
+    const where = kind === 'menu'
+      ? { guestId_kind_menuItemId: { guestId: req.guestId, kind, menuItemId } }
+      : { guestId_kind_tableId: { guestId: req.guestId, kind, tableId } };
     const favorite = await prisma.guestFavoriteUnit.upsert({
-      where: { guestId_tableId: { guestId: req.guestId, tableId } },
-      create: { guestId: req.guestId, tableId },
+      where,
+      create: { guestId: req.guestId, kind, tableId, menuItemId },
       update: {}
     });
     return res.status(200).json({ favorite });
@@ -118,10 +127,21 @@ async function addFavorite(req, res) {
 
 async function removeFavorite(req, res) {
   try {
-    const tableId = Number(req.params.tableId);
-    await prisma.guestFavoriteUnit.deleteMany({
-      where: { guestId: req.guestId, tableId }
-    });
+    const id = Number(req.params.id);
+    if (id) {
+      await prisma.guestFavoriteUnit.deleteMany({
+        where: { id, guestId: req.guestId }
+      });
+      return res.status(200).json({ removed: true });
+    }
+    const kind = req.query.kind === 'menu' ? 'menu' : (req.query.kind === 'table' ? 'table' : null);
+    const tableId = req.query.tableId ? Number(req.query.tableId) : null;
+    const menuItemId = req.query.menuItemId ? Number(req.query.menuItemId) : null;
+    const where = { guestId: req.guestId };
+    if (kind === 'menu' && menuItemId) { where.kind = 'menu'; where.menuItemId = menuItemId; }
+    else if (kind === 'table' && tableId) { where.kind = 'table'; where.tableId = tableId; }
+    else { return res.status(400).json({ message: 'Provide id or kind+tableId/menuItemId.' }); }
+    await prisma.guestFavoriteUnit.deleteMany({ where });
     return res.status(200).json({ removed: true });
   } catch (error) {
     console.error('[guestController.removeFavorite] Failed.', error);

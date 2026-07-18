@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useLocale } from '../state/locale';
+import { useGuest } from '../state/guest';
 import { localizedCopy } from '../lib/i18n';
 import { guestApi } from '../lib/api';
 import { identifyAnalytics, captureAnalytics, resetAnalytics } from '../lib/analytics';
@@ -24,12 +25,10 @@ function statusLabel(status, locale) {
 export default function CabinetPage() {
   const { locale } = useLocale();
   const c = (values) => localizedCopy(values, locale);
+  const { guest, isLoggedIn, login, logout: ctxLogout } = useGuest();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [token, setToken] = useState(() => {
-    try { return localStorage.getItem('guest_token') || null; } catch { return null; }
-  });
-  const [guest, setGuest] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [email, setEmail] = useState('');
@@ -43,12 +42,10 @@ export default function CabinetPage() {
 
   const loadCabinet = useCallback(async () => {
     try {
-      const [me, res, fav] = await Promise.all([
-        guestApi.me(),
+      const [res, fav] = await Promise.all([
         guestApi.reservations(),
         guestApi.favorites()
       ]);
-      setGuest(me.guest);
       setReservations(res.reservations || []);
       setFavorites(fav.favorites || []);
     } catch (err) {
@@ -56,27 +53,20 @@ export default function CabinetPage() {
     }
   }, [c]);
 
-  const finishLogin = useCallback(async (authToken, guestData) => {
-    try { localStorage.setItem('guest_token', authToken); } catch {}
-    setToken(authToken);
-    setGuest(guestData);
-    captureAnalytics('guest_logged_in', { method: 'magic_link' });
-    identifyAnalytics(`guest_${guestData.id}`, { email: guestData.email, name: guestData.name });
-    await loadCabinet();
-  }, [loadCabinet, c]);
-
   useEffect(() => {
-    if (!token) return;
+    if (!isLoggedIn) return;
     loadCabinet();
-  }, [token, loadCabinet]);
+  }, [isLoggedIn, loadCabinet]);
 
   useEffect(() => {
     const linkToken = searchParams.get('token');
-    if (linkToken && !token) {
+    if (linkToken && !isLoggedIn) {
       setLoading(true);
       guestApi.verifyLink(linkToken)
         .then(async (data) => {
-          await finishLogin(data.token, data.guest);
+          login(data.token, data.guest);
+          captureAnalytics('guest_logged_in', { method: 'magic_link' });
+          identifyAnalytics(`guest_${data.guest.id}`, { email: data.guest.email, name: data.guest.name });
           searchParams.delete('token');
           setSearchParams(searchParams, { replace: true });
         })
@@ -85,7 +75,7 @@ export default function CabinetPage() {
         })
         .finally(() => setLoading(false));
     }
-  }, [searchParams, token, finishLogin, c]);
+  }, [searchParams, isLoggedIn, login, c]);
 
   const handleRequestLink = async (e) => {
     e.preventDefault();
@@ -93,6 +83,14 @@ export default function CabinetPage() {
     setMessage('');
     if (!email.includes('@')) {
       setError(c({ ua: 'Введіть коректний email.', ru: 'Введите корректный email.', en: 'Enter a valid email.' }));
+      return;
+    }
+    if (name.trim().length < 2) {
+      setError(c({ ua: 'Введіть імʼя.', ru: 'Введите имя.', en: 'Enter your name.' }));
+      return;
+    }
+    if (phone.trim().length < 7) {
+      setError(c({ ua: 'Введіть телефон.', ru: 'Введите телефон.', en: 'Enter your phone.' }));
       return;
     }
     setSendingLink(true);
@@ -108,10 +106,8 @@ export default function CabinetPage() {
   };
 
   const handleLogout = () => {
-    try { localStorage.removeItem('guest_token'); } catch {}
     resetAnalytics();
-    setToken(null);
-    setGuest(null);
+    ctxLogout();
     setReservations([]);
     setFavorites([]);
   };
@@ -127,35 +123,42 @@ export default function CabinetPage() {
     }
   };
 
-  const toggleFavorite = async (tableId, isFav) => {
+  const toggleFavorite = async (fav) => {
     try {
-      if (isFav) {
-        await guestApi.removeFavorite(tableId);
-        setFavorites((prev) => prev.filter((f) => f.tableId !== tableId));
+      if (fav.kind === 'menu') {
+        await guestApi.removeFavorite({ kind: 'menu', menuItemId: fav.menuItemId });
+        setFavorites((prev) => prev.filter((f) => !(f.kind === 'menu' && f.menuItemId === fav.menuItemId)));
       } else {
-        const res = await guestApi.addFavorite(tableId);
-        setFavorites((prev) => [...prev, res.favorite]);
+        await guestApi.removeFavorite({ kind: 'table', tableId: fav.tableId });
+        setFavorites((prev) => prev.filter((f) => !(f.kind === 'table' && f.tableId === fav.tableId)));
       }
-      captureAnalytics('favorite_unit_set', { tableId, action: isFav ? 'remove' : 'add' });
+      captureAnalytics('favorite_unit_set', { action: 'remove', kind: fav.kind });
     } catch (err) {
       setError(err.message);
     }
   };
 
-  if (!token) {
+  const bookFromFavorite = (fav) => {
+    const tableId = fav.tableId;
+    const kind = fav.table?.bookingKind ? fav.table.bookingKind.toLowerCase() : 'table';
+    const params = new URLSearchParams({ favoritesTableId: String(tableId), kind });
+    navigate(`/booking?${params.toString()}`);
+  };
+
+  if (!isLoggedIn) {
     return (
       <div className="cabinet-page">
         <div className="cabinet-login">
           <h1>{c({ ua: 'Кабінет гостя', ru: 'Кабинет гостя', en: 'Guest cabinet' })}</h1>
-          <p className="cabinet-sub">{c({ ua: 'Ваші бронювання, улюблені столики та історія — в одному місці.', ru: 'Ваши брони, любимые столики и история — в одном месте.', en: 'Your bookings, favorite tables and history — all in one place.' })}</p>
+          <p className="cabinet-sub">{c({ ua: 'Ваші бронювання, улюблені столики та історія — в одному місці. Імʼя та телефон потрібні для бронювання.', ru: 'Ваши брони, любимые столики и история — в одном месте. Имя и телефон нужны для бронирования.', en: 'Your bookings, favorite tables and history — all in one place. Name and phone are required for booking.' })}</p>
           <form onSubmit={handleRequestLink} className="cabinet-form">
             <label>
-              {c({ ua: 'Імʼя', ru: 'Имя', en: 'Name' })}
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={c({ ua: 'Необовʼязково', ru: 'Необязательно', en: 'Optional' })} />
+              {c({ ua: 'Імʼя *', ru: 'Имя *', en: 'Name *' })}
+              <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} placeholder={c({ ua: 'Ваше імʼя', ru: 'Ваше имя', en: 'Your name' })} />
             </label>
             <label>
-              {c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={c({ ua: 'Необовʼязково', ru: 'Необязательно', en: 'Optional' })} />
+              {c({ ua: 'Телефон *', ru: 'Телефон *', en: 'Phone *' })}
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} required minLength={7} placeholder="+38 (0XX) XXX-XX-XX" />
             </label>
             <label>
               Email *
@@ -217,14 +220,29 @@ export default function CabinetPage() {
 
       {tab === 'favorites' && (
         <div className="cabinet-list">
-          {favorites.length === 0 && <p className="cabinet-empty">{c({ ua: 'Додайте улюблені столики при бронюванні.', ru: 'Добавьте любимые столики при бронировании.', en: 'Add favorite tables when booking.' })}</p>}
+          {favorites.length === 0 && <p className="cabinet-empty">{c({ ua: 'Додайте улюблені столики, кроваті або страви.', ru: 'Добавьте любимые столики, кровати или блюда.', en: 'Add favorite tables, beds or dishes.' })}</p>}
           {favorites.map((f) => (
-            <div key={f.tableId} className="cabinet-card">
-              <div className="cabinet-card-main">
-                <strong>{f.table?.name ? localizedCopy(f.table.name, locale) : (f.table?.code || `#${f.tableId}`)}</strong>
-                <span className="cabinet-meta">{f.table?.bookingKind} · {f.table?.seatsMin}–{f.table?.seatsMax} {c({ ua: 'місць', ru: 'мест', en: 'seats' })}</span>
-              </div>
-              <button className="cabinet-cancel" onClick={() => toggleFavorite(f.tableId, true)}>{c({ ua: 'Прибрати', ru: 'Убрать', en: 'Remove' })}</button>
+            <div key={`${f.kind}-${f.tableId || f.menuItemId}`} className="cabinet-card">
+              {f.kind === 'menu' ? (
+                <>
+                  <div className="cabinet-card-main">
+                    <strong>{f.menuItem?.name ? localizedCopy(f.menuItem.name, locale) : `#${f.menuItemId}`}</strong>
+                    {f.menuItem?.price != null && <span className="cabinet-meta">{Number(f.menuItem.price)} ₴</span>}
+                  </div>
+                  <button className="cabinet-cancel" onClick={() => toggleFavorite(f)}>{c({ ua: 'Прибрати', ru: 'Убрать', en: 'Remove' })}</button>
+                </>
+              ) : (
+                <>
+                  <div className="cabinet-card-main">
+                    <strong>{f.table?.name ? localizedCopy(f.table.name, locale) : (f.table?.code || `#${f.tableId}`)}</strong>
+                    <span className="cabinet-meta">{f.table?.bookingKind} · {f.table?.seatsMin}–{f.table?.seatsMax} {c({ ua: 'місць', ru: 'мест', en: 'seats' })}</span>
+                  </div>
+                  <div className="cabinet-card-side">
+                    <button className="cabinet-book-btn" onClick={() => bookFromFavorite(f)}>{c({ ua: 'Забронювати', ru: 'Забронировать', en: 'Book' })}</button>
+                    <button className="cabinet-cancel" onClick={() => toggleFavorite(f)}>{c({ ua: 'Прибрати', ru: 'Убрать', en: 'Remove' })}</button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

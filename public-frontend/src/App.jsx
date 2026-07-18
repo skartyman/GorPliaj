@@ -11,26 +11,29 @@ import PaymentReturnsPage from './pages/PaymentReturnsPage';
 import RulesPage from './pages/RulesPage';
 import WaiterCabinetPage from './pages/WaiterCabinetPage';
 import CabinetPage from './pages/CabinetPage';
+import { GuestProvider } from './state/guest';
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:slug" element={<EventDetailPage />} />
-        <Route path="/menu" element={<MenuPage />} />
-        <Route path="/map-preview" element={<Navigate to="/booking" replace />} />
-        <Route path="/booking" element={<UnifiedBookingPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/rules" element={<RulesPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/payment-returns" element={<PaymentReturnsPage />} />
-        <Route path="/cabinet" element={<CabinetPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-      <Route path="/waiter" element={<WaiterCabinetPage />} />
-      <Route path="/waiter/*" element={<WaiterCabinetPage />} />
-    </Routes>
+    <GuestProvider>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:slug" element={<EventDetailPage />} />
+          <Route path="/menu" element={<MenuPage />} />
+          <Route path="/map-preview" element={<Navigate to="/booking" replace />} />
+          <Route path="/booking" element={<UnifiedBookingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/rules" element={<RulesPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/payment-returns" element={<PaymentReturnsPage />} />
+          <Route path="/cabinet" element={<CabinetPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+        <Route path="/waiter" element={<WaiterCabinetPage />} />
+        <Route path="/waiter/*" element={<WaiterCabinetPage />} />
+      </Routes>
+    </GuestProvider>
   );
 }

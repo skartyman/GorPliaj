@@ -264,14 +264,18 @@ model GuestMagicLink {
 }
 
 model GuestFavoriteUnit {
-  id        Int      @id @default(autoincrement())
-  guestId   Int
-  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  tableId   Int
-  table     VenueTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id         Int        @id @default(autoincrement())
+  guestId    Int
+  guest      Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  kind       String     @default("table")
+  tableId    Int?
+  table      VenueTable? @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  menuItemId Int?
+  menuItem   MenuItem?   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now())
 
-  @@unique([guestId, tableId])
+  @@unique([guestId, kind, tableId])
+  @@unique([guestId, kind, menuItemId])
   @@index([guestId])
 }
 
@@ -504,6 +508,7 @@ model MenuItem {
   updatedAt   DateTime     @updatedAt
   category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems  TableOrderItem[]
+  favoriteUnits GuestFavoriteUnit[]
 
   @@index([categoryId])
   @@index([sortOrder])
