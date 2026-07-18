@@ -1766,7 +1766,7 @@ export default function MapPage() {
                           <button type="button" className="btn btn-success w-full" onClick={() => handleFreeTableArrive(selectedTable)}>Прийшли</button>
                         )}
                         {selectedDate <= getDateKey() && (
-                          <button type="button" className="btn btn-small w-full" style={{ background: '#9333EA', borderColor: '#7E22CE', color: '#fff' }} onClick={() => handleFreeTableArriveOnPremises(selectedTable)}>{t('map.onPremises')}</button>
+                          <button type="button" className="btn w-full" style={{ background: '#9333EA', borderColor: '#7E22CE', color: '#fff' }} onClick={() => handleFreeTableArriveOnPremises(selectedTable)}>{t('map.onPremises')}</button>
                         )}
                         <button type="button" className="btn w-full" style={selectedDate > getDateKey() ? { gridColumn: 'span 2' } : {}} onClick={() => onBookTable(selectedTable)}>Забронювати</button>
                       </div>
