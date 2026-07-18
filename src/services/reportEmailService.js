@@ -155,10 +155,21 @@ function buildStaffHtml(report) {
 
 function buildSummaryHtml(report) {
   const kpi = report.kpis;
+  const occ = report.occupancy;
+  const ob = occ ? occ.byKind.beach : null;
+  const ot = occ ? occ.byKind.table : null;
   const content = `
     <p style="margin:8px 0 6px;color:#365d62;font-size:14px;">Зведений звіт за період із KPI та трендами. ${kpi.revenue.change != null ? `Зміна підтвердженої виручки: <strong>${kpi.revenue.change > 0 ? '+' : ''}${kpi.revenue.change}%</strong> у порівнянні з попереднім періодом.` : ''}</p>
     <p style="margin:0 0 18px;color:#55777b;font-size:12px;background:#fff5dc;padding:8px 12px;border-radius:8px;">⚠ Виручка враховує тільки онлайн-еквайринг (статус PAID). Наложні платежі і повернення виключені.</p>
     <div>${kpiCard('Підтверджена виручка', money(kpi.revenue.value), kpi.revenue.change != null ? `${kpi.revenue.change > 0 ? '▲' : '▼'} ${Math.abs(kpi.revenue.change)}%` : 'тільки онлайн')}${kpiCard('Бронювань', fmt(kpi.reservations.value))}${kpiCard('Скасування', pct(kpi.cancelledRate.value))}${kpiCard('Не прийшли', pct(kpi.noShowRate.value))}${kpiCard('Виручка від квитків', money(kpi.ticketRevenue.value))}${kpiCard('Виручка від меню', money(kpi.menuRevenue.value))}${kpiCard('Середній чек', money(kpi.menuAvgCheck.value))}${kpiCard('Активних подій', fmt(kpi.activeEvents.value))}</div>
+    ${occ ? `
+    <h3 style="margin:22px 0 8px;font-size:14px;color:#173d43;">Наповнюваність</h3>
+    <div>${kpiCard('Сер. наповнюваність', pct(kpi.occupancyAvgPct.value), `Пік: ${pct(kpi.occupancyPeakPct.value)}`)}${kpiCard('Гостей', fmt(kpi.occupancyGuests.value))}${kpiCard('Від закладу', fmt(kpi.occupancyOnPremises.value))}</div>
+    ${ob && ot ? `
+    <h3 style="margin:18px 0 8px;font-size:14px;color:#173d43;">По типу послуг</h3>
+    <div>${kpiCard(`Пляжні: ${pct(ob.avgPct)} (${pct(ob.peakPct)} пік)`, `Броней: ${fmt(ob.bookings)}`, `Гостей: ${fmt(ob.guests)}`)}${kpiCard(`Столи/Вечір: ${pct(ot.avgPct)} (${pct(ot.peakPct)} пік)`, `Броней: ${fmt(ot.bookings)}`, `Гостей: ${fmt(ot.guests)} · Вечірніх: ${fmt(ot.eveningEvents)}`)}</div>
+    ` : ''}
+    ` : ''}
     <p style="margin-top:22px;font-size:13px;color:#365d62;line-height:1.6;">Розгорнуті дані доступні в панелі адміністрування у розділі «Звіти».</p>
   `;
   return buildEmailLayout({ title: 'Зведений звіт', subtitle: `${fmt(report.period.from)} — ${fmt(report.period.to)}`, content });
@@ -169,15 +180,15 @@ function buildOccupancyHtml(report) {
   const b = report.byKind.beach;
   const t = report.byKind.table;
   const content = `
-    <p style="margin:8px 0 14px;color:#365d62;font-size:14px;">Звіт по наповнюваності за період. Всього днів: <strong>${fmt(s.totalReservations)}</strong> бронювань, прийшли: <strong>${fmt(s.arrived)}</strong>, не прийшли: <strong>${fmt(s.noShows)}</strong>.</p>
-    <div>${kpiCard('Всього бронювань', fmt(s.totalReservations))}${kpiCard('Прийшли', fmt(s.arrived))}${kpiCard('Не прийшли', fmt(s.noShows))}${kpiCard('Від закладу', fmt(s.onPremises))}${kpiCard('Гостей', fmt(s.totalGuests))}${kpiCard('Ср. тривалість', s.avgDurationMinutes != null ? `${fmt(s.avgDurationMinutes)} хв` : '—')}${kpiCard('Наповнюваність', pct(s.occupancyPct))}</div>
+    <p style="margin:8px 0 14px;color:#365d62;font-size:14px;">Звіт по наповнюваності за період (${report.period.dayCount} днів). Всього бронювань: <strong>${fmt(s.totalReservations)}</strong>, прийшли: <strong>${fmt(s.arrived)}</strong>, не прийшли: <strong>${fmt(s.noShows)}</strong>.</p>
+    <div>${kpiCard('Сер. наповнюваність', pct(s.occupancyPct), `Пік: ${pct(s.peakPct)}`)}${kpiCard('Сер. пляж', pct(s.occupancyPctBeach), `Пік: ${pct(s.peakPctBeach)}`)}${kpiCard('Сер. столи', pct(s.occupancyPctTable), `Пік: ${pct(s.peakPctTable)}`)}${kpiCard('Гостей', fmt(s.totalGuests))}${kpiCard('Від закладу', fmt(s.onPremises))}${kpiCard('Ср. тривалість', s.avgDurationMinutes != null ? `${fmt(s.avgDurationMinutes)} хв` : '—')}</div>
     <h3 style="margin:22px 0 8px;font-size:14px;color:#173d43;">По типу послуг</h3>
-    <div>${kpiCard(`Пляжні послуги: ${fmt(b.units)}/${fmt(b.capacity)}`, pct(b.occupancyPct), `Гостей: ${fmt(b.guests)}`)}${kpiCard(`Столи / Вечір: ${fmt(t.units)}/${fmt(t.capacity)}`, pct(t.occupancyPct), `Гостей: ${fmt(t.guests)} · Вечірніх: ${fmt(t.eveningEvents)}`)}</div>
+    <div>${kpiCard(`Пляжні послуги`, `Сер. ${pct(b.avgPct)} · Пік ${pct(b.peakPct)}`, `Броней: ${fmt(b.bookings)} · Гостей: ${fmt(b.guests)}`)}${kpiCard(`Столи / Вечір`, `Сер. ${pct(t.avgPct)} · Пік ${pct(t.peakPct)}`, `Броней: ${fmt(t.bookings)} · Гостей: ${fmt(t.guests)} · Вечірніх: ${fmt(t.eveningEvents)}`)}</div>
     ${report.byZone.length ? `
     <h3 style="margin:22px 0 8px;font-size:14px;color:#173d43;">По зонах:</h3>
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-      ${tableRow(['Зона', 'Місць', 'Зайнято', '%', 'Гостей', 'Від закладу'], true)}
-      ${report.byZone.map(z => tableRow([escapeHtml(z.name), fmt(z.capacity), fmt(z.occupied), pct(z.occupancyPct), fmt(z.guests), fmt(z.onPremises)])).join('')}
+      ${tableRow(['Зона', 'Місць', 'Ср. %', 'Пік %', 'Броней', 'Гостей', 'Від закладу'], true)}
+      ${report.byZone.map(z => tableRow([escapeHtml(z.name), fmt(z.capacity), pct(z.avgPct), pct(z.peakPct), fmt(z.bookings), fmt(z.guests), fmt(z.onPremises)])).join('')}
     </table>` : ''}
     <p style="margin-top:22px;font-size:13px;color:#365d62;line-height:1.6;">Розгорнуті дані з графіками доступні в панелі адміністрування у розділі «Звіти» → «Наповнюваність».</p>
   `;

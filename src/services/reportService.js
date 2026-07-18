@@ -415,13 +415,14 @@ async function getSummaryReport({ from, to }) {
   const prevFrom = new Date(from.getTime() - dayCount * 24 * 60 * 60 * 1000);
   const prevTo = from;
 
-  const [fin, res, tickets, menu, events, staff] = await Promise.all([
+  const [fin, res, tickets, menu, events, staff, occ] = await Promise.all([
     getFinancialReport({ from, to }),
     getReservationsReport({ from, to }),
     getTicketSalesReport({ from, to }),
     getMenuReport({ from, to }),
     getEventsReport({ from, to }),
-    getStaffReport({ from, to })
+    getStaffReport({ from, to }),
+    getOccupancyReport({ from, to })
   ]);
 
   const [prevFin] = await Promise.all([getFinancialReport({ from: prevFrom, to: prevTo })]);
@@ -439,14 +440,19 @@ async function getSummaryReport({ from, to }) {
       ticketRevenue: { value: tickets.summary.totalRevenue },
       menuRevenue: { value: menu.summary.totalRevenue },
       menuAvgCheck: { value: menu.summary.avgCheck },
-      activeEvents: { value: events.summary.totalEvents }
+      activeEvents: { value: events.summary.totalEvents },
+      occupancyAvgPct: { value: occ.summary.occupancyPct },
+      occupancyPeakPct: { value: occ.summary.peakPct },
+      occupancyGuests: { value: occ.summary.totalGuests },
+      occupancyOnPremises: { value: occ.summary.onPremises }
     },
     financial: fin,
     reservations: res,
     tickets,
     menu,
     events,
-    staff
+    staff,
+    occupancy: occ
   };
 }
 
@@ -486,40 +492,45 @@ async function getOccupancyReport({ from, to }) {
   const dayStart = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   const dayEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate());
 
-  const reservations = await prisma.reservation.findMany({
-    where: {
-      reservationDate: { gte: dayStart, lt: dayEnd }
-    },
-    include: {
-      table: { select: { id: true, code: true, name: true, seatsMin: true, seatsMax: true, bookingKind: true } },
-      zone: { select: { id: true, name: true } }
-    }
-  });
+  const [reservations, allHolds, tables, zones] = await Promise.all([
+    prisma.reservation.findMany({
+      where: { reservationDate: { gte: dayStart, lt: dayEnd } },
+      include: {
+        table: { select: { id: true, code: true, name: true, seatsMin: true, seatsMax: true, bookingKind: true } },
+        zone: { select: { id: true, name: true } }
+      }
+    }),
+    prisma.tableHold.findMany({
+      where: {
+        reservationDate: { gte: dayStart, lt: dayEnd },
+        status: 'ACTIVE',
+        expiresAt: { gt: dayStart }
+      },
+      select: { id: true, tableId: true, reservationDate: true, timeFrom: true, timeTo: true }
+    }),
+    prisma.venueTable.findMany({
+      where: { isActive: true, isBookable: true },
+      select: { id: true, seatsMax: true, bookingKind: true, zoneId: true }
+    }),
+    prisma.zone.findMany({
+      include: { tables: { select: { id: true, seatsMax: true, bookingKind: true } } }
+    })
+  ]);
 
-  const tables = await prisma.venueTable.findMany({
-    where: { isActive: true },
-    select: { id: true, seatsMax: true, bookingKind: true, zoneId: true, mapId: true }
-  });
-
-  const zones = await prisma.zone.findMany({
-    include: { tables: { select: { id: true, seatsMax: true, bookingKind: true } } }
-  });
-
-  const totalCapacity = tables.reduce((sum, t) => sum + (t.seatsMax || 1), 0);
-  const beachCapacity = tables.filter(t => t.bookingKind === 'BEACH').reduce((sum, t) => sum + (t.seatsMax || 1), 0);
-  const tableCapacity = tables.filter(t => t.bookingKind === 'TABLE').reduce((sum, t) => sum + (t.seatsMax || 1), 0);
+  const beachTables = tables.filter(t => t.bookingKind === 'BEACH');
+  const tableTables = tables.filter(t => t.bookingKind === 'TABLE');
+  const beachCapacity = beachTables.length;
+  const tableCapacity = tableTables.length;
+  const totalCapacity = tables.length;
 
   const arrived = reservations.filter(r => r.arrivedAt || ['SEATED', 'COMPLETED'].includes(r.status));
   const confirmed = reservations.filter(r => ['CONFIRMED', 'SEATED', 'COMPLETED'].includes(r.status));
   const noShows = reservations.filter(r => r.status === 'NO_SHOW');
   const onPremises = arrived.filter(r => r.onPremises);
-  const beach = arrived.filter(r => r.bookingKind === 'BEACH');
-  const tableEvening = arrived.filter(r => r.bookingKind === 'TABLE');
-  const hasEvent = arrived.filter(r => r.eventId);
 
   const totalGuests = arrived.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
-  const beachGuests = beach.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
-  const tableGuests = tableEvening.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+  const beachGuests = arrived.filter(r => r.bookingKind === 'BEACH').reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+  const tableGuests = arrived.filter(r => r.bookingKind === 'TABLE').reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
   const onPremisesGuests = onPremises.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
 
   let avgDurationMinutes = null;
@@ -533,6 +544,78 @@ async function getOccupancyReport({ from, to }) {
     }
   }
 
+  const daysPct = { total: [], beach: [], table: [] };
+  const zoneDayData = {};
+
+  for (let d = 0; d < dayCount; d++) {
+    const dayDate = new Date(dayStart.getTime() + d * 24 * 60 * 60 * 1000);
+    const dayKey = dayDate.toISOString().slice(0, 10);
+    const dayTimeStart = dayDate;
+    const dayTimeEnd = new Date(dayDate.getTime() + 24 * 60 * 60 * 1000);
+
+    const dayBusyRes = reservations.filter(r => {
+      const rDate = new Date(r.reservationDate);
+      const rDay = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
+      if (rDay.getTime() !== dayDate.getTime()) return false;
+      return ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'].includes(r.status);
+    });
+
+    const dayBusyHolds = allHolds.filter(h => {
+      const hDate = new Date(h.reservationDate);
+      const hDay = new Date(hDate.getFullYear(), hDate.getMonth(), hDate.getDate());
+      return hDay.getTime() === dayDate.getTime() && h.expiresAt > dayTimeStart;
+    });
+
+    const busyTableIds = new Set(dayBusyRes.map(r => r.tableId));
+    dayBusyHolds.forEach(h => busyTableIds.add(h.tableId));
+
+    const totalOccupied = busyTableIds.size;
+    const totalPct = totalCapacity > 0 ? (totalOccupied / totalCapacity * 100) : 0;
+
+    const beachOccupied = beachTables.filter(t => busyTableIds.has(t.id)).length;
+    const beachPct = beachCapacity > 0 ? (beachOccupied / beachCapacity * 100) : 0;
+
+    const tableOccupied = tableTables.filter(t => busyTableIds.has(t.id)).length;
+    const tablePct = tableCapacity > 0 ? (tableOccupied / tableCapacity * 100) : 0;
+
+    daysPct.total.push(totalPct);
+    daysPct.beach.push(beachPct);
+    daysPct.table.push(tablePct);
+
+    const uniqueZoneIds = new Set(tables.map(t => t.zoneId));
+    for (const zid of uniqueZoneIds) {
+      if (!zoneDayData[zid]) zoneDayData[zid] = { pcts: [], peakPct: 0, bookings: new Set(), guests: 0, onPremises: 0, beachUnits: new Set(), beachGuests: 0, onPremisesGuests: 0 };
+      const zTables = tables.filter(t => t.zoneId === zid);
+      const zCapacity = zTables.length;
+      const zBusyIds = new Set(dayBusyRes.filter(r => r.zoneId === zid).map(r => r.tableId));
+      dayBusyHolds.forEach(h => { if (zTables.some(t => t.id === h.tableId)) zBusyIds.add(h.tableId); });
+      const zOccupied = zBusyIds.size;
+      const zPct = zCapacity > 0 ? (zOccupied / zCapacity * 100) : 0;
+      zoneDayData[zid].pcts.push(zPct);
+      if (zPct > zoneDayData[zid].peakPct) zoneDayData[zid].peakPct = zPct;
+
+      const zRes = dayBusyRes.filter(r => r.zoneId === zid);
+      zRes.forEach(r => { zoneDayData[zid].bookings.add(r.id); });
+      zoneDayData[zid].guests += zRes.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+      const zOnPremises = zRes.filter(r => r.onPremises);
+      zoneDayData[zid].onPremises += zOnPremises.length;
+      zoneDayData[zid].onPremisesGuests += zOnPremises.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+      const zBeach = zRes.filter(r => r.bookingKind === 'BEACH');
+      zBeach.forEach(r => zoneDayData[zid].beachUnits.add(r.id));
+      zoneDayData[zid].beachGuests += zBeach.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
+    }
+  }
+
+  function avg(arr) { return arr.length > 0 ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)) : 0; }
+  function peak(arr) { return arr.length > 0 ? parseFloat(Math.max(...arr).toFixed(1)) : 0; }
+
+  const avgTotalPct = avg(daysPct.total);
+  const peakTotalPct = peak(daysPct.total);
+  const avgBeachPct = avg(daysPct.beach);
+  const peakBeachPct = peak(daysPct.beach);
+  const avgTablePct = avg(daysPct.table);
+  const peakTablePct = peak(daysPct.table);
+
   const byZone = [];
   for (const zone of tables.reduce((acc, t) => {
     if (!acc.find(z => z.id === t.zoneId)) {
@@ -541,27 +624,24 @@ async function getOccupancyReport({ from, to }) {
     }
     return acc;
   }, [])) {
-    const zoneTables = tables.filter(t => t.zoneId === zone.id);
-    const zoneCapacity = zoneTables.reduce((sum, t) => sum + (t.seatsMax || 1), 0);
-    const zoneReservations = arrived.filter(r => r.zoneId === zone.id);
-    const zoneGuests = zoneReservations.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0);
-    const zoneOnPremises = zoneReservations.filter(r => r.onPremises);
-    const zoneUniqueTables = new Set(zoneReservations.map(r => r.tableId)).size;
-    const zoneBeach = zoneReservations.filter(r => r.bookingKind === 'BEACH');
+    const zd = zoneDayData[zone.id];
+    const zTables = tables.filter(t => t.zoneId === zone.id);
+    const zCapacity = zTables.length;
     byZone.push({
       zoneId: zone.id,
       name: zone.name?.ua || zone.name?.ru || zone.name?.en || 'Unknown',
-      capacity: zoneCapacity,
-      occupied: zoneUniqueTables,
-      guests: zoneGuests,
-      onPremises: zoneOnPremises.length,
-      onPremisesGuests: zoneOnPremises.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0),
-      beachUnits: zoneBeach.length,
-      beachGuests: zoneBeach.reduce((sum, r) => sum + (r.arrivedGuests || r.guests || 0), 0),
-      occupancyPct: zoneCapacity > 0 ? parseFloat((zoneUniqueTables / zoneTables.length * 100).toFixed(1)) : 0
+      capacity: zCapacity,
+      avgPct: zd ? avg(zd.pcts) : 0,
+      peakPct: zd ? zd.peakPct : 0,
+      bookings: zd ? zd.bookings.size : 0,
+      guests: zd ? zd.guests : 0,
+      onPremises: zd ? zd.onPremises : 0,
+      onPremisesGuests: zd ? zd.onPremisesGuests : 0,
+      beachUnits: zd ? zd.beachUnits.size : 0,
+      beachGuests: zd ? zd.beachGuests : 0
     });
   }
-  byZone.sort((a, b) => b.occupied - a.occupied);
+  byZone.sort((a, b) => b.avgPct - a.avgPct);
 
   const hourly = [];
   for (let h = 0; h < 24; h++) {
@@ -597,11 +677,16 @@ async function getOccupancyReport({ from, to }) {
       beachCapacity,
       tableCapacity,
       avgDurationMinutes,
-      occupancyPct: totalCapacity > 0 ? parseFloat((arrived.length / tables.length * 100).toFixed(1)) : 0
+      occupancyPct: avgTotalPct,
+      peakPct: peakTotalPct,
+      occupancyPctBeach: avgBeachPct,
+      peakPctBeach: peakBeachPct,
+      occupancyPctTable: avgTablePct,
+      peakPctTable: peakTablePct
     },
     byKind: {
-      beach: { units: beach.length, guests: beachGuests, capacity: beachCapacity, occupancyPct: beachCapacity > 0 ? parseFloat((beach.length / beachCapacity * 100).toFixed(1)) : 0 },
-      table: { units: tableEvening.length, guests: tableGuests, capacity: tableCapacity, eveningEvents: hasEvent.length, occupancyPct: tableCapacity > 0 ? parseFloat((tableEvening.length / tableCapacity * 100).toFixed(1)) : 0 }
+      beach: { bookings: arrived.filter(r => r.bookingKind === 'BEACH').length, guests: beachGuests, capacity: beachCapacity, avgPct: avgBeachPct, peakPct: peakBeachPct },
+      table: { bookings: arrived.filter(r => r.bookingKind === 'TABLE').length, guests: tableGuests, capacity: tableCapacity, eveningEvents: arrived.filter(r => r.eventId).length, avgPct: avgTablePct, peakPct: peakTablePct }
     },
     byZone,
     hourly

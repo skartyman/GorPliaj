@@ -10,7 +10,8 @@ const REPORT_TYPES = [
   { value: 'TICKETS', label: 'Продаж квитків' },
   { value: 'MENU', label: 'Меню' },
   { value: 'EVENTS', label: 'Події' },
-  { value: 'STAFF', label: 'Персонал' }
+  { value: 'STAFF', label: 'Персонал' },
+  { value: 'OCCUPANCY', label: 'Наповнюваність' }
 ];
 
 const FREQUENCIES = [

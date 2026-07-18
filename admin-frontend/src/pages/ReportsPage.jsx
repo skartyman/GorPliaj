@@ -428,6 +428,23 @@ function SummaryTab({ data, loading }) {
         <StatCard label="Середній чек меню" value={formatMoney(kpi.menuAvgCheck.value)} color="#C89241" />
         <StatCard label="Активних подій" value={fmt(kpi.activeEvents.value)} color="#DAA520" />
       </div>
+
+      {kpi.occupancyAvgPct ? (
+        <>
+          <div className="report-section-title" style={{ marginTop: 22 }}>Наповнюваність</div>
+          <div className="stats-grid">
+            <StatCard label="Сер. наповнюваність" value={pct(kpi.occupancyAvgPct.value)} sub={`Пік: ${pct(kpi.occupancyPeakPct.value)}`} color="#9333EA" />
+            <StatCard label="Гостей" value={fmt(kpi.occupancyGuests.value)} color="#5B7B3A" />
+            <StatCard label="Від закладу" value={fmt(kpi.occupancyOnPremises.value)} color="#4A2C1A" />
+          </div>
+          {data.occupancy?.byKind && (
+            <div className="stats-grid" style={{ marginTop: 12 }}>
+              <StatCard label="🏖 Пляж" value={`${pct(data.occupancy.byKind.beach.avgPct)} · пік ${pct(data.occupancy.byKind.beach.peakPct)}`} sub={`Броней: ${fmt(data.occupancy.byKind.beach.bookings)} · Гостей: ${fmt(data.occupancy.byKind.beach.guests)}`} color="#DAA520" />
+              <StatCard label="🪑 Столи / Вечір" value={`${pct(data.occupancy.byKind.table.avgPct)} · пік ${pct(data.occupancy.byKind.table.peakPct)}`} sub={`Броней: ${fmt(data.occupancy.byKind.table.bookings)} · Гостей: ${fmt(data.occupancy.byKind.table.guests)} · Вечірніх: ${fmt(data.occupancy.byKind.table.eveningEvents)}`} color="#C89241" />
+            </div>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -553,13 +570,13 @@ function OccupancyTab({ data, loading: periodLoading }) {
         <StatCard label="Від закладу" value={fmt(s.onPremises)} color="#9333EA" />
         <StatCard label="Гостей" value={fmt(s.totalGuests)} color="#4A2C1A" />
         <StatCard label="Ср. тривалість" value={s.avgDurationMinutes != null ? `${fmt(s.avgDurationMinutes)} хв` : '—'} color="#C89241" />
-        <StatCard label="Наповнюваність" value={pct(s.occupancyPct)} color="#DAA520" />
+        <StatCard label="Сер. наповнюваність" value={pct(s.occupancyPct)} sub={`Пік: ${pct(s.peakPct)}`} color="#DAA520" />
       </div>
 
       <div className="report-section-title" style={{ marginTop: 22 }}>По типу послуг</div>
       <div className="stats-grid">
-        <StatCard label="Пляжні послуги" value={`${fmt(data.byKind.beach.units)} / ${fmt(data.byKind.beach.capacity)} місць`} sub={`${pct(data.byKind.beach.occupancyPct)} · Гостей: ${fmt(data.byKind.beach.guests)}`} color="#DAA520" />
-        <StatCard label="Столи / Вечірні події" value={`${fmt(data.byKind.table.units)} / ${fmt(data.byKind.table.capacity)} місць`} sub={`${pct(data.byKind.table.occupancyPct)} · Гостей: ${fmt(data.byKind.table.guests)} · Вечірніх: ${fmt(data.byKind.table.eveningEvents)}`} color="#C89241" />
+        <StatCard label="Пляжні послуги" value={`${pct(data.byKind.beach.avgPct)} · пік ${pct(data.byKind.beach.peakPct)}`} sub={`Броней: ${fmt(data.byKind.beach.bookings)} · Гостей: ${fmt(data.byKind.beach.guests)}`} color="#DAA520" />
+        <StatCard label="Столи / Вечірні події" value={`${pct(data.byKind.table.avgPct)} · пік ${pct(data.byKind.table.peakPct)}`} sub={`Броней: ${fmt(data.byKind.table.bookings)} · Гостей: ${fmt(data.byKind.table.guests)} · Вечірніх: ${fmt(data.byKind.table.eveningEvents)}`} color="#C89241" />
       </div>
 
       {zoneRows.length > 0 && (
@@ -571,8 +588,9 @@ function OccupancyTab({ data, loading: periodLoading }) {
                 <tr>
                   <th>Зона</th>
                   <th>Місць</th>
-                  <th>Зайнято</th>
-                  <th>%</th>
+                  <th>Ср. %</th>
+                  <th>Пік %</th>
+                  <th>Броней</th>
                   <th>Гостей</th>
                   <th>Пляж</th>
                   <th>Від закладу</th>
@@ -583,8 +601,9 @@ function OccupancyTab({ data, loading: periodLoading }) {
                   <tr key={z.zoneId}>
                     <td><strong>{z.name}</strong></td>
                     <td>{fmt(z.capacity)}</td>
-                    <td>{fmt(z.occupied)}</td>
-                    <td>{pct(z.occupancyPct)}</td>
+                    <td>{pct(z.avgPct)}</td>
+                    <td>{pct(z.peakPct)}</td>
+                    <td>{fmt(z.bookings)}</td>
                     <td>{fmt(z.guests)}</td>
                     <td>{fmt(z.beachUnits)} / {fmt(z.beachGuests)} гіст.</td>
                     <td>{fmt(z.onPremises)} / {fmt(z.onPremisesGuests)} гіст.</td>
