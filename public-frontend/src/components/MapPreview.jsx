@@ -170,6 +170,22 @@ function RealMapObject({ object, scale, locale = 'ua', unit, onActivate }) {
     );
   }
 
+  const plantSubTypes = ['BUSH', 'TREE', 'FLOWER'];
+  if (plantSubTypes.includes(subType)) {
+    const fillColor = subType === 'TREE' ? '#22c55e' : subType === 'FLOWER' ? '#f472b6' : '#4ade80';
+    const fillColor2 = subType === 'TREE' ? '#16a34a' : subType === 'FLOWER' ? '#ec4899' : '#22c55e';
+    return (
+      <svg style={baseStyle} {...interactionProps} viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+        <g fill={fillColor}>
+          <circle cx="50" cy="50" r="40" opacity="0.55" />
+          <circle cx="40" cy="40" r="20" fill={fillColor2} />
+          <circle cx="60" cy="45" r="25" fill={fillColor2} />
+          <circle cx="50" cy="65" r="20" fill={fillColor} />
+        </g>
+      </svg>
+    );
+  }
+
   if (type === 'TEXT' || type === 'LABEL' || meta.text || label) {
     const fontSize = Math.max(6, (meta.fontSize || 14) * scale);
     return (
@@ -494,8 +510,7 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
     const points = [...pointersRef.current.values()];
     if (points.length === 1) {
       const mobileTouch = isMobileViewport && event.pointerType === 'touch';
-      if (!mobileTouch) event.currentTarget.setPointerCapture?.(event.pointerId);
-      gestureRef.current = { type: mobileTouch ? 'scroll' : 'pan', x: points[0].x, y: points[0].y, view: { scale, x: translateX, y: translateY } };
+      gestureRef.current = { type: mobileTouch ? 'scroll' : 'pan', x: points[0].x, y: points[0].y, view: { scale, x: translateX, y: translateY }, captured: false };
     } else if (points.length === 2) {
       setShowTwoFingerHint(false);
       window.clearTimeout(gestureHintTimerRef.current);
@@ -523,7 +538,12 @@ export default function MapPreview({ mapData, mapObjects = [], zones = [], units
       return;
     }
     if (points.length === 1 && gesture.type === 'pan') {
-      if (Math.hypot(points[0].x - gesture.x, points[0].y - gesture.y) > 5) gestureMovedRef.current = true;
+      const dist = Math.hypot(points[0].x - gesture.x, points[0].y - gesture.y);
+      if (!gesture.captured && dist > 5) {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        gesture.captured = true;
+      }
+      if (dist > 5) gestureMovedRef.current = true;
       setView({ ...gesture.view, x: gesture.view.x + points[0].x - gesture.x, y: gesture.view.y + points[0].y - gesture.y });
     } else if (points.length === 2) {
       event.preventDefault();
