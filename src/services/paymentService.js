@@ -9,7 +9,7 @@ function toAdminPayment(payment) {
     providerPaymentId: payment.providerPaymentId,
     providerOrderId: payment.providerOrderId,
     paymentUrl: payment.paymentUrl,
-    amount: Number(payment.amount),
+    amount: Number(payment.amount?.toString() ?? 0),
     currency: payment.currency,
     status: payment.status,
     rawPayload: payment.rawPayload,
@@ -31,7 +31,7 @@ function toAdminPayment(payment) {
       customerName: payment.ticketOrder.customerName,
       customerEmail: payment.ticketOrder.customerEmail,
       customerPhone: payment.ticketOrder.customerPhone,
-      amount: Number(payment.ticketOrder.amount),
+      amount: Number(payment.ticketOrder.amount?.toString() ?? 0),
       status: payment.ticketOrder.status,
       event: payment.ticketOrder.event ? {
         id: payment.ticketOrder.event.id,
@@ -128,7 +128,7 @@ async function updatePaymentStatus(id, status) {
   });
   if (!existing) return { type: 'NOT_FOUND' };
 
-  const VALID_STATUSES = ['PENDING', 'REQUIRES_ACTION', 'PAID', 'FAILED', 'REFUNDED', 'CANCELLED'];
+  const VALID_STATUSES = ['PENDING', 'REQUIRES_ACTION', 'PAID', 'FAILED', 'CANCELLED'];
   if (!VALID_STATUSES.includes(status)) {
     return { type: 'INVALID', message: 'Invalid payment status.' };
   }
@@ -200,6 +200,27 @@ async function updatePaymentStatus(id, status) {
       const hutkoService = require('./hutkoService');
       await hutkoService.notifyPaidReservation(payment.reservationId);
       await hutkoService.deliverPaidReservation(payment.reservationId, payment.amount);
+    }
+  }
+  else if ((payment.reservationId || payment.ticketOrderId) && (status === 'CANCELLED' || status === 'FAILED')) {
+    // Roll back linked entities when a payment is cancelled or failed:
+    // reservation returns to awaiting payment, ticket order returns to pending.
+    if (payment.reservationId) {
+      const reservation = await prisma.reservation.findUnique({
+        where: { id: payment.reservationId },
+        select: { bookingGroupId: true, status: true }
+      });
+      await prisma.reservation.updateMany({
+        where: {
+          ...(reservation?.bookingGroupId ? { bookingGroupId: reservation.bookingGroupId } : { id: payment.reservationId }),
+          status: { in: ['CONFIRMED', 'PENDING', 'AWAITING_PAYMENT'] }
+        },
+        data: { status: 'AWAITING_PAYMENT' }
+      });
+    }
+    if (payment.ticketOrderId) {
+      const ticketSalesService = require('./ticketSalesService');
+      await ticketSalesService.updateOrderStatus(payment.ticketOrderId, 'PENDING');
     }
   }
 

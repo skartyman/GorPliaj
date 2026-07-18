@@ -993,8 +993,7 @@ const translations = {
       actions: {
         MARK_AS_PAID: 'Підтвердити оплату',
         MARK_AS_CANCELLED: 'Скасувати',
-        MARK_AS_FAILED: 'Позначити невдалим',
-        REFUND: 'Повернути кошти'
+        MARK_AS_FAILED: 'Позначити невдалим'
       }
     },
     settings: {
@@ -1238,6 +1237,55 @@ const translations = {
   ru: {
     appTitle: 'Админка GorPliaj',
     brand: 'GorPliaj Admin',
+    payments: {
+      title: 'Платежи',
+      description: 'Просмотр транзакций и управление платежами.',
+      eyebrow: 'Финансы',
+      heroTitle: 'Транзакции и статусы платежей',
+      heroDescription: 'Мониторинг всех платежей через Hutko (Fondy).',
+      loading: 'Загружаем платежи...',
+      empty: 'Платежей пока нет.',
+      notConfigured: 'Платёжный шлюз не настроен. Добавьте FONDY_MERCHANT_ID и FONDY_SECRET_KEY в .env.',
+      errors: {
+        load: 'Не удалось загрузить платежи.',
+        update: 'Не удалось обновить статус платежа.'
+      },
+      summary: {
+        total: 'Всего',
+        paid: 'Оплачено',
+        pending: 'Ожидает',
+        failed: 'Неудачно',
+        amount: 'Сумма'
+      },
+      columns: {
+        id: '№',
+        type: 'Тип',
+        target: 'За что',
+        reservation: 'Бронирование',
+        amount: 'Сумма',
+        status: 'Статус',
+        provider: 'Провайдер',
+        date: 'Дата',
+        actions: 'Действия'
+      },
+      type: {
+        reservation: 'Бронирование',
+        ticket: 'Билет'
+      },
+      statuses: {
+        PENDING: 'Ожидает',
+        REQUIRES_ACTION: 'Требует действия',
+        PAID: 'Оплачено',
+        FAILED: 'Неудачно',
+        REFUNDED: 'Возвращено',
+        CANCELLED: 'Отменено'
+      },
+      actions: {
+        MARK_AS_PAID: 'Подтвердить оплату',
+        MARK_AS_CANCELLED: 'Отменить',
+        MARK_AS_FAILED: 'Отметить неудачным'
+      }
+    },
     common: {
       admin: 'Админка',
       loading: 'Загрузка...',
@@ -1626,6 +1674,55 @@ const translations = {
   en: {
     appTitle: 'GorPliaj Admin',
     brand: 'GorPliaj Admin',
+    payments: {
+      title: 'Payments',
+      description: 'View transactions and manage payments.',
+      eyebrow: 'Finance',
+      heroTitle: 'Transactions and payment statuses',
+      heroDescription: 'Monitoring all payments via Hutko (Fondy).',
+      loading: 'Loading payments...',
+      empty: 'No payments yet.',
+      notConfigured: 'Payment gateway is not configured. Add FONDY_MERCHANT_ID and FONDY_SECRET_KEY to .env.',
+      errors: {
+        load: 'Failed to load payments.',
+        update: 'Failed to update payment status.'
+      },
+      summary: {
+        total: 'Total',
+        paid: 'Paid',
+        pending: 'Pending',
+        failed: 'Failed',
+        amount: 'Amount'
+      },
+      columns: {
+        id: '№',
+        type: 'Type',
+        target: 'For',
+        reservation: 'Reservation',
+        amount: 'Amount',
+        status: 'Status',
+        provider: 'Provider',
+        date: 'Date',
+        actions: 'Actions'
+      },
+      type: {
+        reservation: 'Reservation',
+        ticket: 'Ticket'
+      },
+      statuses: {
+        PENDING: 'Pending',
+        REQUIRES_ACTION: 'Requires action',
+        PAID: 'Paid',
+        FAILED: 'Failed',
+        REFUNDED: 'Refunded',
+        CANCELLED: 'Cancelled'
+      },
+      actions: {
+        MARK_AS_PAID: 'Mark as paid',
+        MARK_AS_CANCELLED: 'Cancel',
+        MARK_AS_FAILED: 'Mark as failed'
+      }
+    },
     common: {
       admin: 'Admin',
       loading: 'Loading...',
