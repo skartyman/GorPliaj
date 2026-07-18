@@ -20,7 +20,7 @@ export default function PaymentsPage() {
       { label: t('payments.actions.MARK_AS_FAILED'), status: 'FAILED', className: 'btn btn-small btn-danger' }
     ],
     PAID: [
-      { label: t('payments.actions.REFUND'), status: 'REFUNDED', className: 'btn btn-small btn-warning' }
+      // Refunds are handled elsewhere, so no actions for paid payments
     ]
   }), [t]);
 
@@ -164,7 +164,13 @@ export default function PaymentsPage() {
       label: t('payments.columns.actions'),
       render: (row) => {
         const actions = STATUS_ACTIONS[row.status] || [];
-        if (!actions.length) return <span className="muted">—</span>;
+        if (!actions.length) {
+          // For PAID status, show that it's processed
+          if (row.status === 'PAID') {
+            return <span className="muted">{t('payments.statuses.PAID')}</span>;
+          }
+          return <span className="muted">—</span>;
+        }
         return (
           <div className="actions compact">
             {actions.map((action) => (

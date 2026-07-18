@@ -122,7 +122,10 @@ async function getAdminPaymentById(id) {
 }
 
 async function updatePaymentStatus(id, status) {
-  const existing = await prisma.payment.findUnique({ where: { id } });
+  const existing = await prisma.payment.findUnique({ 
+    where: { id },
+    include: { ticketOrder: true, reservation: true }
+  });
   if (!existing) return { type: 'NOT_FOUND' };
 
   const VALID_STATUSES = ['PENDING', 'REQUIRES_ACTION', 'PAID', 'FAILED', 'REFUNDED', 'CANCELLED'];
@@ -171,6 +174,34 @@ async function updatePaymentStatus(id, status) {
       }
     }
   });
+
+  // Trigger appropriate actions based on payment type and status
+  if (payment.ticketOrderId && status === 'PAID') {
+    // For ticket payments marked as PAID, update ticket order status
+    const ticketSalesService = require('./ticketSalesService');
+    await ticketSalesService.updateOrderStatus(payment.ticketOrderId, 'PAID');
+  }
+  else if (payment.reservationId && status === 'PAID') {
+    // For reservation payments marked as PAID, update reservation status
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: payment.reservationId },
+      select: { bookingGroupId: true }
+    });
+    
+    const confirmation = await prisma.reservation.updateMany({
+      where: {
+        ...(reservation?.bookingGroupId ? { bookingGroupId: reservation.bookingGroupId } : { id: payment.reservationId }),
+        status: { in: ['PENDING', 'AWAITING_PAYMENT'] }
+      },
+      data: { status: 'CONFIRMED' }
+    });
+    
+    if (confirmation.count > 0) {
+      const hutkoService = require('./hutkoService');
+      await hutkoService.notifyPaidReservation(payment.reservationId);
+      await hutkoService.deliverPaidReservation(payment.reservationId, payment.amount);
+    }
+  }
 
   return { type: 'SUCCESS', payment: toAdminPayment(payment) };
 }
