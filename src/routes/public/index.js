@@ -53,4 +53,9 @@ router.delete('/guest/favorites/:id', requireGuestAuth, guestController.removeFa
 router.delete('/guest/favorites', requireGuestAuth, guestController.removeFavorite);
 router.post('/guest/reservations/:id/cancel', requireGuestAuth, guestController.cancelReservation);
 
+router.get('/guest/favorite-orders', requireGuestAuth, guestController.listFavoriteOrders);
+router.post('/guest/favorite-orders', requireGuestAuth, guestController.createFavoriteOrder);
+router.patch('/guest/favorite-orders/:id', requireGuestAuth, guestController.renameFavoriteOrder);
+router.delete('/guest/favorite-orders/:id', requireGuestAuth, guestController.deleteFavoriteOrder);
+
 module.exports = router;

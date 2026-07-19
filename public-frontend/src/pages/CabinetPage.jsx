@@ -1,10 +1,99 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useLocale } from '../state/locale';
 import { useGuest } from '../state/guest';
 import { localizedCopy } from '../lib/i18n';
 import { guestApi } from '../lib/api';
 import { identifyAnalytics, captureAnalytics, resetAnalytics } from '../lib/analytics';
+
+const COUNTRIES = [
+  { code: 'UA', flag: '\u{1F1FA}\u{1F1E6}', dial: '+380', mask: 'XX XXX XX XX', len: 9 },
+  { code: 'US', flag: '\u{1F1FA}\u{1F1F8}', dial: '+1',    mask: 'XXX XXX XXXX', len: 10 },
+  { code: 'GB', flag: '\u{1F1EC}\u{1F1E7}', dial: '+44',   mask: 'XXXX XXXXXX', len: 10 },
+  { code: 'PL', flag: '\u{1F1F5}\u{1F1F1}', dial: '+48',   mask: 'XXX XXX XXX', len: 9 },
+  { code: 'DE', flag: '\u{1F1E9}\u{1F1EA}', dial: '+49',   mask: 'XXXX XXXXXXX', len: 10 },
+  { code: 'FR', flag: '\u{1F1EB}\u{1F1F7}', dial: '+33',   mask: 'X XX XX XX XX', len: 9 },
+  { code: 'IT', flag: '\u{1F1EE}\u{1F1F9}', dial: '+39',   mask: 'XXX XXX XXXX', len: 10 },
+  { code: 'ES', flag: '\u{1F1EA}\u{1F1F8}', dial: '+34',   mask: 'XXX XX XX XX', len: 9 },
+  { code: 'IL', flag: '\u{1F1EE}\u{1F1F1}', dial: '+972',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'CA', flag: '\u{1F1E8}\u{1F1E6}', dial: '+1',    mask: 'XXX XXX XXXX', len: 10 },
+];
+
+function formatPhoneValue(raw, country) {
+  const digits = raw.replace(/\D/g, '').slice(0, country.len);
+  let result = '';
+  let di = 0;
+  for (const ch of country.mask) {
+    if (ch === 'X') {
+      if (di < digits.length) result += digits[di++];
+      else break;
+    } else {
+      result += ch;
+    }
+  }
+  return result;
+}
+
+function PhoneInput({ value, onChange, required }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const country = COUNTRIES.find((c) => c.dial === value?.split(' ')[0]?.replace('+', '+') && value?.startsWith(c.dial)) || COUNTRIES[0];
+  const localPart = value ? value.slice(country.dial.length).trim() : '';
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function handleSelect(c) {
+    setOpen(false);
+    onChange(`+${c.dial.replace('+', '')} `);
+  }
+
+  function handleInput(e) {
+    const raw = e.target.value;
+    if (raw.startsWith(country.dial) || raw.startsWith(`+${country.dial.replace('+', '')}`)) {
+      const local = raw.slice(country.dial.length + 1).replace(/\D/g, '');
+      onChange(`${country.dial} ${formatPhoneValue(local, country)}`);
+    } else {
+      const digits = raw.replace(/\D/g, '').slice(0, country.len);
+      onChange(`+${country.dial.replace('+', '')} ${formatPhoneValue(digits, country)}`);
+    }
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', gap: 0, border: '1px solid var(--line-light)', borderRadius: 10, overflow: 'hidden', background: 'var(--bg-secondary)' }}>
+        <button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 8px', border: 'none', borderRight: '1px solid var(--line-light)', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: 14, minWidth: 60 }}>
+          <span>{country.flag}</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{country.dial}</span>
+        </button>
+        <input
+          type="tel"
+          value={value ? value.slice(country.dial.length + 1) : ''}
+          onChange={handleInput}
+          required={required}
+          placeholder={formatPhoneValue('', country)}
+          style={{ flex: 1, padding: '12px 14px', border: 'none', background: 'transparent', fontSize: 15, color: 'var(--text)', outline: 'none' }}
+        />
+      </div>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, maxHeight: 200, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+          {COUNTRIES.map((c) => (
+            <button key={c.code} type="button" onClick={() => handleSelect(c)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', border: 'none', background: c.code === country.code ? 'var(--accent-bg, rgba(0,0,0,0.05))' : 'transparent', cursor: 'pointer', fontSize: 14 }}>
+              <span>{c.flag}</span>
+              <span style={{ fontWeight: 500 }}>{c.dial}</span>
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>{c.code}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATUS_LABELS = {
   PENDING: { ua: 'Очікує', ru: 'Ожидает', en: 'Pending' },
@@ -31,6 +120,7 @@ export default function CabinetPage() {
 
   const [reservations, setReservations] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [favOrders, setFavOrders] = useState([]);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -42,12 +132,14 @@ export default function CabinetPage() {
 
   const loadCabinet = useCallback(async () => {
     try {
-      const [res, fav] = await Promise.all([
+      const [res, fav, orders] = await Promise.all([
         guestApi.reservations(),
-        guestApi.favorites()
+        guestApi.favorites(),
+        guestApi.favoriteOrders()
       ]);
       setReservations(res.reservations || []);
       setFavorites(fav.favorites || []);
+      setFavOrders(orders.orders || []);
     } catch (err) {
       setError(err.message || c({ ua: 'Не вдалося завантажити кабінет.', ru: 'Не удалось загрузить кабинет.', en: 'Failed to load cabinet.' }));
     }
@@ -89,7 +181,7 @@ export default function CabinetPage() {
       setError(c({ ua: 'Введіть імʼя.', ru: 'Введите имя.', en: 'Enter your name.' }));
       return;
     }
-    if (phone.trim().length < 7) {
+    if (phone.replace(/\D/g, '').length < 7) {
       setError(c({ ua: 'Введіть телефон.', ru: 'Введите телефон.', en: 'Enter your phone.' }));
       return;
     }
@@ -110,6 +202,7 @@ export default function CabinetPage() {
     ctxLogout();
     setReservations([]);
     setFavorites([]);
+    setFavOrders([]);
   };
 
   const handleCancel = async (id) => {
@@ -145,6 +238,42 @@ export default function CabinetPage() {
     navigate(`/booking?${params.toString()}`);
   };
 
+  const handleRenameFavOrder = async (id) => {
+    const order = favOrders.find((o) => o.id === id);
+    const newName = window.prompt(c({ ua: 'Назва замовлення', ru: 'Название заказа', en: 'Order name' }), order?.name || '');
+    if (newName === null || !newName.trim()) return;
+    try {
+      await guestApi.renameFavoriteOrder(id, newName.trim());
+      setFavOrders((prev) => prev.map((o) => o.id === id ? { ...o, name: newName.trim() } : o));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteFavOrder = async (id) => {
+    if (!window.confirm(c({ ua: 'Видалити?', ru: 'Удалить?', en: 'Delete?' }))) return;
+    try {
+      await guestApi.deleteFavoriteOrder(id);
+      setFavOrders((prev) => prev.filter((o) => o.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleReorder = (order) => {
+    const items = {};
+    try {
+      const parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item) => {
+          if (item.menuItemId) items[String(item.menuItemId)] = { quantity: item.quantity || 1 };
+        });
+      }
+    } catch {}
+    localStorage.setItem('gorpliaj-menu-cart', JSON.stringify(items));
+    navigate('/menu');
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="cabinet-page">
@@ -158,7 +287,7 @@ export default function CabinetPage() {
             </label>
             <label>
               {c({ ua: 'Телефон *', ru: 'Телефон *', en: 'Phone *' })}
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} required minLength={7} placeholder="+38 (0XX) XXX-XX-XX" />
+              <PhoneInput value={phone} onChange={setPhone} required />
             </label>
             <label>
               Email *
@@ -187,12 +316,20 @@ export default function CabinetPage() {
 
       {error && <p className="cabinet-error">{error}</p>}
 
+      <div className="cabinet-actions">
+        <Link to="/booking" className="cabinet-action-btn">{c({ ua: 'Нове бронювання', ru: 'Новое бронирование', en: 'New booking' })}</Link>
+        <Link to="/menu" className="cabinet-action-btn">{c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}</Link>
+      </div>
+
       <div className="cabinet-tabs">
         <button className={tab === 'reservations' ? 'active' : ''} onClick={() => setTab('reservations')}>
           {c({ ua: 'Бронювання', ru: 'Бронирования', en: 'Bookings' })}
         </button>
         <button className={tab === 'favorites' ? 'active' : ''} onClick={() => setTab('favorites')}>
           {c({ ua: 'Улюблене', ru: 'Избранное', en: 'Favorites' })}
+        </button>
+        <button className={tab === 'favOrders' ? 'active' : ''} onClick={() => setTab('favOrders')}>
+          {c({ ua: 'Улюблені замовлення', ru: 'Избранные заказы', en: 'Favorite orders' })}
         </button>
       </div>
 
@@ -245,6 +382,37 @@ export default function CabinetPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'favOrders' && (
+        <div className="cabinet-list">
+          {favOrders.length === 0 && <p className="cabinet-empty">{c({ ua: 'Поки немає збережених замовлень.', ru: 'Пока нет сохранённых заказов.', en: 'No saved orders yet.' })}</p>}
+          {favOrders.map((order) => {
+            let itemCount = 0;
+            let totalPrice = 0;
+            try {
+              const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+              if (Array.isArray(items)) {
+                itemCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
+                totalPrice = items.reduce((s, i) => s + (i.quantity || 1) * (i.price || 0), 0);
+              }
+            } catch {}
+            return (
+              <div key={order.id} className="cabinet-card">
+                <div className="cabinet-card-main">
+                  <strong>{order.name}</strong>
+                  <span className="cabinet-meta">{itemCount} {c({ ua: 'шт.', ru: 'шт.', en: 'items' })} · {totalPrice} {c({ ua: 'грн', ru: 'грн', en: 'UAH' })}</span>
+                  <span className="cabinet-meta">{new Date(order.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="cabinet-card-side">
+                  <button className="cabinet-book-btn" onClick={() => handleReorder(order)}>{c({ ua: 'Повторити', ru: 'Повторить', en: 'Reorder' })}</button>
+                  <button className="cabinet-cancel" onClick={() => handleRenameFavOrder(order.id)}>{c({ ua: 'Перейменувати', ru: 'Переименовать', en: 'Rename' })}</button>
+                  <button className="cabinet-cancel" onClick={() => handleDeleteFavOrder(order.id)}>{c({ ua: 'Видалити', ru: 'Удалить', en: 'Delete' })}</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

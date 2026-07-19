@@ -245,8 +245,9 @@ model Guest {
   updatedAt    DateTime @updatedAt
   lastLoginAt  DateTime?
   reservations Reservation[]
-  favorites    GuestFavoriteUnit[]
-  magicLinks   GuestMagicLink[]
+  favorites       GuestFavoriteUnit[]
+  favoriteOrders  GuestFavoriteOrder[]
+  magicLinks      GuestMagicLink[]
 
   @@index([phone])
 }
@@ -276,6 +277,18 @@ model GuestFavoriteUnit {
 
   @@unique([guestId, kind, tableId])
   @@unique([guestId, kind, menuItemId])
+  @@index([guestId])
+}
+
+model GuestFavoriteOrder {
+  id        Int      @id @default(autoincrement())
+  guestId   Int
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  name      String
+  items     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([guestId])
 }
 

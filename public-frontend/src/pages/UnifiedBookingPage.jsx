@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { holdsApi, mapApi, bookingsApi, eventsApi, guestApi } from '../lib/api';
 import { captureAnalytics, captureException, getDistinctId } from '../lib/analytics';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
+import FavTooltip from '../components/FavTooltip';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useGuest } from '../state/guest';
@@ -2828,7 +2829,29 @@ export default function UnifiedBookingPage() {
                 >
                   {panelFav ? '♥' : '♡'}
                 </button>
-              ) : null}
+              ) : (
+                <FavTooltip type="table">
+                  <button
+                    type="button"
+                    aria-label="Add to favorites"
+                    style={{
+                      position: 'absolute',
+                      top: 14,
+                      right: 52,
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '22px',
+                      cursor: 'pointer',
+                      lineHeight: 1,
+                      color: 'var(--text-muted, #64748b)',
+                      padding: '4px 8px',
+                      zIndex: 10
+                    }}
+                  >
+                    ♡
+                  </button>
+                </FavTooltip>
+              )}
 
               {activePanelTablePhoto || activePanelObjectMeta?.photoUrl ? (
                 <div style={{ marginBottom: 14, borderRadius: 8, overflow: 'hidden' }}>

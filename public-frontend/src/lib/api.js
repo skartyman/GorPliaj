@@ -181,5 +181,9 @@ export const guestApi = {
     if (params?.menuItemId) q.set('menuItemId', String(params.menuItemId));
     return request(`/guest/favorites?${q.toString()}`, { method: 'DELETE' });
   },
-  cancelReservation: (id) => request(`/guest/reservations/${id}/cancel`, { method: 'POST' })
+  cancelReservation: (id) => request(`/guest/reservations/${id}/cancel`, { method: 'POST' }),
+  favoriteOrders: () => request('/guest/favorite-orders'),
+  createFavoriteOrder: (payload) => request('/guest/favorite-orders', { method: 'POST', body: JSON.stringify(payload) }),
+  renameFavoriteOrder: (id, name) => request(`/guest/favorite-orders/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deleteFavoriteOrder: (id) => request(`/guest/favorite-orders/${id}`, { method: 'DELETE' })
 };

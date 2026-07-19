@@ -173,6 +173,68 @@ async function cancelReservation(req, res) {
   }
 }
 
+async function listFavoriteOrders(req, res) {
+  try {
+    const orders = await prisma.guestFavoriteOrder.findMany({
+      where: { guestId: req.guestId },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.status(200).json({ orders });
+  } catch (error) {
+    console.error('[guestController.listFavoriteOrders] Failed.', error);
+    return res.status(500).json({ message: 'Failed to load favorite orders.' });
+  }
+}
+
+async function createFavoriteOrder(req, res) {
+  try {
+    const items = req.body.items;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'items array is required.' });
+    }
+    const count = await prisma.guestFavoriteOrder.count({ where: { guestId: req.guestId } });
+    const name = req.body.name || `Моє замовлення ${count + 1}`;
+    const order = await prisma.guestFavoriteOrder.create({
+      data: { guestId: req.guestId, name, items }
+    });
+    return res.status(201).json({ order });
+  } catch (error) {
+    console.error('[guestController.createFavoriteOrder] Failed.', error);
+    return res.status(500).json({ message: 'Failed to create favorite order.' });
+  }
+}
+
+async function renameFavoriteOrder(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const name = req.body.name;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'name is required.' });
+    }
+    await prisma.guestFavoriteOrder.updateMany({
+      where: { id, guestId: req.guestId },
+      data: { name: name.trim() }
+    });
+    return res.status(200).json({ renamed: true });
+  } catch (error) {
+    console.error('[guestController.renameFavoriteOrder] Failed.', error);
+    return res.status(500).json({ message: 'Failed to rename favorite order.' });
+  }
+}
+
+async function deleteFavoriteOrder(req, res) {
+  try {
+    const id = Number(req.params.id);
+    await prisma.guestFavoriteOrder.deleteMany({
+      where: { id, guestId: req.guestId }
+    });
+    return res.status(200).json({ removed: true });
+  } catch (error) {
+    console.error('[guestController.deleteFavoriteOrder] Failed.', error);
+    return res.status(500).json({ message: 'Failed to delete favorite order.' });
+  }
+}
+
 module.exports = {
   requestMagicLink,
   verifyMagicLink,
@@ -181,5 +243,9 @@ module.exports = {
   listFavorites,
   addFavorite,
   removeFavorite,
-  cancelReservation
+  cancelReservation,
+  listFavoriteOrders,
+  createFavoriteOrder,
+  renameFavoriteOrder,
+  deleteFavoriteOrder
 };

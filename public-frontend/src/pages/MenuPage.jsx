@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { menuApi, tableOrderApi, waiterCallApi } from '../lib/api';
+import FavTooltip from '../components/FavTooltip';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useCart } from '../state/cart';
@@ -79,6 +80,7 @@ export default function MenuPage() {
   const [tableWaiterName, setTableWaiterName] = useState('');
   const [serviceToast, setServiceToast] = useState('');
   const [reviewRating, setReviewRating] = useState(null);
+  const [favOrderSaved, setFavOrderSaved] = useState(false);
   const html5QrCodeRef = useRef(null);
   const eventSourceRef = useRef(null);
 
@@ -236,6 +238,16 @@ export default function MenuPage() {
   const cartTotalItems = cartEntries.reduce((sum, e) => sum + e.quantity, 0);
   const cartTotalPrice = cartEntries.reduce((sum, e) => sum + e.quantity * e.price, 0);
   const menuServiceChargeNote = c({ ua: 'Звертаємо увагу, що до кінцевого рахунку за меню буде додано 10% за обслуговування гостя.', ru: 'Обращаем внимание, что к итоговому счету за меню будет добавлено 10% за обслуживание гостя.', en: 'Please note that a 10% guest service charge will be added to the final menu bill.' });
+
+  const saveFavoriteOrder = async () => {
+    if (!isLoggedIn || !cartEntries.length) return;
+    try {
+      const orderItems = cartEntries.map((e) => ({ menuItemId: e.itemId, quantity: e.quantity, price: e.price }));
+      await guestApi.createFavoriteOrder({ items: orderItems });
+      setFavOrderSaved(true);
+      setTimeout(() => setFavOrderSaved(false), 3000);
+    } catch {}
+  };
 
   function formatPrice(v) {
     return new Intl.NumberFormat(locale === 'en' ? 'en-US' : (locale === 'ua' ? 'uk-UA' : 'ru-RU'), { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v);
@@ -447,7 +459,11 @@ export default function MenuPage() {
                           <div className="menu-card-actions">
                             {isLoggedIn ? (
                               <button type="button" className={`menu-fav-btn ${favMenuIds[String(item.id)] ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleMenuFavorite(item.id); }} aria-label="Favorite">★</button>
-                            ) : null}
+                            ) : (
+                              <FavTooltip type="menu">
+                                <button type="button" className="menu-fav-btn" onClick={(e) => e.stopPropagation()} aria-label="Favorite">★</button>
+                              </FavTooltip>
+                            )}
                             <button type="button" className={`menu-like-btn ${likes[String(item.id)] ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }}>♥ {item.likesCount || 0}</button>
                             <div className="menu-qty" onClick={(e) => e.stopPropagation()}>
                               <button type="button" onClick={() => updateQuantity(item.id, -1)} disabled={quantity === 0}>−</button>
@@ -512,6 +528,11 @@ export default function MenuPage() {
               )}
               <button className="btn btn-secondary" type="button" onClick={() => { const lines = [t('menuCartTitle')]; cartEntries.forEach((e) => lines.push(`${e.name} x ${e.quantity} - ${formatPrice(e.quantity * e.price)} грн`)); lines.push(`${t('menuCartTotal')}: ${formatPrice(cartTotalPrice)} грн`); navigator.clipboard.writeText(lines.join('\n')); }}>{t('menuCartCopy')}</button>
               <button className="btn btn-secondary" type="button" onClick={clear}>{t('menuCartClear')}</button>
+              {isLoggedIn && (
+                <button className="btn btn-secondary" type="button" onClick={saveFavoriteOrder} disabled={favOrderSaved}>
+                  {favOrderSaved ? c({ ua: 'Збережено \u2713', ru: 'Сохранено \u2713', en: 'Saved \u2713' }) : c({ ua: 'Зберегти як улюблене', ru: 'Сохранить как избранное', en: 'Save as favorite' })}
+                </button>
+              )}
             </div>
           </section>
         </div>
