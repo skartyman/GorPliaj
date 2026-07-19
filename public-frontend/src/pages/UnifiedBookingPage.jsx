@@ -2805,7 +2805,7 @@ export default function UnifiedBookingPage() {
                 ×
               </button>
 
-              <h3 style={{ margin: '0 0 12px' }}>{t('mapSelectedTitle')}</h3>
+              <h3 style={{ margin: '0 0 12px', paddingRight: 80 }}>{t('mapSelectedTitle')}</h3>
 
               {isLoggedIn ? (
                 <button
