@@ -7052,7 +7052,7 @@ select.booking-compact-control {
 .cabinet-action-btn:hover { background: var(--accent-bg, rgba(0,0,0,0.04)); }
 
 .cabinet-book-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-weight: 600; }
-.cabinet-card-side { flex-direction: row; align-items: center; gap: 10px; }
+.cabinet-card-side { flex-direction: row; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 .booking-guest-autofill { font-size: 14px; color: var(--muted); background: var(--bg-secondary); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; line-height: 1.5; }
 .booking-guest-autofill strong { color: var(--text); }
