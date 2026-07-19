@@ -6998,8 +6998,8 @@ select.booking-compact-control {
 .cabinet-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text); }
 .cabinet-form input { padding: 12px 14px; border: 1px solid var(--line-light); border-radius: 10px; font-size: 15px; background: var(--bg-secondary); color: var(--text); }
 .cabinet-form input::placeholder { color: var(--muted); }
-.cabinet-form button { margin-top: 8px; padding: 13px 16px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
-.cabinet-form button:disabled { opacity: .6; cursor: default; }
+.cabinet-form button:not(.phone-intl-link) { margin-top: 8px; padding: 13px 16px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+.cabinet-form button:not(.phone-intl-link):disabled { opacity: .6; cursor: default; }
 .cabinet-success { margin-top: 16px; color: #2ecc71; font-size: 14px; line-height: 1.5; }
 .cabinet-error { margin-top: 16px; color: #ff6b6b; font-size: 14px; line-height: 1.5; }
 .cabinet-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
