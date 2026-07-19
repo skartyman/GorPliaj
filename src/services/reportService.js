@@ -488,9 +488,9 @@ function resolveRange(period) {
 }
 
 async function getOccupancyReport({ from, to }) {
-  const dayCount = Math.max(1, Math.round((to - from) / (1000 * 60 * 60 * 24)));
   const dayStart = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const dayEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  const dayEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+  const dayCount = Math.max(1, Math.round((dayEnd - dayStart) / (1000 * 60 * 60 * 24)));
 
   const [reservations, allHolds, tables, zones] = await Promise.all([
     prisma.reservation.findMany({
