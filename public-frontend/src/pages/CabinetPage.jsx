@@ -7,16 +7,45 @@ import { guestApi } from '../lib/api';
 import { identifyAnalytics, captureAnalytics, resetAnalytics } from '../lib/analytics';
 
 const COUNTRIES = [
-  { code: 'UA', flag: '\u{1F1FA}\u{1F1E6}', dial: '+380', mask: 'XX XXX XX XX', len: 9 },
-  { code: 'US', flag: '\u{1F1FA}\u{1F1F8}', dial: '+1',    mask: 'XXX XXX XXXX', len: 10 },
-  { code: 'GB', flag: '\u{1F1EC}\u{1F1E7}', dial: '+44',   mask: 'XXXX XXXXXX', len: 10 },
-  { code: 'PL', flag: '\u{1F1F5}\u{1F1F1}', dial: '+48',   mask: 'XXX XXX XXX', len: 9 },
-  { code: 'DE', flag: '\u{1F1E9}\u{1F1EA}', dial: '+49',   mask: 'XXXX XXXXXXX', len: 10 },
-  { code: 'FR', flag: '\u{1F1EB}\u{1F1F7}', dial: '+33',   mask: 'X XX XX XX XX', len: 9 },
-  { code: 'IT', flag: '\u{1F1EE}\u{1F1F9}', dial: '+39',   mask: 'XXX XXX XXXX', len: 10 },
-  { code: 'ES', flag: '\u{1F1EA}\u{1F1F8}', dial: '+34',   mask: 'XXX XX XX XX', len: 9 },
-  { code: 'IL', flag: '\u{1F1EE}\u{1F1F1}', dial: '+972',  mask: 'XX XXX XXXX', len: 9 },
-  { code: 'CA', flag: '\u{1F1E8}\u{1F1E6}', dial: '+1',    mask: 'XXX XXX XXXX', len: 10 },
+  { code: 'UA', name: 'Україна',             dial: '+380', mask: 'XX XXX XX XX', len: 9 },
+  { code: 'US', name: 'United States',       dial: '+1',    mask: 'XXX XXX XXXX', len: 10 },
+  { code: 'GB', name: 'United Kingdom',      dial: '+44',   mask: 'XXXX XXXXXX', len: 10 },
+  { code: 'PL', name: 'Polska',              dial: '+48',   mask: 'XXX XXX XXX', len: 9 },
+  { code: 'DE', name: 'Deutschland',         dial: '+49',   mask: 'XXXX XXXXXXX', len: 10 },
+  { code: 'FR', name: 'France',              dial: '+33',   mask: 'X XX XX XX XX', len: 9 },
+  { code: 'IT', name: 'Italia',              dial: '+39',   mask: 'XXX XXX XXXX', len: 10 },
+  { code: 'ES', name: 'España',              dial: '+34',   mask: 'XXX XX XX XX', len: 9 },
+  { code: 'IL', name: 'Israel',              dial: '+972',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'CA', name: 'Canada',              dial: '+1',    mask: 'XXX XXX XXXX', len: 10 },
+  { code: 'AU', name: 'Australia',           dial: '+61',   mask: 'XXXX XXXXXX', len: 9 },
+  { code: 'AT', name: 'Österreich',          dial: '+43',   mask: 'XXX XXXXXX', len: 10 },
+  { code: 'BE', name: 'België',              dial: '+32',   mask: 'XXX XX XX XX', len: 9 },
+  { code: 'BG', name: 'България',            dial: '+359',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'HR', name: 'Hrvatska',            dial: '+385',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'CY', name: 'Κύπρος',              dial: '+357',  mask: 'XX XXX XXX', len: 8 },
+  { code: 'CZ', name: 'Česko',               dial: '+420',  mask: 'XXX XXX XXX', len: 9 },
+  { code: 'DK', name: 'Danmark',             dial: '+45',   mask: 'XX XX XX XX', len: 8 },
+  { code: 'EE', name: 'Eesti',               dial: '+372',  mask: 'XXXX XXXX', len: 8 },
+  { code: 'FI', name: 'Suomi',               dial: '+358',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'GR', name: 'Ελλάδα',              dial: '+30',   mask: 'XX XXX XXXX', len: 10 },
+  { code: 'HU', name: 'Magyarország',        dial: '+36',   mask: 'XX XXX XXX', len: 9 },
+  { code: 'IE', name: 'Ireland',             dial: '+353',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'JP', name: '日本',                dial: '+81',   mask: 'XX XXXX XXXX', len: 10 },
+  { code: 'LV', name: 'Latvija',             dial: '+371',  mask: 'XX XXX XXX', len: 8 },
+  { code: 'LT', name: 'Lietuva',             dial: '+370',  mask: 'XXX XXX XXX', len: 8 },
+  { code: 'MT', name: 'Malta',               dial: '+356',  mask: 'XXXX XXXX', len: 8 },
+  { code: 'MD', name: 'Moldova',             dial: '+373',  mask: 'XXXX XXXX', len: 8 },
+  { code: 'NL', name: 'Nederland',           dial: '+31',   mask: 'XX XXXXXXX', len: 9 },
+  { code: 'NO', name: 'Norge',               dial: '+47',   mask: 'XXX XX XXX', len: 8 },
+  { code: 'PT', name: 'Portugal',            dial: '+351',  mask: 'XXX XXX XXX', len: 9 },
+  { code: 'RO', name: 'România',             dial: '+40',   mask: 'XX XXX XXX', len: 9 },
+  { code: 'SK', name: 'Slovensko',           dial: '+421',  mask: 'XXX XXX XXX', len: 9 },
+  { code: 'SI', name: 'Slovenija',           dial: '+386',  mask: 'XX XXX XXX', len: 8 },
+  { code: 'SE', name: 'Sverige',             dial: '+46',   mask: 'XX XXX XXXX', len: 9 },
+  { code: 'CH', name: 'Schweiz',             dial: '+41',   mask: 'XX XXX XX XX', len: 9 },
+  { code: 'TR', name: 'Türkiye',             dial: '+90',   mask: 'XXX XXX XX XX', len: 10 },
+  { code: 'AE', name: 'الإمارات',            dial: '+971',  mask: 'XX XXX XXXX', len: 9 },
+  { code: 'SA', name: 'المملكة العربية السعودية', dial: '+966', mask: 'XX XXX XXXX', len: 9 },
 ];
 
 function formatPhoneValue(raw, country) {
@@ -36,9 +65,20 @@ function formatPhoneValue(raw, country) {
 
 function PhoneInput({ value, onChange, required }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const ref = useRef(null);
-  const country = COUNTRIES.find((c) => c.dial === value?.split(' ')[0]?.replace('+', '+') && value?.startsWith(c.dial)) || COUNTRIES[0];
-  const localPart = value ? value.slice(country.dial.length).trim() : '';
+  const searchRef = useRef(null);
+
+  const country = COUNTRIES.find((c) => {
+    const v = (value || '').replace(/\s/g, '');
+    return v.startsWith(c.dial);
+  }) || COUNTRIES[0];
+
+  const filtered = COUNTRIES.filter((c) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.dial.includes(q);
+  });
 
   useEffect(() => {
     function handleClick(e) {
@@ -48,47 +88,78 @@ function PhoneInput({ value, onChange, required }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    if (open && searchRef.current) searchRef.current.focus();
+  }, [open]);
+
   function handleSelect(c) {
     setOpen(false);
-    onChange(`+${c.dial.replace('+', '')} `);
+    setSearch('');
+    onChange(`${c.dial} `);
   }
 
   function handleInput(e) {
     const raw = e.target.value;
-    if (raw.startsWith(country.dial) || raw.startsWith(`+${country.dial.replace('+', '')}`)) {
-      const local = raw.slice(country.dial.length + 1).replace(/\D/g, '');
-      onChange(`${country.dial} ${formatPhoneValue(local, country)}`);
+    const dialLen = country.dial.length;
+    const local = raw.replace(/[^\d]/g, '');
+    const formatted = formatPhoneValue(local.slice(dialLen > 0 ? 0 : 0), country);
+    if (local.length > 0) {
+      onChange(`${country.dial} ${formatted}`);
     } else {
-      const digits = raw.replace(/\D/g, '').slice(0, country.len);
-      onChange(`+${country.dial.replace('+', '')} ${formatPhoneValue(digits, country)}`);
+      onChange('');
+    }
+  }
+
+  function handleRawKeyDown(e) {
+    if (e.key === 'Backspace') {
+      const localDigits = (value || '').replace(/[^\d]/g, '').slice(country.dial.length);
+      if (localDigits.length === 0) {
+        onChange('');
+      }
     }
   }
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', gap: 0, border: '1px solid var(--line-light)', borderRadius: 10, overflow: 'hidden', background: 'var(--bg-secondary)' }}>
-        <button type="button" onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 8px', border: 'none', borderRight: '1px solid var(--line-light)', background: 'var(--bg-secondary)', cursor: 'pointer', fontSize: 14, minWidth: 60 }}>
-          <span>{country.flag}</span>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{country.dial}</span>
+    <div ref={ref} className="phone-input-wrap">
+      <div className="phone-input-box">
+        <button type="button" className="phone-country-btn" onClick={() => { setOpen(!open); setSearch(''); }}>
+          <span className="phone-flag">{country.code}</span>
+          <span className="phone-dial">{country.dial}</span>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ marginLeft: 2, opacity: 0.5 }}><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
         <input
           type="tel"
+          className="phone-number-input"
           value={value ? value.slice(country.dial.length + 1) : ''}
           onChange={handleInput}
+          onKeyDown={handleRawKeyDown}
           required={required}
           placeholder={formatPhoneValue('', country)}
-          style={{ flex: 1, padding: '12px 14px', border: 'none', background: 'transparent', fontSize: 15, color: 'var(--text)', outline: 'none' }}
         />
       </div>
       {open && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, maxHeight: 200, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-          {COUNTRIES.map((c) => (
-            <button key={c.code} type="button" onClick={() => handleSelect(c)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', border: 'none', background: c.code === country.code ? 'var(--accent-bg, rgba(0,0,0,0.05))' : 'transparent', cursor: 'pointer', fontSize: 14 }}>
-              <span>{c.flag}</span>
-              <span style={{ fontWeight: 500 }}>{c.dial}</span>
-              <span style={{ color: 'var(--muted)', fontSize: 12 }}>{c.code}</span>
-            </button>
-          ))}
+        <div className="phone-dropdown">
+          <div className="phone-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4, flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input
+              ref={searchRef}
+              type="text"
+              className="phone-search-input"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Пошук країни..."
+            />
+          </div>
+          <div className="phone-list">
+            {filtered.map((c) => (
+              <button key={c.code} type="button" className={`phone-option ${c.code === country.code ? 'active' : ''}`} onClick={() => handleSelect(c)}>
+                <span className="phone-flag">{c.code}</span>
+                <span className="phone-option-name">{c.name}</span>
+                <span className="phone-option-dial">{c.dial}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && <div className="phone-empty">Нічого не знайдено</div>}
+          </div>
         </div>
       )}
     </div>

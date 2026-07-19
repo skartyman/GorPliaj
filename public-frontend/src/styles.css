@@ -7102,3 +7102,138 @@ select.booking-compact-control {
   cursor: pointer;
   text-decoration: none;
 }
+
+/* Phone Input */
+.phone-input-wrap { position: relative; }
+.phone-input-box {
+  display: flex;
+  border: 1px solid var(--line-light);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  transition: border-color 0.15s;
+}
+.phone-input-box:focus-within { border-color: var(--accent, #e07a5f); }
+
+.phone-country-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 10px;
+  border: none;
+  border-right: 1px solid var(--line-light);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 80px;
+  transition: background 0.12s;
+}
+.phone-country-btn:hover { background: rgba(0,0,0,0.04); }
+
+.phone-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--accent, #e07a5f);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.phone-dial {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.phone-number-input {
+  flex: 1;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  letter-spacing: 0.5px;
+}
+.phone-number-input::placeholder { color: var(--muted); letter-spacing: 1px; }
+
+.phone-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+  overflow: hidden;
+}
+
+.phone-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.phone-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+.phone-search-input::placeholder { color: var(--muted); }
+
+.phone-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.phone-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  transition: background 0.1s;
+}
+.phone-option:hover { background: rgba(0,0,0,0.04); }
+.phone-option.active { background: rgba(0,0,0,0.06); }
+
+.phone-option-name {
+  flex: 1;
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-option-dial {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.phone-empty {
+  padding: 16px 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
