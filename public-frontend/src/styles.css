@@ -7108,14 +7108,17 @@ select.booking-compact-control {
   display: inline-block;
   margin-top: 6px;
   padding: 0;
-  background: none;
+  background: none !important;
   border: none;
-  color: var(--accent, #e07a5f);
+  border-bottom: 1px dashed #DAA520;
+  padding-bottom: 1px;
+  color: #DAA520;
   font-size: 12px;
+  font-weight: 400;
   cursor: pointer;
   text-decoration: none;
-  border-bottom: 1px dashed var(--accent, #e07a5f);
-  padding-bottom: 1px;
   transition: opacity 0.15s;
+  border-radius: 0;
+  line-height: 1.4;
 }
 .phone-intl-link:hover { opacity: 0.7; }

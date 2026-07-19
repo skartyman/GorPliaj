@@ -484,9 +484,9 @@ export default function EventDetailPage() {
                           <p className="ticket-email-note" id="ticket-email-note">
                             <span aria-hidden="true">i</span>
                             {c({
-                              ua: 'Вкажіть правильний email — на нього надійдуть лист і квитки.',
-                              ru: 'Укажите правильный email — на него придут письмо и билеты.',
-                              en: 'Use a valid email address — your confirmation and tickets will be sent there.'
+                              ua: 'Вкажіть правильний email - на нього надійдуть лист і квитки.',
+                              ru: 'Укажите правильный email - на него придут письмо и билеты.',
+                              en: 'Use a valid email address - your confirmation and tickets will be sent there.'
                             })}
                           </p>
                         </div>

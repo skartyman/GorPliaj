@@ -1803,8 +1803,8 @@ export default function UnifiedBookingPage() {
     if (submitBookingKind === 'BEACH') {
       if (form.timeFrom > '13:00') {
         setErrorMessage(c({
-          ua: 'За правилами закладу, при бронюванні пляжних послуг обовʼязкова явка гостя — до 13:00.',
-          ru: 'По правилам заведения, при бронировании пляжных услуг обязательная явка гостя — до 13:00.',
+          ua: 'За правилами закладу, при бронюванні пляжних послуг обовʼязкова явка гостя - до 13:00.',
+          ru: 'По правилам заведения, при бронировании пляжных услуг обязательная явка гостя - до 13:00.',
           en: 'According to venue rules, for beach services bookings, the guest must arrive before 13:00.'
         }));
         return;
@@ -2940,8 +2940,8 @@ export default function UnifiedBookingPage() {
                       <span>
                         {effectiveBookingGroupSuggestion.complete
                           ? c({
-                            ua: `Загальна місткість — до ${effectiveBookingGroupSuggestion.totalCapacity} гостей. Усі позиції оформлюються однією оплатою.`,
-                            ru: `Общая вместимость — до ${effectiveBookingGroupSuggestion.totalCapacity} гостей. Все позиции оформляются одной оплатой.`,
+                            ua: `Загальна місткість - до ${effectiveBookingGroupSuggestion.totalCapacity} гостей. Усі позиції оформлюються однією оплатою.`,
+                            ru: `Общая вместимость - до ${effectiveBookingGroupSuggestion.totalCapacity} гостей. Все позиции оформляются одной оплатой.`,
                             en: `Combined capacity is up to ${effectiveBookingGroupSuggestion.totalCapacity}. All positions use one checkout.`
                           })
                           : c({

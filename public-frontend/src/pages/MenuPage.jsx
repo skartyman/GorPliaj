@@ -174,7 +174,7 @@ export default function MenuPage() {
           const label = labels[data.status];
           if (label) {
             const name = orderWaiterName || '';
-            setOrderSuccessBanner(`${label}${name ? ` — ${name}` : ''}`);
+            setOrderSuccessBanner(`${label}${name ? ` - ${name}` : ''}`);
           }
         }
       } catch {}
@@ -291,7 +291,7 @@ export default function MenuPage() {
       setCartOpen(false);
       const name = order.waiterName || '';
       const msg = name
-        ? c({ ua: `✅ Замовлення надіслано — Офіціант: ${name}`, ru: `✅ Заказ отправлен — Официант: ${name}`, en: `✅ Order sent — Waiter: ${name}` })
+        ? c({ ua: `✅ Замовлення надіслано - Офіціант: ${name}`, ru: `✅ Заказ отправлен - Официант: ${name}`, en: `✅ Order sent - Waiter: ${name}` })
         : c({ ua: '✅ Замовлення надіслано', ru: '✅ Заказ отправлен', en: '✅ Order sent' });
       setOrderSuccessBanner(msg);
       setTimeout(() => { setOrderSuccessBanner(''); }, 5000);

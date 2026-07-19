@@ -191,7 +191,9 @@ export default function CabinetPage() {
       <div className="cabinet-page">
         <div className="cabinet-login">
           <h1>{c({ ua: 'Кабінет гостя', ru: 'Кабинет гостя', en: 'Guest cabinet' })}</h1>
-          <p className="cabinet-sub">{c({ ua: 'Ваші бронювання, улюблені столики та історія — в одному місці. Імʼя та телефон потрібні для бронювання.', ru: 'Ваши брони, любимые столики и история — в одном месте. Имя и телефон нужны для бронирования.', en: 'Your bookings, favorite tables and history — all in one place. Name and phone are required for booking.' })}</p>
+          <p className="cabinet-sub">{c({ ua: 'Ваші бронювання, улюблені столики та історія - в одному місці. Імʼя та телефон потрібні для бронювання.',
+            ru: 'Ваши брони, любимые столики и история - в одном месте. Имя и телефон нужны для бронирования.',
+            en: 'Your bookings, favorite tables and history - all in one place. Name and phone are required for booking.' })}</p>
           <form onSubmit={handleRequestLink} className="cabinet-form">
             <label>
               {c({ ua: 'Імʼя *', ru: 'Имя *', en: 'Name *' })}
