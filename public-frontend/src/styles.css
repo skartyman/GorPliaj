@@ -2906,7 +2906,7 @@ h3 {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(139, 139, 148, 0.68) transparent;
-  padding: 16px;
+  padding: 20px;
   box-sizing: border-box;
   align-self: start;
   position: sticky;
@@ -3686,7 +3686,7 @@ h3 {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   margin: 12px 0 4px;
-  padding: 10px 0;
+  padding: 12px 4px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }

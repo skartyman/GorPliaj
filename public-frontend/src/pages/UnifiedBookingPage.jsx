@@ -2783,75 +2783,66 @@ export default function UnifiedBookingPage() {
             />
           ) : activePanelTable || activePanelObject ? (
             <>
-              <button
-                type="button"
-                className="panel-close-btn"
-                onClick={closePanel}
-                style={{
-                  position: 'absolute',
-                  top: 16,
-                  right: 16,
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  color: 'var(--text-muted, #64748b)',
-                  cursor: 'pointer',
-                  lineHeight: 1,
-                  padding: '4px 8px',
-                  zIndex: 10
-                }}
-                aria-label="Close panel"
-              >
-                ×
-              </button>
-
-              <h3 style={{ margin: '0 0 12px', paddingRight: 80 }}>{t('mapSelectedTitle')}</h3>
-
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  onClick={handleTogglePanelFavorite}
-                  aria-label={panelFav ? 'Remove from favorites' : 'Add to favorites'}
-                  title={panelFav ? c({ ua: 'Прибрати з улюбленого', ru: 'Убрать из избранного', en: 'Remove from favorites' }) : c({ ua: 'В улюблене', ru: 'В избранное', en: 'Add to favorites' })}
-                  style={{
-                    position: 'absolute',
-                    top: 14,
-                    right: 52,
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '22px',
-                    cursor: 'pointer',
-                    lineHeight: 1,
-                    color: panelFav ? 'var(--accent)' : 'var(--text-muted, #64748b)',
-                    padding: '4px 8px',
-                    zIndex: 10
-                  }}
-                >
-                  {panelFav ? '♥' : '♡'}
-                </button>
-              ) : (
-                <FavTooltip type="table">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px' }}>
+                <h3 style={{ margin: 0, flex: 1, minWidth: 0 }}>{t('mapSelectedTitle')}</h3>
+                {isLoggedIn ? (
                   <button
                     type="button"
-                    aria-label="Add to favorites"
+                    onClick={handleTogglePanelFavorite}
+                    aria-label={panelFav ? 'Remove from favorites' : 'Add to favorites'}
+                    title={panelFav ? c({ ua: 'Прибрати з улюбленого', ru: 'Убрать из избранного', en: 'Remove from favorites' }) : c({ ua: 'В улюблене', ru: 'В избранное', en: 'Add to favorites' })}
                     style={{
-                      position: 'absolute',
-                      top: 14,
-                      right: 52,
                       background: 'none',
                       border: 'none',
                       fontSize: '22px',
                       cursor: 'pointer',
                       lineHeight: 1,
-                      color: 'var(--text-muted, #64748b)',
+                      color: panelFav ? 'var(--accent)' : 'var(--text-muted, #64748b)',
                       padding: '4px 8px',
-                      zIndex: 10
+                      flexShrink: 0
                     }}
                   >
-                    ♡
+                    {panelFav ? '♥' : '♡'}
                   </button>
-                </FavTooltip>
-              )}
+                ) : (
+                  <FavTooltip type="table">
+                    <button
+                      type="button"
+                      aria-label="Add to favorites"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '22px',
+                        cursor: 'pointer',
+                        lineHeight: 1,
+                        color: 'var(--text-muted, #64748b)',
+                        padding: '4px 8px',
+                        flexShrink: 0
+                      }}
+                    >
+                      ♡
+                    </button>
+                  </FavTooltip>
+                )}
+                <button
+                  type="button"
+                  className="panel-close-btn"
+                  onClick={closePanel}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    color: 'var(--text-muted, #64748b)',
+                    cursor: 'pointer',
+                    lineHeight: 1,
+                    padding: '4px 8px',
+                    flexShrink: 0
+                  }}
+                  aria-label="Close panel"
+                >
+                  ×
+                </button>
+              </div>
 
               {activePanelTablePhoto || activePanelObjectMeta?.photoUrl ? (
                 <div style={{ marginBottom: 14, borderRadius: 8, overflow: 'hidden' }}>
