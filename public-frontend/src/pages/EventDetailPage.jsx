@@ -8,18 +8,7 @@ import { useMeta } from '../hooks/useMeta';
 import { useLocale } from '../state/locale';
 import { sanitizeRichText } from '../lib/richText';
 import { captureAnalytics, captureException } from '../lib/analytics';
-
-function formatPhone(value) {
-  const digits = value.replace(/\D/g, '').slice(0, 12);
-  if (!digits) return '';
-  const d = digits.startsWith('38') ? digits.slice(2) : digits;
-  let out = '+38 (0';
-  if (d.length > 1) out += d.slice(1, 3);
-  if (d.length > 3) out += ') ' + d.slice(3, 6);
-  if (d.length > 6) out += '-' + d.slice(6, 8);
-  if (d.length > 8) out += '-' + d.slice(8, 10);
-  return d.length > 1 ? out : '+38 (0';
-}
+import PhoneInput from '../components/PhoneInput';
 
 function formatSessionRange(session, locale) {
   if (!session?.startsAt) return '';
@@ -503,14 +492,10 @@ export default function EventDetailPage() {
                         </div>
                         <div className="form-group">
                           <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
-                          <input
-                            type="tel"
-                            className="form-input"
-                            placeholder="+38 (0XX) XXX-XX-XX"
-                            required
-                            minLength="7"
+                          <PhoneInput
                             value={orderForm.customerPhone}
-                            onChange={(eventValue) => setOrderForm({ ...orderForm, customerPhone: formatPhone(eventValue.target.value) })}
+                            onChange={(v) => setOrderForm({ ...orderForm, customerPhone: v })}
+                            required
                           />
                         </div>
                         <button className="btn btn-primary ticket-submit-btn" type="submit" disabled={sales.loading || !selectedTicketType}>

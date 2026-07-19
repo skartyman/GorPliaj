@@ -4,13 +4,13 @@ import { holdsApi, mapApi, bookingsApi, eventsApi, guestApi } from '../lib/api';
 import { captureAnalytics, captureException, getDistinctId } from '../lib/analytics';
 import { clamp, clampTranslate, getInitialViewTransform, getObjectCenter, getPublicMapData, zoomAroundViewportPoint, getUsefulContentBounds } from '../lib/map';
 import FavTooltip from '../components/FavTooltip';
+import PhoneInput from '../components/PhoneInput';
 import { localizeField, localizedCopy } from '../lib/i18n';
 import { useLocale } from '../state/locale';
 import { useGuest } from '../state/guest';
 import { useMeta } from '../hooks/useMeta';
 import { generateTimeSlots, getDefaultTime } from '../utils/timeSlots';
 import {
-  formatPhone,
   money,
   getUnitDisplayName,
   formatUkrainianDate,
@@ -3075,14 +3075,10 @@ export default function UnifiedBookingPage() {
                         </div>
                         <div className="booking-contact-field">
                           <label>{c({ ua: 'Телефон', ru: 'Телефон', en: 'Phone' })}</label>
-                          <input
-                            type="tel"
-                            className="form-input"
+                          <PhoneInput
                             value={form.customerPhone}
-                            placeholder="+38 (0XX) XXX-XX-XX"
+                            onChange={(v) => setForm((current) => ({ ...current, customerPhone: v }))}
                             required
-                            minLength="7"
-                            onChange={(e) => setForm((current) => ({ ...current, customerPhone: formatPhone(e.target.value) }))}
                           />
                         </div>
                         <div className="booking-contact-field">
