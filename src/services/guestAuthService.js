@@ -71,7 +71,7 @@ function verifyToken(token) {
 async function getGuestById(guestId) {
   return prisma.guest.findUnique({
     where: { id: guestId },
-    select: { id: true, email: true, phone: true, name: true, createdAt: true, lastLoginAt: true }
+    select: { id: true, email: true, phone: true, name: true, shellBalance: true, createdAt: true, lastLoginAt: true }
   });
 }
 
@@ -118,6 +118,10 @@ async function verifyMagicLink(token) {
     where: { id: link.guestId },
     data: { lastLoginAt: new Date() }
   });
+
+  const shellService = require('./shellService');
+  shellService.grantRegistrationBonus(link.guestId).catch(() => {});
+
   return link.guest;
 }
 

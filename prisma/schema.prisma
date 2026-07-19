@@ -241,13 +241,16 @@ model Guest {
   email        String   @unique
   phone        String?
   name         String?
+  shellBalance Decimal  @default(0) @db.Decimal(10, 2)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   lastLoginAt  DateTime?
-  reservations Reservation[]
-  favorites       GuestFavoriteUnit[]
-  favoriteOrders  GuestFavoriteOrder[]
-  magicLinks      GuestMagicLink[]
+  reservations       Reservation[]
+  favorites          GuestFavoriteUnit[]
+  favoriteOrders     GuestFavoriteOrder[]
+  magicLinks         GuestMagicLink[]
+  shellTransactions  ShellTransaction[]
+  payments           Payment[]
 
   @@index([phone])
 }
@@ -292,6 +295,37 @@ model GuestFavoriteOrder {
   @@index([guestId])
 }
 
+model ShellTransaction {
+  id          Int               @id @default(autoincrement())
+  guestId     Int
+  guest       Guest             @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  type        ShellTxType
+  amount      Decimal           @db.Decimal(10, 2)
+  balanceAfter Decimal          @db.Decimal(10, 2)
+  source      ShellSource
+  description String?
+  referenceId Int?
+  createdAt   DateTime          @default(now())
+
+  @@index([guestId])
+  @@index([createdAt])
+}
+
+enum ShellTxType {
+  TOPUP
+  EARN
+  SPEND
+  ADJUST
+}
+
+enum ShellSource {
+  REGISTRATION
+  TICKET_PURCHASE
+  MENU_ORDER
+  TOPUP
+  ADMIN_ADJUSTMENT
+}
+
 model TableHold {
   id              Int             @id @default(autoincrement())
   tableId         Int
@@ -321,6 +355,7 @@ model Payment {
   id                Int           @id @default(autoincrement())
   reservationId     Int?          @unique
   ticketOrderId     Int?          @unique
+  guestId           Int?
   provider          String
   providerPaymentId String?
   providerOrderId   String?
@@ -334,11 +369,13 @@ model Payment {
   updatedAt         DateTime      @updatedAt
   reservation       Reservation?  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   ticketOrder       TicketOrder?  @relation(fields: [ticketOrderId], references: [id], onDelete: Cascade)
+  guest             Guest?        @relation(fields: [guestId], references: [id], onDelete: SetNull)
 
   @@index([ticketOrderId])
   @@index([providerPaymentId])
   @@index([providerOrderId])
   @@index([status])
+  @@index([guestId])
 }
 
 model Event {

@@ -26,13 +26,19 @@ function statusLabel(status, locale) {
 export default function CabinetPage() {
   const { locale } = useLocale();
   const c = (values) => localizedCopy(values, locale);
-  const { guest, isLoggedIn, login, logout: ctxLogout } = useGuest();
+  const { guest, isLoggedIn, login, logout: ctxLogout, refresh } = useGuest();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [reservations, setReservations] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [favOrders, setFavOrders] = useState([]);
+  const [shellBalance, setShellBalance] = useState(0);
+  const [shellHistory, setShellHistory] = useState([]);
+  const [shellPage, setShellPage] = useState(1);
+  const [shellTotalPages, setShellTotalPages] = useState(1);
+  const [topupAmount, setTopupAmount] = useState('');
+  const [topupLoading, setTopupLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -44,14 +50,16 @@ export default function CabinetPage() {
 
   const loadCabinet = useCallback(async () => {
     try {
-      const [res, fav, orders] = await Promise.all([
+      const [res, fav, orders, shell] = await Promise.all([
         guestApi.reservations(),
         guestApi.favorites(),
-        guestApi.favoriteOrders()
+        guestApi.favoriteOrders(),
+        guestApi.shellBalance()
       ]);
       setReservations(res.reservations || []);
       setFavorites(fav.favorites || []);
       setFavOrders(orders.orders || []);
+      setShellBalance(shell.balance || 0);
     } catch (err) {
       setError(err.message || c({ ua: 'Не вдалося завантажити кабінет.', ru: 'Не удалось загрузить кабинет.', en: 'Failed to load cabinet.' }));
     }
@@ -80,6 +88,19 @@ export default function CabinetPage() {
         .finally(() => setLoading(false));
     }
   }, [searchParams, isLoggedIn, login, c]);
+
+  useEffect(() => {
+    if (searchParams.get('topup') === 'success' && isLoggedIn) {
+      setMessage(c({ ua: 'Баланс успішно поповнено!', ru: 'Баланс успешно пополнен!', en: 'Balance topped up successfully!' }));
+      setTab('shells');
+      loadCabinet();
+      loadShellHistory();
+      refresh();
+      searchParams.delete('topup');
+      searchParams.delete('tab');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, isLoggedIn]);
 
   const handleRequestLink = async (e) => {
     e.preventDefault();
@@ -115,6 +136,32 @@ export default function CabinetPage() {
     setReservations([]);
     setFavorites([]);
     setFavOrders([]);
+    setShellBalance(0);
+    setShellHistory([]);
+  };
+
+  const loadShellHistory = async (page = 1) => {
+    try {
+      const data = await guestApi.shellHistory(page);
+      setShellHistory(data.transactions || []);
+      setShellPage(data.page || 1);
+      setShellTotalPages(data.totalPages || 1);
+    } catch {}
+  };
+
+  const handleTopup = async () => {
+    const amount = parseFloat(topupAmount);
+    if (!amount || amount <= 0) return;
+    setTopupLoading(true);
+    try {
+      const result = await guestApi.shellTopup(amount);
+      if (result.paymentUrl) {
+        window.location.href = result.paymentUrl;
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to create top-up.');
+      setTopupLoading(false);
+    }
   };
 
   const handleCancel = async (id) => {
@@ -245,6 +292,9 @@ export default function CabinetPage() {
         <button className={tab === 'favOrders' ? 'active' : ''} onClick={() => setTab('favOrders')}>
           {c({ ua: 'Улюблені замовлення', ru: 'Избранные заказы', en: 'Favorite orders' })}
         </button>
+        <button className={tab === 'shells' ? 'active' : ''} onClick={() => { setTab('shells'); loadShellHistory(); }}>
+          {c({ ua: 'Ракушки', ru: 'Ракушки', en: 'Shells' })} {guest?.shellBalance != null ? `(${guest.shellBalance})` : ''}
+        </button>
       </div>
 
       {tab === 'reservations' && (
@@ -327,6 +377,53 @@ export default function CabinetPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'shells' && (
+        <div className="cabinet-shells">
+          <div className="shells-balance-card">
+            <div className="shells-balance-label">{c({ ua: 'Ваш баланс', ru: 'Ваш баланс', en: 'Your balance' })}</div>
+            <div className="shells-balance-value">{guest?.shellBalance || 0} {c({ ua: 'ракушок', ru: 'ракушек', en: 'shells' })}</div>
+            <div className="shells-topup-row">
+              <input
+                type="number"
+                min="1"
+                step="1"
+                className="form-input shells-topup-input"
+                placeholder={c({ ua: 'Сума поповнення (₴)', ru: 'Сумма пополнения (₴)', en: 'Top-up amount (₴)' })}
+                value={topupAmount}
+                onChange={(e) => setTopupAmount(e.target.value)}
+              />
+              <button className="cabinet-book-btn" onClick={handleTopup} disabled={topupLoading || !topupAmount}>
+                {topupLoading ? '...' : c({ ua: 'Поповнити', ru: 'Пополнить', en: 'Top up' })}
+              </button>
+            </div>
+            <p className="shells-rate">1 ₴ = 1 {c({ ua: 'ракушка', ru: 'ракушка', en: 'shell' })}</p>
+          </div>
+
+          <h3 className="shells-history-title">{c({ ua: 'Історія операцій', ru: 'История операций', en: 'Transaction history' })}</h3>
+          {shellHistory.length === 0 && <p className="cabinet-empty">{c({ ua: 'Поки немає операцій.', ru: 'Пока нет операций.', en: 'No transactions yet.' })}</p>}
+          {shellHistory.map((t) => (
+            <div key={t.id} className="cabinet-card shells-tx">
+              <div className="cabinet-card-main">
+                <strong>{t.description || t.source}</strong>
+                <span className="cabinet-meta">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="cabinet-card-side">
+                <span className={`shells-tx-amount ${t.type === 'SPEND' ? 'negative' : 'positive'}`}>
+                  {t.type === 'SPEND' ? '-' : '+'}{t.amount}
+                </span>
+              </div>
+            </div>
+          ))}
+          {shellTotalPages > 1 && (
+            <div className="shells-pagination">
+              <button className="cabinet-cancel" disabled={shellPage <= 1} onClick={() => loadShellHistory(shellPage - 1)}>←</button>
+              <span>{shellPage} / {shellTotalPages}</span>
+              <button className="cabinet-cancel" disabled={shellPage >= shellTotalPages} onClick={() => loadShellHistory(shellPage + 1)}>→</button>
+            </div>
+          )}
         </div>
       )}
     </div>

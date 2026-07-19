@@ -165,6 +165,18 @@ function generateTicketPaymentOrderId(ticketOrderId) {
   return `GPT-${ticketOrderId}-${Date.now()}`;
 }
 
+function generateShellTopupOrderId(guestId) {
+  return `GPSH-${guestId}-${Date.now()}`;
+}
+
+function parseShellTopupOrderId(orderId) {
+  if (!orderId || typeof orderId !== 'string') return null;
+  const match = orderId.match(/^GPSH-(\d+)-/);
+  if (!match) return null;
+  const id = parseInt(match[1], 10);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 function parseOrderId(orderId) {
   if (!orderId || typeof orderId !== 'string') return null;
   const parts = orderId.split('-');
@@ -232,9 +244,64 @@ async function applyTicketPaymentStatus({ ticketOrderId, providerOrderId, provid
   if (ourStatus === 'PAID') {
     const ticketSalesService = require('./ticketSalesService');
     await ticketSalesService.updateOrderStatus(ticketOrderId, 'PAID');
+
+    const shellService = require('./shellService');
+    const ticketOrder = await prisma.ticketOrder.findUnique({
+      where: { id: ticketOrderId },
+      select: { customerEmail: true }
+    });
+    if (ticketOrder?.customerEmail) {
+      const guest = await prisma.guest.findUnique({
+        where: { email: ticketOrder.customerEmail.toLowerCase().trim() },
+        select: { id: true }
+      });
+      if (guest) {
+        shellService.grantTicketBonus(guest.id, ticketOrderId).catch(() => {});
+      }
+    }
   }
 
   return payment;
+}
+
+async function applyShellTopupStatus({ guestId, providerOrderId, providerPaymentId, amount, currency = 'UAH', status, rawPayload }) {
+  const ourStatus = mapHutkoStatus(status);
+  const updateData = {
+    ...(providerPaymentId ? { providerPaymentId: String(providerPaymentId) } : {}),
+    status: ourStatus,
+    currency,
+    rawPayload
+  };
+
+  if (amount) {
+    const parsedAmount = parseInt(amount, 10) / 100;
+    if (!isNaN(parsedAmount)) {
+      updateData.amount = parsedAmount;
+    }
+  }
+
+  if (ourStatus === 'PAID') {
+    updateData.paidAt = new Date();
+  }
+
+  const payment = await prisma.payment.findFirst({
+    where: { providerOrderId }
+  });
+
+  if (!payment) return null;
+
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: updateData
+  });
+
+  if (ourStatus === 'PAID') {
+    const shellService = require('./shellService');
+    const creditedAmount = Number(updateData.amount || payment.amount);
+    await shellService.creditTopup(guestId, creditedAmount, payment.id);
+  }
+
+  return { ...payment, ...updateData };
 }
 
 async function createCheckoutSession({ reservationId, ticketOrderId = null, amount, description, currency = 'UAH', customerEmail, customerPhone, returnTo }) {
@@ -396,6 +463,53 @@ async function createTicketCheckoutSession({ ticketOrderId }) {
   return { type: 'SUCCESS', paymentUrl: checkoutUrl, paymentId: payment.id };
 }
 
+async function createShellTopupCheckoutSession({ guestId, amount }) {
+  const config = hutkoUtils.getConfig();
+  if (!config.isConfigured) {
+    return { type: 'NOT_CONFIGURED', message: 'Payment gateway is not configured. Set FONDY_MERCHANT_ID and FONDY_SECRET_KEY.' };
+  }
+
+  const orderId = generateShellTopupOrderId(guestId);
+  const amountCents = Math.round(Number(amount) * 100);
+  const appBaseUrl = process.env.APP_BASE_URL || 'https://gorpliaj.fly.dev';
+
+  const requestData = hutkoUtils.prepareRequest({
+    order_id: orderId,
+    order_desc: `Поповнення балансу ракушок: ${amount} ₴`,
+    currency: 'UAH',
+    amount: String(amountCents),
+    response_url: `${appBaseUrl}/api/paygate/hutko/return/public?kind=shell_topup&return_to=${encodeURIComponent('/cabinet?tab=shells&topup=success')}`,
+    server_callback_url: `${appBaseUrl}/api/paygate/hutko/callback`,
+    lifetime: 3600
+  });
+
+  const raw = await postToHutko('/api/checkout/url/', requestData);
+  const parsed = hutkoUtils.parseResponse(raw);
+
+  if (!parsed.success) {
+    return { type: 'PROVIDER_ERROR', message: parsed.error, raw: parsed.raw };
+  }
+
+  const checkoutUrl = parsed.data.checkout_url;
+  const providerPaymentId = parsed.data.payment_id ? String(parsed.data.payment_id) : null;
+
+  const payment = await prisma.payment.create({
+    data: {
+      guestId,
+      provider: 'hutko',
+      providerPaymentId,
+      providerOrderId: orderId,
+      paymentUrl: checkoutUrl,
+      amount,
+      currency: 'UAH',
+      status: 'PENDING',
+      rawPayload: raw
+    }
+  });
+
+  return { type: 'SUCCESS', paymentUrl: checkoutUrl, paymentId: payment.id, amount };
+}
+
 async function processCallback(payload) {
   if (!payload) {
     return { type: 'INVALID', message: 'Empty callback payload' };
@@ -418,8 +532,9 @@ async function processCallback(payload) {
   const ourStatus = mapHutkoStatus(hutkoStatus);
 
   const ticketOrderId = parseTicketPaymentOrderId(orderId);
-  const reservationId = ticketOrderId ? null : parseOrderId(orderId);
-  if (!reservationId && !ticketOrderId) {
+  const shellTopupGuestId = parseShellTopupOrderId(orderId);
+  const reservationId = (ticketOrderId || shellTopupGuestId) ? null : parseOrderId(orderId);
+  if (!reservationId && !ticketOrderId && !shellTopupGuestId) {
     return { type: 'NOT_FOUND', message: 'Could not parse reservation ID from order_id' };
   }
 
@@ -451,6 +566,16 @@ async function processCallback(payload) {
       status: hutkoStatus,
       rawPayload: payload
     })
+    : shellTopupGuestId
+    ? await applyShellTopupStatus({
+      guestId: shellTopupGuestId,
+      providerOrderId: orderId,
+      providerPaymentId,
+      amount,
+      currency,
+      status: hutkoStatus,
+      rawPayload: payload
+    })
     : await prisma.payment.upsert({
       where: { reservationId },
       update: updateData,
@@ -467,7 +592,7 @@ async function processCallback(payload) {
     });
 
   if (ourStatus === 'PAID') {
-    if (ticketOrderId) {
+    if (ticketOrderId || shellTopupGuestId) {
       return { type: 'SUCCESS', payment };
     }
 
@@ -664,14 +789,17 @@ async function resolvePublicReturnPath(providerOrderId) {
 module.exports = {
   createCheckoutSession,
   createTicketCheckoutSession,
+  createShellTopupCheckoutSession,
   processCallback,
   getPaymentStatus,
   syncTicketOrderPaymentStatus,
   syncReservationPaymentStatus,
   generateOrderId,
   generateTicketPaymentOrderId,
+  generateShellTopupOrderId,
   parseOrderId,
   parseTicketPaymentOrderId,
+  parseShellTopupOrderId,
   mapHutkoStatus,
   resolvePublicReturnPath
 };

@@ -7132,3 +7132,24 @@ select.booking-compact-control {
   line-height: 1.4;
 }
 .phone-intl-link:hover { opacity: 0.7; }
+
+/* Shells (Ракушки) */
+.cabinet-shells { display: grid; gap: 16px; }
+.shells-balance-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+.shells-balance-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+.shells-balance-value { font-size: 2rem; font-weight: 700; color: var(--brand); margin-bottom: 16px; }
+.shells-topup-row { display: flex; gap: 8px; align-items: center; }
+.shells-topup-input { flex: 1; min-width: 0; }
+.shells-rate { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+.shells-history-title { font-size: 1rem; font-weight: 600; margin: 0; }
+.shells-tx { align-items: center; }
+.shells-tx-amount { font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+.shells-tx-amount.positive { color: #4caf50; }
+.shells-tx-amount.negative { color: #ff8a8a; }
+.shells-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; }

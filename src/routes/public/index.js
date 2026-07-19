@@ -58,4 +58,8 @@ router.post('/guest/favorite-orders', requireGuestAuth, guestController.createFa
 router.patch('/guest/favorite-orders/:id', requireGuestAuth, guestController.renameFavoriteOrder);
 router.delete('/guest/favorite-orders/:id', requireGuestAuth, guestController.deleteFavoriteOrder);
 
+router.get('/guest/shells/balance', requireGuestAuth, guestController.getShellBalance);
+router.get('/guest/shells/history', requireGuestAuth, guestController.getShellHistory);
+router.post('/guest/shells/topup', requireGuestAuth, guestController.createShellTopup);
+
 module.exports = router;

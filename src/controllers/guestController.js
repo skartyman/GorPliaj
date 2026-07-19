@@ -1,5 +1,7 @@
 const prisma = require('../lib/prisma');
 const guestAuthService = require('../services/guestAuthService');
+const shellService = require('../services/shellService');
+const hutkoService = require('../services/hutkoService');
 const { sendGuestMagicLinkEmail } = require('../services/emailService');
 const { getBaseUrl } = require('../utils/deliveryPresentation');
 
@@ -46,7 +48,8 @@ async function verifyMagicLink(req, res) {
         id: guest.id,
         email: guest.email,
         phone: guest.phone,
-        name: guest.name
+        name: guest.name,
+        shellBalance: Number(guest.shellBalance || 0)
       }
     });
   } catch (error) {
@@ -235,6 +238,51 @@ async function deleteFavoriteOrder(req, res) {
   }
 }
 
+async function getShellBalance(req, res) {
+  try {
+    const balance = await shellService.getBalance(req.guestId);
+    return res.status(200).json({ balance });
+  } catch (error) {
+    console.error('[guestController.getShellBalance] Failed.', error);
+    return res.status(500).json({ message: 'Failed to get shell balance.' });
+  }
+}
+
+async function getShellHistory(req, res) {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 20;
+    const history = await shellService.getHistory(req.guestId, { page, limit });
+    return res.status(200).json(history);
+  } catch (error) {
+    console.error('[guestController.getShellHistory] Failed.', error);
+    return res.status(500).json({ message: 'Failed to get shell history.' });
+  }
+}
+
+async function createShellTopup(req, res) {
+  try {
+    const amount = parseFloat(req.body.amount);
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Amount must be a positive number.' });
+    }
+    const result = await hutkoService.createShellTopupCheckoutSession({
+      guestId: req.guestId,
+      amount
+    });
+    if (result.type === 'NOT_CONFIGURED') {
+      return res.status(503).json({ message: result.message });
+    }
+    if (result.type === 'PROVIDER_ERROR') {
+      return res.status(502).json({ message: result.message });
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('[guestController.createShellTopup] Failed.', error);
+    return res.status(500).json({ message: 'Failed to create shell top-up.' });
+  }
+}
+
 module.exports = {
   requestMagicLink,
   verifyMagicLink,
@@ -247,5 +295,8 @@ module.exports = {
   listFavoriteOrders,
   createFavoriteOrder,
   renameFavoriteOrder,
-  deleteFavoriteOrder
+  deleteFavoriteOrder,
+  getShellBalance,
+  getShellHistory,
+  createShellTopup
 };

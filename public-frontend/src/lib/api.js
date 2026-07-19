@@ -185,5 +185,8 @@ export const guestApi = {
   favoriteOrders: () => request('/guest/favorite-orders'),
   createFavoriteOrder: (payload) => request('/guest/favorite-orders', { method: 'POST', body: JSON.stringify(payload) }),
   renameFavoriteOrder: (id, name) => request(`/guest/favorite-orders/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
-  deleteFavoriteOrder: (id) => request(`/guest/favorite-orders/${id}`, { method: 'DELETE' })
+  deleteFavoriteOrder: (id) => request(`/guest/favorite-orders/${id}`, { method: 'DELETE' }),
+  shellBalance: () => request('/guest/shells/balance'),
+  shellHistory: (page = 1) => request(`/guest/shells/history?page=${page}`),
+  shellTopup: (amount) => request('/guest/shells/topup', { method: 'POST', body: JSON.stringify({ amount }) })
 };

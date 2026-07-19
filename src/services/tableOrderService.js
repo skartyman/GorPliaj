@@ -111,6 +111,18 @@ async function completeOrder(orderId) {
     data: { status: 'COMPLETED', completedAt: new Date() }
   });
 
+  if (order.customerPhone) {
+    const normalizedPhone = order.customerPhone.replace(/\D/g, '');
+    const guest = await prisma.guest.findFirst({
+      where: { phone: { contains: normalizedPhone } },
+      select: { id: true }
+    });
+    if (guest) {
+      const shellService = require('./shellService');
+      shellService.grantMenuOrderBonus(guest.id, orderId).catch(() => {});
+    }
+  }
+
   broadcastToGuest(order.id, { type: 'STATUS_UPDATE', id: order.id, status: order.status, completedAt: order.completedAt?.toISOString() });
   return order;
 }
