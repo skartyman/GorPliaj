@@ -5835,6 +5835,16 @@ h3 {
     margin-top: 4px;
   }
 
+  .menu-card-actions {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .menu-fav-btn {
+    font-size: 15px;
+    padding: 2px 4px;
+  }
+
   .menu-qty button {
     width: 28px;
     height: 28px;
