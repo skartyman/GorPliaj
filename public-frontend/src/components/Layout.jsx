@@ -254,17 +254,17 @@ export default function Layout() {
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
-              <p style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--brand)' }}>{brandName}</p>
-              <p style={{ marginTop: 8 }}>{footerDescription}</p>
+              <p className="footer-brand-name">{brandName}</p>
+              <p className="footer-description">{footerDescription}</p>
               {socialLinks.length > 0 && (
-                <div className="footer-socials" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+                <div className="footer-socials">
                   {socialLinks.map((social, idx) => {
                     const isInstagram = social.platform === 'instagram';
                     const handle = isInstagram ? social.url.replace(/\/$/, '').split('/').pop() : null;
                     const iconClass = SOCIAL_ICONS[social.platform.toLowerCase()] || SOCIAL_ICONS.default;
 
                     return (
-                      <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" className="social-link" style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <a key={idx} href={social.url} target="_blank" rel="noopener noreferrer" className="social-link footer-social-link">
                         <i className={`fab ${iconClass}`} style={{ fontSize: '1.2rem' }} />
                         {isInstagram && <span style={{ fontSize: '0.9rem' }}>@{handle}</span>}
                       </a>
@@ -274,15 +274,17 @@ export default function Layout() {
               )}
             </div>
             <div className="footer-contacts">
-              <h3>{contactsTitle}</h3>
-              <p>📞 <a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
-              <p>📍 {addressText}</p>
-              <p>🕐 {workingHoursText}</p>
+              <h3 className="footer-section-label">{contactsTitle}</h3>
+              <div className="footer-contact-list">
+                <p><span aria-hidden="true">📞</span><a href={`tel:${settings?.phone || '+380000000000'}`}>{settings?.phone || '+38 (000) 000-00-00'}</a></p>
+                <p><span aria-hidden="true">📍</span><span>{addressText}</span></p>
+                <p><span aria-hidden="true">🕐</span><span>{workingHoursText}</span></p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <h3 style={{ color: 'var(--brand)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16, marginTop: 0 }}>
+          <div className="footer-location">
+            <h3 className="footer-section-label footer-map-title">
               {findUsTitle}
             </h3>
             <div className="footer-bottom-map">
