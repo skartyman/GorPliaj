@@ -101,7 +101,7 @@ function getDepositFromObject(object) {
   };
 }
 
-function getEventEntryBreakdown(event, reservationDate, guests) {
+function getEventEntryBreakdown(event, reservationDate, guests, { requireTickets = true } = {}) {
   if (!event) return null;
 
   const matchingSession = event.sessions?.find((session) =>
@@ -123,6 +123,25 @@ function getEventEntryBreakdown(event, reservationDate, guests) {
       amount: 0,
       currency: 'UAH',
       isFreeEntry: true
+    };
+  }
+
+  if (!requireTickets && (matchingSession || isSameBookingDay(event.startAt, reservationDate))) {
+    return {
+      eventId: event.id,
+      eventSlug: event.slug,
+      eventTitle: localizeJson(event.title),
+      ticketTypeId: null,
+      eventSessionId: matchingSession?.id || null,
+      eventSession: matchingSession || null,
+      eventStartsAt: event.startAt,
+      eventEndsAt: event.endAt,
+      ticketTypeName: '',
+      ticketPrice: 0,
+      ticketCount: 0,
+      amount: 0,
+      currency: 'UAH',
+      isFreeEntry: false
     };
   }
 
@@ -322,7 +341,9 @@ async function createGroupReservation(req, res, context) {
     }
   }
 
-  const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests);
+  const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests, {
+    requireTickets: false
+  });
   if (event && !entryBreakdown) {
     return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });
   }
@@ -614,7 +635,9 @@ async function createReservation(req, res) {
       rentalAmount = null;
     }
 
-    const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests);
+    const entryBreakdown = getEventEntryBreakdown(event, reservationDate, guests, {
+      requireTickets: false
+    });
     if (event && !entryBreakdown) {
       return res.status(409).json({ message: 'Entry tickets for this event are not available for the selected guest count.' });
     }

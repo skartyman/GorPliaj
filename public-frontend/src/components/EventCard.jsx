@@ -90,7 +90,7 @@ export default function EventCard({ event, featured = false }) {
             )
           ) : null}
           {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
-            <Link className="btn btn-primary event-action-btn" to={`/booking?event=${event.slug}`}>
+            <Link className="btn btn-primary event-action-btn" to={`/booking?event=${event.slug}&tableOnly=1`}>
               {bookTableLabel}
             </Link>
           ) : null}

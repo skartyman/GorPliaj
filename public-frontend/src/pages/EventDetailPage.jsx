@@ -137,7 +137,8 @@ export default function EventDetailPage() {
     eventsApi.ticketTypes(slug)
       .then((result) => {
         const ticketTypes = Array.isArray(result.ticketTypes) ? result.ticketTypes : [];
-        const sessions = Array.isArray(result.sessions) ? result.sessions : [];
+        const sessions = (Array.isArray(result.sessions) ? result.sessions : [])
+          .filter((session) => session.admissionMode !== 'FREE');
         const defaultSessionId = sessions[0] ? String(sessions[0].id) : '';
         const defaultTypes = ticketTypes.filter((type) => String(type.eventSessionId || '') === defaultSessionId);
 
@@ -233,9 +234,6 @@ export default function EventDetailPage() {
     [sales.sessions, orderForm.eventSessionId]
   );
   const selectedSessionIsFree = selectedEventSession?.admissionMode === 'FREE';
-  const hasFreeSession = sales.sessions.some((session) => session.admissionMode === 'FREE')
-    || state.event?.sessions?.some((session) => session.admissionMode === 'FREE');
-
   const hasTicketTypeChoice = visibleTicketTypes.length > 1;
 
   useEffect(() => {
@@ -295,8 +293,10 @@ export default function EventDetailPage() {
   const fullDescription = localizeField(event.fullDescription, locale);
   const fullDescriptionHtml = sanitizeRichText(fullDescription);
   const paymentUrl = orderStatus?.paymentUrl || orderResult?.paymentUrl;
-  const bookingUrl = `/booking?event=${encodeURIComponent(event.slug)}`;
-  const selectedSessionBookingUrl = `${bookingUrl}${selectedEventSession ? `&date=${encodeURIComponent(getSessionDateKey(selectedEventSession))}` : ''}`;
+  const bookingUrl = `/booking?event=${encodeURIComponent(event.slug)}&tableOnly=1`;
+  const bookingDate = orderStatus?.eventDate || (selectedEventSession ? getSessionDateKey(selectedEventSession) : '');
+  const bookingGuestCount = Number(orderStatus?.ticketCount || orderForm.quantity || 1);
+  const selectedSessionBookingUrl = `${bookingUrl}${bookingDate ? `&date=${encodeURIComponent(bookingDate)}` : ''}&guests=${encodeURIComponent(bookingGuestCount)}`;
 
   return (
     <>
@@ -332,16 +332,14 @@ export default function EventDetailPage() {
                 {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
               </Link>
             ) : null}
-            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl && !hasFreeSession ? (
+            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && event.ticketUrl ? (
               <a className="btn btn-secondary" href={event.ticketUrl} target="_blank" rel="noreferrer">
                 {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
               </a>
             ) : null}
-            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && (!event.ticketUrl || hasFreeSession) ? (
+            {(event.ctaType === 'TICKETS' || event.ctaType === 'BOTH') && !event.ticketUrl ? (
               <button type="button" className="btn btn-secondary" onClick={() => { setTicketFormOpen(true); captureAnalytics('ticket_form_opened', { event_slug: slug }); }}>
-                {hasFreeSession
-                  ? c({ ua: 'Обрати дату', ru: 'Выбрать дату', en: 'Choose a date' })
-                  : c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
+                {c({ ua: 'Купити квиток', ru: 'Купить билет', en: 'Buy ticket' })}
               </button>
             ) : null}
           </div>
@@ -359,7 +357,7 @@ export default function EventDetailPage() {
                         {c({ ua: 'Завантажуємо квитки...', ru: 'Загружаем билеты...', en: 'Loading tickets...' })}
                       </div>
                     ) : null}
-                    {!sales.loading && !sales.ticketTypes.length && !hasFreeSession && !sales.error ? (
+                    {!sales.loading && !sales.ticketTypes.length && !sales.error ? (
                       <div className="state-msg">
                         {c({
                           ua: 'Продаж квитків для цієї події ще не відкритий.',
@@ -391,9 +389,7 @@ export default function EventDetailPage() {
                           >
                             {sales.sessions.map((session) => (
                               <option key={session.id} value={session.id}>
-                                {localizeField(session.name, locale) || formatSessionRange(session, locale)} · {session.admissionMode === 'FREE'
-                                  ? c({ ua: 'вхід вільний', ru: 'вход свободный', en: 'free entry' })
-                                  : c({ ua: 'за квитком', ru: 'по билету', en: 'ticket required' })}
+                                {localizeField(session.name, locale) || formatSessionRange(session, locale)}
                               </option>
                             ))}
                           </select>
@@ -537,10 +533,11 @@ export default function EventDetailPage() {
                       <>
                         <span className="guest-modal-kicker">{c({ ua: 'Оплата успішна', ru: 'Оплата прошла', en: 'Payment successful' })}</span>
                         <h2>{c({ ua: 'Дякуємо! Ваші квитки готові.', ru: 'Спасибо! Ваши билеты готовы.', en: 'Thank you! Your tickets are ready.' })}</h2>
-                        <p>{c({ ua: 'Завантажте квитки у PDF, перегляньте меню або забронюйте стіл на вечір.', ru: 'Скачайте билеты в PDF, посмотрите меню или забронируйте стол на вечер.', en: 'Download your PDF tickets, browse the menu, or book a table for the evening.' })}</p>
+                        <p>{c({ ua: 'Столик не входить у вартість квитка. Забронюйте його окремо, якщо хочете гарантувати місце для своєї компанії.', ru: 'Стол не входит в стоимость билета. Забронируйте его отдельно, если хотите гарантировать место для своей компании.', en: 'A table is not included with your ticket. Book one separately if you want to guarantee a place for your group.' })}</p>
+                        <p className="ticket-email-note">{c({ ua: 'Вкажіть у бронюванні всіх гостей за столом. Якщо комусь не вистачає квитка, його можна придбати при вході в день події.', ru: 'Укажите в бронировании всех гостей за столом. Если кому-то не хватает билета, его можно купить при входе в день мероприятия.', en: 'Include everyone at the table in the booking. Any missing tickets can be purchased at the entrance on the event day.' })}</p>
                         <div className="guest-modal-actions">
                           {(event.ctaType === 'BOOKING' || event.ctaType === 'BOTH') ? (
-                            <Link className="btn btn-primary" to={bookingUrl} onClick={() => setTicketFormOpen(false)}>
+                            <Link className="btn btn-primary" to={selectedSessionBookingUrl} onClick={() => setTicketFormOpen(false)}>
                               {c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}
                             </Link>
                           ) : null}

@@ -194,6 +194,8 @@ async function getTicketOrderStatus(req, res) {
           amount: true,
           currency: true,
           downloadToken: true,
+          eventSession: { select: { startsAt: true } },
+          _count: { select: { tickets: true } },
           payment: { select: { paymentUrl: true, status: true } }
         }
       });
@@ -212,7 +214,11 @@ async function getTicketOrderStatus(req, res) {
       downloadUrl: isPaid
         ? `/api/ticket-orders/${encodeURIComponent(order.orderNumber)}/pdf?token=${encodeURIComponent(order.downloadToken)}`
         : null,
-      pdfReady: isPaid
+      pdfReady: isPaid,
+      ticketCount: order._count?.tickets || 0,
+      eventDate: order.eventSession?.startsAt
+        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Kyiv', year: 'numeric', month: '2-digit', day: '2-digit' }).format(order.eventSession.startsAt)
+        : null
     });
   } catch (error) {
     console.error('[publicTicketSales.getTicketOrderStatus] Failed.', error);

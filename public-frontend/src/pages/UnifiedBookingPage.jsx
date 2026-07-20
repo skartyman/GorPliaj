@@ -925,9 +925,9 @@ export default function UnifiedBookingPage() {
                 en: 'Payment confirmed. Your booking confirmation has been sent by email.'
               })
             : c({
-                ua: 'Оплату підтверджено. Бронювання та квитки надіслані на Email.',
-                ru: 'Оплата подтверждена. Бронирование и билеты отправлены на Email.',
-                en: 'Payment confirmed. Your booking and tickets have been sent by email.'
+                ua: 'Бронювання столу підтверджено та надіслано на Email. Вхідні квитки купуються окремо або при вході.',
+                ru: 'Бронирование стола подтверждено и отправлено на Email. Входные билеты покупаются отдельно или при входе.',
+                en: 'Your table booking is confirmed and was sent by email. Entry tickets are purchased separately or at the entrance.'
               }));
           return;
         }
@@ -1758,8 +1758,8 @@ export default function UnifiedBookingPage() {
     const bookingTables = effectiveBookingGroupSuggestion.tables.length ? effectiveBookingGroupSuggestion.tables : (activeUnit ? [activeUnit] : []);
     const rentalAmount = activeEventSlug ? 0 : bookingTables.reduce((sum, table) => sum + Number(table?.rentalAmount || 0), 0);
     const depositAmount = bookingTables.reduce((sum, table) => sum + Number(table?.depositAmount || 0), 0);
-    const entryTicketPrice = Number(entryTicketType?.price || 0);
-    const entryTicketsAmount = entryTicketPrice > 0 ? entryTicketPrice * Number(form.guests || 0) : 0;
+    const entryTicketPrice = 0;
+    const entryTicketsAmount = 0;
     return {
       rentalAmount,
       depositAmount,
@@ -1886,6 +1886,7 @@ export default function UnifiedBookingPage() {
         timeFrom: form.timeFrom,
         commentCustomer: form.commentCustomer,
         eventSlug: activeEventSlug || undefined,
+        includeEntryTickets: false,
         holdToken: hold.holdToken,
         holdTokens: acquiredHolds,
         analyticsDistinctId: analyticsDistinctId || undefined,
@@ -2046,20 +2047,18 @@ export default function UnifiedBookingPage() {
           <div className="booking-scenario-card booking-event-scenario is-primary">
             <div className="booking-event-ticket-summary">
               <span className="booking-scenario-kicker">{sessionName}</span>
-              <strong>{eventEntryIsFree
-                ? (locale === 'ua' ? `${form.guests} гост. + ${positionCount === 1 ? 'бронювання столу' : `${positionCount} столики`}` : locale === 'ru' ? `${form.guests} гост. + ${positionCount === 1 ? 'бронирование стола' : `${positionCount} стола`}` : `${form.guests} guests + ${positionCount} ${positionCount === 1 ? 'table' : 'tables'}`)
-                : (locale === 'ua' ? `${form.guests} квит. + ${positionCount === 1 ? 'бронювання столу' : `${positionCount} столики`}` : locale === 'ru' ? `${form.guests} бил. + ${positionCount === 1 ? 'бронирование стола' : `${positionCount} стола`}` : `${form.guests} tickets + ${positionCount} ${positionCount === 1 ? 'table' : 'tables'}`)}</strong>
+              <strong>{locale === 'ua' ? `${form.guests} гост. + ${positionCount === 1 ? 'бронювання столу' : `${positionCount} столики`}` : locale === 'ru' ? `${form.guests} гост. + ${positionCount === 1 ? 'бронирование стола' : `${positionCount} стола`}` : `${form.guests} guests + ${positionCount} ${positionCount === 1 ? 'table' : 'tables'}`}</strong>
               <p>{eventEntryIsFree
                 ? (locale === 'ua' ? 'Вхід вільний. Вкажіть кількість гостей для бронювання столу.' : locale === 'ru' ? 'Вход свободный. Укажите количество гостей для бронирования стола.' : 'Entry is free. Enter the guest count for the table booking.')
-                : (locale === 'ua' ? 'Кількість гостей дорівнює кількості вхідних квитків.' : locale === 'ru' ? 'Количество гостей равно количеству входных билетов.' : 'Guest count equals the number of entry tickets.')}</p>
+                : (locale === 'ua' ? 'Вкажіть усіх гостей за столом, включно з тими, хто придбає квиток при вході.' : locale === 'ru' ? 'Укажите всех гостей за столом, включая тех, кто купит билет при входе.' : 'Include every guest at the table, including anyone buying a ticket at the entrance.')}</p>
               <div
                 className="booking-event-quantity"
                 role="group"
-                aria-label={eventEntryIsFree ? (locale === 'ua' ? 'Кількість гостей' : locale === 'ru' ? 'Количество гостей' : 'Guest count') : (locale === 'ua' ? 'Кількість квитків' : locale === 'ru' ? 'Количество билетов' : 'Ticket count')}
+                aria-label={locale === 'ua' ? 'Кількість гостей' : locale === 'ru' ? 'Количество гостей' : 'Guest count'}
               >
                 <button
                   type="button"
-                  aria-label={eventEntryIsFree ? (locale === 'ua' ? 'Зменшити кількість гостей' : locale === 'ru' ? 'Уменьшить количество гостей' : 'Decrease guests') : (locale === 'ua' ? 'Зменшити кількість квитків' : locale === 'ru' ? 'Уменьшить количество билетов' : 'Decrease tickets')}
+                  aria-label={locale === 'ua' ? 'Зменшити кількість гостей' : locale === 'ru' ? 'Уменьшить количество гостей' : 'Decrease guests'}
                   disabled={form.guests <= 1}
                   onClick={() => setForm((current) => ({ ...current, guests: Math.max(1, current.guests - 1) }))}
                 >
@@ -2067,13 +2066,13 @@ export default function UnifiedBookingPage() {
                 </button>
                 <output
                   aria-live="polite"
-                  aria-label={eventEntryIsFree ? (locale === 'ua' ? `${form.guests} гостей` : locale === 'ru' ? `${form.guests} гостей` : `${form.guests} guests`) : (locale === 'ua' ? `${form.guests} квитків` : locale === 'ru' ? `${form.guests} билетов` : `${form.guests} tickets`)}
+                  aria-label={locale === 'ua' ? `${form.guests} гостей` : locale === 'ru' ? `${form.guests} гостей` : `${form.guests} guests`}
                 >
                   <strong>{form.guests}</strong>
                 </output>
                 <button
                   type="button"
-                  aria-label={eventEntryIsFree ? (locale === 'ua' ? 'Збільшити кількість гостей' : locale === 'ru' ? 'Увеличить количество гостей' : 'Increase guests') : (locale === 'ua' ? 'Збільшити кількість квитків' : locale === 'ru' ? 'Увеличить количество билетов' : 'Increase tickets')}
+                  aria-label={locale === 'ua' ? 'Збільшити кількість гостей' : locale === 'ru' ? 'Увеличить количество гостей' : 'Increase guests'}
                   disabled={form.guests >= 20}
                   onClick={() => setForm((current) => ({ ...current, guests: Math.min(20, current.guests + 1) }))}
                 >
@@ -2091,7 +2090,7 @@ export default function UnifiedBookingPage() {
               <strong>{locale === 'ua' ? 'Столик гарантовано 30 хвилин' : locale === 'ru' ? 'Стол гарантирован 30 минут' : 'Table guaranteed for 30 minutes'}</strong>
               <span>{eventEntryIsFree
                 ? (locale === 'ua' ? 'Від обраного часу приходу. Після цього столик може бути переданий іншим гостям. Вхід на подію залишається вільним.' : locale === 'ru' ? 'От выбранного времени прихода. После этого стол могут передать другим гостям. Вход на мероприятие остаётся свободным.' : 'From the selected arrival time. After that the table may be released. Event entry remains free.')
-                : (locale === 'ua' ? 'Від обраного часу приходу. Після цього столик може бути переданий іншим гостям, але ваші квитки залишаться дійсними до завершення події.' : locale === 'ru' ? 'От выбранного времени прихода. После этого стол могут передать другим гостям, но ваши билеты останутся действительными до конца мероприятия.' : 'From the selected arrival time. After that the table may be released, while your tickets stay valid through the event.')}</span>
+                : (locale === 'ua' ? 'Бронювання столу не включає вхідні квитки. Квитки можна придбати заздалегідь або при вході в день події.' : locale === 'ru' ? 'Бронирование стола не включает входные билеты. Билеты можно купить заранее или при входе в день мероприятия.' : 'The table booking does not include entry tickets. Tickets can be bought in advance or at the entrance.')}</span>
             </div>
             <button className="btn btn-primary" type="button" disabled={!canBook || !selectedTime} onClick={() => { setBookingKind('TABLE'); setScenarioSelected(true); }}>
               {locale === 'ua' ? 'Продовжити з цим столиком' : locale === 'ru' ? 'Продолжить с этим столом' : 'Continue with this table'}
@@ -2315,7 +2314,7 @@ export default function UnifiedBookingPage() {
           <p className="muted">{activeEventSlug
             ? (eventEntryIsFree
                 ? (locale === 'ua' ? 'Оберіть столик на вечірній мапі. Дату та умови вільного входу ми вже врахували.' : locale === 'ru' ? 'Выберите стол на вечерней карте. Дату и условия свободного входа мы уже учли.' : 'Choose a table on the evening map. The date and free-entry conditions are already applied.')
-                : (locale === 'ua' ? 'Оберіть столик на вечірній мапі. Дату, квитки та правила події ми вже врахували.' : locale === 'ru' ? 'Выберите стол на вечерней карте. Дату, билеты и правила мероприятия мы уже учли.' : 'Choose a table on the evening map. Event dates, tickets and rules are already applied.'))
+                : (locale === 'ua' ? 'Оберіть столик та вкажіть усіх гостей. Вхідні квитки купуються окремо — заздалегідь або при вході.' : locale === 'ru' ? 'Выберите стол и укажите всех гостей. Входные билеты покупаются отдельно — заранее или при входе.' : 'Choose a table and include every guest. Entry tickets are purchased separately, in advance or at the entrance.'))
             : t('mapSubtitle')}</p>
         </div>
       </div>
@@ -2347,9 +2346,9 @@ export default function UnifiedBookingPage() {
         </label> : null}
         <div className="booking-compact-field">
           <span>{activeEventSlug
-            ? (eventEntryIsFree ? (locale === 'ua' ? 'Кількість гостей' : locale === 'ru' ? 'Количество гостей' : 'Guest count') : (locale === 'ua' ? 'Гості = квитки' : locale === 'ru' ? 'Гости = билеты' : 'Guests = tickets'))
+            ? (locale === 'ua' ? 'Кількість гостей' : locale === 'ru' ? 'Количество гостей' : 'Guest count')
             : (t('mapGuests') || (locale === 'ua' ? 'Гостей' : locale === 'ru' ? 'Гостей' : 'Guests'))}</span>
-          <div className="booking-guests-stepper" role="group" aria-label={activeEventSlug && !eventEntryIsFree ? (locale === 'ua' ? 'Кількість квитків' : locale === 'ru' ? 'Количество билетов' : 'Ticket count') : (t('mapGuests') || 'Guests')}>
+          <div className="booking-guests-stepper" role="group" aria-label={t('mapGuests') || 'Guests'}>
             <output className="booking-guests-value" aria-live="polite">{form.guests}</output>
             <div className="booking-guests-arrows">
               <button
@@ -2389,7 +2388,7 @@ export default function UnifiedBookingPage() {
       <div className="mobile-map-sticky-summary">
         <div style={{ display: 'flex', gap: '12px', color: 'var(--muted)' }}>
           <span>📅 <strong style={{color:'var(--text)'}}>{form.date.split('-').reverse().join('.')}</strong></span>
-          <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {activeEventSlug && !eventEntryIsFree ? (locale === 'ua' ? 'квит.' : locale === 'ru' ? 'бил.' : 'tickets') : (locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.')}</strong></span>
+          <span>👥 <strong style={{color:'var(--text)'}}>{form.guests} {locale === 'ua' ? 'чол.' : locale === 'ru' ? 'чел.' : 'ppl.'}</strong></span>
         </div>
       </div>
 
@@ -2427,7 +2426,7 @@ export default function UnifiedBookingPage() {
         <span>{activeEventSlug
           ? (eventEntryIsFree
               ? (locale === 'ua' ? 'Після вибору уточніть час приходу та оформіть бронювання столика. Вхід на подію вільний.' : locale === 'ru' ? 'После выбора уточните время прихода и оформите бронирование стола. Вход на мероприятие свободный.' : 'Then confirm the arrival time and book the table. Event entry is free.')
-              : (locale === 'ua' ? 'Після вибору уточніть час приходу та перейдіть до єдиної оплати столика й квитків.' : locale === 'ru' ? 'После выбора уточните время прихода и перейдите к единой оплате стола и билетов.' : 'Then confirm arrival time and pay for the table and tickets together.'))
+              : (locale === 'ua' ? 'Після вибору уточніть час приходу та кількість гостей за столом. Квитки купуються окремо або при вході.' : locale === 'ru' ? 'После выбора уточните время прихода и количество гостей за столом. Билеты покупаются отдельно или при входе.' : 'Then confirm the arrival time and number of guests at the table. Tickets are purchased separately or at the entrance.'))
           : (locale === 'ua' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u0446\u0456\u0454\u0457 \u043f\u043e\u0437\u0438\u0446\u0456\u0457.' : locale === 'ru' ? '\u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0430\u043c\u0430 \u043f\u043e\u043a\u0430\u0436\u0435\u0442 \u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0439 \u043f\u043e\u0437\u0438\u0446\u0438\u0438.' : 'The system will show rules for that specific place.')}</span>
       </div>
 
@@ -2899,7 +2898,7 @@ export default function UnifiedBookingPage() {
                     : new Date(`${form.date}T12:00:00+03:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long', year: 'numeric' })}</dd>
                 </div>
                 <div>
-                  <dt>{activeEventSlug ? c({ ua: 'Квитки', ru: 'Билеты', en: 'Tickets' }) : c({ ua: 'Гості', ru: 'Гости', en: 'Guests' })}</dt>
+                  <dt>{c({ ua: 'Гості за столом', ru: 'Гости за столом', en: 'Guests at the table' })}</dt>
                   <dd>{form.guests}</dd>
                 </div>
               </dl>
@@ -3012,7 +3011,7 @@ export default function UnifiedBookingPage() {
                       <p className="booking-event-final-note">
                         {eventEntryIsFree
                           ? (locale === 'ua' ? 'Якщо ви запізнюєтеся більш ніж на 30 хвилин, столик може бути переданий іншим гостям. Вхід на подію вільний.' : locale === 'ru' ? 'Если вы опаздываете более чем на 30 минут, стол могут передать другим гостям. Вход на мероприятие свободный.' : 'If you arrive more than 30 minutes late, the table may be released. Event entry is free.')
-                          : (locale === 'ua' ? 'Якщо ви запізнюєтеся більш ніж на 30 хвилин, столик може бути переданий іншим гостям. Вхідні квитки залишаються дійсними до завершення події.' : locale === 'ru' ? 'Если вы опаздываете более чем на 30 минут, стол могут передать другим гостям. Входные билеты остаются действительными до конца мероприятия.' : 'If you arrive more than 30 minutes late, the table may be released. Entry tickets remain valid through the event.')}
+                          : (locale === 'ua' ? 'Якщо ви запізнюєтеся більш ніж на 30 хвилин, столик може бути переданий іншим гостям. Бронювання не включає квитки; їх можна придбати при вході.' : locale === 'ru' ? 'Если вы опаздываете более чем на 30 минут, стол могут передать другим гостям. Бронирование не включает билеты; их можно купить при входе.' : 'If you arrive more than 30 minutes late, the table may be released. The booking does not include tickets; they can be bought at the entrance.')}
                       </p>
                     ) : null}
                     <label className="booking-scenario-field">
@@ -3087,7 +3086,7 @@ export default function UnifiedBookingPage() {
                             {activeEventSlug
                               ? (eventEntryIsFree
                                   ? c({ ua: 'Сюди надійдуть QR-код і PDF-підтвердження бронювання.', ru: 'Сюда придут QR-код и PDF-подтверждение бронирования.', en: 'The booking QR code and PDF confirmation will be sent here.' })
-                                  : c({ ua: 'Сюди надійдуть вхідні квитки, QR-коди та PDF-підтвердження.', ru: 'Сюда придут входные билеты, QR-коды и PDF-подтверждение.', en: 'Entry tickets, QR codes and the PDF confirmation will be sent here.' }))
+                                  : c({ ua: 'Сюди надійдуть QR-код і PDF-підтвердження бронювання столу. Вхідні квитки купуються окремо.', ru: 'Сюда придут QR-код и PDF-подтверждение бронирования стола. Входные билеты покупаются отдельно.', en: 'The table booking QR code and PDF confirmation will be sent here. Entry tickets are purchased separately.' }))
                               : c({ ua: 'Сюди надійдуть QR-код і PDF-підтвердження бронювання.', ru: 'Сюда придут QR-код и PDF-подтверждение бронирования.', en: 'The booking QR code and PDF confirmation will be sent here.' })}
                           </p>
                         </div>

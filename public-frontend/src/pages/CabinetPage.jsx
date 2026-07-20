@@ -45,6 +45,7 @@ export default function CabinetPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [authMode, setAuthMode] = useState('login');
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
   const [message, setMessage] = useState('');
@@ -144,6 +145,10 @@ export default function CabinetPage() {
     }
     if (authMode === 'register' && phone.replace(/\D/g, '').length < 7) {
       setError(c({ ua: 'Введіть телефон.', ru: 'Введите телефон.', en: 'Enter your phone.' }));
+      return;
+    }
+    if (authMode === 'register' && !privacyAccepted) {
+      setError(c({ ua: 'Підтвердьте згоду з політикою конфіденційності.', ru: 'Подтвердите согласие с политикой конфиденциальности.', en: 'Please accept the privacy policy.' }));
       return;
     }
     setSendingLink(true);
@@ -292,6 +297,10 @@ export default function CabinetPage() {
               Email *
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" />
             </label>
+            {authMode === 'register' && <label className="cabinet-consent">
+              <input type="checkbox" checked={privacyAccepted} onChange={(e) => setPrivacyAccepted(e.target.checked)} required />
+              <span>{c({ ua: 'Я погоджуюся з', ru: 'Я соглашаюсь с', en: 'I agree to the' })} <Link to="/privacy">{c({ ua: 'політикою конфіденційності', ru: 'политикой конфиденциальности', en: 'privacy policy' })}</Link> {c({ ua: 'та', ru: 'и', en: 'and' })} <Link to="/payment-returns">{c({ ua: 'умовами оплати і повернення', ru: 'условиями оплаты и возврата', en: 'payment and refund terms' })}</Link>.</span>
+            </label>}
             <button type="submit" disabled={sendingLink}>
               {sendingLink ? c({ ua: 'Надсилаємо…', ru: 'Отправляем…', en: 'Sending…' }) : c({ ua: 'Отримати посилання для входу', ru: 'Получить ссылку для входа', en: 'Get login link' })}
             </button>
