@@ -22,6 +22,15 @@ const adminAppDir = path.join(publicDir, 'admin-app');
 const publicIndexPath = path.join(publicAppDir, 'index.html');
 const hasPublicBuild = fs.existsSync(publicIndexPath);
 let waiterIndexHtml = null;
+app.use((req, res, next) => {
+  if (req.path !== '/' && req.path !== '/app') {
+    return next();
+  }
+
+  const qs = new URLSearchParams(req.query).toString();
+  return res.redirect(307, `/app/${qs ? '?' + qs : ''}`);
+});
+
 if (hasPublicBuild) {
   try {
     waiterIndexHtml = fs.readFileSync(publicIndexPath, 'utf8')
@@ -87,7 +96,7 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/paygate/hutko', hutkoRoutes);
 app.use('/api/waiter', waiterRoutes);
 
-app.get(['/app', '/app/*'], (req, res) => {
+app.get('/app/*', (req, res) => {
   return sendPublicIndex(res);
 });
 
