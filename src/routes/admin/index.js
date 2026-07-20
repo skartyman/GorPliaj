@@ -108,6 +108,7 @@ const {
   updateUser,
   deleteUser
 } = require('../../controllers/adminUserController');
+const { listGuests, getGuest } = require('../../controllers/adminGuestController');
 const {
   listTicketTypes,
   createTicketType,
@@ -264,6 +265,8 @@ router.get('/users', requireAdminAuth, requirePermission('users:view'), listUser
 router.post('/users', requireAdminAuth, requirePermission('users:create'), createUser);
 router.patch('/users/:id', requireAdminAuth, requirePermission('users:update'), updateUser);
 router.delete('/users/:id', requireAdminAuth, requirePermission('users:delete'), deleteUser);
+router.get('/guests', requireAdminAuth, requirePermission('guests:view'), listGuests);
+router.get('/guests/:id', requireAdminAuth, requirePermission('guests:view'), getGuest);
 
 router.get('/waiters', requireAdminAuth, requirePermission('users:view'), async (req, res) => {
   try { res.json(await waiterService.listWaiters()); }

@@ -54,6 +54,7 @@ const translations = {
       ticketSales: 'Продаж квитків',
       verifyTicket: 'Квитки',
       users: 'Користувачі',
+      guests: 'Гості',
       waiters: 'Офіціанти',
       settings: 'Налаштування',
       positions: 'Позиції',

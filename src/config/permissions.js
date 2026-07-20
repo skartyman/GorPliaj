@@ -59,6 +59,8 @@ const PERMISSIONS = {
   'users:update': ['admin', 'manager', 'owner'],
   'users:delete': ['admin', 'manager', 'owner'],
 
+  'guests:view': ['admin', 'manager', 'owner'],
+
   'reports:view': ['admin', 'manager', 'owner'],
   'reports:manage': ['admin', 'manager', 'owner']
 };

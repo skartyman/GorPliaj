@@ -13,6 +13,7 @@ import ReservationDetailPage from './pages/ReservationDetailPage';
 import ReservationsPage from './pages/ReservationsPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
+import GuestsPage from './pages/GuestsPage';
 import TicketVerificationPage from './pages/TicketVerificationPage';
 import TicketSalesPage from './pages/TicketSalesPage';
 import PositionsPage from './pages/PositionsPage';
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/admin/payments" element={<ProtectedPage><PaymentsPage /></ProtectedPage>} />
         <Route path="/admin/verify-ticket" element={<ProtectedPage><TicketVerificationPage /></ProtectedPage>} />
         <Route path="/admin/users" element={<ProtectedPage><UsersPage /></ProtectedPage>} />
+        <Route path="/admin/guests" element={<ProtectedPage><GuestsPage /></ProtectedPage>} />
         <Route path="/admin/settings" element={<ProtectedPage><SettingsPage /></ProtectedPage>} />
         <Route path="/admin/position-types" element={<Navigate to="/admin/positions" replace />} />
         <Route path="/admin/positions" element={<ProtectedPage><PositionsPage /></ProtectedPage>} />

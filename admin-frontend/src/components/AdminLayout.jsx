@@ -39,6 +39,7 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/payments', labelKey: 'nav.payments', icon: IconPayments, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/verify-ticket', labelKey: 'nav.verifyTicket', icon: IconTicket, roles: ['hostess', 'admin', 'manager', 'owner'] },
   { to: '/admin/users', labelKey: 'nav.users', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
+  { to: '/admin/guests', labelKey: 'nav.guests', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/waiters', labelKey: 'nav.waiters', icon: IconUsers, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/reports', labelKey: 'nav.reports', icon: IconReports, roles: ['admin', 'manager', 'owner'] },
   { to: '/admin/reports-schedule', labelKey: 'nav.reportsSchedule', icon: IconSchedule, roles: ['admin', 'manager', 'owner'] },
