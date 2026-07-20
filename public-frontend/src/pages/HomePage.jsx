@@ -182,7 +182,7 @@ export default function HomePage() {
         <h1>{heroTitle}</h1>
         <p>{heroSubtitle}</p>
         <div className="btn-group">
-          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати стіл', ru: 'Забронировать стол', en: 'Book a table' })}</Link>
+          <Link to="/booking" className="btn btn-primary">{c({ ua: 'Забронювати відпочинок', ru: 'Забронировать отдых', en: 'Book your visit' })}</Link>
           <Link to="/menu" className="btn btn-secondary">{c({ ua: 'Переглянути меню', ru: 'Открыть меню', en: 'View menu' })}</Link>
         </div>
       </section>

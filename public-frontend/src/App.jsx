@@ -19,6 +19,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:slug" element={<EventDetailPage />} />
           <Route path="/menu" element={<MenuPage />} />
@@ -29,7 +30,7 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/payment-returns" element={<PaymentReturnsPage />} />
           <Route path="/cabinet" element={<CabinetPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Route>
         <Route path="/waiter" element={<WaiterCabinetPage />} />
         <Route path="/waiter/*" element={<WaiterCabinetPage />} />

@@ -7,7 +7,7 @@ import { localizedCopy, localizeField } from '../lib/i18n';
 import ClientInstallPrompt from './ClientInstallPrompt';
 
 const navItems = [
-  { to: '/', labelKey: 'navHome', icon: (
+  { to: '/home', labelKey: 'navHome', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
       <polyline points="9 22 9 12 15 12 15 22"/>
@@ -144,7 +144,7 @@ export default function Layout() {
         onMouseLeave={() => setIsSidebarOpen(false)}
         onClick={() => setIsSidebarOpen(true)}
       >
-        <NavLink to="/" className="sidebar-logo">
+        <NavLink to="/home" className="sidebar-logo">
           <img src={logoUrl} alt={brandName} />
           <span className="sidebar-logo-text">{brandName}</span>
         </NavLink>
@@ -154,7 +154,7 @@ export default function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/home'}
               className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
             >
               <span className="sidebar-icon">{item.icon}</span>
@@ -197,7 +197,7 @@ export default function Layout() {
       </aside>
 
       <header className={`top-bar${isMenuRoute ? ' menu-top-bar' : ''}`}>
-        <NavLink to="/" className="top-bar-brand">
+        <NavLink to="/home" className="top-bar-brand">
           <img className="top-bar-logo" src={logoUrl} alt={brandName} />
           <span>{brandName}</span>
         </NavLink>
@@ -241,7 +241,7 @@ export default function Layout() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/home'}
             className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}
           >
             <BottomNavIcon path={item.to} />

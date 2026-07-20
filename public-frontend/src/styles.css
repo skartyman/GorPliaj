@@ -7265,6 +7265,12 @@ select.booking-compact-control {
 }
 
 /* Final hero guard: keep actions inside the visual viewport on mobile browsers. */
+@media (min-width: 769px) {
+  .hero {
+    padding-bottom: clamp(104px, 15vh, 172px);
+  }
+}
+
 @media (max-width: 768px) {
   .hero {
     min-height: calc(100dvh - var(--header-height));

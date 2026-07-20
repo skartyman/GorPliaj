@@ -66,6 +66,14 @@ async function cleanupLegacyServiceWorkers() {
 cleanupLegacyServiceWorkers();
 
 const isWaiterRoute = window.location.pathname.startsWith('/waiter');
+const isPublicRouteOutsideAppScope = !isWaiterRoute && !window.location.pathname.startsWith('/app');
+
+if (isPublicRouteOutsideAppScope) {
+  const scopedPath = window.location.pathname === '/'
+    ? '/app/'
+    : `/app${window.location.pathname}`;
+  window.location.replace(`${scopedPath}${window.location.search}${window.location.hash}`);
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -76,10 +84,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-              <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : undefined}>
+if (!isPublicRouteOutsideAppScope) {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+      <BrowserRouter basename={isWaiterRoute ? undefined : '/app'}>
         <SettingsProvider>
           <LocaleProvider>
             <CartProvider>
@@ -88,6 +97,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           </LocaleProvider>
         </SettingsProvider>
       </BrowserRouter>
-    </ErrorBoundary>
-  </React.StrictMode>
-);
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+}
