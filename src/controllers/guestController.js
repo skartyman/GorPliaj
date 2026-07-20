@@ -337,15 +337,39 @@ function findBestBeachDay(dailyForecast) {
   return null;
 }
 
+function resolveTablePrice(table, dateKey, positionTypeMap = new Map()) {
+  const date = new Date(`${dateKey}T12:00:00+03:00`);
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const positionType = String(table?.positionType || '').toUpperCase();
+  const config = positionTypeMap.get(positionType);
+  const candidates = isWeekend
+    ? [table?.priceWeekend, table?.price, config?.priceWeekend, config?.defaultPrice]
+    : [table?.priceWeekday, table?.price, config?.priceWeekday, config?.defaultPrice];
+  const resolved = candidates.map(Number).find((value) => Number.isFinite(value) && value > 0);
+  return resolved || 0;
+}
+
 async function getWelcome(req, res) {
   try {
     const guestId = req.guestId;
 
-    const [favorites, menuItems, defaultMapData] = await Promise.all([
+    const [favorites, menuItems, defaultMapData, positionTypes] = await Promise.all([
       prisma.guestFavoriteUnit.findMany({
         where: { guestId },
         include: {
-          table: { select: { id: true, code: true, name: true, bookingKind: true } },
+          table: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              bookingKind: true,
+              mapId: true,
+              positionType: true,
+              price: true,
+              priceWeekday: true,
+              priceWeekend: true
+            }
+          },
           menuItem: { select: { id: true, name: true, price: true, isAvailable: true } }
         }
       }),
@@ -353,8 +377,10 @@ async function getWelcome(req, res) {
         where: { isActive: true },
         select: { id: true, isAvailable: true, name: true }
       }),
-      contentService.getDefaultMap()
+      contentService.getDefaultMap(),
+      prisma.positionType.findMany({ where: { isActive: true } })
     ]);
+    const positionTypeMap = new Map(positionTypes.map((item) => [String(item.value).toUpperCase(), item]));
 
     const favoriteTables = favorites.filter((f) => f.kind === 'table' && f.table);
     const favoriteDishes = favorites.filter((f) => f.kind === 'menu' && f.menuItem);
@@ -364,9 +390,10 @@ async function getWelcome(req, res) {
       const today = new Date().toISOString().slice(0, 10);
       try {
         const availability = await reservationService.getMapAvailability({
-          mapId: defaultMapData.map.id,
+          mapId: favoriteTables[0]?.table?.mapId || defaultMapData.map.id,
           reservationDate: today,
-          timeFrom: '12:00'
+          timeFrom: toDateTime(today, '12:00'),
+          timeTo: toDateTime(today, '20:00')
         });
         const busySet = new Set(availability.busyTableIds || []);
         const heldSet = new Set(availability.heldTableIds || []);
@@ -378,7 +405,7 @@ async function getWelcome(req, res) {
             name: fav.table?.name || fav.table?.code || `#${tid}`,
             bookingKind: fav.table?.bookingKind || 'BEACH',
             positionType: fav.table?.positionType || null,
-            price: Number(fav.table?.priceWeekend || fav.table?.priceWeekday || fav.table?.price || 0),
+            price: resolveTablePrice(fav.table, today, positionTypeMap),
             isBeach,
             status: busySet.has(tid) ? 'busy' : heldSet.has(tid) ? 'held' : 'free'
           };
@@ -392,7 +419,7 @@ async function getWelcome(req, res) {
             name: fav.table?.name || fav.table?.code || `#${fav.tableId}`,
             bookingKind: fav.table?.bookingKind || 'BEACH',
             positionType: fav.table?.positionType || null,
-            price: Number(fav.table?.priceWeekend || fav.table?.priceWeekday || fav.table?.price || 0),
+            price: resolveTablePrice(fav.table, today, positionTypeMap),
             isBeach,
             status: 'unknown'
           };
@@ -527,12 +554,16 @@ async function getEveningBeach(req, res) {
       return getVenueClockParts(d).dateKey;
     })();
 
-    const favorites = await prisma.guestFavoriteUnit.findMany({
-      where: { guestId, kind: 'table' },
-      include: {
-        table: { select: { id: true, code: true, name: true, bookingKind: true, mapId: true, zoneId: true, seatsMin: true, price: true, priceWeekday: true, priceWeekend: true, positionType: true } }
-      }
-    });
+    const [favorites, positionTypes] = await Promise.all([
+      prisma.guestFavoriteUnit.findMany({
+        where: { guestId, kind: 'table' },
+        include: {
+          table: { select: { id: true, code: true, name: true, bookingKind: true, mapId: true, zoneId: true, seatsMin: true, price: true, priceWeekday: true, priceWeekend: true, positionType: true } }
+        }
+      }),
+      prisma.positionType.findMany({ where: { isActive: true } })
+    ]);
+    const positionTypeMap = new Map(positionTypes.map((item) => [String(item.value).toUpperCase(), item]));
 
     const beachFavorites = favorites.filter((f) => f.table && (f.table.bookingKind === 'BEACH' || ['BUNGALOW', 'KROVAT', 'PIER'].includes(f.table.positionType)));
 
@@ -540,16 +571,17 @@ async function getEveningBeach(req, res) {
       return res.status(200).json({ date: targetDate, isToday, cutoffPassed: !isToday, beds: [] });
     }
 
-    const defaultMap = await contentService.getDefaultMap();
     let busySet = new Set();
     let heldSet = new Set();
 
-    if (defaultMap) {
+    const beachMapId = beachFavorites[0]?.table?.mapId;
+    if (beachMapId) {
       try {
         const availability = await reservationService.getMapAvailability({
-          mapId: defaultMap.map.id,
+          mapId: beachMapId,
           reservationDate: targetDate,
-          timeFrom: '09:00'
+          timeFrom: toDateTime(targetDate, '09:00'),
+          timeTo: toDateTime(targetDate, '20:00')
         });
         busySet = new Set(availability.busyTableIds || []);
         heldSet = new Set(availability.heldTableIds || []);
@@ -569,7 +601,7 @@ async function getEveningBeach(req, res) {
     const beds = beachFavorites.map((fav) => {
       const t = fav.table;
       const isBusy = busySet.has(t.id) || heldSet.has(t.id);
-      const price = Number(t.priceWeekend || t.priceWeekday || t.price || 0);
+      const price = resolveTablePrice(t, targetDate, positionTypeMap);
       return {
         tableId: t.id,
         name: t.code || t.name || `#${t.id}`,
@@ -617,15 +649,11 @@ async function purchaseEveningBeach(req, res) {
     }
 
     const table = favorite.table;
-    const defaultMap = await contentService.getDefaultMap();
-    if (!defaultMap) {
-      return res.status(500).json({ message: 'Карта не знайдена.' });
-    }
-
     const availability = await reservationService.getMapAvailability({
-      mapId: defaultMap.map.id,
+      mapId: table.mapId,
       reservationDate: clock.dateKey,
-      timeFrom: '09:00'
+      timeFrom: toDateTime(clock.dateKey, '09:00'),
+      timeTo: toDateTime(clock.dateKey, '20:00')
     });
     const busySet = new Set(availability.busyTableIds || []);
     const heldSet = new Set(availability.heldTableIds || []);
@@ -644,7 +672,14 @@ async function purchaseEveningBeach(req, res) {
     }
 
     const guest = await guestAuthService.getGuestById(guestId);
-    const price = Number(table.priceWeekend || table.priceWeekday || table.price || 0);
+    const positionType = table.positionType
+      ? await prisma.positionType.findUnique({ where: { value: table.positionType } })
+      : null;
+    const positionTypeMap = new Map(positionType ? [[String(positionType.value).toUpperCase(), positionType]] : []);
+    const price = resolveTablePrice(table, clock.dateKey, positionTypeMap);
+    if (price <= 0) {
+      return res.status(409).json({ message: 'Ціну для цього пляжного місця не налаштовано.' });
+    }
 
     const ticketCode = generateTicketCode();
     const holdResult = await reservationService.createTableHold({

@@ -71,7 +71,7 @@ export default function EveningBeachCard({ data, onPurchased }) {
                   <span className="evening-beach-item-name">{bed.name}</span>
                   <span className="evening-beach-item-type">{c(posLabel)}</span>
                 </div>
-                <span className="evening-beach-item-price">{bed.price}\u20B4</span>
+                <span className="evening-beach-item-price">{bed.price} ₴</span>
               </div>
               <div className="evening-beach-item-action">
                 {isFree ? (

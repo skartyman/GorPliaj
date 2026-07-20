@@ -88,7 +88,7 @@ export default function WelcomeCard({ data, onPurchased }) {
                   {c(STATUS_LABELS[t.status] || STATUS_LABELS.unknown)}
                 </span>
                 {t.price > 0 && (
-                  <span className="welcome-item-price">{t.price}\u20B4</span>
+                  <span className="welcome-item-price">{t.price} ₴</span>
                 )}
                 {canBuy && (
                   <button

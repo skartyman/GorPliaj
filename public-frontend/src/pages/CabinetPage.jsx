@@ -27,7 +27,7 @@ function statusLabel(status, locale) {
 
 export default function CabinetPage() {
   const { locale } = useLocale();
-  const c = (values) => localizedCopy(values, locale);
+  const c = useCallback((values) => localizedCopy(values, locale), [locale]);
   const { guest, isLoggedIn, login, logout: ctxLogout, refresh } = useGuest();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
