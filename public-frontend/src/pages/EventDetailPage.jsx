@@ -456,10 +456,17 @@ export default function EventDetailPage() {
                         ) : null}
                         <div className="form-group">
                           <label>{c({ ua: 'Кількість', ru: 'Количество', en: 'Quantity' })}</label>
-                          <div className="guest-stepper">
-                            <button type="button" className="guest-stepper-btn" onClick={() => setOrderForm((current) => ({ ...current, quantity: Math.max(1, Number(current.quantity) - 1) }))}>−</button>
-                            <span className="guest-stepper-value">{orderForm.quantity}</span>
-                            <button type="button" className="guest-stepper-btn" onClick={() => setOrderForm((current) => ({ ...current, quantity: Math.min(20, Number(current.quantity) + 1) }))}>+</button>
+                          <div className="guest-stepper-row">
+                            <div className="guest-stepper">
+                              <button type="button" className="guest-stepper-btn" onClick={() => setOrderForm((current) => ({ ...current, quantity: Math.max(1, Number(current.quantity) - 1) }))}>−</button>
+                              <span className="guest-stepper-value">{orderForm.quantity}</span>
+                              <button type="button" className="guest-stepper-btn" onClick={() => setOrderForm((current) => ({ ...current, quantity: Math.min(20, Number(current.quantity) + 1) }))}>+</button>
+                            </div>
+                            {selectedTicketType && (
+                              <span className="ticket-total-price">
+                                {Number(selectedTicketType.price) * Number(orderForm.quantity)} {selectedTicketType.currency}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="form-group">

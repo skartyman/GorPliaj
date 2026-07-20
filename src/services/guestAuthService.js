@@ -92,6 +92,12 @@ async function findOrCreateGuest({ email, phone, name }) {
   });
 }
 
+async function findGuestByEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  return prisma.guest.findUnique({ where: { email: normalizedEmail } });
+}
+
 async function createMagicLink(guestId) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MS);
@@ -110,19 +116,22 @@ async function verifyMagicLink(token) {
   if (!link) return null;
   if (link.usedAt) return null;
   if (Date.now() > new Date(link.expiresAt).getTime()) return null;
-  await prisma.guestMagicLink.update({
-    where: { id: link.id },
+  const claimed = await prisma.guestMagicLink.updateMany({
+    where: { id: link.id, usedAt: null, expiresAt: { gt: new Date() } },
     data: { usedAt: new Date() }
   });
+  if (claimed.count !== 1) return null;
   await prisma.guest.update({
     where: { id: link.guestId },
     data: { lastLoginAt: new Date() }
   });
 
   const shellService = require('./shellService');
-  shellService.grantRegistrationBonus(link.guestId).catch(() => {});
+  await shellService.grantRegistrationBonus(link.guestId);
 
-  return link.guest;
+  const refreshedGuest = await prisma.guest.findUnique({ where: { id: link.guestId } });
+
+  return refreshedGuest;
 }
 
 module.exports = {
@@ -130,6 +139,7 @@ module.exports = {
   verifyToken,
   getGuestById,
   findOrCreateGuest,
+  findGuestByEmail,
   createMagicLink,
   verifyMagicLink,
   getTokenTtlMs: () => TOKEN_TTL_MS

@@ -43,38 +43,45 @@ async function getHistory(guestId, { page = 1, limit = 20 } = {}) {
   };
 }
 
-async function createTransaction(guestId, { type, amount, source, description, referenceId }) {
-  const guest = await prisma.guest.findUnique({
-    where: { id: guestId },
-    select: { shellBalance: true }
-  });
-
-  const currentBalance = Number(guest.shellBalance);
-  const newBalance = type === 'SPEND' ? currentBalance - amount : currentBalance + amount;
-
-  if (newBalance < 0) {
-    throw new Error('INSUFFICIENT_BALANCE');
+async function createTransaction(guestId, { type, amount, source, description, referenceId, idempotencyKey }) {
+  if (idempotencyKey) {
+    const existing = await prisma.shellTransaction.findUnique({ where: { idempotencyKey } });
+    if (existing) return { balance: Number(existing.balanceAfter), transaction: existing, duplicate: true };
   }
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const guest = await tx.guest.findUnique({
+        where: { id: guestId },
+        select: { shellBalance: true }
+      });
+      if (!guest) throw new Error('GUEST_NOT_FOUND');
 
-  const [, transaction] = await Promise.all([
-    prisma.guest.update({
-      where: { id: guestId },
-      data: { shellBalance: newBalance }
-    }),
-    prisma.shellTransaction.create({
-      data: {
-        guestId,
-        type,
-        amount,
-        balanceAfter: newBalance,
-        source,
-        description: description || null,
-        referenceId: referenceId || null
-      }
-    })
-  ]);
+      const currentBalance = Number(guest.shellBalance);
+      const newBalance = type === 'SPEND' ? currentBalance - amount : currentBalance + amount;
+      if (newBalance < 0) throw new Error('INSUFFICIENT_BALANCE');
 
-  return { balance: newBalance, transaction };
+      const transaction = await tx.shellTransaction.create({
+        data: {
+          guestId,
+          type,
+          amount,
+          balanceAfter: newBalance,
+          source,
+          description: description || null,
+          referenceId: referenceId || null,
+          idempotencyKey: idempotencyKey || null
+        }
+      });
+      await tx.guest.update({ where: { id: guestId }, data: { shellBalance: newBalance } });
+      return { balance: newBalance, transaction };
+    }, { isolationLevel: 'Serializable' });
+  } catch (error) {
+    if (idempotencyKey && error?.code === 'P2002') {
+      const existing = await prisma.shellTransaction.findUnique({ where: { idempotencyKey } });
+      if (existing) return { balance: Number(existing.balanceAfter), transaction: existing, duplicate: true };
+    }
+    throw error;
+  }
 }
 
 async function earnShells(guestId, source, { description, referenceId } = {}) {
@@ -97,7 +104,8 @@ async function creditTopup(guestId, amount, paymentId) {
     amount,
     source: 'TOPUP',
     description: `Поповнення: ${amount} ₴`,
-    referenceId: paymentId
+    referenceId: paymentId,
+    idempotencyKey: `TOPUP:${guestId}:${paymentId}`
   });
 }
 
@@ -106,7 +114,13 @@ async function grantRegistrationBonus(guestId) {
     where: { guestId, source: 'REGISTRATION' }
   });
   if (existing) return null;
-  return earnShells(guestId, 'REGISTRATION', { description: 'Бонус за реєстрацію' });
+  return createTransaction(guestId, {
+    type: 'EARN',
+    amount: BONUS_AMOUNTS.REGISTRATION,
+    source: 'REGISTRATION',
+    description: 'Бонус за реєстрацію',
+    idempotencyKey: `REGISTRATION:${guestId}`
+  });
 }
 
 async function grantTicketBonus(guestId, ticketOrderId) {
@@ -114,7 +128,7 @@ async function grantTicketBonus(guestId, ticketOrderId) {
     where: { guestId, source: 'TICKET_PURCHASE', referenceId: ticketOrderId }
   });
   if (existing) return null;
-  return earnShells(guestId, 'TICKET_PURCHASE', { description: 'Бонус за купівлю квитка', referenceId: ticketOrderId });
+  return createTransaction(guestId, { type: 'EARN', amount: BONUS_AMOUNTS.TICKET_PURCHASE, source: 'TICKET_PURCHASE', description: 'Бонус за купівлю квитка', referenceId: ticketOrderId, idempotencyKey: `TICKET_PURCHASE:${guestId}:${ticketOrderId}` });
 }
 
 async function grantMenuOrderBonus(guestId, tableOrderId) {
@@ -122,7 +136,7 @@ async function grantMenuOrderBonus(guestId, tableOrderId) {
     where: { guestId, source: 'MENU_ORDER', referenceId: tableOrderId }
   });
   if (existing) return null;
-  return earnShells(guestId, 'MENU_ORDER', { description: 'Бонус за замовлення з меню', referenceId: tableOrderId });
+  return createTransaction(guestId, { type: 'EARN', amount: BONUS_AMOUNTS.MENU_ORDER, source: 'MENU_ORDER', description: 'Бонус за замовлення з меню', referenceId: tableOrderId, idempotencyKey: `MENU_ORDER:${guestId}:${tableOrderId}` });
 }
 
 module.exports = {

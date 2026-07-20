@@ -475,7 +475,7 @@ async function createShellTopupCheckoutSession({ guestId, amount }) {
 
   const requestData = hutkoUtils.prepareRequest({
     order_id: orderId,
-    order_desc: `Поповнення балансу ракушок: ${amount} ₴`,
+    order_desc: `Поповнення балансу мушель: ${amount} ₴`,
     currency: 'UAH',
     amount: String(amountCents),
     response_url: `${appBaseUrl}/api/paygate/hutko/return/public?kind=shell_topup&return_to=${encodeURIComponent('/cabinet?tab=shells&topup=success')}`,

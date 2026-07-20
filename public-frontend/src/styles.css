@@ -206,7 +206,44 @@ img { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 10px;
+}
+.sidebar-footer-row {
+  display: flex;
   gap: 8px;
+  align-items: center;
+}
+.sidebar-shell-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #DAA520;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.sidebar-shell-badge:hover {
+  border-color: #DAA520;
+}
+.sidebar-shell-badge .shell-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Hide topbar shell badge on desktop (shown in sidebar instead) */
+@media (min-width: 769px) {
+  .shell-balance-topbar { display: none; }
+}
+/* Hide sidebar shell badge on mobile (shown in topbar instead) */
+@media (max-width: 768px) {
+  .sidebar-shell-badge { display: none; }
 }
 
 .locale-btn {
@@ -225,6 +262,42 @@ img { display: block; max-width: 100%; }
 .locale-btn:hover {
   border-color: var(--brand);
   color: var(--brand);
+}
+
+.shell-balance-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: #DAA520;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.shell-balance-badge:hover {
+  color: #b8860b;
+}
+.shell-balance-badge .shell-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.shell-balance-badge .shell-balance-count {
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .shell-balance-badge .shell-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .shell-balance-badge {
+    font-size: 0.7rem;
+  }
 }
 
 /* ===== Glass Container ===== */
@@ -4166,6 +4239,17 @@ h3 {
   overflow: hidden;
   background: var(--bg-secondary);
 }
+.guest-stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ticket-total-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--brand);
+  white-space: nowrap;
+}
 
 .guest-stepper-btn {
   width: 44px;
@@ -7003,6 +7087,9 @@ select.booking-compact-control {
 .cabinet-page { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
 .cabinet-login { max-width: 420px; margin: 40px auto; }
 .cabinet-login h1, .cabinet-header h1 { font-size: 26px; margin-bottom: 8px; color: var(--text); }
+.cabinet-auth-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 20px 0 14px; padding: 4px; border-radius: 12px; background: var(--bg-secondary); }
+.cabinet-auth-switch button { padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.cabinet-auth-switch button.active { background: var(--accent); color: #fff; }
 .cabinet-sub { color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
 .cabinet-form { display: flex; flex-direction: column; gap: 14px; }
 .cabinet-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text); }
@@ -7015,8 +7102,9 @@ select.booking-compact-control {
 .cabinet-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
 .cabinet-email { color: var(--muted); font-size: 14px; }
 .cabinet-logout { background: none; border: 1px solid var(--line-light); border-radius: 8px; padding: 8px 14px; cursor: pointer; color: var(--text); font-size: 14px; }
-.cabinet-tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
-.cabinet-tabs button { background: none; border: none; padding: 10px 14px; cursor: pointer; font-size: 15px; color: var(--muted); border-bottom: 2px solid transparent; }
+.cabinet-tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--line); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.cabinet-tabs::-webkit-scrollbar { display: none; }
+.cabinet-tabs button { background: none; border: none; padding: 10px 14px; cursor: pointer; font-size: 15px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; flex-shrink: 0; }
 .cabinet-tabs button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 .cabinet-list { display: flex; flex-direction: column; gap: 12px; }
 .cabinet-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-secondary); }
@@ -7133,7 +7221,138 @@ select.booking-compact-control {
 }
 .phone-intl-link:hover { opacity: 0.7; }
 
-/* Shells (Ракушки) */
+/* ===== WelcomeCard ===== */
+.welcome-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.welcome-good { border-left: 4px solid #4caf50; }
+.welcome-moderate { border-left: 4px solid #ff9800; }
+.welcome-bad { border-left: 4px solid #5c9ce6; }
+
+.welcome-weather { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.welcome-weather-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.welcome-weather-text { flex: 1; }
+.welcome-greeting { font-size: 1.05rem; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+.welcome-weather-details { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+.welcome-section { margin-top: 12px; }
+.welcome-section-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; }
+.welcome-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.9rem; flex-wrap: wrap; }
+.welcome-item-status { font-size: 0.85rem; flex-shrink: 0; width: 18px; text-align: center; }
+.welcome-item-name { flex: 1; color: var(--text); font-weight: 500; min-width: 0; }
+.welcome-item-label { font-size: 0.78rem; font-weight: 500; }
+.welcome-item-price { font-size: 0.82rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.welcome-buy-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.welcome-buy-btn:hover { background: var(--brand); color: #fff; }
+.welcome-buy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.welcome-bestday {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(92, 156, 230, 0.08);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.welcome-bestday strong { color: #5c9ce6; }
+
+.welcome-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.welcome-action-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--brand);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.welcome-action-btn:hover {
+  background: var(--brand);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .welcome-card { padding: 14px 12px; }
+  .welcome-weather-icon { font-size: 1.5rem; }
+  .welcome-greeting { font-size: 0.95rem; }
+  .welcome-actions { flex-direction: column; }
+  .welcome-action-btn { text-align: center; }
+}
+
+/* ===== EveningBeachCard ===== */
+.evening-beach-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 18px;
+  border-left: 4px solid #5c9ce6;
+}
+.evening-beach-title { font-size: 1.05rem; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+.evening-beach-subtitle { font-size: 0.82rem; color: var(--muted); margin: 0 0 12px; }
+.evening-beach-list { display: flex; flex-direction: column; gap: 8px; }
+.evening-beach-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.evening-beach-item-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.evening-beach-item-icon { font-size: 0.85rem; flex-shrink: 0; width: 18px; text-align: center; }
+.evening-beach-item-details { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.evening-beach-item-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+.evening-beach-item-type { font-size: 0.75rem; color: var(--muted); }
+.evening-beach-item-price { font-weight: 700; font-size: 0.9rem; color: var(--text); white-space: nowrap; }
+.evening-beach-item-action { flex-shrink: 0; }
+.evening-beach-buy-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--brand);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.evening-beach-buy-btn:hover { background: var(--brand); color: #fff; }
+.evening-beach-buy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.evening-beach-status-label { font-size: 0.78rem; font-weight: 500; }
+.evening-beach-status-label.free { color: #4caf50; }
+.evening-beach-status-label.busy { color: #ff9800; }
+.evening-beach-footer { font-size: 0.78rem; color: var(--muted); margin: 12px 0 0; }
+
+@media (max-width: 600px) {
+  .evening-beach-card { padding: 14px 12px; }
+  .evening-beach-item { flex-direction: column; align-items: stretch; gap: 6px; }
+  .evening-beach-item-action { align-self: flex-end; }
+  .evening-beach-buy-btn { width: 100%; }
+}
+
+/* Shells (Мушлі) */
 .cabinet-shells { display: grid; gap: 16px; }
 .shells-balance-card {
   background: var(--bg-secondary);
@@ -7141,6 +7360,7 @@ select.booking-compact-control {
   border-radius: 12px;
   padding: 20px;
   text-align: center;
+  overflow: hidden;
 }
 .shells-balance-label { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
 .shells-balance-value { font-size: 2rem; font-weight: 700; color: var(--brand); margin-bottom: 16px; }
@@ -7153,3 +7373,11 @@ select.booking-compact-control {
 .shells-tx-amount.positive { color: #4caf50; }
 .shells-tx-amount.negative { color: #ff8a8a; }
 .shells-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; }
+
+@media (max-width: 600px) {
+  .shells-balance-card { padding: 14px 12px; }
+  .shells-balance-value { font-size: 1.4rem; margin-bottom: 12px; }
+  .shells-topup-row { flex-direction: column; gap: 6px; }
+  .shells-topup-row .btn-accent { width: 100%; }
+  .cabinet-form { overflow: hidden; }
+}

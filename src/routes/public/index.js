@@ -62,4 +62,9 @@ router.get('/guest/shells/balance', requireGuestAuth, guestController.getShellBa
 router.get('/guest/shells/history', requireGuestAuth, guestController.getShellHistory);
 router.post('/guest/shells/topup', requireGuestAuth, guestController.createShellTopup);
 
+router.get('/guest/welcome', requireGuestAuth, guestController.getWelcome);
+
+router.get('/guest/evening-beach', requireGuestAuth, guestController.getEveningBeach);
+router.post('/guest/evening-beach/purchase', requireGuestAuth, guestController.purchaseEveningBeach);
+
 module.exports = router;

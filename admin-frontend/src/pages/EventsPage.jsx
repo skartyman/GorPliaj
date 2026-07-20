@@ -54,14 +54,21 @@ function toDateTimeLocal(value) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
+  const kyivStr = date.toLocaleString('sv-SE', { timeZone: 'Europe/Kyiv' });
+  return kyivStr.slice(0, 16);
 }
 
 function fromDateTimeLocal(value) {
   if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  const parts = String(value).split('T');
+  if (parts.length !== 2) return null;
+  const [datePart, timePart] = parts;
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  const kyivDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const utcMs = kyivDate.getTime() + (3 * 60 * 60 * 1000);
+  const utcDate = new Date(utcMs);
+  return Number.isNaN(utcDate.getTime()) ? null : utcDate.toISOString();
 }
 
 function getLocaleCode(locale) {

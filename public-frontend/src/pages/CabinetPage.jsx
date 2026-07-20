@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useLocale } from '../state/locale';
 import { useGuest } from '../state/guest';
@@ -6,6 +6,8 @@ import { localizedCopy } from '../lib/i18n';
 import { guestApi } from '../lib/api';
 import { identifyAnalytics, captureAnalytics, resetAnalytics } from '../lib/analytics';
 import PhoneInput from '../components/PhoneInput';
+import WelcomeCard from '../components/WelcomeCard';
+import EveningBeachCard from '../components/EveningBeachCard';
 
 const STATUS_LABELS = {
   PENDING: { ua: 'Очікує', ru: 'Ожидает', en: 'Pending' },
@@ -42,11 +44,15 @@ export default function CabinetPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [authMode, setAuthMode] = useState('login');
   const [loading, setLoading] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState('reservations');
+  const [welcomeData, setWelcomeData] = useState(null);
+  const [eveningBeach, setEveningBeach] = useState(null);
+  const verifyingTokenRef = useRef(null);
 
   const loadCabinet = useCallback(async () => {
     try {
@@ -63,6 +69,14 @@ export default function CabinetPage() {
     } catch (err) {
       setError(err.message || c({ ua: 'Не вдалося завантажити кабінет.', ru: 'Не удалось загрузить кабинет.', en: 'Failed to load cabinet.' }));
     }
+    try {
+      const welcome = await guestApi.welcome();
+      setWelcomeData(welcome);
+    } catch {}
+    try {
+      const beach = await guestApi.eveningBeach();
+      setEveningBeach(beach);
+    } catch {}
   }, [c]);
 
   useEffect(() => {
@@ -72,15 +86,17 @@ export default function CabinetPage() {
 
   useEffect(() => {
     const linkToken = searchParams.get('token');
-    if (linkToken && !isLoggedIn) {
+    if (linkToken && !isLoggedIn && verifyingTokenRef.current !== linkToken) {
+      verifyingTokenRef.current = linkToken;
       setLoading(true);
       guestApi.verifyLink(linkToken)
         .then(async (data) => {
           login(data.token, data.guest);
           captureAnalytics('guest_logged_in', { method: 'magic_link' });
           identifyAnalytics(`guest_${data.guest.id}`, { email: data.guest.email, name: data.guest.name });
-          searchParams.delete('token');
-          setSearchParams(searchParams, { replace: true });
+          const nextParams = new URLSearchParams(searchParams);
+          nextParams.delete('token');
+          setSearchParams(nextParams, { replace: true });
         })
         .catch(() => {
           setError(c({ ua: 'Посилання для входу недійсне або застаріле.', ru: 'Ссылка для входа недействительна или устарела.', en: 'Login link is invalid or expired.' }));
@@ -102,6 +118,18 @@ export default function CabinetPage() {
     }
   }, [searchParams, isLoggedIn]);
 
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['reservations', 'favorites', 'favOrders', 'shells'].includes(tabParam)) {
+      setTab(tabParam);
+      if (tabParam === 'shells') {
+        loadShellHistory();
+      }
+      searchParams.delete('tab');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, isLoggedIn]);
+
   const handleRequestLink = async (e) => {
     e.preventDefault();
     setError('');
@@ -110,21 +138,23 @@ export default function CabinetPage() {
       setError(c({ ua: 'Введіть коректний email.', ru: 'Введите корректный email.', en: 'Enter a valid email.' }));
       return;
     }
-    if (name.trim().length < 2) {
+    if (authMode === 'register' && name.trim().length < 2) {
       setError(c({ ua: 'Введіть імʼя.', ru: 'Введите имя.', en: 'Enter your name.' }));
       return;
     }
-    if (phone.replace(/\D/g, '').length < 7) {
+    if (authMode === 'register' && phone.replace(/\D/g, '').length < 7) {
       setError(c({ ua: 'Введіть телефон.', ru: 'Введите телефон.', en: 'Enter your phone.' }));
       return;
     }
     setSendingLink(true);
     try {
-      await guestApi.requestLink(email, phone, name);
-      captureAnalytics('guest_registered', { method: 'magic_link' });
+      await guestApi.requestLink(email, authMode === 'register' ? phone : null, authMode === 'register' ? name : null, authMode === 'login');
+      captureAnalytics(authMode === 'register' ? 'guest_registered' : 'guest_login_link_requested', { method: 'magic_link' });
       setMessage(c({ ua: 'Ми надіслали посилання для входу на ваш email. Перевірте пошту.', ru: 'Мы отправили ссылку для входа на ваш email. Проверьте почту.', en: 'We sent a login link to your email. Check your inbox.' }));
     } catch (err) {
-      setError(err.message || c({ ua: 'Не вдалося надіслати посилання.', ru: 'Не удалось отправить ссылку.', en: 'Failed to send login link.' }));
+      setError(err.status === 404
+        ? c({ ua: 'Акаунт із таким email не знайдено. Оберіть реєстрацію.', ru: 'Аккаунт с таким email не найден. Выберите регистрацию.', en: 'No account found for this email. Choose registration.' })
+        : (err.message || c({ ua: 'Не вдалося надіслати посилання.', ru: 'Не удалось отправить ссылку.', en: 'Failed to send login link.' })));
     } finally {
       setSendingLink(false);
     }
@@ -241,15 +271,23 @@ export default function CabinetPage() {
           <p className="cabinet-sub">{c({ ua: 'Ваші бронювання, улюблені столики та історія - в одному місці. Імʼя та телефон потрібні для бронювання.',
             ru: 'Ваши брони, любимые столики и история - в одном месте. Имя и телефон нужны для бронирования.',
             en: 'Your bookings, favorite tables and history - all in one place. Name and phone are required for booking.' })}</p>
+          <div className="cabinet-auth-switch" role="tablist" aria-label={c({ ua: 'Вхід або реєстрація', ru: 'Вход или регистрация', en: 'Login or registration' })}>
+            <button type="button" className={authMode === 'login' ? 'active' : ''} onClick={() => { setAuthMode('login'); setError(''); setMessage(''); }}>
+              {c({ ua: 'Увійти', ru: 'Войти', en: 'Log in' })}
+            </button>
+            <button type="button" className={authMode === 'register' ? 'active' : ''} onClick={() => { setAuthMode('register'); setError(''); setMessage(''); }}>
+              {c({ ua: 'Реєстрація', ru: 'Регистрация', en: 'Register' })}
+            </button>
+          </div>
           <form onSubmit={handleRequestLink} className="cabinet-form">
-            <label>
+            {authMode === 'register' && <label>
               {c({ ua: 'Імʼя *', ru: 'Имя *', en: 'Name *' })}
               <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} placeholder={c({ ua: 'Ваше імʼя', ru: 'Ваше имя', en: 'Your name' })} />
-            </label>
-            <label>
+            </label>}
+            {authMode === 'register' && <label>
               {c({ ua: 'Телефон *', ru: 'Телефон *', en: 'Phone *' })}
               <PhoneInput value={phone} onChange={setPhone} required />
-            </label>
+            </label>}
             <label>
               Email *
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" />
@@ -277,6 +315,10 @@ export default function CabinetPage() {
 
       {error && <p className="cabinet-error">{error}</p>}
 
+      {welcomeData && <WelcomeCard data={welcomeData} onPurchased={() => loadCabinet()} />}
+
+      {eveningBeach && <EveningBeachCard data={eveningBeach} />}
+
       <div className="cabinet-actions">
         <Link to="/booking" className="cabinet-action-btn">{c({ ua: 'Нове бронювання', ru: 'Новое бронирование', en: 'New booking' })}</Link>
         <Link to="/menu" className="cabinet-action-btn">{c({ ua: 'Переглянути меню', ru: 'Посмотреть меню', en: 'View menu' })}</Link>
@@ -293,7 +335,7 @@ export default function CabinetPage() {
           {c({ ua: 'Улюблені замовлення', ru: 'Избранные заказы', en: 'Favorite orders' })}
         </button>
         <button className={tab === 'shells' ? 'active' : ''} onClick={() => { setTab('shells'); loadShellHistory(); }}>
-          {c({ ua: 'Ракушки', ru: 'Ракушки', en: 'Shells' })} {guest?.shellBalance != null ? `(${guest.shellBalance})` : ''}
+          {c({ ua: 'Мушлі', ru: 'Моллюски', en: 'Shells' })} {guest?.shellBalance != null ? `(${guest.shellBalance})` : ''}
         </button>
       </div>
 
@@ -384,7 +426,7 @@ export default function CabinetPage() {
         <div className="cabinet-shells">
           <div className="shells-balance-card">
             <div className="shells-balance-label">{c({ ua: 'Ваш баланс', ru: 'Ваш баланс', en: 'Your balance' })}</div>
-            <div className="shells-balance-value">{guest?.shellBalance || 0} {c({ ua: 'ракушок', ru: 'ракушек', en: 'shells' })}</div>
+            <div className="shells-balance-value">{guest?.shellBalance || 0} {c({ ua: 'мушель', ru: 'моллюсков', en: 'shells' })}</div>
             <div className="shells-topup-row">
               <input
                 type="number"
@@ -399,7 +441,7 @@ export default function CabinetPage() {
                 {topupLoading ? '...' : c({ ua: 'Поповнити', ru: 'Пополнить', en: 'Top up' })}
               </button>
             </div>
-            <p className="shells-rate">1 ₴ = 1 {c({ ua: 'ракушка', ru: 'ракушка', en: 'shell' })}</p>
+            <p className="shells-rate">1 ₴ = 1 {c({ ua: 'мушля', ru: 'моллюск', en: 'shell' })}</p>
           </div>
 
           <h3 className="shells-history-title">{c({ ua: 'Історія операцій', ru: 'История операций', en: 'Transaction history' })}</h3>

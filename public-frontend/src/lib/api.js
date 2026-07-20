@@ -37,7 +37,9 @@ async function request(path, init) {
         message = payload.message;
       }
     } catch {}
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return response.json();
@@ -163,8 +165,8 @@ export const waiterApi = {
 };
 
 export const guestApi = {
-  requestLink: (email, phone, name) =>
-    request('/guest/auth/request-link', { method: 'POST', body: JSON.stringify({ email, phone, name }) }),
+  requestLink: (email, phone, name, loginOnly = false) =>
+    request('/guest/auth/request-link', { method: 'POST', body: JSON.stringify({ email, phone, name, loginOnly }) }),
   verifyLink: (token) =>
     request('/guest/auth/verify-link', { method: 'POST', body: JSON.stringify({ token }) }),
   me: () => request('/guest/me'),
@@ -188,5 +190,8 @@ export const guestApi = {
   deleteFavoriteOrder: (id) => request(`/guest/favorite-orders/${id}`, { method: 'DELETE' }),
   shellBalance: () => request('/guest/shells/balance'),
   shellHistory: (page = 1) => request(`/guest/shells/history?page=${page}`),
-  shellTopup: (amount) => request('/guest/shells/topup', { method: 'POST', body: JSON.stringify({ amount }) })
+  shellTopup: (amount) => request('/guest/shells/topup', { method: 'POST', body: JSON.stringify({ amount }) }),
+  welcome: () => request('/guest/welcome'),
+  eveningBeach: () => request('/guest/evening-beach'),
+  purchaseEveningBeach: (tableId) => request('/guest/evening-beach/purchase', { method: 'POST', body: JSON.stringify({ tableId }) })
 };

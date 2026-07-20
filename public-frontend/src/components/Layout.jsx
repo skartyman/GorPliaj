@@ -1,7 +1,8 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useLocale } from '../state/locale';
 import { useSettings } from '../state/settings';
+import { useGuest } from '../state/guest';
 import { localizedCopy, localizeField } from '../lib/i18n';
 import ClientInstallPrompt from './ClientInstallPrompt';
 
@@ -69,8 +70,10 @@ function BottomNavIcon({ path }) {
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { locale, setLocale, t } = useLocale();
   const { settings } = useSettings();
+  const { guest, isLoggedIn } = useGuest();
   const isMenuRoute = location.pathname === '/menu';
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -161,6 +164,17 @@ export default function Layout() {
         </nav>
 
         <div className="sidebar-footer">
+          {isLoggedIn && (
+            <button
+              type="button"
+              className="shell-balance-badge sidebar-shell-badge"
+              onClick={() => navigate('/cabinet?tab=shells')}
+              title={localizedCopy({ ua: 'Мушлі - натисніть для поповнення', ru: 'Моллюски - нажмите для пополнения', en: 'Shells - tap to top up' }, locale)}
+            >
+              <img className="shell-icon" src="/icons/shell.png" alt="" draggable={false} />
+              <span className="shell-balance-count">{guest?.shellBalance || 0}</span>
+            </button>
+          )}
           <button
             type="button"
             className="locale-btn"
@@ -176,7 +190,6 @@ export default function Layout() {
             type="button"
             className="locale-btn"
             onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
-            style={{ marginTop: 4 }}
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
@@ -188,7 +201,18 @@ export default function Layout() {
           <img className="top-bar-logo" src={logoUrl} alt={brandName} />
           <span>{brandName}</span>
         </NavLink>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {isLoggedIn && (
+            <button
+              type="button"
+              className="shell-balance-badge shell-balance-topbar"
+              onClick={() => navigate('/cabinet?tab=shells')}
+              title={localizedCopy({ ua: 'Мушлі - натисніть для поповнення', ru: 'Моллюски - нажмите для пополнения', en: 'Shells - tap to top up' }, locale)}
+            >
+              <img className="shell-icon" src="/icons/shell.png" alt="" draggable={false} />
+              <span className="shell-balance-count">{guest?.shellBalance || 0}</span>
+            </button>
+          )}
           <button
             type="button"
             className="locale-btn"

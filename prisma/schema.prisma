@@ -60,41 +60,41 @@ model Zone {
 }
 
 model VenueTable {
-  id           Int           @id @default(autoincrement())
-  mapId        Int
-  zoneId       Int
-  name         Json
-  code         String?
-  bookingKind  BookingKind   @default(TABLE)
-  positionType String?
-  positionSide VenuePositionSide?
-  rowId        Int?
-  photoUrl     String?
-  serviceName  Json?
+  id                 Int                  @id @default(autoincrement())
+  mapId              Int
+  zoneId             Int
+  name               Json
+  code               String?
+  bookingKind        BookingKind          @default(TABLE)
+  positionType       String?
+  positionSide       VenuePositionSide?
+  rowId              Int?
+  photoUrl           String?
+  serviceName        Json?
   serviceDescription Json?
-  seatsMin     Int
-  seatsMax     Int
-  deposit      Decimal       @db.Decimal(10, 2)
-  price        Decimal?      @db.Decimal(10, 2)
-  priceWeekday  Decimal?      @db.Decimal(10, 2)
-  priceWeekend  Decimal?      @db.Decimal(10, 2)
-  depositWeekday Decimal?      @db.Decimal(10, 2)
-  depositWeekend Decimal?      @db.Decimal(10, 2)
-  isActive     Boolean       @default(true)
-  isBookable   Boolean       @default(true)
-  sortOrder    Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  map          Map           @relation(fields: [mapId], references: [id], onDelete: Cascade)
-  zone         Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-  row          BeachRow?     @relation(fields: [rowId], references: [id], onDelete: SetNull)
-  mapObjects   MapObject[]
-  reservations Reservation[]
-  tableHolds   TableHold[]
-  overrides    VenueTableOverride[]
-  orders       TableOrder[]
-  calls        WaiterCall[]
-  favorites    GuestFavoriteUnit[]
+  seatsMin           Int
+  seatsMax           Int
+  deposit            Decimal              @db.Decimal(10, 2)
+  price              Decimal?             @db.Decimal(10, 2)
+  priceWeekday       Decimal?             @db.Decimal(10, 2)
+  priceWeekend       Decimal?             @db.Decimal(10, 2)
+  depositWeekday     Decimal?             @db.Decimal(10, 2)
+  depositWeekend     Decimal?             @db.Decimal(10, 2)
+  isActive           Boolean              @default(true)
+  isBookable         Boolean              @default(true)
+  sortOrder          Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  map                Map                  @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  zone               Zone                 @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  row                BeachRow?            @relation(fields: [rowId], references: [id], onDelete: SetNull)
+  mapObjects         MapObject[]
+  reservations       Reservation[]
+  tableHolds         TableHold[]
+  overrides          VenueTableOverride[]
+  orders             TableOrder[]
+  calls              WaiterCall[]
+  favorites          GuestFavoriteUnit[]
 
   @@index([mapId])
   @@index([zoneId])
@@ -103,20 +103,20 @@ model VenueTable {
 }
 
 model VenueTableOverride {
-  id         Int       @id @default(autoincrement())
-  tableId     Int
-  eventId     Int?
-  ruleDate    DateTime?
-  deposit     Decimal?  @db.Decimal(10, 2)
-  price       Decimal?  @db.Decimal(10, 2)
-  isActive    Boolean?
-  isBookable  Boolean?
-  photoUrl    String?
-  note        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  table       VenueTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  event       Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  id         Int        @id @default(autoincrement())
+  tableId    Int
+  eventId    Int?
+  ruleDate   DateTime?
+  deposit    Decimal?   @db.Decimal(10, 2)
+  price      Decimal?   @db.Decimal(10, 2)
+  isActive   Boolean?
+  isBookable Boolean?
+  photoUrl   String?
+  note       String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  table      VenueTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  event      Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   @@index([tableId])
   @@index([eventId])
@@ -124,24 +124,24 @@ model VenueTableOverride {
 }
 
 model PositionType {
-  id              Int             @id @default(autoincrement())
-  value           String          @unique
-  name            Json
-  description     Json?
-  photoUrl        String?
-  defaultPrice    Decimal?        @db.Decimal(10, 2)
-  defaultDeposit  Decimal?        @db.Decimal(10, 2)
-  priceWeekday    Decimal?        @db.Decimal(10, 2)
-  priceWeekend    Decimal?        @db.Decimal(10, 2)
-  depositWeekday  Decimal?        @db.Decimal(10, 2)
-  depositWeekend  Decimal?        @db.Decimal(10, 2)
-  code            String
-  requiresSide    Boolean         @default(false)
-  bookingKind     String
-  sortOrder       Int             @default(0)
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id             Int      @id @default(autoincrement())
+  value          String   @unique
+  name           Json
+  description    Json?
+  photoUrl       String?
+  defaultPrice   Decimal? @db.Decimal(10, 2)
+  defaultDeposit Decimal? @db.Decimal(10, 2)
+  priceWeekday   Decimal? @db.Decimal(10, 2)
+  priceWeekend   Decimal? @db.Decimal(10, 2)
+  depositWeekday Decimal? @db.Decimal(10, 2)
+  depositWeekend Decimal? @db.Decimal(10, 2)
+  code           String
+  requiresSide   Boolean  @default(false)
+  bookingKind    String
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model BeachRow {
@@ -151,8 +151,8 @@ model BeachRow {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  zone      Zone         @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-  tables    VenueTable[]
+  zone   Zone         @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  tables VenueTable[]
 }
 
 model MapObject {
@@ -181,48 +181,48 @@ model MapObject {
 }
 
 model Reservation {
-  id              Int               @id @default(autoincrement())
-  bookingGroupId  String?
-  isGroupLead     Boolean           @default(false)
-  groupGuestCount Int?
-  tableId         Int
-  mapId           Int
-  zoneId          Int
-  eventId         Int?
-  bookingKind     BookingKind       @default(TABLE)
-  customerName    String
-  customerPhone   String
-  customerEmail   String?
-  guests          Int
-  reservationDate DateTime
-  timeFrom        DateTime
-  timeTo          DateTime
-  status          ReservationStatus @default(PENDING)
-  source          ReservationSource @default(WEB)
-  ticketCode      String?           @unique
-  arrivedAt       DateTime?
-  arrivedGuests   Int?
-  commentCustomer String?
-  commentAdmin    String?
-  depositRequired Boolean           @default(false)
-  depositAmount   Decimal?          @db.Decimal(10, 2)
-  rentalAmount    Decimal?          @db.Decimal(10, 2)
-  paidInCash      Boolean           @default(false)
-  onPremises      Boolean           @default(false)
-  onPremisesNote  String?
+  id                  Int               @id @default(autoincrement())
+  bookingGroupId      String?
+  isGroupLead         Boolean           @default(false)
+  groupGuestCount     Int?
+  tableId             Int
+  mapId               Int
+  zoneId              Int
+  eventId             Int?
+  bookingKind         BookingKind       @default(TABLE)
+  customerName        String
+  customerPhone       String
+  customerEmail       String?
+  guests              Int
+  reservationDate     DateTime
+  timeFrom            DateTime
+  timeTo              DateTime
+  status              ReservationStatus @default(PENDING)
+  source              ReservationSource @default(WEB)
+  ticketCode          String?           @unique
+  arrivedAt           DateTime?
+  arrivedGuests       Int?
+  commentCustomer     String?
+  commentAdmin        String?
+  depositRequired     Boolean           @default(false)
+  depositAmount       Decimal?          @db.Decimal(10, 2)
+  rentalAmount        Decimal?          @db.Decimal(10, 2)
+  paidInCash          Boolean           @default(false)
+  onPremises          Boolean           @default(false)
+  onPremisesNote      String?
   analyticsDistinctId String?
-  expiresAt       DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  event           Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  map             Map               @relation(fields: [mapId], references: [id], onDelete: Restrict)
-  zone            Zone              @relation(fields: [zoneId], references: [id], onDelete: Restrict)
-  table           VenueTable        @relation(fields: [tableId], references: [id], onDelete: Restrict)
-  payment         Payment?
-  logs            ReservationLog[]
-  tableHolds      TableHold[]
-  guest           Guest?          @relation(fields: [guestId], references: [id], onDelete: SetNull)
-  guestId         Int?
+  expiresAt           DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  event               Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  map                 Map               @relation(fields: [mapId], references: [id], onDelete: Restrict)
+  zone                Zone              @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  table               VenueTable        @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  payment             Payment?
+  logs                ReservationLog[]
+  tableHolds          TableHold[]
+  guest               Guest?            @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  guestId             Int?
 
   @@index([tableId])
   @@index([bookingGroupId])
@@ -237,46 +237,46 @@ model Reservation {
 }
 
 model Guest {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  phone        String?
-  name         String?
-  shellBalance Decimal  @default(0) @db.Decimal(10, 2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  lastLoginAt  DateTime?
-  reservations       Reservation[]
-  favorites          GuestFavoriteUnit[]
-  favoriteOrders     GuestFavoriteOrder[]
-  magicLinks         GuestMagicLink[]
-  shellTransactions  ShellTransaction[]
-  payments           Payment[]
+  id                Int                  @id @default(autoincrement())
+  email             String               @unique
+  phone             String?
+  name              String?
+  shellBalance      Decimal              @default(0) @db.Decimal(10, 2)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  lastLoginAt       DateTime?
+  reservations      Reservation[]
+  favorites         GuestFavoriteUnit[]
+  favoriteOrders    GuestFavoriteOrder[]
+  magicLinks        GuestMagicLink[]
+  shellTransactions ShellTransaction[]
+  payments          Payment[]
 
   @@index([phone])
 }
 
 model GuestMagicLink {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   guestId   Int
-  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  token     String   @unique
+  guest     Guest     @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([guestId])
 }
 
 model GuestFavoriteUnit {
-  id         Int        @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   guestId    Int
-  guest      Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  kind       String     @default("table")
+  guest      Guest       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  kind       String      @default("table")
   tableId    Int?
   table      VenueTable? @relation(fields: [tableId], references: [id], onDelete: Cascade)
   menuItemId Int?
   menuItem   MenuItem?   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  createdAt  DateTime   @default(now())
+  createdAt  DateTime    @default(now())
 
   @@unique([guestId, kind, tableId])
   @@unique([guestId, kind, menuItemId])
@@ -296,16 +296,17 @@ model GuestFavoriteOrder {
 }
 
 model ShellTransaction {
-  id          Int               @id @default(autoincrement())
-  guestId     Int
-  guest       Guest             @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  type        ShellTxType
-  amount      Decimal           @db.Decimal(10, 2)
-  balanceAfter Decimal          @db.Decimal(10, 2)
-  source      ShellSource
-  description String?
-  referenceId Int?
-  createdAt   DateTime          @default(now())
+  id             Int         @id @default(autoincrement())
+  guestId        Int
+  guest          Guest       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  type           ShellTxType
+  amount         Decimal     @db.Decimal(10, 2)
+  balanceAfter   Decimal     @db.Decimal(10, 2)
+  source         ShellSource
+  description    String?
+  referenceId    Int?
+  idempotencyKey String?     @unique
+  createdAt      DateTime    @default(now())
 
   @@index([guestId])
   @@index([createdAt])
@@ -379,28 +380,28 @@ model Payment {
 }
 
 model Event {
-  id               Int           @id @default(autoincrement())
-  title            Json
-  slug             String        @unique
-  shortDescription Json?
-  fullDescription  Json?
-  posterImage      String?
-  startAt          DateTime
-  endAt            DateTime?
-  status           EventStatus   @default(DRAFT)
-  isFeatured       Boolean       @default(false)
-  ctaType          EventCtaType  @default(BOOKING)
+  id                    Int                  @id @default(autoincrement())
+  title                 Json
+  slug                  String               @unique
+  shortDescription      Json?
+  fullDescription       Json?
+  posterImage           String?
+  startAt               DateTime
+  endAt                 DateTime?
+  status                EventStatus          @default(DRAFT)
+  isFeatured            Boolean              @default(false)
+  ctaType               EventCtaType         @default(BOOKING)
   preferredMapUsageMode MapUsageMode?
-  ticketUrl        String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  reservations     Reservation[]
-  tableHolds       TableHold[]
-  tableOverrides   VenueTableOverride[]
-  sessions         EventSession[]
-  ticketTypes      TicketType[]
-  ticketOrders     TicketOrder[]
-  tickets          Ticket[]
+  ticketUrl             String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  reservations          Reservation[]
+  tableHolds            TableHold[]
+  tableOverrides        VenueTableOverride[]
+  sessions              EventSession[]
+  ticketTypes           TicketType[]
+  ticketOrders          TicketOrder[]
+  tickets               Ticket[]
 
   @@index([slug])
   @@index([status])
@@ -410,20 +411,20 @@ model Event {
 }
 
 model EventSession {
-  id        Int       @id @default(autoincrement())
-  eventId    Int
-  name       Json?
-  startsAt   DateTime
-  endsAt     DateTime
-  sortOrder  Int      @default(0)
-  isActive   Boolean  @default(true)
+  id            Int                @id @default(autoincrement())
+  eventId       Int
+  name          Json?
+  startsAt      DateTime
+  endsAt        DateTime
+  sortOrder     Int                @default(0)
+  isActive      Boolean            @default(true)
   admissionMode EventAdmissionMode @default(TICKETED)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  ticketTypes TicketType[]
-  ticketOrders TicketOrder[]
-  tickets    Ticket[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  event         Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypes   TicketType[]
+  ticketOrders  TicketOrder[]
+  tickets       Ticket[]
 
   @@index([eventId])
   @@index([startsAt])
@@ -431,24 +432,24 @@ model EventSession {
 }
 
 model TicketType {
-  id          Int      @id @default(autoincrement())
-  eventId     Int
+  id             Int           @id @default(autoincrement())
+  eventId        Int
   eventSessionId Int?
-  name        Json
-  description Json?
-  price       Decimal  @db.Decimal(10, 2)
-  currency    String   @default("UAH")
-  capacity    Int
-  soldCount   Int      @default(0)
-  salesStart  DateTime?
-  salesEnd    DateTime?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventSession EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
-  tickets     Ticket[]
+  name           Json
+  description    Json?
+  price          Decimal       @db.Decimal(10, 2)
+  currency       String        @default("UAH")
+  capacity       Int
+  soldCount      Int           @default(0)
+  salesStart     DateTime?
+  salesEnd       DateTime?
+  isActive       Boolean       @default(true)
+  sortOrder      Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  event          Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventSession   EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
+  tickets        Ticket[]
 
   @@index([eventId])
   @@index([eventSessionId])
@@ -457,26 +458,26 @@ model TicketType {
 }
 
 model TicketOrder {
-  id            Int               @id @default(autoincrement())
-  eventId       Int
+  id             Int               @id @default(autoincrement())
+  eventId        Int
   eventSessionId Int?
-  orderNumber   String            @unique
-  downloadToken String            @unique
-  customerName  String
-  customerEmail String
-  customerPhone String?
-  amount        Decimal           @db.Decimal(10, 2)
-  currency      String            @default("UAH")
-  status        TicketOrderStatus @default(PENDING)
-  expiresAt     DateTime?
-  paidAt        DateTime?
-  cancelledAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  event         Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  eventSession  EventSession?     @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
-  payment       Payment?
-  tickets       Ticket[]
+  orderNumber    String            @unique
+  downloadToken  String            @unique
+  customerName   String
+  customerEmail  String
+  customerPhone  String?
+  amount         Decimal           @db.Decimal(10, 2)
+  currency       String            @default("UAH")
+  status         TicketOrderStatus @default(PENDING)
+  expiresAt      DateTime?
+  paidAt         DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  event          Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  eventSession   EventSession?     @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
+  payment        Payment?
+  tickets        Ticket[]
 
   @@index([eventId])
   @@index([eventSessionId])
@@ -486,25 +487,25 @@ model TicketOrder {
 }
 
 model Ticket {
-  id           Int          @id @default(autoincrement())
-  orderId      Int
-  eventId      Int
+  id             Int           @id @default(autoincrement())
+  orderId        Int
+  eventId        Int
   eventSessionId Int?
-  ticketTypeId Int
-  code         String       @unique
-  status       TicketStatus @default(RESERVED)
-  holderName   String?
-  holderEmail  String?
-  issuedAt     DateTime?
-  usedAt       DateTime?
-  cancelledAt  DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  order        TicketOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  event        Event        @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  eventSession EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
-  ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
-  scans        TicketScan[]
+  ticketTypeId   Int
+  code           String        @unique
+  status         TicketStatus  @default(RESERVED)
+  holderName     String?
+  holderEmail    String?
+  issuedAt       DateTime?
+  usedAt         DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  order          TicketOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  event          Event         @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  eventSession   EventSession? @relation(fields: [eventSessionId], references: [id], onDelete: SetNull)
+  ticketType     TicketType    @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  scans          TicketScan[]
 
   @@index([orderId])
   @@index([eventId])
@@ -527,15 +528,15 @@ model TicketScan {
 }
 
 model MenuCategory {
-  id        Int        @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   name      Json
-  slug      String     @unique
+  slug      String      @unique
   section   MenuSection @default(KITCHEN)
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
-  noPhoto   Boolean    @default(false)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+  noPhoto   Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   items     MenuItem[]
 
   @@index([sortOrder])
@@ -544,20 +545,20 @@ model MenuCategory {
 }
 
 model MenuItem {
-  id          Int          @id @default(autoincrement())
-  categoryId  Int
-  name        Json
-  description Json?
-  price       Decimal      @db.Decimal(10, 2)
-  imageUrl    String?
-  likesCount  Int          @default(0)
-  isActive    Boolean      @default(true)
-  isAvailable Boolean      @default(true)
-  sortOrder   Int          @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  orderItems  TableOrderItem[]
+  id            Int                 @id @default(autoincrement())
+  categoryId    Int
+  name          Json
+  description   Json?
+  price         Decimal             @db.Decimal(10, 2)
+  imageUrl      String?
+  likesCount    Int                 @default(0)
+  isActive      Boolean             @default(true)
+  isAvailable   Boolean             @default(true)
+  sortOrder     Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  category      MenuCategory        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems    TableOrderItem[]
   favoriteUnits GuestFavoriteUnit[]
 
   @@index([categoryId])
@@ -577,28 +578,28 @@ model News {
 }
 
 model FrontendSettings {
-  id           Int      @id @default(autoincrement())
-  title        Json?
-  description  Json?
-  keywords     Json?
-  logoUrl      String?
-  faviconUrl   String?
-  phone        String?
-  email        String?
-  address      Json?
-  mapEmbedUrl  String?
-  workingHours Json?
-  socialMedia  Json?
-  heroTitle    Json?
-  heroSubtitle Json?
-  aboutTitle   Json?
-  aboutText    Json?
-  aboutImageUrl String?
-  galleryImages Json?
-  footerText    Json?
+  id               Int      @id @default(autoincrement())
+  title            Json?
+  description      Json?
+  keywords         Json?
+  logoUrl          String?
+  faviconUrl       String?
+  phone            String?
+  email            String?
+  address          Json?
+  mapEmbedUrl      String?
+  workingHours     Json?
+  socialMedia      Json?
+  heroTitle        Json?
+  heroSubtitle     Json?
+  aboutTitle       Json?
+  aboutText        Json?
+  aboutImageUrl    String?
+  galleryImages    Json?
+  footerText       Json?
   reportRecipients Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model ReservationLog {
@@ -744,24 +745,24 @@ enum CallStatus {
 }
 
 model Waiter {
-  id             Int            @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   name           String
-  pinCode        String         @unique
+  pinCode        String        @unique
   telegramChatId String?
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
   shifts         WaiterShift[]
   orders         TableOrder[]
   calls          WaiterCall[]
 }
 
 model WaiterShift {
-  id        Int                 @id @default(autoincrement())
+  id        Int                @id @default(autoincrement())
   waiterId  Int
-  startedAt DateTime            @default(now())
+  startedAt DateTime           @default(now())
   endedAt   DateTime?
-  isActive  Boolean             @default(true)
-  waiter    Waiter              @relation(fields: [waiterId], references: [id])
+  isActive  Boolean            @default(true)
+  waiter    Waiter             @relation(fields: [waiterId], references: [id])
   tables    WaiterShiftTable[]
   orders    TableOrder[]
 
@@ -780,21 +781,21 @@ model WaiterShiftTable {
 }
 
 model TableOrder {
-  id             Int              @id @default(autoincrement())
-  tableId        Int
-  shiftId        Int?
-  waiterId       Int?
-  status         OrderStatus      @default(PENDING)
-  customerName   String?
-  customerPhone  String?
-  notes          String?
-  createdAt      DateTime         @default(now())
-  acceptedAt     DateTime?
-  completedAt    DateTime?
-  shift          WaiterShift?     @relation(fields: [shiftId], references: [id])
-  waiter         Waiter?          @relation(fields: [waiterId], references: [id])
-  table          VenueTable?      @relation(fields: [tableId], references: [id])
-  items          TableOrderItem[]
+  id            Int              @id @default(autoincrement())
+  tableId       Int
+  shiftId       Int?
+  waiterId      Int?
+  status        OrderStatus      @default(PENDING)
+  customerName  String?
+  customerPhone String?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  acceptedAt    DateTime?
+  completedAt   DateTime?
+  shift         WaiterShift?     @relation(fields: [shiftId], references: [id])
+  waiter        Waiter?          @relation(fields: [waiterId], references: [id])
+  table         VenueTable?      @relation(fields: [tableId], references: [id])
+  items         TableOrderItem[]
 
   @@index([tableId])
   @@index([waiterId])
@@ -802,26 +803,26 @@ model TableOrder {
 }
 
 model TableOrderItem {
-  id         Int       @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   orderId    Int
   menuItemId Int
-  quantity   Int       @default(1)
-  price      Decimal   @db.Decimal(10, 2)
+  quantity   Int        @default(1)
+  price      Decimal    @db.Decimal(10, 2)
   notes      String?
   order      TableOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem   MenuItem? @relation(fields: [menuItemId], references: [id])
+  menuItem   MenuItem?  @relation(fields: [menuItemId], references: [id])
 
   @@index([orderId])
 }
 
 model WaiterCall {
-  id          Int        @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   tableId     Int
   waiterId    Int?
-  status      CallStatus @default(PENDING)
-  createdAt   DateTime   @default(now())
+  status      CallStatus  @default(PENDING)
+  createdAt   DateTime    @default(now())
   respondedAt DateTime?
-  waiter      Waiter?    @relation(fields: [waiterId], references: [id])
+  waiter      Waiter?     @relation(fields: [waiterId], references: [id])
   table       VenueTable? @relation(fields: [tableId], references: [id])
 
   @@index([tableId])
@@ -830,18 +831,18 @@ model WaiterCall {
 }
 
 model ReportSchedule {
-  id             Int               @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   name           String
   reportType     ReportType
-  frequency      ReportFrequency   @default(WEEKLY)
+  frequency      ReportFrequency @default(WEEKLY)
   recipientEmail String
   recipientName  String?
-  isActive       Boolean           @default(true)
+  isActive       Boolean         @default(true)
   dayOfWeek      Int?
-  hour           Int               @default(9)
+  hour           Int             @default(9)
   lastSentAt     DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([reportType])
   @@index([frequency])
@@ -866,22 +867,22 @@ enum ReportFrequency {
 }
 
 model OccupancySnapshot {
-  id               Int      @id @default(autoincrement())
-  date             DateTime @unique
-  beachOccupied    Int      @default(0)
-  beachCapacity    Int      @default(0)
-  beachPct         Float    @default(0)
-  beachGuests      Int      @default(0)
-  tableOccupied    Int      @default(0)
-  tableCapacity    Int      @default(0)
-  tablePct         Float    @default(0)
-  tableGuests      Int      @default(0)
-  eveningEvents    Int      @default(0)
-  totalGuests      Int      @default(0)
-  onPremises       Int      @default(0)
-  arrived          Int      @default(0)
-  totalReservations Int    @default(0)
-  createdAt        DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  date              DateTime @unique
+  beachOccupied     Int      @default(0)
+  beachCapacity     Int      @default(0)
+  beachPct          Float    @default(0)
+  beachGuests       Int      @default(0)
+  tableOccupied     Int      @default(0)
+  tableCapacity     Int      @default(0)
+  tablePct          Float    @default(0)
+  tableGuests       Int      @default(0)
+  eveningEvents     Int      @default(0)
+  totalGuests       Int      @default(0)
+  onPremises        Int      @default(0)
+  arrived           Int      @default(0)
+  totalReservations Int      @default(0)
+  createdAt         DateTime @default(now())
 
   @@index([date])
 }
