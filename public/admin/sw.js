@@ -44,4 +44,3 @@ self.addEventListener('activate', (event) => {
 
 // Admin assets are intentionally left uncached at runtime so stale responses do
 // not interfere with uploads, editor saves, or asset hot updates.
-self.addEventListener('fetch', () => {});

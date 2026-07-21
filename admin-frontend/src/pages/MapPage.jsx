@@ -798,7 +798,7 @@ export default function MapPage() {
     const [mapResult, reservationsResult, availabilityResult] = await Promise.all([
       apiRequest(`/api/maps/${selectedMapId}`),
       apiRequest('/api/admin/reservations'),
-      apiRequest(`/api/maps/${selectedMapId}/availability?date=${selectedDate}&timeFrom=${getTimeKey(new Date())}`)
+      apiRequest(`/api/maps/${selectedMapId}/availability?date=${selectedDate}&timeFrom=${venueClock().timeKey}`)
     ]);
     if (!mapResult.response.ok) {
       setState((prev) => ({ ...prev, loading: false, error: mapResult.body?.message || t('map.errors.load'), mapData: null, reservations: [], availability: { busyTableIds: [], heldTableIds: [], freeTableIds: [] } }));
