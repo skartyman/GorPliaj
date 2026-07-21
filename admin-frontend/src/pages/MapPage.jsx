@@ -889,6 +889,18 @@ export default function MapPage() {
   const safeTransform = transform || { scale: 1, translateX: 0, translateY: 0 };
 
   useEffect(() => {
+    if (!containerNode || !state.mapData?.map?.id || computedViewportHeight === 'auto') return undefined;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => actions.fitToView());
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [actions.fitToView, computedViewportHeight, containerNode, state.mapData?.map?.id]);
+
+  useEffect(() => {
     const node = containerNode;
     if (!node) return;
     const update = () => {
