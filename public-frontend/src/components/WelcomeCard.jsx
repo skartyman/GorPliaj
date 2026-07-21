@@ -128,7 +128,7 @@ export default function WelcomeCard({ data, onPurchased }) {
         <div className="welcome-bestday">
           {c({ ua: 'Найкращий день для відпочинку:', ru: 'Лучший день для отдыха:', en: 'Best day for a visit:' })}{' '}
           <strong>
-            {new Date(weather.bestDay.date).toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {new Date(`${weather.bestDay.date}T12:00:00Z`).toLocaleDateString(locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', weekday: 'long', day: 'numeric', month: 'long' })}
             {' '}{Math.round(weather.bestDay.tempMax)}°C
           </strong>
         </div>

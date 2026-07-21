@@ -6,7 +6,7 @@ const { sendGuestMagicLinkEmail } = require('../services/emailService');
 const { getBaseUrl } = require('../utils/deliveryPresentation');
 const contentService = require('../services/contentService');
 const reservationService = require('../services/reservationService');
-const { getVenueClockParts, toDateTime } = require('../utils/venueTime');
+const { getVenueClockParts, toDateTime, addVenueDays, minutesToTimeKey } = require('../utils/venueTime');
 const { generateTicketCode } = require('../utils/ticket');
 
 function normalizeEmail(value) {
@@ -338,8 +338,9 @@ function findBestBeachDay(dailyForecast) {
 }
 
 function resolveTablePrice(table, dateKey, positionTypeMap = new Map()) {
-  const date = new Date(`${dateKey}T12:00:00+03:00`);
-  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const { year, month, day } = getVenueClockParts(toDateTime(dateKey, '12:00'));
+  const weekDay = new Date(Date.UTC(year, month - 1, day, 12)).getUTCDay();
+  const isWeekend = weekDay === 0 || weekDay === 6;
   const positionType = String(table?.positionType || '').toUpperCase();
   const config = positionTypeMap.get(positionType);
   const candidates = isWeekend
@@ -387,7 +388,7 @@ async function getWelcome(req, res) {
 
     let tableStatuses = [];
     if (defaultMapData && favoriteTables.length > 0) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getVenueClockParts().dateKey;
       try {
         const availability = await reservationService.getMapAvailability({
           mapId: favoriteTables[0]?.table?.mapId || defaultMapData.map.id,
@@ -528,18 +529,15 @@ async function getWelcome(req, res) {
   }
 }
 
-function roundUpToSlot(date) {
-  const m = date.getMinutes();
-  if (m <= 0) date.setMinutes(0, 0, 0);
-  else if (m <= 30) date.setMinutes(30, 0, 0);
-  else { date.setHours(date.getHours() + 1); date.setMinutes(0, 0, 0); }
-  return date;
-}
-
-function addHours(date, h) {
-  const d = new Date(date);
-  d.setHours(d.getHours() + h);
-  return d;
+function getBeachArrival(clock) {
+  const roundedMinutes = clock.minute === 0
+    ? clock.minutes
+    : Math.ceil(clock.minutes / 30) * 30;
+  const arrivalMinutes = roundedMinutes + 60;
+  const dayOffset = Math.floor(arrivalMinutes / 1440);
+  const dateKey = addVenueDays(clock.dateKey, dayOffset);
+  const timeKey = minutesToTimeKey(arrivalMinutes);
+  return { dateKey, timeKey, dateTime: toDateTime(dateKey, timeKey) };
 }
 
 async function getEveningBeach(req, res) {
@@ -548,11 +546,7 @@ async function getEveningBeach(req, res) {
     const clock = getVenueClockParts();
     const cutoffMinutes = 17 * 60;
     const isToday = clock.minutes < cutoffMinutes;
-    const targetDate = isToday ? clock.dateKey : (() => {
-      const d = new Date();
-      d.setDate(d.getDate() + 1);
-      return getVenueClockParts(d).dateKey;
-    })();
+    const targetDate = isToday ? clock.dateKey : addVenueDays(clock.dateKey, 1);
 
     const [favorites, positionTypes] = await Promise.all([
       prisma.guestFavoriteUnit.findMany({
@@ -592,10 +586,7 @@ async function getEveningBeach(req, res) {
 
     let computedTimeFrom = null;
     if (isToday) {
-      const now = new Date();
-      const rounded = roundUpToSlot(new Date(now));
-      const arrival = addHours(rounded, 1);
-      computedTimeFrom = `${String(arrival.getHours()).padStart(2, '0')}:${String(arrival.getMinutes()).padStart(2, '0')}`;
+      computedTimeFrom = getBeachArrival(clock).timeKey;
     }
 
     const beds = beachFavorites.map((fav) => {
@@ -661,9 +652,7 @@ async function purchaseEveningBeach(req, res) {
       return res.status(409).json({ message: 'Кровать вже зайнята.' });
     }
 
-    const now = new Date();
-    const rounded = roundUpToSlot(new Date(now));
-    const arrival = addHours(rounded, 1);
+    const arrival = getBeachArrival(clock).dateTime;
     const timeFrom = arrival;
     const timeTo = toDateTime(clock.dateKey, '20:00');
 
@@ -684,7 +673,7 @@ async function purchaseEveningBeach(req, res) {
     const ticketCode = generateTicketCode();
     const holdResult = await reservationService.createTableHold({
       tableId: table.id,
-      reservationDate: new Date(clock.dateKey + 'T00:00:00+03:00'),
+      reservationDate: toDateTime(clock.dateKey, '00:00'),
       timeFrom,
       timeTo,
       locale: 'ua'
@@ -699,7 +688,7 @@ async function purchaseEveningBeach(req, res) {
       customerPhone: guest?.phone || '',
       customerEmail: guest?.email || null,
       guests: table.seatsMin || 1,
-      reservationDate: new Date(clock.dateKey + 'T00:00:00+03:00'),
+      reservationDate: toDateTime(clock.dateKey, '00:00'),
       timeFrom,
       timeTo,
       rentalAmount: price,

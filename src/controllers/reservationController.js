@@ -15,7 +15,7 @@ const {
   verifyTicketSignature
 } = require('../utils/ticketSignature');
 const { generateTicketPdf } = require('../services/ticketPdfService');
-const { getClosingDateTime, toDateTime, VENUE_UTC_OFFSET, getVenueClockParts } = require('../utils/venueTime');
+const { getClosingDateTime, toDateTime, getVenueClockParts } = require('../utils/venueTime');
 const { localizeMessage } = require('../utils/localization');
 const crypto = require('crypto');
 
@@ -513,7 +513,7 @@ async function createReservation(req, res) {
       return res.status(400).json({ message: 'Guest count must be greater than 0.' });
     }
 
-    const reservationDate = new Date(`${req.body.reservationDate}T00:00:00${VENUE_UTC_OFFSET}`);
+    const reservationDate = toDateTime(req.body.reservationDate, '00:00');
     const timeFrom = toDateTime(req.body.reservationDate, req.body.timeFrom);
     let timeTo = getClosingDateTime(req.body.reservationDate);
 

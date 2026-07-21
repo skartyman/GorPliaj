@@ -6,30 +6,18 @@ import StatusPill from '../components/StatusPill';
 import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { useInteractiveMap } from '../hooks/useInteractiveMap';
+import { venueClock } from '../lib/venueTime';
 
 const DEFAULT_BED_ASSET_URL = 'https://pub-6d1f04082d9e4584a48596bdac463b42.r2.dev/menu/1778407987243-d869a9bf9505fca824818b2d.png';
 const MAP_PREVIEW_GUTTER = 240;
 
-function getTimeKey(date) {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
 function getDateKey(value = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Kyiv',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(value);
-  const obj = Object.fromEntries(parts.map((p) => [p.type, p.value]));
-  return `${obj.year}-${obj.month}-${obj.day}`;
+  return venueClock(value).dateKey;
 }
 
 function getRoundedTimeKey(value = new Date()) {
-  const date = new Date(value);
-  date.setMinutes(date.getMinutes() + 30);
-  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0);
-  return getTimeKey(date);
+  const total = Math.ceil((venueClock(value).minutes + 30) / 15) * 15;
+  return `${String(Math.floor((total % 1440) / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
 function getPositionDisplayName(table, language, fallback = '—') {

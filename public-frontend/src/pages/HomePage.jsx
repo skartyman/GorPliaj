@@ -11,6 +11,7 @@ import WeatherBlock from '../components/WeatherBlock';
 import EventCard from '../components/EventCard';
 import MapPreview from '../components/MapPreview';
 import { captureAnalytics } from '../lib/analytics';
+import { addVenueDays, venueClock, venueWeekDay } from '../lib/venueTime';
 
 export default function HomePage() {
   const { t, locale } = useLocale();
@@ -66,9 +67,8 @@ export default function HomePage() {
     let cancelled = false;
 
     async function loadMapPreview() {
-      const now = new Date();
-      const previewDate = new Date(now);
-      const weekDay = now.getDay();
+      const clock = venueClock();
+      const weekDay = venueWeekDay(clock.dateKey);
       const schedule = weekDay === 0 || weekDay >= 5
         ? settings?.workingHours?.fri
         : settings?.workingHours?.mon;
@@ -76,15 +76,11 @@ export default function HomePage() {
         const [hours, minutes] = String(value || fallback).split(':').map(Number);
         return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : 0;
       };
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const currentMinutes = clock.minutes;
       const openMinutes = parseMinutes(schedule?.open, '09:00');
       const closeMinutes = parseMinutes(schedule?.close, weekDay === 0 || weekDay >= 5 ? '22:00' : '21:00');
       const isTomorrow = currentMinutes >= closeMinutes;
-      if (isTomorrow) previewDate.setDate(previewDate.getDate() + 1);
-      const year = previewDate.getFullYear();
-      const month = String(previewDate.getMonth() + 1).padStart(2, '0');
-      const day = String(previewDate.getDate()).padStart(2, '0');
-      const date = `${year}-${month}-${day}`;
+      const date = isTomorrow ? addVenueDays(clock.dateKey, 1) : clock.dateKey;
       const previewMinutes = isTomorrow ? openMinutes : Math.min(Math.max(currentMinutes, openMinutes), closeMinutes);
       const timeFrom = `${String(Math.floor(previewMinutes / 60)).padStart(2, '0')}:${String(previewMinutes % 60).padStart(2, '0')}`;
       const mapsResult = await mapApi.list({ usageMode: 'DAY', guests: 2 });

@@ -355,7 +355,7 @@ export default function CabinetPage() {
             <div key={r.id} className="cabinet-card">
               <div className="cabinet-card-main">
                 <strong>{r.table?.name ? localizedCopy(r.table.name, locale) : (r.table?.code || `#${r.id}`)}</strong>
-                <span className="cabinet-meta">{new Date(r.reservationDate).toLocaleDateString()} · {r.timeFrom?.slice(11, 16)} · {r.guests} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
+                <span className="cabinet-meta">{new Date(r.reservationDate).toLocaleDateString(undefined, { timeZone: 'Europe/Kyiv' })} · {r.timeFrom?.slice(11, 16)} · {r.guests} {c({ ua: 'гостей', ru: 'гостей', en: 'guests' })}</span>
                 {r.event && <span className="cabinet-event">{localizedCopy(r.event.title, locale)}</span>}
               </div>
               <div className="cabinet-card-side">
@@ -418,7 +418,7 @@ export default function CabinetPage() {
                 <div className="cabinet-card-main">
                   <strong>{order.name}</strong>
                   <span className="cabinet-meta">{itemCount} {c({ ua: 'шт.', ru: 'шт.', en: 'items' })} · {totalPrice} {c({ ua: 'грн', ru: 'грн', en: 'UAH' })}</span>
-                  <span className="cabinet-meta">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  <span className="cabinet-meta">{new Date(order.createdAt).toLocaleDateString(undefined, { timeZone: 'Europe/Kyiv' })}</span>
                 </div>
                 <div className="cabinet-card-side">
                   <button className="cabinet-book-btn" onClick={() => handleReorder(order)}>{c({ ua: 'Повторити', ru: 'Повторить', en: 'Reorder' })}</button>
@@ -459,7 +459,7 @@ export default function CabinetPage() {
             <div key={t.id} className="cabinet-card shells-tx">
               <div className="cabinet-card-main">
                 <strong>{t.description || t.source}</strong>
-                <span className="cabinet-meta">{new Date(t.createdAt).toLocaleDateString()} {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="cabinet-meta">{new Date(t.createdAt).toLocaleDateString(undefined, { timeZone: 'Europe/Kyiv' })} {new Date(t.createdAt).toLocaleTimeString([], { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div className="cabinet-card-side">
                 <span className={`shells-tx-amount ${t.type === 'SPEND' ? 'negative' : 'positive'}`}>

@@ -1,14 +1,12 @@
 const prisma = require('../lib/prisma');
 const { normalizeLocalizedField } = require('../utils/localization');
-const { VENUE_UTC_OFFSET, getVenueClockParts } = require('../utils/venueTime');
+const { getVenueClockParts, getVenueDateRange, toDateTime } = require('../utils/venueTime');
 
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 
 function getDayRange(value) {
   const { dateKey } = getVenueClockParts(value instanceof Date ? value : new Date(value));
-  const start = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const { start, end } = getVenueDateRange(dateKey);
   return { start, end };
 }
 
@@ -18,9 +16,10 @@ function normalizeRuleScope({ eventId, ruleDate }) {
 
   let normalizedRuleDate = null;
   if (ruleDate) {
-    const parsed = new Date(ruleDate);
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(String(ruleDate))
+      ? toDateTime(String(ruleDate), '00:00')
+      : new Date(ruleDate);
     if (!Number.isNaN(parsed.getTime())) {
-      parsed.setHours(0, 0, 0, 0);
       normalizedRuleDate = parsed;
     }
   }
@@ -508,9 +507,8 @@ async function listReservationPositionsManagement({
     : null;
 
   const effectiveDate = reservationDate
-    ? new Date(`${reservationDate}T00:00:00${VENUE_UTC_OFFSET}`)
+    ? toDateTime(reservationDate, '00:00')
     : (selectedEvent?.startAt ? new Date(selectedEvent.startAt) : today);
-  effectiveDate.setHours(0, 0, 0, 0);
 
   const maps = await prisma.map.findMany({
     where: mapId ? { id: Number(mapId) } : undefined,

@@ -245,12 +245,12 @@ export default function TicketVerificationPage() {
 
   function formatDate(dateStr) {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long', year: 'numeric' });
   }
 
   function formatTime(dateStr) {
     const d = new Date(dateStr);
-    return d.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString('uk-UA', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit' });
   }
 
   const payStatus = verifyResult?.paymentStatus;

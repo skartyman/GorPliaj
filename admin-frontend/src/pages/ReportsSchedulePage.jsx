@@ -284,7 +284,7 @@ export default function ReportsSchedulePage() {
                             <span>·</span>
                             <span>о {s.hour}:00</span>
                           </div>
-                          {s.lastSentAt ? <div className="schedule-last">Останній: {new Date(s.lastSentAt).toLocaleString('uk')}</div> : null}
+                          {s.lastSentAt ? <div className="schedule-last">Останній: {new Date(s.lastSentAt).toLocaleString('uk', { timeZone: 'Europe/Kyiv' })}</div> : null}
                         </div>
                         <div className="schedule-actions">
                           <button type="button" className="btn btn-small" onClick={() => onTrigger(s.id)} disabled={triggerState[s.id] === 'sending'}>

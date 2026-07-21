@@ -41,7 +41,8 @@ RUN npx prisma generate
 FROM base
 
 # Set production environment only for runtime image
-ENV NODE_ENV="production"
+ENV NODE_ENV="production" \
+    TZ="Europe/Kyiv"
 
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl fonts-dejavu-core chromium && \

@@ -110,8 +110,8 @@ export function formatEventButtonLabel(value) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const weekday = date.toLocaleDateString('uk-UA', { weekday: 'long' });
-  const dayMonth = date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+  const weekday = date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv', weekday: 'long' });
+  const dayMonth = date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long' });
   return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dayMonth}`;
 }
 

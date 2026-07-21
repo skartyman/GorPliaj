@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const venueTableOverrideService = require('./venueTableOverrideService');
 const { localizeMessage } = require('../utils/localization');
-const { getClosingTimeString, getVenueClockParts, VENUE_UTC_OFFSET, VENUE_TIME_ZONE } = require('../utils/venueTime');
+const { getClosingTimeString, getVenueClockParts, getVenueDateRange, VENUE_TIME_ZONE } = require('../utils/venueTime');
 const analytics = require('./analyticsService');
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'SEATED'];
 const HOLD_TTL_MS = 15 * 60 * 1000;
@@ -255,16 +255,12 @@ async function getPublicReservationByTicketCode(ticketCode) {
 
 function getDateRange(date) {
   const { dateKey } = getVenueClockParts(date instanceof Date ? date : new Date(date));
-  const start = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
-  const end = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
-  end.setDate(end.getDate() + 1);
+  const { start, end } = getVenueDateRange(dateKey);
   return { start, end };
 }
 
 function getDateKeyRange(dateKey) {
-  const start = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
-  const end = new Date(`${dateKey}T00:00:00${VENUE_UTC_OFFSET}`);
-  end.setDate(end.getDate() + 1);
+  const { start, end } = getVenueDateRange(dateKey);
   return { start, end };
 }
 

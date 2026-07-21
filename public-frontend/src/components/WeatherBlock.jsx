@@ -74,10 +74,9 @@ function formatTemp(temp) {
 function formatTime(isoString) {
   if (!isoString) return '';
   try {
-    const date = new Date(isoString);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    return new Intl.DateTimeFormat('uk-UA', {
+      timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).format(new Date(isoString));
   } catch {
     return '';
   }

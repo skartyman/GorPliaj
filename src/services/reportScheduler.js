@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const prisma = require('../lib/prisma');
 const { sendReportEmail } = require('./reportEmailService');
 const { getOccupancyLive } = require('./reportService');
+const { getVenueClockParts } = require('../utils/venueTime');
 
 let scheduledJobs = [];
 
@@ -35,8 +36,9 @@ function scheduleReportJobs() {
 
 async function runScheduledReports() {
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentDay = now.getDay();
+  const clock = getVenueClockParts(now);
+  const currentHour = clock.hour;
+  const currentDay = new Date(Date.UTC(clock.year, clock.month - 1, clock.day, 12)).getUTCDay();
 
   const schedules = await prisma.reportSchedule.findMany({
     where: { isActive: true }
@@ -49,7 +51,7 @@ async function runScheduledReports() {
       shouldRun = true;
     } else if (schedule.frequency === 'WEEKLY' && schedule.dayOfWeek === currentDay && schedule.hour === currentHour) {
       shouldRun = true;
-    } else if (schedule.frequency === 'MONTHLY' && now.getDate() === 1 && schedule.hour === currentHour) {
+    } else if (schedule.frequency === 'MONTHLY' && clock.day === 1 && schedule.hour === currentHour) {
       shouldRun = true;
     }
 

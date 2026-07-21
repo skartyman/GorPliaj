@@ -7,6 +7,7 @@ import { apiRequest, formatDate, formatTime, localizeField } from '../lib/api';
 import { useAdminI18n } from '../lib/i18n';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { addVenueDays, venueClock } from '../lib/venueTime';
 
 const ACTIVE_RESERVATION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED', 'HELD', 'SEATED'];
 const ATTENTION_STATUSES = ['PENDING', 'AWAITING_PAYMENT', 'CONFIRMED'];
@@ -17,10 +18,7 @@ const TICKET_ROLES = ['admin', 'hostess', 'manager', 'owner'];
 function localDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return venueClock(date).dateKey;
 }
 
 function rowDateKey(value) {
@@ -31,12 +29,14 @@ function rowDateKey(value) {
 }
 
 function lastDays(count, locale = 'uk-UA') {
+  const today = venueClock().dateKey;
   return Array.from({ length: count }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (count - 1 - index));
+    const key = addVenueDays(today, -(count - 1 - index));
+    const [year, month, day] = key.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day, 12));
     return {
-      key: localDateKey(date),
-      label: date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })
+      key,
+      label: date.toLocaleDateString(locale, { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' })
     };
   });
 }

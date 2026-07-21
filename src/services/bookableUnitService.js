@@ -106,9 +106,12 @@ function inferBeachKindFromPositionType(positionType) {
 
 function isWeekend(dateStringOrDate) {
   if (!dateStringOrDate) return false;
-  const date = new Date(dateStringOrDate);
+  const raw = String(dateStringOrDate);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T12:00:00Z`)
+    : new Date(dateStringOrDate);
   if (isNaN(date.getTime())) return false;
-  const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+  const day = date.getUTCDay(); // Date-only business days are calendar days, not server-local instants.
   return day === 0 || day === 6;
 }
 

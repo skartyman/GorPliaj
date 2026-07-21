@@ -37,9 +37,9 @@ export default function EveningBeachCard({ data, onPurchased }) {
     }
   };
 
-  const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString(
+  const formattedDate = new Date(date + 'T12:00:00Z').toLocaleDateString(
     locale === 'ua' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : 'en-US',
-    { day: 'numeric', month: 'long' }
+    { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long' }
   );
 
   const title = isToday

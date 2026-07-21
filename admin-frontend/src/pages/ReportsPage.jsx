@@ -104,7 +104,7 @@ function FinancialTab({ data, loading }) {
   ].filter(x => x.value > 0);
 
   const dailyRevenue = data.reservations.map(r => ({
-    date: new Date(r.date).toLocaleDateString('uk', { day: '2-digit', month: '2-digit' }),
+    date: new Date(r.date).toLocaleDateString('uk', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' }),
     amount: r.amount
   }));
 
@@ -340,7 +340,7 @@ function EventsTab({ data, loading }) {
             {data.events.map(event => (
               <tr key={event.eventId}>
                 <td>{event.title}</td>
-                <td>{new Date(event.startAt).toLocaleDateString('uk')}</td>
+                <td>{new Date(event.startAt).toLocaleDateString('uk', { timeZone: 'Europe/Kyiv' })}</td>
                 <td>{fmt(event.reservationsCount)}</td>
                 <td>{fmt(event.totalTickets)}</td>
                 <td>{formatMoney(event.ticketRevenue)}</td>
@@ -490,7 +490,7 @@ function OccupancyTab({ data, loading: periodLoading }) {
     const t = liveData.byKind.table;
     const tot = liveData.total;
     const now = new Date(liveData.asOf);
-    const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = now.toLocaleTimeString('uk-UA', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit' });
 
     return (
       <div className="report-content">

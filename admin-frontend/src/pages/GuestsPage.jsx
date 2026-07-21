@@ -9,7 +9,7 @@ function money(value, currency = 'UAH') {
 }
 
 function dateTime(value) {
-  return value ? new Date(value).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+  return value ? new Date(value).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', dateStyle: 'short', timeStyle: 'short' }) : '—';
 }
 
 function TimelineSection({ title, count, children, empty }) {

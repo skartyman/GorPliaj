@@ -173,7 +173,7 @@ export default function UsersPage() {
                   )}
                 </td>
                 <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  {new Date(user.createdAt).toLocaleDateString('uk-UA')}
+                  {new Date(user.createdAt).toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' })}
                 </td>
                 <td>
                   {editingId === user.id ? (

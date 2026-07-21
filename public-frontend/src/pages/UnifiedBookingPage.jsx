@@ -2894,8 +2894,8 @@ export default function UnifiedBookingPage() {
                 <div>
                   <dt>{c({ ua: 'Дата бронювання', ru: 'Дата бронирования', en: 'Booking date' })}</dt>
                   <dd>{locale === 'ua'
-                    ? formatUkrainianDate(`${form.date}T12:00:00+03:00`)
-                    : new Date(`${form.date}T12:00:00+03:00`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long', year: 'numeric' })}</dd>
+                    ? formatUkrainianDate(`${form.date}T12:00:00Z`)
+                    : new Date(`${form.date}T12:00:00Z`).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'Europe/Kyiv', day: 'numeric', month: 'long', year: 'numeric' })}</dd>
                 </div>
                 <div>
                   <dt>{c({ ua: 'Гості за столом', ru: 'Гости за столом', en: 'Guests at the table' })}</dt>
