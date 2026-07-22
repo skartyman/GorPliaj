@@ -65,9 +65,20 @@ function fromDateTimeLocal(value) {
   const [datePart, timePart] = parts;
   const [year, month, day] = datePart.split('-').map(Number);
   const [hour, minute] = timePart.split(':').map(Number);
-  const kyivDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-  const utcMs = kyivDate.getTime() + (3 * 60 * 60 * 1000);
-  const utcDate = new Date(utcMs);
+  const wallClockUtc = Date.UTC(year, month - 1, day, hour, minute);
+  const getKyivOffset = (date) => {
+    const values = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Kyiv',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).formatToParts(date).map((part) => [part.type, part.value]));
+    return Date.UTC(
+      Number(values.year), Number(values.month) - 1, Number(values.day),
+      Number(values.hour), Number(values.minute), Number(values.second)
+    ) - Math.floor(date.getTime() / 1000) * 1000;
+  };
+  let utcDate = new Date(wallClockUtc - getKyivOffset(new Date(wallClockUtc)));
+  utcDate = new Date(wallClockUtc - getKyivOffset(utcDate));
   return Number.isNaN(utcDate.getTime()) ? null : utcDate.toISOString();
 }
 
